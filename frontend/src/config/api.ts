@@ -1,11 +1,11 @@
 // Configuração da API
 const API_CONFIG = {
   // URL base do backend - usa variável de ambiente ou domínio de produção
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://bora.factoriasolutions.com',
-  
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3003',
+
   // URL para Socket.IO
-  SOCKET_URL: import.meta.env.VITE_API_URL || 'https://bora.factoriasolutions.com',
-  
+  SOCKET_URL: import.meta.env.VITE_API_URL || 'http://localhost:3003',
+
   // Endpoints da API
   ENDPOINTS: {
     HEALTH: '/health',

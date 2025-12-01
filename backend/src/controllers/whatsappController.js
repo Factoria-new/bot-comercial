@@ -138,12 +138,13 @@ class WhatsAppController {
         });
       }
 
-      // API Key agora é opcional - se não fornecida, usará a do .env
-      if (!apiKey && !process.env.GEMINI_API_KEY) {
-        logger.error('API Key não fornecida e não há chave padrão no .env');
+
+      // Modelo SaaS: API Key é OBRIGATÓRIA - cada cliente usa sua própria chave
+      if (aiProvider === 'gemini' && !apiKey) {
+        logger.error('API Key não fornecida');
         return res.status(400).json({
           success: false,
-          error: 'API Key é obrigatória (configure no .env ou forneça na configuração)'
+          error: 'API Key do Google Gemini é obrigatória. Obtenha sua chave em: https://aistudio.google.com/app/apikey'
         });
       }
 
@@ -157,7 +158,7 @@ class WhatsAppController {
 
       const result = this.whatsappService.setSessionConfig(sessionId, {
         name: name || `Instância ${sessionId}`,
-        apiKey: apiKey || process.env.GEMINI_API_KEY, // Usa a chave fornecida ou a do .env
+        apiKey: apiKey, // Usa APENAS a chave fornecida pelo usuário
         aiProvider: aiProvider || 'gemini',
         assistantId,
         model: model || 'gemini-2.0-flash-exp',

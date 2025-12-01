@@ -22,11 +22,11 @@ const Login = () => {
             <div className="w-full max-w-md animate-fade-in">
                 <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
                     <CardHeader className="space-y-1 text-center flex flex-col items-center">
-                        <div className="w-16 h-16 mb-4 relative">
+                        <div className="w-64 mb-6 relative">
                             <img
-                                src="/bora-logo.png"
+                                src="/texto-logo.png"
                                 alt="Bora Logo"
-                                className="w-full h-full object-contain"
+                                className="w-full h-auto object-contain"
                             />
                         </div>
                         <CardTitle className="text-2xl font-bold tracking-tight text-bora-blue-900">

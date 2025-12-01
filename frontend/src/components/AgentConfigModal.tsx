@@ -77,13 +77,29 @@ const AgentConfigModal = ({
 
   const handleSave = async () => {
     // Validações
-    
+    if (aiProvider === 'gemini' && !apiKey.trim()) {
+      toast({
+        title: "API Key obrigatória",
+        description: "Por favor, insira sua API Key do Google Gemini para usar o sistema.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (aiProvider === 'openai' && !assistantId.trim()) {
+      toast({
+        title: "Assistant ID obrigatório",
+        description: "Por favor, insira o ID do seu assistente OpenAI.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSaving(true);
     try {
       const config: AgentConfig = {
         aiProvider,
-        apiKey: apiKey.trim() || undefined, // Envia apenas se preenchido, senão usa a do .env
+        apiKey: apiKey.trim(), // Sempre envia a API key (vazia ou preenchida)
         model: 'gemini-2.5-flash', // Modelo fixo no backend
         systemPrompt: aiProvider === 'gemini' ? systemPrompt.trim() : undefined,
         temperature: 1.0, // Temperatura fixa no backend
@@ -139,18 +155,48 @@ const AgentConfigModal = ({
 
           <div className="px-6 pb-6 space-y-6">
             {/* Tabs de Provedor */}
-            <Tabs value={aiProvider} onValueChange={(v) => setAiProvider(v as 'gemini' )} className="w-full ">
+            <Tabs value={aiProvider} onValueChange={(v) => setAiProvider(v as 'gemini')} className="w-full ">
               <TabsList className="items-center justify-center w-full grid-cols-2 bg-white/70 border border-[#243B6B]/20 backdrop-blur-md">
                 <TabsTrigger value="gemini" className="data-[state=active]:bg-[#243B6B] data-[state=active]:text-white">
                   <Sparkles className="w-4 h-4 mr-2" />
                   Google Gemini
                 </TabsTrigger>
-               
+
               </TabsList>
 
               {/* Configurações Gemini */}
-              <TabsContent value="gemini" className="space-y-4 mt-4">              
-                              
+              <TabsContent value="gemini" className="space-y-4 mt-4">
+
+                {/* API Key do Gemini */}
+                <div className="space-y-2">
+                  <Label htmlFor="api-key" className="text-[#243B6B] flex items-center gap-2 font-medium">
+                    <Sparkles className="w-4 h-4" />
+                    API Key do Google Gemini <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <input
+                      id="api-key"
+                      type={showApiKey ? "text" : "password"}
+                      placeholder="AIza..."
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="w-full px-3 py-2 bg-white/90 border border-[#243B6B]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#243B6B]/50 text-sm font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#243B6B] text-xs"
+                    >
+                      {showApiKey ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    🔑 Obtenha sua chave em: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[#243B6B] hover:underline font-semibold">Google AI Studio</a>
+                    <br />
+                    💳 Você precisa de sua própria chave de API para usar o sistema. É gratuito para começar!
+                  </p>
+                </div>
+
                 {/* Prompt do Sistema */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -206,15 +252,15 @@ const AgentConfigModal = ({
                         <SelectTrigger className="bg-white/90 backdrop-blur-sm border-[#243B6B]/30 text-gray-900 hover:bg-white transition-colors">
                           <SelectValue placeholder="Selecione a voz" />
                         </SelectTrigger>
-                        <SelectContent 
+                        <SelectContent
                           className="bg-white/95 backdrop-blur-md border-[#243B6B]/20 shadow-xl"
                           side="bottom"
                           sideOffset={4}
                         >
                           {GEMINI_VOICES.map((voice) => (
-                            <SelectItem 
-                              key={voice.value} 
-                              value={voice.value} 
+                            <SelectItem
+                              key={voice.value}
+                              value={voice.value}
                               className="text-gray-900 hover:bg-[#243B6B]/10 focus:bg-[#243B6B]/10 cursor-pointer"
                             >
                               <div>
@@ -230,9 +276,9 @@ const AgentConfigModal = ({
                       </p>
                     </div>
                   )}
-                  
+
                   <p className="text-xs text-gray-600">
-                    {ttsEnabled ? 
+                    {ttsEnabled ?
                       'Ative para permitir que o assistente envie mensagens em áudio.' :
                       'Ative para permitir que o assistente envie mensagens em áudio.'
                     }
@@ -240,7 +286,7 @@ const AgentConfigModal = ({
                 </div>
               </TabsContent>
 
-              
+
             </Tabs>
 
             {/* Botões de Ação */}

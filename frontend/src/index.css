@@ -5,48 +5,74 @@
 @layer base {
   :root {
     /* Esquema de cores com fundo branco e azul #243B6B */
-    --background: 0 0% 100%; /* Branco #FFFFFF */
-    --foreground: 218 54% 42%; /* Azul #243B6B */
+    --background: 0 0% 100%;
+    /* Branco #FFFFFF */
+    --foreground: 218 54% 42%;
+    /* Azul #243B6B */
 
-    --card: 0 0% 100%; /* Branco */
-    --card-foreground: 218 54% 42%; /* Azul #243B6B */
+    --card: 0 0% 100%;
+    /* Branco */
+    --card-foreground: 218 54% 42%;
+    /* Azul #243B6B */
 
-    --popover: 0 0% 100%; /* Branco */
-    --popover-foreground: 218 54% 42%; /* Azul #243B6B */
+    --popover: 0 0% 100%;
+    /* Branco */
+    --popover-foreground: 218 54% 42%;
+    /* Azul #243B6B */
 
-    --primary: 218 54% 42%; /* Azul #243B6B */
-    --primary-foreground: 0 0% 100%; /* Branco */
+    --primary: 218 54% 42%;
+    /* Azul #243B6B */
+    --primary-foreground: 0 0% 100%;
+    /* Branco */
 
-    --secondary: 218 54% 42%; /* Azul #243B6B */
-    --secondary-foreground: 0 0% 100%; /* Branco */
+    --secondary: 218 54% 42%;
+    /* Azul #243B6B */
+    --secondary-foreground: 0 0% 100%;
+    /* Branco */
 
-    --muted: 0 0% 96%; /* Cinza muito claro */
-    --muted-foreground: 0 0% 45%; /* Cinza médio */
+    --muted: 0 0% 96%;
+    /* Cinza muito claro */
+    --muted-foreground: 0 0% 45%;
+    /* Cinza médio */
 
-    --accent: 218 54% 93%; /* Azul muito claro */
-    --accent-foreground: 218 54% 42%; /* Azul #243B6B */
+    --accent: 218 54% 93%;
+    /* Azul muito claro */
+    --accent-foreground: 218 54% 42%;
+    /* Azul #243B6B */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%; /* Cinza claro para bordas */
-    --input: 214.3 31.8% 91.4%; /* Cinza claro */
-    --ring: 218 54% 42%; /* Azul #243B6B para focus */
+    --border: 214.3 31.8% 91.4%;
+    /* Cinza claro para bordas */
+    --input: 214.3 31.8% 91.4%;
+    /* Cinza claro */
+    --ring: 218 54% 42%;
+    /* Azul #243B6B para focus */
 
     --radius: 0.75rem;
 
     /* Cores personalizadas */
-    --bora-blue: 218 54% 42%; /* #243B6B */
+    --bora-blue: 218 54% 42%;
+    /* #243B6B */
 
     /* Sidebar com tema claro */
-    --sidebar-background: 0 0% 100%; /* Branco */
-    --sidebar-foreground: 218 54% 42%; /* Azul #243B6B */
-    --sidebar-primary: 218 54% 42%; /* Azul #243B6B */
-    --sidebar-primary-foreground: 0 0% 100%; /* Branco */
-    --sidebar-accent: 0 0% 96%; /* Cinza muito claro */
-    --sidebar-accent-foreground: 218 54% 42%; /* Azul #243B6B */
-    --sidebar-border: 214.3 31.8% 91.4%; /* Cinza claro */
-    --sidebar-ring: 218 54% 42%; /* Azul #243B6B */
+    --sidebar-background: 0 0% 100%;
+    /* Branco */
+    --sidebar-foreground: 218 54% 42%;
+    /* Azul #243B6B */
+    --sidebar-primary: 218 54% 42%;
+    /* Azul #243B6B */
+    --sidebar-primary-foreground: 0 0% 100%;
+    /* Branco */
+    --sidebar-accent: 0 0% 96%;
+    /* Cinza muito claro */
+    --sidebar-accent-foreground: 218 54% 42%;
+    /* Azul #243B6B */
+    --sidebar-border: 214.3 31.8% 91.4%;
+    /* Cinza claro */
+    --sidebar-ring: 218 54% 42%;
+    /* Azul #243B6B */
   }
 
   .dark {
@@ -78,7 +104,7 @@
     --border: 220 39% 18%;
     --input: 220 39% 14%;
     --ring: 160 84% 39%;
-    
+
     --sidebar-background: 218 54% 4%;
     --sidebar-foreground: 160 84% 39%;
     --sidebar-primary: 160 84% 39%;
@@ -105,18 +131,25 @@
   }
 
   /* Melhora o comportamento de toque em dispositivos móveis */
-  button, a, [role="button"] {
+  button,
+  a,
+  [role="button"] {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
 
   /* Previne zoom em inputs no iOS */
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     font-size: 16px;
   }
 
   @media (max-width: 640px) {
-    input, select, textarea {
+
+    input,
+    select,
+    textarea {
       font-size: 16px;
     }
   }
@@ -146,6 +179,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -162,6 +196,7 @@
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+
   to {
     opacity: 0;
     transform: scale(0.8) translateY(-10px);
@@ -183,9 +218,12 @@
 
 /* Animação de bounce customizada */
 @keyframes custom-bounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
@@ -193,8 +231,8 @@
 
 /* Sombras sutis */
 .shadow-soft {
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.3), 
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
     0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
 
@@ -256,14 +294,14 @@
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.8);
   border-color: rgba(36, 59, 107, 0.25);
-  box-shadow: 
+  box-shadow:
     0 10px 25px -5px rgba(36, 59, 107, 0.15),
     0 10px 10px -5px rgba(36, 59, 107, 0.1),
     0 0 20px rgba(36, 59, 107, 0.1);
 }
 
 /* Garante que o conteúdo dos cards fique acima dos efeitos */
-.card-stats > * {
+.card-stats>* {
   position: relative;
   z-index: 1;
 }
@@ -293,7 +331,7 @@
 .btn-new-instance:hover {
   transform: translateY(-1px);
   background: linear-gradient(135deg, #1e3257 0%, #253d73 100%);
-  box-shadow: 
+  box-shadow:
     0 10px 20px rgba(36, 59, 107, 0.35),
     0 6px 6px rgba(36, 59, 107, 0.25);
 }
@@ -329,7 +367,7 @@
   background: linear-gradient(135deg, #243B6B 0%, #2E4A8C 100%);
   color: white;
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 8px 16px rgba(36, 59, 107, 0.35),
     0 4px 4px rgba(36, 59, 107, 0.25);
 }
@@ -338,7 +376,7 @@
   left: 100%;
 }
 
-.btn-qr-code > * {
+.btn-qr-code>* {
   position: relative;
   z-index: 2;
 }
@@ -370,7 +408,7 @@
   background: linear-gradient(135deg, rgb(239, 68, 68) 0%, rgb(220, 38, 38) 100%);
   color: white;
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 8px 16px rgba(239, 68, 68, 0.35),
     0 4px 4px rgba(239, 68, 68, 0.25);
 }
@@ -380,7 +418,7 @@
 }
 
 /* Garante que o conteúdo do botão fique acima do efeito */
-.btn-destructive > * {
+.btn-destructive>* {
   position: relative;
   z-index: 2;
 }
@@ -402,12 +440,12 @@
   .card-stats:hover {
     transform: none;
   }
-  
+
   .btn-new-instance:hover,
   .btn-destructive:hover {
     transform: none;
   }
-  
+
   /* Melhora o espaçamento em telas pequenas */
   .container {
     padding-left: 1rem;

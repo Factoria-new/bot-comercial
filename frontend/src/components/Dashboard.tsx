@@ -348,7 +348,7 @@ const Dashboard = () => {
             <div className="text-center sm:text-left">
               <div className="flex justify-center sm:justify-start mb-2">
                 <img
-                  src="/bora-logo.png"
+                  src="/texto-logo.png"
                   alt="Bora Expandir - Agência de Viagens e Assessoria de Imigração"
                   className="h-16 sm:h-20 lg:h-24 w-auto"
                 />
