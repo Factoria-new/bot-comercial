@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+service-account.json
 
 # Environment
 .env
