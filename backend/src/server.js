@@ -6,7 +6,9 @@ import dotenv from 'dotenv';
 import logger from './config/logger.js';
 import WhatsAppService from './services/whatsappService.js';
 import WhatsAppController from './controllers/whatsappController.js';
+import CalendarController from './controllers/calendarController.js';
 import createWhatsAppRoutes from './routes/whatsappRoutes.js';
+import createCalendarRoutes from './routes/calendarRoutes.js';
 
 
 dotenv.config();
@@ -78,6 +80,13 @@ app.use((req, res, next) => {
 const whatsappService = new WhatsAppService(io);
 const whatsappController = new WhatsAppController(whatsappService);
 
+console.log('\n=== Verificando ENV antes de inicializar CalendarController ===');
+console.log('COMPOSIO_API_KEY:', process.env.COMPOSIO_API_KEY ? `Presente (${process.env.COMPOSIO_API_KEY.substring(0, 10)}...)` : 'AUSENTE');
+console.log('COMPOSIO_AUTH_CONFIG_ID:', process.env.COMPOSIO_AUTH_CONFIG_ID || 'AUSENTE');
+console.log('=============================================================\n');
+
+const calendarController = new CalendarController();
+
 // Rotas
 app.get('/', (req, res) => {
   res.json({
@@ -115,6 +124,9 @@ app.get('/sessions/active', (req, res) => {
 
 // Rotas do WhatsApp
 app.use('/api/whatsapp', createWhatsAppRoutes(whatsappController));
+
+// Rotas do Google Calendar
+app.use('/api/calendar', createCalendarRoutes(calendarController));
 
 // Socket.io event handlers
 io.on('connection', (socket) => {

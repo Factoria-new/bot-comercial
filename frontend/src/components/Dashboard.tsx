@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, MessageSquare, Users, Activity, Bot, Loader } from 'lucide-react';
+import { PlusCircle, MessageSquare, Users, Activity, Bot, Loader, LogOut } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/config/firebase';
+import { useNavigate } from 'react-router-dom';
 import WhatsAppInstanceCard from './WhatsAppInstanceCard';
 import WhatsAppConnectionModal, { ConnectionState } from './WhatsAppConnectionModal';
 import AIStatusCard from '@/components/AIStatusCard';
+import CalendarIntegration from '@/components/CalendarIntegration';
 import { WhatsAppInstance, WhatsAppConfig } from '@/types/whatsapp';
 import { useToast } from '@/hooks/use-toast';
 import { useSocket } from '@/contexts/SocketContext';
@@ -28,6 +32,54 @@ const Dashboard = () => {
   const [removingInstances, setRemovingInstances] = useState<Set<number>>(new Set());
   const { toast } = useToast();
   const { socket, isConnected } = useSocket();
+  const navigate = useNavigate();
+
+  // Bloquear botão de voltar
+  useEffect(() => {
+    // Adiciona um estado ao histórico para "prender" o usuário
+    window.history.pushState(null, document.title, window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      // Impede a navegação voltando para o estado anterior (que é o atual)
+      window.history.go(1);
+
+      toast({
+        title: "Ação não permitida",
+        description: "Para voltar à tela de login, você deve sair da conta.",
+        variant: "destructive",
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Logout realizado",
+        description: "Você saiu do sistema com sucesso.",
+      });
+      // Substitui a entrada atual (Dashboard) pela Landing Page
+      navigate('/', { replace: true });
+      // Navega para o Login (criando uma nova entrada)
+      // Pequeno delay para garantir que a navegação anterior processou
+      setTimeout(() => {
+        navigate('/login');
+      }, 50);
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      toast({
+        title: "Erro ao sair",
+        description: "Não foi possível realizar o logout.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Carregar todas as sessões do backend ao iniciar
   useEffect(() => {
@@ -364,6 +416,14 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="w-full sm:w-auto bg-white/50 hover:bg-[#243B6B] hover:text-white border-[#243B6B]/20 text-[#243B6B] transition-colors"
+              >
+                <LogOut className="mr-2" size={18} />
+                <span className="text-sm sm:text-base">Sair</span>
+              </Button>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -492,6 +552,14 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+
+        {/* Google Calendar Integration */}
+        {instances.length > 0 && instances.some(i => i.isConnected) && (
+          <div className="mt-6 sm:mt-8">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Integrações</h2>
+            <CalendarIntegration sessionId={`instance_${instances.find(i => i.isConnected)?.id}`} />
+          </div>
+        )}
 
         {/* Connection Modal */}
         <WhatsAppConnectionModal

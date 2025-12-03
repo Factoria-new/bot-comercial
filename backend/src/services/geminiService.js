@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAICacheManager } from '@google/generative-ai/server';
+import { Composio } from '@composio/core';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -21,6 +22,28 @@ const CACHE_TTL_MINUTES = process.env.GEMINI_CACHE_TTL ? parseInt(process.env.GE
 // Cache local para rastrear caches criados no Gemini (hash -> { name, expireTime })
 const systemPromptCache = new Map();
 
+// Inicializar cliente Composio
+// Inicializar cliente Composio (Lazy Loading)
+let composioClientInstance = null;
+
+function getComposioClient() {
+  if (composioClientInstance) return composioClientInstance;
+
+  if (process.env.COMPOSIO_API_KEY) {
+    try {
+      composioClientInstance = new Composio({ apiKey: process.env.COMPOSIO_API_KEY });
+      logger.info('✅ Cliente Composio inicializado com sucesso (Lazy)');
+      return composioClientInstance;
+    } catch (error) {
+      logger.error('❌ Erro ao inicializar Composio:', error.message);
+      return null;
+    }
+  } else {
+    logger.warn('⚠️ COMPOSIO_API_KEY não configurada - funcionalidades de Calendar não estarão disponíveis');
+    return null;
+  }
+}
+
 // Diretrizes fixas que SEMPRE serão aplicadas
 const SYSTEM_GUIDELINES = `
 Diretrizes:
@@ -34,11 +57,26 @@ Diretrizes:
 /**
  * Combina o prompt personalizado do usuário com as diretrizes fixas do sistema
  */
-function buildSystemPrompt(customPrompt = '') {
+function buildSystemPrompt(customPrompt = '', includeDateTime = false) {
+  let prompt = '';
+
   if (customPrompt && customPrompt.trim()) {
-    return `${customPrompt.trim()}\n\n${SYSTEM_GUIDELINES}`;
+    prompt = `${customPrompt.trim()}\n\n${SYSTEM_GUIDELINES}`;
+  } else {
+    prompt = `Você é um assistente virtual prestativo e profissional.\n${SYSTEM_GUIDELINES}`;
   }
-  return `Você é um assistente virtual prestativo e profissional.\n${SYSTEM_GUIDELINES}`;
+
+  // Adicionar contexto de data/hora se solicitado (útil para Calendar)
+  if (includeDateTime) {
+    const now = new Date();
+    const timezone = process.env.TIMEZONE || 'America/Sao_Paulo';
+    const dateStr = now.toLocaleDateString('pt-BR', { timeZone: timezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit' });
+
+    prompt += `\n\nContexto Temporal:\n- Data atual: ${dateStr}\n- Hora atual: ${timeStr}\n- Fuso horário: ${timezone}`;
+  }
+
+  return prompt;
 }
 
 /**
@@ -870,5 +908,199 @@ export function getConversationsStats() {
       phoneNumber: phone
     }))
   };
+}
+
+/**
+ * Obtém as ferramentas (tools) do Google Calendar via Composio
+ * @param {string} userId - ID do usuário (phoneNumber será usado como user_id)
+ */
+export async function getCalendarTools(userId = 'default') {
+  try {
+    const client = getComposioClient();
+    if (!client) {
+      logger.warn('⚠️ Composio não está configurado - Calendar tools não disponíveis');
+      return null;
+    }
+
+    logger.info(`📅 Obtendo ferramentas do Google Calendar para user_id: ${userId}...`);
+
+    // Usar a API correta do Composio com user_id
+    const tools = await client.tools.get({
+      user_id: userId,
+      toolkits: ['GOOGLECALENDAR']
+    });
+
+    logger.info(`✅ ${tools.length} ferramentas do Calendar carregadas`);
+    return tools;
+  } catch (error) {
+    logger.error('❌ Erro ao obter Calendar tools:', error.message);
+    logger.error('Stack:', error.stack);
+    return null;
+  }
+}
+
+/**
+ * Processa mensagem com suporte a Google Calendar usando Function Calling
+ */
+export async function processMessageWithCalendar(messageText, phoneNumber, apiKey, systemPrompt = '') {
+  try {
+    logger.info('📅 Processando mensagem COM suporte a Calendar');
+
+    const client = getComposioClient();
+
+    if (!client) {
+      logger.warn('⚠️ Composio não configurado - usando processamento padrão');
+      return await processMessageWithGemini(messageText, phoneNumber, apiKey, FIXED_MODEL, systemPrompt, FIXED_TEMPERATURE);
+    }
+
+    // Obter ferramentas do Calendar
+    const calendarTools = await getCalendarTools(phoneNumber);
+
+    if (!calendarTools || calendarTools.length === 0) {
+      logger.warn('⚠️ Não foi possível carregar Calendar tools - usando processamento padrão');
+      return await processMessageWithGemini(messageText, phoneNumber, apiKey, FIXED_MODEL, systemPrompt, FIXED_TEMPERATURE);
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // Build system prompt com contexto temporal
+    const finalSystemPrompt = buildSystemPrompt(systemPrompt, true);
+
+    // Criar chave única para histórico
+    const conversationKey = phoneNumber;
+
+    // Obter ou criar histórico de conversa
+    let conversationData = userConversations.get(conversationKey);
+
+    // Verificar se o prompt mudou
+    const promptChanged = conversationData && conversationData.systemPrompt !== finalSystemPrompt;
+
+    if (!conversationData || promptChanged) {
+      if (promptChanged) {
+        logger.info(`🔄 Prompt alterado para ${phoneNumber} - recriando conversa com Calendar tools`);
+      }
+
+      // Tentar obter cache para o system prompt
+      let cachedContent = await getOrCreateCache(apiKey, finalSystemPrompt);
+
+      const modelConfig = {
+        model: FIXED_MODEL,
+        generationConfig: {
+          temperature: FIXED_TEMPERATURE,
+          topP: 0.95,
+          topK: 40,
+          maxOutputTokens: 8192,
+        },
+        tools: {
+          functionDeclarations: calendarTools
+        }
+      };
+
+      // Se conseguiu cache, usa cachedContent. Se não, usa systemInstruction normal.
+      if (cachedContent) {
+        modelConfig.cachedContent = cachedContent;
+      } else {
+        modelConfig.systemInstruction = finalSystemPrompt;
+      }
+
+      const model = genAI.getGenerativeModel(modelConfig);
+
+      const chat = model.startChat({
+        history: [],
+      });
+
+      conversationData = {
+        chat,
+        model,
+        systemPrompt: finalSystemPrompt
+      };
+
+      userConversations.set(conversationKey, conversationData);
+      logger.info(`🆕 Nova conversa com Calendar iniciada para ${phoneNumber}`);
+    } else {
+      logger.info(`♻️ Usando conversa existente com Calendar para ${phoneNumber}`);
+    }
+
+    const { chat } = conversationData;
+
+    logger.info('===== ENVIANDO MENSAGEM PARA GEMINI (COM CALENDAR) =====');
+    logger.info(`Telefone: ${phoneNumber}`);
+    logger.info(`Modelo: ${FIXED_MODEL}`);
+    logger.info(`Calendar Tools: ${calendarTools.length} ações disponíveis`);
+    logger.info(`Mensagem: ${messageText}`);
+    logger.info('========================================================');
+
+    // Enviar mensagem
+    const result = await chat.sendMessage(messageText);
+    const response = result.response;
+
+    // Verificar se há function calls
+    const functionCalls = response.functionCalls();
+
+    if (functionCalls && functionCalls.length > 0) {
+      logger.info(`🔧 ${functionCalls.length} function call(s) detectada(s)`);
+
+      // Processar cada function call
+      const functionResponses = [];
+
+      for (const call of functionCalls) {
+        logger.info(`📞 Executando: ${call.name}`);
+        logger.info(`📊 Parâmetros: ${JSON.stringify(call.args, null, 2)}`);
+
+        try {
+          // Executar a ação via Composio
+          const toolResult = await client.executeAction(call.name, call.args);
+
+          logger.info(`✅ Resultado da ação: ${JSON.stringify(toolResult, null, 2)}`);
+
+          functionResponses.push({
+            functionResponse: {
+              name: call.name,
+              response: toolResult
+            }
+          });
+        } catch (toolError) {
+          logger.error(`❌ Erro ao executar ${call.name}:`, toolError.message);
+
+          functionResponses.push({
+            functionResponse: {
+              name: call.name,
+              response: {
+                error: toolError.message,
+                success: false
+              }
+            }
+          });
+        }
+      }
+
+      // Enviar resultados das funções de volta ao modelo
+      logger.info('📤 Enviando resultados das funções para o modelo gerar resposta final...');
+      const finalResult = await chat.sendMessage(functionResponses);
+      const finalResponse = finalResult.response.text();
+
+      logger.info('===== RESPOSTA FINAL (APÓS FUNCTION CALLS) =====');
+      logger.info(`Resposta: ${finalResponse}`);
+      logger.info('===============================================');
+
+      return finalResponse;
+    } else {
+      // Sem function calls, retornar resposta direta
+      const responseText = response.text();
+
+      logger.info('===== RESPOSTA DIRETA (SEM FUNCTION CALLS) =====');
+      logger.info(`Resposta: ${responseText}`);
+      logger.info('===============================================');
+
+      return responseText;
+    }
+
+  } catch (error) {
+    logger.error('❌ ERRO ao processar com Calendar:', error);
+
+    // Fallback para processamento padrão em caso de erro
+    logger.warn('⚠️ Fallback para processamento padrão sem Calendar');
+    return await processMessageWithGemini(messageText, phoneNumber, apiKey, FIXED_MODEL, systemPrompt, FIXED_TEMPERATURE);
+  }
 }
 

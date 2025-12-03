@@ -20,7 +20,8 @@ import {
   processMessageWithGemini,
   processAudioMessageWithGemini,
   processImageMessageWithGemini,
-  processDocumentMessageWithGemini
+  processDocumentMessageWithGemini,
+  processMessageWithCalendar
 } from './geminiService.js';
 import {
   generateSpeech,
@@ -2095,13 +2096,13 @@ class WhatsAppService {
         console.log("apiKey configurada:", config?.apiKey ? 'Sim' : 'Não');
 
         const geminiApiKey = config?.apiKey || process.env.GEMINI_API_KEY;
-        aiResponse = await processMessageWithGemini(
+
+        // Usar processMessageWithCalendar (que faz fallback automático para processMessageWithGemini se Composio não estiver configurado)
+        aiResponse = await processMessageWithCalendar(
           combinedMessage,
           phoneNumber,
           geminiApiKey,
-          'gemini-2.5-flash', // Modelo fixo
-          config?.systemPrompt || '', // Prompt personalizado do frontend
-          1.0 // Temperatura fixa
+          config?.systemPrompt || '' // Prompt personalizado do frontend
         );
       }
       console.log("aiResponse", aiResponse);
