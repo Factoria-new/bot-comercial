@@ -68,6 +68,13 @@ const Landing = () => {
                 start: "top top",
                 end: "bottom bottom",
                 scrub: 0, // Instant scrub updates, smoothing handled by RAF
+                snap: {
+                    snapTo: [1], // Sempre puxa para o final (efeito gravidade)
+                    duration: { min: 1.5, max: 4 }, // Tempo padrão
+                    delay: 0, // Instantâneo
+                    ease: "power2.inOut",
+                    inertia: false
+                },
                 onUpdate: (self) => {
                     // Update target time based on scroll progress
                     const newTime = videoDuration * self.progress;
@@ -264,7 +271,7 @@ const Landing = () => {
                     </div>
 
                     {/* Gradient Overlay for smooth transition to Light Theme */}
-                    <div className="absolute bottom-0 left-0 w-full h-[50vh] bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/60 to-transparent z-10 pointer-events-none" />
+
                 </div>
             </div>
 
@@ -316,7 +323,7 @@ const Landing = () => {
                                 </ul>
                             </div>
                             <div className="w-full md:w-1/2 order-1 md:order-2 min-h-[400px] bg-slate-50 relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-slate-200/50" />
+
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <span className="text-slate-300 font-medium text-lg">Visual Concept Area</span>
                                 </div>
@@ -326,7 +333,7 @@ const Landing = () => {
                         {/* Feature 2: Funcionários Digitais (Visual Left, Text Right) */}
                         <div className="w-full bg-[#F8FAFC] border-b border-slate-200 flex flex-col md:flex-row">
                             <div className="w-full md:w-1/2 order-1 min-h-[400px] bg-white relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-bl from-transparent to-slate-100/50" />
+
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <span className="text-slate-300 font-medium text-lg">Visual Concept Area</span>
                                 </div>
@@ -398,7 +405,7 @@ const Landing = () => {
                                 </ul>
                             </div>
                             <div className="w-full md:w-1/2 order-1 md:order-2 min-h-[400px] bg-slate-50 relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-slate-200/50" />
+
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <span className="text-slate-300 font-medium text-lg">Visual Concept Area</span>
                                 </div>
@@ -408,7 +415,7 @@ const Landing = () => {
                         {/* Feature 4: Confiabilidade Enterprise (Visual Left, Text Right) */}
                         <div className="w-full bg-[#F8FAFC] border-b border-slate-200 flex flex-col md:flex-row">
                             <div className="w-full md:w-1/2 order-1 min-h-[400px] bg-white relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-bl from-transparent to-slate-100/50" />
+
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <span className="text-slate-300 font-medium text-lg">Visual Concept Area</span>
                                 </div>
@@ -448,7 +455,7 @@ const Landing = () => {
                     </div>
 
                     {/* Future Feature: Google Calendar Integration */}
-                    <div className="mt-24 bg-gradient-to-br from-[#1F345E] to-[#0F1C35] border border-white/10 rounded-3xl p-8 md:p-16 relative overflow-hidden shadow-2xl">
+                    <div className="mt-24 bg-[#1F345E] border border-white/10 rounded-3xl p-8 md:p-16 relative overflow-hidden shadow-2xl">
                         <div className="absolute top-0 right-0 w-96 h-96 bg-[#078B48]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                         <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
 
