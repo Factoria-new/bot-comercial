@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WhatsAppInstance, WhatsAppConfig } from '@/types/whatsapp';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Loader, LogOut, Bot, Trash2, Settings } from 'lucide-react';
+import { Check, Loader, LogOut, Bot, Trash2, Settings, Pencil, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useSocket } from '@/contexts/SocketContext';
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import API_CONFIG from '@/config/api';
@@ -36,6 +37,8 @@ const WhatsAppInstanceCard = ({
   });
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState('');
   const [agentConfig, setAgentConfig] = useState<AgentConfig | undefined>(undefined);
   const { toast } = useToast();
   const { socket } = useSocket();
@@ -133,6 +136,66 @@ const WhatsAppInstanceCard = ({
     }
   };
 
+  const handleSaveName = async () => {
+    if (!tempName.trim()) return;
+
+    try {
+      const newName = tempName.trim();
+
+      // Atualizar estado local
+      setConfig(prev => ({ ...prev, name: newName }));
+
+      // Salvar no backend
+      // Construir payload completo com o novo nome
+      const payload = {
+        name: newName,
+        aiProvider: agentConfig?.aiProvider || 'gemini',
+        apiKey: agentConfig?.apiKey || config.apiKey || '',
+        model: agentConfig?.model || 'gemini-2.0-flash-exp',
+        systemPrompt: agentConfig?.systemPrompt || '',
+        temperature: agentConfig?.temperature !== undefined ? agentConfig?.temperature : 1.0,
+        assistantId: agentConfig?.assistantId || config.assistantId || undefined,
+        ttsEnabled: agentConfig?.ttsEnabled || false,
+        ttsVoice: agentConfig?.ttsVoice || 'Aoede',
+        enabled: true
+      };
+
+      await authenticatedFetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SESSION_CONFIG(`instance_${instance.id}`)}`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      // Notificar pai
+      onSaveConfig(instance.id, {
+        ...config,
+        name: newName
+      });
+
+      setIsEditingName(false);
+      toast({
+        title: "Nome atualizado",
+        description: "O nome da instância foi alterado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar nome:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível atualizar o nome.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startEditing = () => {
+    setTempName(displayName);
+    setIsEditingName(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditingName(false);
+    setTempName('');
+  };
+
   const handleDisconnect = async () => {
     setIsDisconnecting(true);
     try {
@@ -178,17 +241,44 @@ const WhatsAppInstanceCard = ({
   };
 
   // Determinar o nome de exibição da instância
-  const displayName = instance.name !== `Instância ${instance.id}` && instance.name ?
-    instance.name :
-    `Instância ${instance.id}`;
+  const displayName = instance.name;
 
   return (
     <Card className={`w-full h-fit animate-fade-in hover:shadow-lg transition-all duration-300 bg-dark-navy-950/95 backdrop-blur-sm border border-mint-glow/30 rounded-2xl ${isRemoving ? 'animate-fade-out-scale opacity-0' : ''
       }`}>
       <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            {displayName}
+          <CardTitle className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex items-center gap-2">
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={tempName}
+                  onChange={(e) => setTempName(e.target.value)}
+                  className="h-8 w-48 text-sm text-blue-600 font-semibold"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveName();
+                    if (e.key === 'Escape') cancelEditing();
+                  }}
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-50" onClick={handleSaveName}>
+                  <Check size={16} />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={cancelEditing}>
+                  <X size={16} />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                {displayName}
+                <button
+                  onClick={startEditing}
+                  className="text-gray-400 hover:text-primary transition-colors"
+                >
+                  <Pencil size={14} />
+                </button>
+              </div>
+            )}
           </CardTitle>
           {getStatusBadge()}
         </div>

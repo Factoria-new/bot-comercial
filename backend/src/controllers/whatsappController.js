@@ -140,13 +140,13 @@ class WhatsAppController {
 
 
       // Modelo SaaS: API Key é OBRIGATÓRIA - cada cliente usa sua própria chave
-      if (aiProvider === 'gemini' && !apiKey) {
-        logger.error('API Key não fornecida');
-        return res.status(400).json({
-          success: false,
-          error: 'API Key do Google Gemini é obrigatória. Obtenha sua chave em: https://aistudio.google.com/app/apikey'
-        });
-      }
+      // if (aiProvider === 'gemini' && !apiKey) {
+      //   logger.error('API Key não fornecida');
+      //   return res.status(400).json({
+      //     success: false,
+      //     error: 'API Key do Google Gemini é obrigatória. Obtenha sua chave em: https://aistudio.google.com/app/apikey'
+      //   });
+      // }
 
       // Validar configurações baseadas no provedor
       if (aiProvider === 'openai' && !assistantId) {

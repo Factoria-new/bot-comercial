@@ -1920,13 +1920,21 @@ class WhatsAppService {
 
   getAllSessions() {
     const sessionsList = [];
+    const allIds = new Set([...sessions.keys(), ...sessionConfigs.keys()]);
 
-    sessions.forEach((session, sessionId) => {
+    allIds.forEach((sessionId) => {
+      const session = sessions.get(sessionId);
+      const config = sessionConfigs.get(sessionId);
+
       sessionsList.push({
         sessionId,
-        connected: session.socket.user ? true : false,
-        user: session.socket.user || null,
-        config: sessionConfigs.get(sessionId) || null
+        connected: session?.socket?.user ? true : false,
+        user: session?.socket?.user ? {
+          id: session.socket.user.id,
+          name: session.socket.user.name,
+          phoneNumber: session.socket.user.id.split(':')[0]
+        } : null,
+        config: config || null
       });
     });
 
@@ -1990,6 +1998,7 @@ class WhatsAppService {
   setSessionConfig(sessionId, config) {
     try {
       const newConfig = {
+        name: config.name,
         aiProvider: config.aiProvider || 'gemini', // 'gemini' ou 'openai'
         apiKey: config.apiKey || process.env.GEMINI_API_KEY, // API key da instância ou padrão do sistema
         assistantId: config.assistantId, // Apenas para OpenAI

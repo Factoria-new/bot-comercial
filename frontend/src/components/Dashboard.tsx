@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, MessageSquare, Users, Activity, Bot, Loader, LogOut } from 'lucide-react';
@@ -30,6 +30,7 @@ const Dashboard = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isInitializing, setIsInitializing] = useState(true);
   const [removingInstances, setRemovingInstances] = useState<Set<number>>(new Set());
+  const isRemovingRef = useRef(false);
   const { toast } = useToast();
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate();
@@ -96,6 +97,12 @@ const Dashboard = () => {
   }, []); // Executar apenas uma vez ao montar
 
   const checkActiveSessions = async (silent = false) => {
+    // Se estiver removendo alguma instância, não atualizar a lista para evitar race conditions
+    if (isRemovingRef.current) {
+      console.log('⏳ Ignorando checkActiveSessions pois há remoções em andamento');
+      return;
+    }
+
     try {
       if (!silent) {
         setIsInitializing(true);
@@ -119,12 +126,12 @@ const Dashboard = () => {
 
         return {
           id: instanceId,
-          name: session.config?.name || `Instância ${instanceId}`,
+          name: session.config?.name || 'Nome do Agente',
           isConnected: session.connected,
           apiKey: session.config?.apiKey || '',
           assistantId: session.config?.assistantId || '',
           lastConnected: new Date(),
-          phoneNumber: session.user?.number || ''
+          phoneNumber: session.user?.phoneNumber || ''
         };
       });
 
@@ -253,7 +260,7 @@ const Dashboard = () => {
     ));
   };
 
-  const addInstance = () => {
+  const addInstance = async () => {
     // Verificar se já existem 4 instâncias
     if (instances.length >= 4) {
       toast({
@@ -264,15 +271,57 @@ const Dashboard = () => {
       return;
     }
 
+    const newId = Date.now();
     const newInstance: WhatsAppInstance = {
-      id: Date.now(),
-      name: `Instância ${instances.length + 1}`,
+      id: newId,
+      name: 'Nome do Agente',
       isConnected: false,
       apiKey: '',
       assistantId: '',
       lastConnected: new Date(),
     };
-    setInstances([...instances, newInstance]);
+
+    // Persistir imediatamente no backend para evitar que suma no refresh/sync
+    try {
+      const initialConfig = {
+        name: 'Nome do Agente',
+        apiKey: '',
+        assistantId: '',
+        aiProvider: 'gemini',
+        model: 'gemini-2.0-flash-exp',
+        systemPrompt: '',
+        temperature: 1.0,
+        ttsEnabled: false,
+        ttsVoice: 'Aoede',
+        enabled: true
+      };
+
+      // Salvar no backend
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/whatsapp/config/instance_${newId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(initialConfig)
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao salvar configuração');
+      }
+
+      console.log('✅ Nova instância persistida no backend:', newId);
+
+      // Atualizar estado local apenas após sucesso no backend
+      setInstances(prev => [...prev, newInstance]);
+
+    } catch (error) {
+      console.error('Erro ao persistir nova instância:', error);
+      toast({
+        title: "Erro ao criar instância",
+        description: "Não foi possível salvar a nova instância no servidor.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleGenerateQR = (instanceId: number) => {
@@ -314,9 +363,14 @@ const Dashboard = () => {
     updateInstanceStatus(instanceId, false);
   };
 
+  // ... (existing code)
+
+  // ...
+
   const handleRemoveInstance = async (instanceId: number) => {
     // Adicionar à lista de instâncias sendo removidas
     setRemovingInstances(prev => new Set(prev).add(instanceId));
+    isRemovingRef.current = true;
 
     try {
       // Chamar API para remover a sessão (backend cuidará do logout e limpeza de arquivos)
@@ -337,6 +391,8 @@ const Dashboard = () => {
         setRemovingInstances(prev => {
           const newSet = new Set(prev);
           newSet.delete(instanceId);
+          // Update ref if set is empty
+          if (newSet.size === 0) isRemovingRef.current = false;
           return newSet;
         });
 
@@ -358,6 +414,7 @@ const Dashboard = () => {
       setRemovingInstances(prev => {
         const newSet = new Set(prev);
         newSet.delete(instanceId);
+        if (newSet.size === 0) isRemovingRef.current = false;
         return newSet;
       });
     }
@@ -557,7 +614,10 @@ const Dashboard = () => {
         {instances.length > 0 && instances.some(i => i.isConnected) && (
           <div className="mt-6 sm:mt-8">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Integrações</h2>
-            <CalendarIntegration sessionId={`instance_${instances.find(i => i.isConnected)?.id}`} />
+            <CalendarIntegration
+              sessionId={`instance_${instances.find(i => i.isConnected)?.id}`}
+              userEmail={auth.currentUser?.email || ''}
+            />
           </div>
         )}
 

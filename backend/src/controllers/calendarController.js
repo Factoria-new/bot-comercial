@@ -27,11 +27,14 @@ class CalendarController {
      */
     async initiateConnection(req, res) {
         try {
-            const { sessionId } = req.body;
+            const { sessionId, userId } = req.body;
 
             if (!sessionId) {
                 return res.status(400).json({ error: 'sessionId é obrigatório' });
             }
+
+            // Se userId (email) for fornecido, usar ele. Senão, fallback para sessionId (comportamento antigo)
+            const composioUserId = userId || sessionId;
 
             if (!this.composioClient) {
                 return res.status(500).json({ error: 'Composio não está configurado. Verifique COMPOSIO_API_KEY' });
@@ -41,24 +44,90 @@ class CalendarController {
                 return res.status(500).json({ error: 'COMPOSIO_AUTH_CONFIG_ID não configurado' });
             }
 
-            logger.info(`📅 Iniciando conexão do Google Calendar para sessão: ${sessionId}`);
+            logger.info(`📅 Iniciando conexão do Google Calendar para: ${composioUserId} (Sessão: ${sessionId})`);
 
             // URL de redirect para o nosso backend (que depois manda pro frontend)
             // Isso garante que o usuário não fique preso na tela do Composio
             const backendUrl = process.env.BACKEND_URL || 'http://localhost:3003';
             const redirectUrl = `${backendUrl}/api/calendar/callback`;
 
+            // 1. Verificar se já existe uma conexão para este usuário
+            try {
+                const connections = await this.composioClient.connectedAccounts.list({
+                    userId: composioUserId
+                });
+
+                let existingConnection = null;
+                // Garantir que connections não é null/undefined antes de acessar
+                const safeConnections = connections || {};
+                const calendarConnections = Array.isArray(safeConnections) ? safeConnections : (safeConnections.items || []);
+
+                // 1. Tentar encontrar uma conexão ATIVA primeiro
+                // Precisamos iterar e buscar detalhes completos pois o list retorna parcial
+                for (const connection of calendarConnections) {
+                    try {
+                        // Verificar se é Google Calendar
+                        const isCalendar =
+                            (connection.toolkit && connection.toolkit.slug === 'googlecalendar') ||
+                            connection.appUniqueId === 'googlecalendar' ||
+                            connection.appName === 'googlecalendar';
+
+                        if (isCalendar) {
+                            if (connection.status === 'ACTIVE') {
+                                existingConnection = connection;
+                                break; // Encontrou ativa, para
+                            } else if (!existingConnection) {
+                                // Guarda a primeira inativa encontrada como fallback
+                                existingConnection = connection;
+                            }
+                        }
+                    } catch (err) {
+                        logger.warn(`⚠️ Erro ao processar conexão ${connection.id}: ${err.message}`);
+                    }
+                }
+
+                if (existingConnection) {
+                    logger.info(`🔄 Conexão existente encontrada para ${composioUserId}: ${existingConnection.status}`);
+
+                    // Se estiver INACTIVE, reativar
+                    if (existingConnection.status !== 'ACTIVE') {
+                        logger.info(`🔌 Reativando conexão ${existingConnection.id}...`);
+
+                        if (this.composioClient.connectedAccounts.updateStatus) {
+                            await this.composioClient.connectedAccounts.updateStatus(existingConnection.id, { status: 'ACTIVE' });
+                        } else {
+                            await this.composioClient.connectedAccounts.enable(existingConnection.id);
+                        }
+
+                        logger.info(`✅ Conexão ${existingConnection.id} reativada com sucesso!`);
+                    }
+
+                    // Retornar sucesso imediato (simulando o redirect ou retornando dados da conexão)
+                    // Como o frontend espera authUrl, podemos mandar null e indicar que já está conectado
+                    // OU mandar para o callback para finalizar o fluxo no frontend
+                    return res.json({
+                        success: true,
+                        alreadyConnected: true,
+                        connectionId: existingConnection.id,
+                        message: 'Conta reativada com sucesso'
+                    });
+                }
+            } catch (checkErr) {
+                logger.warn(`⚠️ Erro ao verificar conexões existentes: ${checkErr.message}`);
+                // Prosseguir para criação normal se falhar a verificação
+            }
+
             // Iniciar conexão via Composio
             // Assinatura: initiate(userId, authConfigId, options)
             const connection = await this.composioClient.connectedAccounts.initiate(
-                sessionId,
+                composioUserId,
                 process.env.COMPOSIO_AUTH_CONFIG_ID,
                 {
                     redirectUrl: redirectUrl
                 }
             );
 
-            logger.info(`✅ Link OAuth gerado para sessão ${sessionId}: ${connection.redirectUrl}`);
+            logger.info(`✅ Link OAuth gerado para ${composioUserId}: ${connection.redirectUrl}`);
 
             return res.json({
                 success: true,
@@ -67,12 +136,13 @@ class CalendarController {
             });
 
         } catch (error) {
-            logger.error('❌ Erro ao iniciar conexão OAuth:', error.message);
-            logger.error('Stack trace:', error.stack);
-            logger.error('Error details:', JSON.stringify(error, null, 2));
+            logger.error('❌ Erro ao iniciar conexão OAuth:', error);
+            if (error.response) {
+                logger.error('Response data:', error.response.data);
+            }
             return res.status(500).json({
                 error: 'Erro ao iniciar conexão com Google Calendar',
-                details: error.message
+                details: error.message || String(error)
             });
         }
     }
@@ -84,13 +154,16 @@ class CalendarController {
     async getConnectionStatus(req, res) {
         try {
             const { sessionId } = req.params;
-            const { connectionId } = req.query;
+            const { connectionId, userId } = req.query;
+
+            // Se userId (email) for fornecido, usar ele. Senão, fallback para sessionId
+            const composioUserId = userId || sessionId;
 
             if (!this.composioClient) {
                 return res.status(500).json({ error: 'Composio não está configurado' });
             }
 
-            logger.info(`📊 Verificando status do Calendar para sessão: ${sessionId} ${connectionId ? `(ConnectionId: ${connectionId})` : ''}`);
+            logger.info(`📊 Verificando status do Calendar para: ${composioUserId} (Sessão: ${sessionId}) ${connectionId ? `(ConnectionId: ${connectionId})` : ''}`);
 
             let calendarConnection = null;
 
@@ -109,9 +182,9 @@ class CalendarController {
 
             // Fallback: Buscar na lista se não achou pelo ID
             if (!calendarConnection) {
-                // Buscar connections desta sessão
+                // Buscar connections desta sessão/usuário
                 const response = await this.composioClient.connectedAccounts.list({
-                    userId: sessionId
+                    userId: composioUserId
                 });
 
                 logger.info(`📦 Resposta bruta do Composio list: ${JSON.stringify(response, null, 2)}`);
@@ -175,17 +248,28 @@ class CalendarController {
     async disconnectCalendar(req, res) {
         try {
             const { sessionId } = req.params;
+            const { userId } = req.query;
+
+            // Se userId (email) for fornecido, usar ele. Senão, fallback para sessionId
+            const composioUserId = userId || sessionId;
+
+            logger.info(`🔌 [disconnectCalendar] Iniciando desconexão...`);
+            logger.info(`   Params: sessionId=${sessionId}, userId=${userId}`);
+            logger.info(`   ComposioUserId final: ${composioUserId}`);
 
             if (!this.composioClient) {
+                logger.error('❌ Composio client não inicializado');
                 return res.status(500).json({ error: 'Composio não está configurado' });
             }
 
-            logger.info(`🔌 Desconectando Google Calendar para sessão: ${sessionId}`);
+            logger.info(`🔌 Desconectando Google Calendar para: ${composioUserId} (Sessão: ${sessionId})`);
 
-            // Buscar connections desta sessão
+            // Buscar connections desta sessão/usuário
             const response = await this.composioClient.connectedAccounts.list({
-                userId: sessionId
+                userId: composioUserId
             });
+
+            logger.info(`📦 [disconnectCalendar] Resposta list: ${JSON.stringify(response)}`);
 
             let connections = [];
             if (Array.isArray(response)) {
@@ -196,20 +280,37 @@ class CalendarController {
                 connections = response.data;
             }
 
-            const calendarConnections = connections.filter(c =>
-                c.appUniqueId === 'googlecalendar' || c.appName === 'googlecalendar'
-            );
+            logger.info(`🔍 [disconnectCalendar] Conexões encontradas: ${connections.length}`);
 
-            if (calendarConnections.length > 0) {
-                for (const connection of calendarConnections) {
-                    await this.composioClient.connectedAccounts.delete(connection.id);
-                    logger.info(`✅ Connection ${connection.id} deletada`);
+            if (connections.length > 0) {
+                for (const connection of connections) {
+                    try {
+                        logger.info(`🔎 Verificando conexão ${connection.id}...`);
+
+                        // Verificar se é Google Calendar (usando toolkit.slug que vem no list)
+                        const isCalendar =
+                            (connection.toolkit && connection.toolkit.slug === 'googlecalendar') ||
+                            connection.appUniqueId === 'googlecalendar' ||
+                            connection.appName === 'googlecalendar';
+
+                        if (isCalendar) {
+                            logger.info(`�️ Deletando conexão ${connection.id} (status: ${connection.status})...`);
+                            await this.composioClient.connectedAccounts.delete(connection.id);
+                            logger.info(`✅ Connection ${connection.id} deletada com sucesso`);
+                        } else {
+                            logger.info(`ℹ️ Ignorando conexão ${connection.id} (App: ${connection.appUniqueId || connection.appName})`);
+                        }
+                    } catch (err) {
+                        logger.error(`❌ Erro ao processar/desativar conexão ${connection.id}:`, err);
+                    }
                 }
+            } else {
+                logger.warn(`⚠️ Nenhuma conexão encontrada para o usuário ${composioUserId}`);
             }
 
             return res.json({
                 success: true,
-                message: 'Google Calendar desconectado com sucesso'
+                message: 'Google Calendar desconectado (desativado) com sucesso'
             });
 
         } catch (error) {

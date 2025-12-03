@@ -48,7 +48,7 @@ export const useWhatsAppInstances = () => {
             instance.id === i ? {
               ...instance,
               isConnected: true,
-              phoneNumber: data.user.number,
+              phoneNumber: data.user.phoneNumber,
               lastConnected: new Date()
             } : instance
           ));

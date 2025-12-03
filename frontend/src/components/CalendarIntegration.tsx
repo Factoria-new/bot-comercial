@@ -7,9 +7,10 @@ import API_CONFIG from '@/config/api';
 
 interface CalendarIntegrationProps {
     sessionId: string;
+    userEmail: string;
 }
 
-const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) => {
+const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, userEmail }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -54,9 +55,15 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) 
         setIsLoading(true);
         try {
             // Se tiver connectionId, passar na query string
-            const url = connectionId
-                ? `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}?connectionId=${connectionId}`
-                : `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}`;
+            let url = `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}`;
+            const params = new URLSearchParams();
+
+            if (connectionId) params.append('connectionId', connectionId);
+            if (userEmail) params.append('userId', userEmail);
+
+            if (params.toString()) {
+                url += `?${params.toString()}`;
+            }
 
             const response = await fetch(url);
             const data = await response.json();
@@ -82,10 +89,21 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) 
             const response = await fetch(`${API_CONFIG.BASE_URL}/api/calendar/connect`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId }),
+                body: JSON.stringify({ sessionId, userId: userEmail }),
             });
 
             const data = await response.json();
+
+            if (data.alreadyConnected) {
+                setIsConnected(true);
+                setIsConnecting(false);
+                toast({
+                    title: "Conexão Reativada",
+                    description: "Sua conta do Google Calendar foi reativada com sucesso.",
+                });
+                await checkConnectionStatus(data.connectionId);
+                return;
+            }
 
             if (data.authUrl && data.connectionId) {
                 // Abrir em uma nova janela/popup
@@ -113,7 +131,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) 
                     let isWindowClosed = false;
                     try {
                         // Tentar ler closed, mas ignorar erro se bloqueado por COOP
-                        isWindowClosed = authWindow?.closed;
+                        isWindowClosed = !!authWindow?.closed;
                     } catch (e) {
                         // Ignorar erro de Cross-Origin
                     }
@@ -125,7 +143,10 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) 
                     } else {
                         // Verificar status no backend
                         try {
-                            const statusResponse = await fetch(`${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}?connectionId=${data.connectionId}`);
+                            let statusUrl = `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}?connectionId=${data.connectionId}`;
+                            if (userEmail) statusUrl += `&userId=${userEmail}`;
+
+                            const statusResponse = await fetch(statusUrl);
                             const statusData = await statusResponse.json();
 
                             if (statusData.connected) {
@@ -161,7 +182,10 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) 
 
     const handleDisconnect = async () => {
         try {
-            const response = await fetch(`${API_CONFIG.BASE_URL}/api/calendar/disconnect/${sessionId}`, {
+            let disconnectUrl = `${API_CONFIG.BASE_URL}/api/calendar/disconnect/${sessionId}`;
+            if (userEmail) disconnectUrl += `?userId=${userEmail}`;
+
+            const response = await fetch(disconnectUrl, {
                 method: 'DELETE',
             });
 
@@ -188,140 +212,91 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) 
 
     if (isLoading) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Google Calendar
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
+            <Card className="w-full max-w-[320px] aspect-square flex flex-col justify-center items-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </Card>
         );
     }
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
+        <Card className="w-full max-w-[320px] aspect-square flex flex-col overflow-hidden">
+            <CardHeader className="pb-2 pt-4 px-4 shrink-0">
+                <CardTitle className="flex items-center gap-2 text-base">
+                    <Calendar className="h-4 w-4" />
                     Google Calendar
                 </CardTitle>
-                <CardDescription>
-                    Conecte sua conta do Google para agendar eventos automaticamente via WhatsApp
+                <CardDescription className="text-xs line-clamp-2">
+                    Agende eventos automaticamente via WhatsApp
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+
+            <CardContent className="flex-1 flex flex-col justify-between p-4 pt-0 overflow-hidden">
                 {/* Status da Conexão */}
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                        {isConnected ? (
-                            <>
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                                <div>
-                                    <p className="font-medium">Conectado</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Sua conta Google está autorizada
-                                    </p>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <XCircle className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Não Conectado</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Conecte para habilitar agendamentos
-                                    </p>
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    <div className="flex gap-2">
-                        {isConnecting && !isConnected && (
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => checkConnectionStatus()}
-                                className="gap-2"
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                                Verificar
-                            </Button>
-                        )}
-
-                        {isConnected ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleDisconnect}
-                            >
-                                Desconectar
-                            </Button>
-                        ) : (
-                            <Button
-                                onClick={handleConnect}
-                                disabled={isConnecting}
-                                className="gap-2"
-                            >
-                                {isConnecting ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Conectando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <ExternalLink className="h-4 w-4" />
-                                        Conectar
-                                    </>
-                                )}
-                            </Button>
-                        )}
-                    </div>
+                <div className="flex flex-col items-center justify-center flex-1 gap-3 py-2">
+                    {isConnected ? (
+                        <div className="text-center space-y-2">
+                            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full w-fit mx-auto">
+                                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                                <p className="font-medium text-sm">Conectado</p>
+                                <p className="text-xs text-muted-foreground mt-1 px-2">
+                                    Pronto para agendar e listar eventos
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center space-y-2">
+                            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-full w-fit mx-auto">
+                                <Calendar className="h-8 w-8 text-gray-400" />
+                            </div>
+                            <div>
+                                <p className="font-medium text-sm">Não Conectado</p>
+                                <p className="text-xs text-muted-foreground mt-1 px-2">
+                                    Conecte para habilitar agendamentos
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Informações e Exemplos */}
-                {isConnected && (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                        <p className="font-medium text-foreground">✅ Recursos Habilitados:</p>
-                        <ul className="list-disc list-inside space-y-1 ml-2">
-                            <li>Criar eventos via WhatsApp</li>
-                            <li>Listar seus compromissos</li>
-                            <li>Buscar eventos por nome ou data</li>
-                            <li>Atualizar eventos existentes</li>
-                        </ul>
+                {/* Botão de Ação */}
+                <div className="mt-auto pt-2 shrink-0">
+                    {isConnected ? (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDisconnect}
+                            className="w-full text-xs h-8"
+                        >
+                            Desconectar
+                        </Button>
+                    ) : (
+                        <Button
+                            onClick={handleConnect}
+                            disabled={isConnecting}
+                            className="w-full gap-2 text-xs h-8"
+                        >
+                            {isConnecting ? (
+                                <>
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Conectando...
+                                </>
+                            ) : (
+                                <>
+                                    <ExternalLink className="h-3 w-3" />
+                                    Conectar Conta Google
+                                </>
+                            )}
+                        </Button>
+                    )}
 
-                        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-900">
-                            <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                                💡 Exemplos de uso:
-                            </p>
-                            <ul className="text-xs space-y-1 text-blue-800 dark:text-blue-200">
-                                <li>"Agende uma reunião amanhã às 14h"</li>
-                                <li>"Quais são meus compromissos de hoje?"</li>
-                                <li>"Marque um evento dia 15 às 10h"</li>
-                            </ul>
-                        </div>
-                    </div>
-                )}
-
-                {!isConnected && (
-                    <div className="text-sm text-muted-foreground space-y-2">
-                        <p>
-                            Ao conectar, você autoriza o bot a acessar seu Google Calendar para:
+                    {!isConnected && (
+                        <p className="text-[10px] text-center text-muted-foreground mt-2">
+                            🔒 Acesso seguro via OAuth 2.0
                         </p>
-                        <ul className="list-disc list-inside space-y-1 ml-2">
-                            <li>Criar eventos quando solicitado via WhatsApp</li>
-                            <li>Listar seus compromissos</li>
-                            <li>Atualizar eventos existentes</li>
-                        </ul>
-                        <p className="text-xs mt-3">
-                            🔒 Suas credenciais Google são seguras e gerenciadas via OAuth 2.0
-                        </p>
-                    </div>
-                )}
+                    )}
+                </div>
             </CardContent>
         </Card>
     );
