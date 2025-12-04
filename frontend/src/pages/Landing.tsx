@@ -279,8 +279,8 @@ const Landing = () => {
         <div style={{ fontFamily: "'Poppins', sans-serif" }}>
             {/* Header - Só o container maior fica transparente */}
             <header className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl py-3 px-6 flex justify-between items-center rounded-2xl transition-all duration-500 ${phase === 'initial'
-                    ? 'bg-white/80 backdrop-blur-md shadow-lg border border-gray-100'
-                    : 'bg-transparent shadow-none border-transparent'
+                ? 'bg-white/80 backdrop-blur-md shadow-lg border border-gray-100'
+                : 'bg-transparent shadow-none border-transparent'
                 }`}>
                 <img src="/logo-header.png" alt="Factoria" className="h-8 md:h-10 w-auto object-contain" />
 
@@ -309,16 +309,35 @@ const Landing = () => {
                 {/* Texto Hero (Lado Esquerdo) */}
                 <div
                     ref={heroTextRef}
-                    className="absolute top-0 left-0 w-[50vw] h-screen flex flex-col justify-start pt-32 md:pt-40 pl-8 md:pl-16 z-10"
+                    className="absolute top-0 left-0 w-[50vw] h-screen flex flex-col justify-center pb-24 pl-8 md:pl-16 z-10"
                 >
+                    {/* Badge */}
+                    <div className="inline-flex items-center gap-2 bg-[#00A947]/10 text-[#00A947] px-4 py-2 rounded-full text-sm font-medium mb-6 w-fit">
+                        <span className="w-2 h-2 bg-[#00A947] rounded-full animate-pulse"></span>
+                        Mais de 500 empresas já automatizaram
+                    </div>
+
                     <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left">
                         Automatize <br />
                         seu <span className="text-[#00A947]">WhatsApp</span> <br />
                         com IA
                     </h1>
+
                     <p className="text-gray-600 text-left mt-6 text-xl max-w-lg mr-auto">
                         Transforme seu atendimento com a tecnologia que escala seu negócio enquanto você dorme.
                     </p>
+
+                    {/* Botões CTA */}
+                    <div className="flex flex-wrap gap-4 mt-8">
+                        <Link to="/login">
+                            <Button className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105">
+                                Começar Agora
+                            </Button>
+                        </Link>
+                        <Button variant="outline" className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all">
+                            Ver Demonstração
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Wrapper do Vídeo */}
