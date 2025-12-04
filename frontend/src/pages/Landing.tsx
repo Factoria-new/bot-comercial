@@ -15,13 +15,12 @@ const Landing = () => {
     const [phase, setPhase] = useState<'initial' | 'expanded' | 'playing' | 'ended' | 'reversing'>('initial');
     const isAnimatingRef = useRef(false);
     const reverseAnimationRef = useRef<number | null>(null);
-    const zoomLevelRef = useRef(1); // Zoom inicial = 1 (100%)
-    const zoomEndLevelRef = useRef(1); // Zoom do loop final
-    const maxZoom = 1.05; // Zoom máximo = 5% (quase imperceptível)
-    const zoomStep = 0.015; // Incremento por scroll
+    const zoomLevelRef = useRef(1);
+    const zoomEndLevelRef = useRef(1);
+    const maxZoom = 1.05;
+    const zoomStep = 0.015;
 
     useEffect(() => {
-        // Fonte Poppins
         const link = document.createElement('link');
         link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap';
         link.rel = 'stylesheet';
@@ -29,7 +28,6 @@ const Landing = () => {
         return () => { document.head.removeChild(link) };
     }, []);
 
-    // Configuração inicial do wrapper
     useEffect(() => {
         const wrapper = videoWrapperRef.current;
         if (wrapper) {
@@ -43,36 +41,31 @@ const Landing = () => {
         }
     }, []);
 
-    // Função para tocar vídeo em reverso
     const playReverse = useCallback(() => {
         const videoReverse = videoReverseRef.current;
         const videoEndLoop = videoEndLoopRef.current;
 
         if (!videoReverse || !videoEndLoop) return;
 
-        // Para o loop final e mostra o vídeo otimizado para reverso
         videoEndLoop.pause();
         gsap.set(videoEndLoop, { autoAlpha: 0 });
 
-        // Posiciona o vídeo de reverso no final
         videoReverse.currentTime = videoReverse.duration;
         gsap.set(videoReverse, { autoAlpha: 1 });
 
         setPhase('reversing');
 
-        // Animação de reverso usando requestAnimationFrame
-        const reverseSpeed = 1; // Velocidade do reverso (1x = velocidade normal)
+        const reverseSpeed = 1;
         let lastTime = performance.now();
 
         const animateReverse = (currentTime: number) => {
-            const deltaTime = (currentTime - lastTime) / 1000; // em segundos
+            const deltaTime = (currentTime - lastTime) / 1000;
             lastTime = currentTime;
 
             if (videoReverse.currentTime > 0) {
                 videoReverse.currentTime = Math.max(0, videoReverse.currentTime - (deltaTime * reverseSpeed));
                 reverseAnimationRef.current = requestAnimationFrame(animateReverse);
             } else {
-                // Vídeo chegou ao início - volta para o loop inicial
                 gsap.set(videoReverse, { autoAlpha: 0 });
                 gsap.set(videoLoopRef.current, { autoAlpha: 1 });
                 setPhase('expanded');
@@ -83,7 +76,6 @@ const Landing = () => {
         reverseAnimationRef.current = requestAnimationFrame(animateReverse);
     }, []);
 
-    // Cleanup do reverso
     useEffect(() => {
         return () => {
             if (reverseAnimationRef.current) {
@@ -92,7 +84,6 @@ const Landing = () => {
         };
     }, []);
 
-    // Handler de interação (scroll/touch)
     useEffect(() => {
         const handleInteraction = (e: Event) => {
             if (isAnimatingRef.current) {
@@ -107,15 +98,14 @@ const Landing = () => {
 
             if (!wrapper || !heroText || !videoLoop || !videoMain) return;
 
-            // Detectar direção do scroll
             const wheelEvent = e as WheelEvent;
             const isScrollUp = wheelEvent.deltaY < 0;
 
-            // FASE 1: Initial -> Expanded (somente scroll down)
+            // FASE 1: Initial -> Expanded
             if (phase === 'initial') {
                 if (isScrollUp) {
                     e.preventDefault();
-                    return; // Ignora scroll up
+                    return;
                 }
 
                 e.preventDefault();
@@ -128,7 +118,6 @@ const Landing = () => {
                     }
                 });
 
-                // Expansão do wrapper
                 tl.to(wrapper, {
                     width: "100vw",
                     height: "100vh",
@@ -139,7 +128,6 @@ const Landing = () => {
                     ease: "power2.inOut"
                 }, 0);
 
-                // Fade out do texto
                 tl.to(heroText, {
                     x: -100,
                     autoAlpha: 0,
@@ -153,12 +141,8 @@ const Landing = () => {
             if (phase === 'expanded') {
                 e.preventDefault();
 
-                const videoLoop = videoLoopRef.current;
-
                 if (isScrollUp) {
-                    // Scroll UP: diminui zoom ou volta a expansão
                     if (zoomLevelRef.current > 1) {
-                        // Diminui o zoom
                         zoomLevelRef.current = Math.max(1, zoomLevelRef.current - zoomStep);
                         gsap.to(videoLoop, {
                             scale: zoomLevelRef.current,
@@ -166,7 +150,6 @@ const Landing = () => {
                             ease: "power1.out"
                         });
                     } else {
-                        // Já está no zoom mínimo, volta a expansão (contrai o vídeo)
                         isAnimatingRef.current = true;
 
                         const tl = gsap.timeline({
@@ -176,7 +159,6 @@ const Landing = () => {
                             }
                         });
 
-                        // Contrai o wrapper
                         tl.to(wrapper, {
                             width: "40vw",
                             height: "70vh",
@@ -187,7 +169,6 @@ const Landing = () => {
                             ease: "power2.inOut"
                         }, 0);
 
-                        // Fade in do texto
                         tl.to(heroText, {
                             x: 0,
                             autoAlpha: 1,
@@ -195,9 +176,7 @@ const Landing = () => {
                         }, 0);
                     }
                 } else {
-                    // Scroll DOWN: aumenta zoom ou inicia vídeo
                     if (zoomLevelRef.current < maxZoom) {
-                        // Aumenta o zoom gradualmente
                         zoomLevelRef.current = Math.min(maxZoom, zoomLevelRef.current + zoomStep);
                         gsap.to(videoLoop, {
                             scale: zoomLevelRef.current,
@@ -205,7 +184,6 @@ const Landing = () => {
                             ease: "power1.out"
                         });
                     } else {
-                        // Zoom máximo atingido, inicia o vídeo principal
                         isAnimatingRef.current = true;
 
                         gsap.set(videoLoop, { autoAlpha: 0 });
@@ -213,7 +191,6 @@ const Landing = () => {
                         videoMain.currentTime = 0;
                         videoMain.play();
 
-                        // Reseta o zoom para próxima vez
                         zoomLevelRef.current = 1;
                         gsap.set(videoLoop, { scale: 1 });
 
@@ -225,24 +202,20 @@ const Landing = () => {
                 return;
             }
 
-            // FASE 3: Playing - bloqueia scroll enquanto vídeo toca
+            // FASE 3: Playing
             if (phase === 'playing') {
                 e.preventDefault();
                 return;
             }
 
-            // FASE 4: Ended - zoom e scroll
+            // FASE 4: Ended
             if (phase === 'ended') {
                 const videoEndLoop = videoEndLoopRef.current;
-
-                // Só captura scroll UP se estiver no topo da página (área do vídeo)
                 const isAtTop = window.scrollY < 100;
 
                 if (isScrollUp && isAtTop) {
                     e.preventDefault();
-                    // Scroll UP: diminui zoom ou reverte o vídeo
                     if (zoomEndLevelRef.current > 1) {
-                        // Diminui o zoom
                         zoomEndLevelRef.current = Math.max(1, zoomEndLevelRef.current - zoomStep);
                         gsap.to(videoEndLoop, {
                             scale: zoomEndLevelRef.current,
@@ -250,13 +223,11 @@ const Landing = () => {
                             ease: "power1.out"
                         });
                     } else {
-                        // Já está no zoom mínimo, reverte o vídeo
                         zoomEndLevelRef.current = 1;
                         gsap.set(videoEndLoop, { scale: 1 });
                         playReverse();
                     }
                 } else if (!isScrollUp) {
-                    // Scroll DOWN: aumenta zoom ou libera scroll
                     if (zoomEndLevelRef.current < maxZoom && isAtTop) {
                         e.preventDefault();
                         zoomEndLevelRef.current = Math.min(maxZoom, zoomEndLevelRef.current + zoomStep);
@@ -266,12 +237,11 @@ const Landing = () => {
                             ease: "power1.out"
                         });
                     }
-                    // Após zoom máximo ou fora do topo, NÃO bloqueia - scroll normal na página
                 }
                 return;
             }
 
-            // FASE 5: Reversing - bloqueia scroll enquanto reverte
+            // FASE 5: Reversing
             if (phase === 'reversing') {
                 e.preventDefault();
                 return;
@@ -287,7 +257,6 @@ const Landing = () => {
         };
     }, [phase, playReverse]);
 
-    // Listener para quando o vídeo principal termina
     useEffect(() => {
         const videoMain = videoMainRef.current;
         const videoEndLoop = videoEndLoopRef.current;
@@ -308,19 +277,28 @@ const Landing = () => {
 
     return (
         <div style={{ fontFamily: "'Poppins', sans-serif" }}>
-            {/* Header */}
-            <header className="fixed top-0 left-0 z-50 w-full py-6 px-4 md:px-8 flex justify-between items-center transition-all duration-300">
-                <img src="/logo-header.png" alt="Factoria" className="h-10 md:h-14 w-auto object-contain drop-shadow-lg" />
+            {/* Header - Só o container maior fica transparente */}
+            <header className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl py-3 px-6 flex justify-between items-center rounded-2xl transition-all duration-500 ${phase === 'initial'
+                    ? 'bg-white/80 backdrop-blur-md shadow-lg border border-gray-100'
+                    : 'bg-transparent shadow-none border-transparent'
+                }`}>
+                <img src="/logo-header.png" alt="Factoria" className="h-8 md:h-10 w-auto object-contain" />
 
-                {/* Navegação */}
-                <nav className="hidden md:flex items-center gap-8">
-                    <a href="#home" className="text-black hover:text-[#00A947] transition-all font-medium py-2 px-3 rounded-lg hover:border hover:border-[#00A947]">Home</a>
-                    <a href="#sobre" className="text-black hover:text-[#00A947] transition-all font-medium py-2 px-3 rounded-lg hover:border hover:border-[#00A947]">Sobre Nós</a>
-                    <a href="#produto" className="text-black hover:text-[#00A947] transition-all font-medium py-2 px-3 rounded-lg hover:border hover:border-[#00A947]">Produto</a>
+                {/* Navegação Central - mantém o fundo pill sempre */}
+                <nav className="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
+                    <a href="#home" className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full">
+                        Home
+                    </a>
+                    <a href="#sobre" className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full">
+                        Sobre Nós
+                    </a>
+                    <a href="#produto" className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full">
+                        Produto
+                    </a>
                 </nav>
 
                 <Link to="/login">
-                    <Button className="bg-[#1F345E] text-white hover:bg-[#1F345E]/90 font-semibold px-6 md:px-8 py-2 md:py-3 rounded-full shadow-lg">
+                    <Button className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-6 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all">
                         Entrar
                     </Button>
                 </Link>
@@ -398,7 +376,7 @@ const Landing = () => {
                         <source src="/videos-scroll/NAVIGATE_4K_S50_loop@md.mp4" type="video/mp4" />
                     </video>
 
-                    {/* Overlay de Métricas (aparece quando vídeo termina) */}
+                    {/* Overlay de Métricas */}
                     <div
                         className={`absolute top-1/2 left-8 md:left-20 -translate-y-1/2 z-30 max-w-md transition-opacity duration-500 ${phase === 'ended' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                     >
@@ -416,7 +394,7 @@ const Landing = () => {
                 </div>
             </div>
 
-            {/* Resto do Site (só aparece após o vídeo terminar) */}
+            {/* Resto do Site */}
             {phase === 'ended' && (
                 <section className="relative z-20 bg-[#F8FAFC] pt-32 pb-24 px-4 md:px-8">
                     <div className="max-w-7xl mx-auto text-center">
