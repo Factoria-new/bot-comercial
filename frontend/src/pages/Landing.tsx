@@ -45,7 +45,7 @@ const Landing = () => {
                         trigger: container,
                         start: "top top",
                         end: "bottom bottom",
-                        scrub: 0.5, // Suave para evitar lag, mas responsivo
+                        scrub: 0, // Instantâneo para tirar a sensação de "peso/travamento"
                         snap: {
                             snapTo: [0, 0.2, 1], // Snap no início, 20% (Tela Cheia) e fim
                             duration: { min: 2.0, max: 5.0 }, // Snap bem mais lento para o vídeo não correr
@@ -90,9 +90,9 @@ const Landing = () => {
                 }, 0);
 
                 // Transição suave entre Loop inicial e Vídeo de Scroll
-                // Acontece APÓS a expansão (tempo 2)
-                tl.to(videoLoop, { autoAlpha: 0, duration: 0 }, 2);
-                tl.to(videoScroll, { autoAlpha: 1, duration: 0 }, 2);
+                // Acontece APÓS a expansão e um micro-delay (tempo 2.1) para manter o loop rodando no snap
+                tl.to(videoLoop, { autoAlpha: 0, duration: 0 }, 2.1);
+                tl.to(videoScroll, { autoAlpha: 1, duration: 0 }, 2.1);
 
                 // --- FASE 2: Tocar o Vídeo com Scroll ---
                 // Ocupa o resto da timeline
@@ -132,7 +132,7 @@ const Landing = () => {
                             }
                         }
                     }
-                }, 2); // Começa após a expansão terminar (offset 2)
+                }, 2.1); // Começa após a expansão e o micro-delay (offset 2.1)
             };
 
             if (videoScroll.readyState >= 1) {
