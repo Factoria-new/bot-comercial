@@ -235,7 +235,10 @@ const Landing = () => {
             if (phase === 'ended') {
                 const videoEndLoop = videoEndLoopRef.current;
 
-                if (isScrollUp) {
+                // Só captura scroll UP se estiver no topo da página (área do vídeo)
+                const isAtTop = window.scrollY < 100;
+
+                if (isScrollUp && isAtTop) {
                     e.preventDefault();
                     // Scroll UP: diminui zoom ou reverte o vídeo
                     if (zoomEndLevelRef.current > 1) {
@@ -252,9 +255,9 @@ const Landing = () => {
                         gsap.set(videoEndLoop, { scale: 1 });
                         playReverse();
                     }
-                } else {
+                } else if (!isScrollUp) {
                     // Scroll DOWN: aumenta zoom ou libera scroll
-                    if (zoomEndLevelRef.current < maxZoom) {
+                    if (zoomEndLevelRef.current < maxZoom && isAtTop) {
                         e.preventDefault();
                         zoomEndLevelRef.current = Math.min(maxZoom, zoomEndLevelRef.current + zoomStep);
                         gsap.to(videoEndLoop, {
@@ -263,7 +266,7 @@ const Landing = () => {
                             ease: "power1.out"
                         });
                     }
-                    // Após zoom máximo, NÃO bloqueia - scroll normal na página
+                    // Após zoom máximo ou fora do topo, NÃO bloqueia - scroll normal na página
                 }
                 return;
             }
@@ -311,9 +314,9 @@ const Landing = () => {
 
                 {/* Navegação */}
                 <nav className="hidden md:flex items-center gap-8">
-                    <a href="#home" className="text-white hover:text-[#00A947] transition-colors font-medium">Home</a>
-                    <a href="#sobre" className="text-white hover:text-[#00A947] transition-colors font-medium">Sobre Nós</a>
-                    <a href="#produto" className="text-white hover:text-[#00A947] transition-colors font-medium">Produto</a>
+                    <a href="#home" className="text-black hover:text-[#00A947] transition-all font-medium py-2 px-3 rounded-lg hover:border hover:border-[#00A947]">Home</a>
+                    <a href="#sobre" className="text-black hover:text-[#00A947] transition-all font-medium py-2 px-3 rounded-lg hover:border hover:border-[#00A947]">Sobre Nós</a>
+                    <a href="#produto" className="text-black hover:text-[#00A947] transition-all font-medium py-2 px-3 rounded-lg hover:border hover:border-[#00A947]">Produto</a>
                 </nav>
 
                 <Link to="/login">
@@ -324,18 +327,18 @@ const Landing = () => {
             </header>
 
             {/* Container Principal */}
-            <div className="relative bg-[#5B53D9] min-h-screen">
+            <div className="relative bg-white min-h-screen">
                 {/* Texto Hero (Lado Esquerdo) */}
                 <div
                     ref={heroTextRef}
                     className="absolute top-0 left-0 w-[50vw] h-screen flex flex-col justify-start pt-32 md:pt-40 pl-8 md:pl-16 z-10"
                 >
-                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight drop-shadow-lg text-left">
+                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left">
                         Automatize <br />
-                        seu <span className="text-[#00A947]" style={{ WebkitTextStroke: '1px white' }}>WhatsApp</span> <br />
+                        seu <span className="text-[#00A947]">WhatsApp</span> <br />
                         com IA
                     </h1>
-                    <p className="text-gray-300 text-left mt-6 text-xl max-w-lg mr-auto">
+                    <p className="text-gray-600 text-left mt-6 text-xl max-w-lg mr-auto">
                         Transforme seu atendimento com a tecnologia que escala seu negócio enquanto você dorme.
                     </p>
                 </div>
