@@ -705,7 +705,7 @@ const Landing = () => {
                             </video>
                         </div>
 
-                        <div className="container mx-auto relative z-10">
+                        <div className="container mx-auto relative z-10" style={{ maxWidth: "100%" }}>
                             <div className="text-center mb-8">
                                 <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                                     Planos Flexíveis
