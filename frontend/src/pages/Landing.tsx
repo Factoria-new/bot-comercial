@@ -36,6 +36,12 @@ const Landing = () => {
     const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
+        // Force scroll to top on mount
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.scrollTo(0, 0);
+
         const link = document.createElement('link');
         link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap';
         link.rel = 'stylesheet';
@@ -352,6 +358,57 @@ const Landing = () => {
             }
         }, 100);
     };
+    const handleResetToHome = (e: React.MouseEvent) => {
+        e.preventDefault();
+
+        const wrapper = videoWrapperRef.current;
+        const heroText = heroTextRef.current;
+        const videoLoop = videoLoopRef.current;
+        const videoMain = videoMainRef.current;
+        const videoEndLoop = videoEndLoopRef.current;
+
+        if (!wrapper || !heroText || !videoLoop || !videoMain || !videoEndLoop) return;
+
+        // 1. Parar animações
+        isAnimatingRef.current = false;
+        if (reverseAnimationRef.current) {
+            cancelAnimationFrame(reverseAnimationRef.current);
+        }
+
+        // 2. Resetar vídeos
+        videoMain.pause();
+        videoMain.currentTime = 0;
+        gsap.set(videoMain, { autoAlpha: 0 });
+
+        videoEndLoop.pause();
+        videoEndLoop.currentTime = 0;
+        gsap.set(videoEndLoop, { autoAlpha: 0 });
+
+        videoLoop.play();
+        gsap.set(videoLoop, { autoAlpha: 1 });
+
+        // 3. Resetar layout (Hero Text e Wrapper)
+        gsap.set(heroText, {
+            x: 0,
+            autoAlpha: 1
+        });
+
+        gsap.set(wrapper, {
+            width: "40vw",
+            height: "70vh",
+            top: "15vh",
+            right: "5vw",
+            borderRadius: "30px"
+        });
+
+        // 4. Resetar estados
+        setPhase('initial');
+        zoomLevelRef.current = 1;
+        zoomEndLevelRef.current = 1;
+
+        // 5. Scroll para o topo
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     return (
         <div style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -364,7 +421,7 @@ const Landing = () => {
 
                 {/* Navegação Central - mantém o fundo pill sempre */}
                 <nav className="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
-                    <a href="#home" className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full">
+                    <a href="#home" onClick={handleResetToHome} className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full cursor-pointer">
                         Home
                     </a>
                     <a href="#sobre" className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full">
@@ -634,13 +691,26 @@ const Landing = () => {
                     <TestimonialsSection />
 
                     {/* Pricing Section */}
-                    <section id="pricing" className="relative py-24 px-6 md:px-12 bg-slate-100">
-                        <div className="container mx-auto">
+                    <section id="pricing" className="relative py-24 px-6 md:px-12 bg-slate-100 overflow-hidden">
+                        {/* Background Video */}
+                        <div className="absolute inset-0 z-0">
+                            <video
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="w-full h-full object-cover"
+                            >
+                                <source src="/videos-scroll/NAVIGATE_4K_S20_loop@md.mp4" type="video/mp4" />
+                            </video>
+                        </div>
+
+                        <div className="container mx-auto relative z-10">
                             <div className="text-center mb-8">
-                                <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
+                                <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                                     Planos Flexíveis
                                 </h2>
-                                <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                                <p className="text-xl text-white max-w-2xl mx-auto font-medium">
                                     Comece pequeno e escale conforme sua demanda cresce. Sem contratos de longo prazo.
                                 </p>
                             </div>
