@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion"
 import { cn } from '@/lib/utils'
 
 const Wave = () => (
@@ -30,69 +31,171 @@ const Cross = () => (
     </svg>
 )
 
+const BorderBeam = ({ className }: { className?: string }) => (
+    <div
+        className={cn("absolute inset-0 z-0 pointer-events-none rounded-2xl overflow-hidden", className)}
+        style={{
+            maskImage: 'linear-gradient(black, black), linear-gradient(black, black)',
+            maskClip: 'content-box, border-box',
+            maskComposite: 'exclude',
+            WebkitMaskComposite: 'xor',
+            padding: '4px',
+        }}
+    >
+        <div
+            className="absolute -inset-[50%] animate-[spin_4s_linear_infinite]"
+            style={{
+                backgroundImage: `conic-gradient(from 0deg at 50% 50%, transparent 0%, transparent 50%, #fff 100%)`
+            }}
+        />
+    </div>
+)
+
 export const PricingWrapper: React.FC<{
     children: React.ReactNode
     type?: 'waves' | 'crosses'
     contactHref: string
     className?: string
-}> = ({ children, contactHref, className, type = 'waves' }) => (
-    <article
-        className={cn(
-            'min-h-[300px] h-[600px] max-h-[500px] max-w-sm w-full bg-purple-500 relative overflow-hidden rounded-2xl text-white',
-            className
-        )}
-    >
-        <span
-            className={
-                'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-start justify-start sm:gap-10 gap-7'
-            }
+    featured?: boolean
+}> = ({ children, contactHref, className, type = 'waves', featured = false }) => {
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+
+    const mouseX = useSpring(x, { stiffness: 500, damping: 100 });
+    const mouseY = useSpring(y, { stiffness: 500, damping: 100 });
+
+    function handleMouseMove(event: React.MouseEvent<HTMLElement>) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+        const xPct = mouseX / width - 0.5;
+        const yPct = mouseY / height - 0.5;
+        x.set(xPct);
+        y.set(yPct);
+    }
+
+    function handleMouseLeave() {
+        x.set(0);
+        y.set(0);
+    }
+
+    const rotateX = useTransform(mouseY, [-0.5, 0.5], ["20deg", "-20deg"]);
+    const rotateY = useTransform(mouseX, [-0.5, 0.5], ["-20deg", "20deg"]);
+
+    // Dynamic shadow that moves opposite to the tilt
+    const shadowX = useTransform(mouseX, [-0.5, 0.5], ["20px", "-20px"]);
+    const shadowY = useTransform(mouseY, [-0.5, 0.5], ["20px", "-20px"]);
+    const boxShadow = useTransform(
+        [shadowX, shadowY],
+        ([sx, sy]) => `${sx} ${sy} 40px rgba(0,0,0,0.4)`
+    );
+
+    return (
+        <motion.article
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                rotateX,
+                rotateY,
+                transformStyle: "preserve-3d",
+            }}
+            className={cn(
+                'min-h-[300px] h-[600px] max-h-[500px] max-w-sm w-full relative sm:mx-6',
+                // Removed bg color and rounded from here, moved to inner face
+                // 'bg-purple-500 relative overflow-hidden rounded-2xl text-white transform-gpu border-2 border-white/20',
+                // className
+            )}
         >
-            {children}
-            <div className={'w-full h-full flex items-end justify-end text-base'}>
-                <Link to={contactHref} className={'w-full h-fit'}>
-                    <button className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold'}>
-                        contact
-                    </button>
-                </Link>
-            </div>
-        </span>
-        {type === 'waves' && (
-            <>
-                <div className={'w-fit h-fit absolute -top-[106px] sm:left-4 -left-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
-                    <Wave />
-                </div>
-                <div className={'w-fit h-fit absolute -top-[106px] sm:right-4 -right-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
-                    <Wave />
-                </div>
-            </>
-        )}
-        {type === 'crosses' && (
-            <>
+            {/* THICKNESS LAYERS (Stacked behind) */}
+            <div
+                className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-4] border-2 border-transparent', className)}
+                style={{ transform: "translateZ(-16px)" }}
+            />
+            <div
+                className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-3] border-2 border-transparent', className)}
+                style={{ transform: "translateZ(-12px)" }}
+            />
+            <div
+                className={cn('absolute inset-[1px] rounded-2xl brightness-75 z-[-2] border-2 border-transparent', className)}
+                style={{ transform: "translateZ(-8px)" }}
+            />
+            <div
+                className={cn('absolute inset-[1px] rounded-2xl brightness-90 z-[-1] border-2 border-transparent', className)}
+                style={{ transform: "translateZ(-4px)" }}
+            />
+
+            {/* FRONT FACE (Main Content) */}
+            <motion.div
+                style={{
+                    transform: "translateZ(0px)",
+                    transformStyle: "preserve-3d",
+                    boxShadow
+                }}
+                className={cn(
+                    'absolute inset-0 w-full h-full overflow-hidden rounded-2xl text-white border-2 border-white/20',
+                    className
+                )}
+            >
+                {featured && <BorderBeam />}
                 <div
-                    className={'w-fit h-fit absolute top-0 -left-10 z-0 animate-[spin_5s_linear_infinite]'}
+                    style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
+                    className={
+                        'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-start justify-start sm:gap-10 gap-7'
+                    }
                 >
-                    <Cross />
+                    {children}
+                    <div style={{ transform: "translateZ(25px)" }} className={'w-full h-full flex items-end justify-end text-base'}>
+                        <Link to={contactHref} className={'w-full h-fit'}>
+                            <button className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold hover:bg-neutral-100 transition-colors shadow-lg'}>
+                                contact
+                            </button>
+                        </Link>
+                    </div>
                 </div>
-                <div
-                    className={'w-fit h-fit absolute top-1/2 -right-12 z-0 animate-[spin_5s_linear_infinite]'}
-                >
-                    <Cross />
-                </div>
-                <div
-                    className={'w-fit h-fit absolute top-[85%] -left-5 z-0 animate-[spin_5s_linear_infinite]'}
-                >
-                    <Cross />
-                </div>
-            </>
-        )}
-    </article>
-)
+                {type === 'waves' && (
+                    <>
+                        <div className={'w-fit h-fit absolute -top-[106px] sm:left-4 -left-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
+                            <Wave />
+                        </div>
+                        <div className={'w-fit h-fit absolute -top-[106px] sm:right-4 -right-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
+                            <Wave />
+                        </div>
+                    </>
+                )}
+                {type === 'crosses' && (
+                    <>
+                        <div
+                            className={'w-fit h-fit absolute top-0 -left-10 z-0 animate-[spin_5s_linear_infinite]'}
+                        >
+                            <Cross />
+                        </div>
+                        <div
+                            className={'w-fit h-fit absolute top-1/2 -right-12 z-0 animate-[spin_5s_linear_infinite]'}
+                        >
+                            <Cross />
+                        </div>
+                        <div
+                            className={'w-fit h-fit absolute top-[85%] -left-5 z-0 animate-[spin_5s_linear_infinite]'}
+                        >
+                            <Cross />
+                        </div>
+                    </>
+                )}
+            </motion.div>
+        </motion.article>
+    )
+}
 
 export const Heading: React.FC<{ children: React.ReactNode; className?: string }> = ({
     children,
     className
 }) => (
-    <h1 className={cn('sm:text-5xl leading-[1] text-[clamp(1.7rem,10vw,3rem)] font-bold', className)}>
+    <h1
+        style={{ transform: "translateZ(30px)" }}
+        className={cn('sm:text-5xl leading-[1] text-[clamp(1.7rem,10vw,3rem)] font-bold drop-shadow-lg', className)}
+    >
         {children}
     </h1>
 )
@@ -102,8 +205,8 @@ export const Price: React.FC<{ children: React.ReactNode; className?: string }> 
     className
 }) => (
     <div
-        style={{ lineHeight: '1' }}
-        className={cn('sm:text-5xl text-[clamp(1.7rem,10vw,3rem)] font-bold', className)}
+        style={{ lineHeight: '1', transform: "translateZ(20px)" }}
+        className={cn('sm:text-5xl text-[clamp(1.7rem,10vw,3rem)] font-bold drop-shadow-md', className)}
     >
         {children}
     </div>
@@ -113,7 +216,10 @@ export const Paragraph: React.FC<{ children: React.ReactNode; className?: string
     children,
     className
 }) => (
-    <p className={cn('sm:text-2xl text-[clamp(0.1rem,20vw,1.25rem)] font-bold', className)}>
+    <p
+        style={{ transform: "translateZ(10px)" }}
+        className={cn('sm:text-2xl text-[clamp(0.1rem,20vw,1.25rem)] font-bold drop-shadow-sm', className)}
+    >
         {children}
     </p>
 )

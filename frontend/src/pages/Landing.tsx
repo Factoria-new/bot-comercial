@@ -505,9 +505,9 @@ const Landing = () => {
                 <>
 
                     <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
-                        <div className="container mx-auto space-y-32">
+                        <div className="container mx-auto space-y-32" style={{ maxWidth: '100%' }}>
                             {/* Feature 1 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-2  gap-20 items-center" style={{ gap: 'auto', marginLeft: '5rem' }}>
                                 <div className="order-2 lg:order-1">
                                     <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Multiplicação de Força
@@ -524,7 +524,7 @@ const Landing = () => {
                                         ))}
                                     </ul>
                                 </div>
-                                <div className="order-1 lg:order-2 flex justify-center relative">
+                                <div className="order-1 lg:order-2 flex justify-center relative" style={{ gap: 'auto' }}>
                                     <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
                                             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -537,7 +537,7 @@ const Landing = () => {
                             </div>
 
                             {/* Feature 2 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center" style={{ gap: 'auto' }}>
                                 <div className="order-1 flex justify-center relative">
                                     <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
@@ -569,7 +569,7 @@ const Landing = () => {
                             </div>
 
                             {/* Feature 3 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center" style={{ gap: 'auto', marginLeft: '5rem' }}>
                                 <div className="order-2 lg:order-1">
                                     <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Controle Total (Tempo Real)
@@ -635,7 +635,7 @@ const Landing = () => {
 
                     {/* Pricing Section */}
                     <section id="pricing" className="relative py-24 px-6 md:px-12 bg-slate-100">
-                        <div className="container mx-auto">
+                        <div className="container mx-auto" style={{ maxWidth: '90%' }}>
                             <div className="text-center mb-8">
                                 <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
                                     Planos Flexíveis
@@ -647,32 +647,32 @@ const Landing = () => {
 
                             <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap">
                                 <PricingWrapper contactHref="/login" type="waves" className="bg-[#00A947]">
-                                    <Heading>Starter</Heading>
+                                    <Heading>Mensal</Heading>
                                     <Price>
-                                        R$ 497<br /><span className="text-2xl">/mês</span>
+                                        R$ 19,90<br /><span className="text-2xl">/mês</span>
                                     </Price>
                                     <Paragraph className="text-lg">
-                                        1 Atendente Digital<br />1.000 Conversas/mês
+                                        Acesso Completo<br />Sem fidelidade
                                     </Paragraph>
                                 </PricingWrapper>
 
                                 <PricingWrapper contactHref="/login" type="crosses" className="bg-[#243B6B]">
-                                    <Heading>Pro</Heading>
+                                    <Heading>Anual</Heading>
                                     <Price>
-                                        R$ 997<br /><span className="text-2xl">/mês</span>
+                                        R$ 197<br /><span className="text-2xl">/ano</span>
                                     </Price>
                                     <Paragraph className="text-lg">
-                                        3 Atendentes<br />5.000 Conversas<br />CRM & Suporte
+                                        Economize 17%<br />Equivalente a R$16/mês
                                     </Paragraph>
                                 </PricingWrapper>
 
-                                <PricingWrapper contactHref="/contact" type="waves" className="bg-slate-900">
-                                    <Heading>Enterprise</Heading>
+                                <PricingWrapper contactHref="/contact" type="waves" className="bg-slate-900" featured={true}>
+                                    <Heading>Vitalício</Heading>
                                     <Price>
-                                        Sob<br />Consulta
+                                        R$ 297<br /><span className="text-2xl">único</span>
                                     </Price>
                                     <Paragraph className="text-lg">
-                                        Atendentes Ilimitados<br />API Dedicada<br />SLA & Suporte
+                                        Pague uma vez<br />Acesso para sempre<br />Oferta Limitada
                                     </Paragraph>
                                 </PricingWrapper>
                             </div>
