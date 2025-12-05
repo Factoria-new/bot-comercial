@@ -1,5 +1,5 @@
 import { TestimonialsColumn } from "@/components/ui/testimonials-columns-1";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 
 const testimonials = [
     {

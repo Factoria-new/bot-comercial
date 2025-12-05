@@ -154,6 +154,11 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-10px)" },
         },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -162,6 +167,7 @@ const config: Config = {
         "fade-out-scale": "fade-out-scale 0.5s ease-out forwards",
         "float": "float 6s ease-in-out infinite",
         "custom-bounce": "custom-bounce 1s ease-in-out infinite",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
     },
   },

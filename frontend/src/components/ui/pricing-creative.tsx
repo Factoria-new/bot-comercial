@@ -3,6 +3,8 @@
 import { motion } from "motion/react"
 import { Check } from "lucide-react"
 
+import { BorderBeam } from "./border-beam"
+
 export default function PricingCreative() {
     return (
         <section className="relative flex flex-col items-center py-24">
@@ -14,8 +16,8 @@ export default function PricingCreative() {
                     transition={{ type: "spring", duration: 0.5 }}
                     className="relative z-10 w-72 rounded-2xl border border-primary/10 bg-white/80 px-8 py-10 text-foreground shadow-lg backdrop-blur-md transition-transform hover:scale-105"
                 >
-                    <div className="mb-2 text-lg font-bold text-primary">Starter</div>
-                    <div className="mb-4 text-3xl font-extrabold text-foreground">R$ 497<span className="text-sm font-normal text-muted-foreground">/mês</span></div>
+                    <div className="mb-2 text-lg font-bold text-primary">Mensal</div>
+                    <div className="mb-4 text-3xl font-extrabold text-foreground">R$ 19,90<span className="text-sm font-normal text-muted-foreground">/mês</span></div>
                     <ul className="mb-6 space-y-2 text-sm text-muted-foreground">
                         <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-emerald-500" />1 Atendente Digital</li>
                         <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-emerald-500" />1.000 Conversas/mês</li>
@@ -39,8 +41,8 @@ export default function PricingCreative() {
                     >
                         MAIS POPULAR
                     </motion.div>
-                    <div className="mb-2 text-lg font-bold text-white/90">Pro</div>
-                    <div className="mb-4 text-5xl font-black">R$ 997<span className="text-lg font-normal text-white/70">/mês</span></div>
+                    <div className="mb-2 text-lg font-bold text-white/90">Anual</div>
+                    <div className="mb-4 text-5xl font-black">R$ 197<span className="text-lg font-normal text-white/70">/ano</span></div>
                     <ul className="mb-6 space-y-2 text-base text-white/90">
                         <li className="flex items-center"><Check className="mr-2 h-5 w-5 text-emerald-300" />3 Atendentes Digitais</li>
                         <li className="flex items-center"><Check className="mr-2 h-5 w-5 text-emerald-300" />5.000 Conversas/mês</li>
@@ -48,7 +50,7 @@ export default function PricingCreative() {
                         <li className="flex items-center"><Check className="mr-2 h-5 w-5 text-emerald-300" />Suporte Prioritário</li>
                     </ul>
                     <button className="w-full rounded-md bg-white py-2 font-bold text-primary hover:bg-gray-100 transition shadow-lg">
-                        Escolher Pro
+                        Escolher Anual
                     </button>
                 </motion.div>
 
@@ -59,15 +61,17 @@ export default function PricingCreative() {
                     transition={{ type: "spring", duration: 0.6 }}
                     className="relative z-10 w-72 rounded-2xl border border-primary/10 bg-white/80 px-8 py-10 text-foreground shadow-lg backdrop-blur-md transition-transform hover:scale-105"
                 >
-                    <div className="mb-2 text-lg font-bold text-primary">Enterprise</div>
-                    <div className="mb-4 text-3xl font-extrabold text-foreground">Sob Consulta</div>
+                    <BorderBeam duration={12} delay={9} />
+                    <div className="mb-2 text-lg font-bold text-primary">Vitalício</div>
+                    <div className="mb-4 text-3xl font-extrabold text-foreground">R$ 297<span className="text-sm font-normal text-muted-foreground">/único</span></div>
                     <ul className="mb-6 space-y-2 text-sm text-muted-foreground">
                         <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-emerald-500" />Atendentes Ilimitados</li>
                         <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-emerald-500" />API Dedicada</li>
                         <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-emerald-500" />SLA & Suporte</li>
+                        <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-emerald-500" />Acesso Vitalício</li>
                     </ul>
                     <button className="w-full rounded-md bg-primary py-2 font-semibold text-white hover:bg-primary/90 transition shadow-md">
-                        Falar com Vendas
+                        Comprar Agora
                     </button>
                 </motion.div>
             </div>
