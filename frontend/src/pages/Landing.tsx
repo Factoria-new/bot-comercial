@@ -32,6 +32,7 @@ const Landing = () => {
     const zoomEndLevelRef = useRef(1);
     const maxZoom = 1.05;
     const zoomStep = 0.015;
+    const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
         const link = document.createElement('link');
@@ -285,13 +286,76 @@ const Landing = () => {
         };
 
         videoMain.addEventListener('ended', handleEnded);
+        videoMain.addEventListener('ended', handleEnded);
         return () => videoMain.removeEventListener('ended', handleEnded);
     }, []);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 50);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const handleSkipToPricing = () => {
+        const wrapper = videoWrapperRef.current;
+        const heroText = heroTextRef.current;
+        const videoLoop = videoLoopRef.current;
+        const videoMain = videoMainRef.current;
+        const videoEndLoop = videoEndLoopRef.current;
+
+        if (!wrapper || !heroText || !videoLoop || !videoMain || !videoEndLoop) return;
+
+        // 1. Parar animações em andamento
+        isAnimatingRef.current = false;
+        if (reverseAnimationRef.current) {
+            cancelAnimationFrame(reverseAnimationRef.current);
+        }
+
+        // 2. Definir estado visual final (Expanded)
+        gsap.set(wrapper, {
+            width: "100vw",
+            height: "100vh",
+            top: "0vh",
+            right: "0vw",
+            borderRadius: "0px"
+        });
+
+        gsap.set(heroText, {
+            x: -100,
+            autoAlpha: 0
+        });
+
+        // 3. Configurar vídeos para o estado final
+        videoLoop.pause();
+        gsap.set(videoLoop, { autoAlpha: 0 });
+
+        videoMain.pause();
+        gsap.set(videoMain, { autoAlpha: 0 });
+
+        videoEndLoop.currentTime = 0;
+        videoEndLoop.play();
+        gsap.set(videoEndLoop, { autoAlpha: 1, scale: 1 });
+
+        // 4. Atualizar estado React
+        setPhase('ended');
+        zoomEndLevelRef.current = 1;
+
+        // 5. Scroll para pricing após renderização
+        setTimeout(() => {
+            const pricingSection = document.getElementById('pricing');
+            if (pricingSection) {
+                pricingSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 100);
+    };
 
     return (
         <div style={{ fontFamily: "'Poppins', sans-serif" }}>
             {/* Header - Só o container maior fica transparente */}
-            <header className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl py-3 px-6 flex justify-between items-center rounded-2xl transition-all duration-500 ${phase === 'initial'
+            <header className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl py-3 px-6 flex justify-between items-center rounded-2xl transition-all duration-500 ${phase === 'initial' || (phase === 'ended' && isScrolled)
                 ? 'bg-white/80 backdrop-blur-md shadow-lg border border-gray-100'
                 : 'bg-transparent shadow-none border-transparent'
                 }`}>
@@ -327,26 +391,27 @@ const Landing = () => {
                     {/* Badge */}
                     <div className="inline-flex items-center gap-2 bg-[#00A947]/10 text-[#00A947] px-4 py-2 rounded-full text-sm font-medium mb-6 w-fit">
                         <span className="w-2 h-2 bg-[#00A947] rounded-full animate-pulse"></span>
-                        Mais de 500 empresas já automatizaram
+                        Tecnologia State-of-the-Art
                     </div>
 
                     <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left">
-                        Automatize <br />
-                        seu <span className="text-[#00A947]">WhatsApp</span> <br />
-                        com IA
+                        Inteligência <br />
+                        que conversa, <br />
+                        <span className="text-[#00A947]">Vendas que <br />fecham</span>
                     </h1>
 
                     <p className="text-gray-600 text-left mt-6 text-xl max-w-lg mr-auto">
-                        Transforme seu atendimento com a tecnologia que escala seu negócio enquanto você dorme.
+                        Recupere 100% dos leads perdidos por demora na resposta. Atendimento instantâneo, inteligente e humano. A qualquer hora.
                     </p>
 
                     {/* Botões CTA */}
                     <div className="flex flex-wrap gap-4 mt-8">
-                        <Link to="/login">
-                            <Button className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105">
-                                Começar Agora
-                            </Button>
-                        </Link>
+                        <Button
+                            onClick={handleSkipToPricing}
+                            className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                        >
+                            Ver Futuro
+                        </Button>
                         <Button variant="outline" className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all">
                             Ver Demonstração
                         </Button>
@@ -436,10 +501,10 @@ const Landing = () => {
                 <>
 
                     <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
-                        <div className="container mx-auto space-y-32" style={{ maxWidth: '100%' }}>
+                        <div className="container mx-auto space-y-32">
                             {/* Feature 1 */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                <div className="order-2 lg:order-1 ml-20">
+                                <div className="order-2 lg:order-1">
                                     <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Multiplicação de Força
                                     </h3>
@@ -501,7 +566,7 @@ const Landing = () => {
 
                             {/* Feature 3 */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                <div className="order-2 lg:order-1 ml-20">
+                                <div className="order-2 lg:order-1">
                                     <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Controle Total (Tempo Real)
                                     </h3>

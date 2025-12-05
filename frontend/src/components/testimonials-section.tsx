@@ -3,58 +3,58 @@ import { motion } from "motion/react";
 
 const testimonials = [
     {
-        text: "This ERP revolutionized our operations, streamlining finance and inventory. The cloud-based platform keeps us productive, even remotely.",
+        text: "Antes eu perdia vendas por demorar a responder. Com a Factoria, meu WhatsApp vende 24 horas por dia. O ROI foi imediato.",
         image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80",
-        name: "Briana Patton",
-        role: "Operations Manager",
+        name: "Fernanda Silva",
+        role: "Dona de E-commerce",
     },
     {
-        text: "Implementing this ERP was smooth and quick. The customizable, user-friendly interface made team training effortless.",
+        text: "A capacidade de atender 500 clientes ao mesmo tempo sem perder a qualidade é impressionante. Minha equipe agora foca só no fechamento.",
         image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80",
-        name: "Bilal Ahmed",
-        role: "IT Manager",
+        name: "Ricardo Mendes",
+        role: "Gerente de Vendas",
     },
     {
-        text: "The support team is exceptional, guiding us through setup and providing ongoing assistance, ensuring our satisfaction.",
+        text: "Eu estava cético sobre IA, mas a naturalidade das conversas é assustadora. Meus clientes nem percebem que é um robô.",
         image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80",
-        name: "Saman Malik",
-        role: "Customer Support Lead",
+        name: "Juliana Costa",
+        role: "Diretora de Marketing",
     },
     {
-        text: "This ERP's seamless integration enhanced our business operations and efficiency. Highly recommend for its intuitive interface.",
+        text: "Reduzimos nosso tempo de resposta de 2 horas para 2 segundos. A taxa de conversão subiu 40% no primeiro mês.",
         image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80",
-        name: "Omar Raza",
+        name: "Carlos Eduardo",
         role: "CEO",
     },
     {
-        text: "Its robust features and quick support have transformed our workflow, making us significantly more efficient.",
+        text: "A melhor parte é acordar e ver as vendas que aconteceram durante a madrugada. É literalmente ganhar dinheiro dormindo.",
         image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-        name: "Zainab Hussain",
-        role: "Project Manager",
+        name: "Mariana Santos",
+        role: "Fundadora",
     },
     {
-        text: "The smooth implementation exceeded expectations. It streamlined processes, improving overall business performance.",
+        text: "A integração foi super simples e o suporte nos ajudou em cada etapa. Hoje não imagino minha operação sem isso.",
         image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=100&q=80",
-        name: "Aliza Khan",
-        role: "Business Analyst",
+        name: "Patrícia Lima",
+        role: "Líder de Operações",
     },
     {
-        text: "Our business functions improved with a user-friendly design and positive customer feedback.",
+        text: "O bot qualifica os leads perfeitamente. Só chegam para os vendedores os clientes prontos para comprar.",
         image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80",
-        name: "Farhan Siddiqui",
-        role: "Marketing Director",
+        name: "Roberto Almeida",
+        role: "Diretor Comercial",
     },
     {
-        text: "They delivered a solution that exceeded expectations, understanding our needs and enhancing our operations.",
+        text: "Escalamos de 10 para 100 vendas diárias sem contratar nenhum atendente novo. A tecnologia se pagou na primeira semana.",
         image: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=100&q=80",
-        name: "Sana Sheikh",
-        role: "Sales Manager",
+        name: "Camila Rocha",
+        role: "Growth Hacker",
     },
     {
-        text: "Using this ERP, our online presence and conversions significantly improved, boosting business performance.",
+        text: "Simplesmente revolucionário. O controle que tenho sobre os atendimentos e a consistência das respostas mudou nosso jogo.",
         image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80",
-        name: "Hassan Ali",
-        role: "E-commerce Manager",
+        name: "Lucas Ferreira",
+        role: "Empresário",
     },
 ];
 
@@ -76,10 +76,10 @@ export const TestimonialsSection = () => {
 
 
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-5">
-                        What our users say
+                        O que nossos usuarios dizem
                     </h2>
                     <p className="text-center mt-5 opacity-75">
-                        See what our customers have to say about us.
+                        Veja como empresas estão escalando suas vendas com nossa tecnologia.
                     </p>
                 </motion.div>
 
