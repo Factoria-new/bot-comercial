@@ -436,10 +436,10 @@ const Landing = () => {
                 <>
 
                     <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
-                        <div className="container mx-auto space-y-32">
+                        <div className="container mx-auto space-y-32" style={{ maxWidth: '100%' }}>
                             {/* Feature 1 */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                <div className="order-2 lg:order-1">
+                                <div className="order-2 lg:order-1 ml-20">
                                     <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Multiplicação de Força
                                     </h3>
@@ -501,7 +501,7 @@ const Landing = () => {
 
                             {/* Feature 3 */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                <div className="order-2 lg:order-1">
+                                <div className="order-2 lg:order-1 ml-20">
                                     <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Controle Total (Tempo Real)
                                     </h3>

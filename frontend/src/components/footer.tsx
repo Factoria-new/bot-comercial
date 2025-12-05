@@ -33,11 +33,8 @@ export default function Footer() {
             <div className="container mx-auto px-4 xl:px-8 py-12 xl:py-16">
                 <div className="grid grid-cols-1 xl:grid-cols-6 gap-8 xl:gap-12 mb-12">
                     <div className="xl:col-span-2">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-                                <span className="text-white font-bold text-xl">F</span>
-                            </div>
-                            <span className="text-xl font-bold text-foreground">Factoria</span>
+                        <div className="mb-6">
+                            <img src="/logo-header.png" alt="Factoria" className="h-8 md:h-10 w-auto object-contain" />
                         </div>
                         <p className="text-slate-600 mb-6 max-w-sm">
                             Transform your WhatsApp into an intelligent AI assistant. Automate conversations and scale your business effortlessly.
@@ -45,36 +42,36 @@ export default function Footer() {
                         <div className="flex gap-4">
                             <a
                                 href="#"
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-slate-200 flex items-center justify-center transition-colors"
+                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#F14624] group flex items-center justify-center transition-all duration-300 shadow-sm"
                                 aria-label="Twitter"
                             >
-                                <Twitter className="w-5 h-5 text-slate-600" />
+                                <Twitter className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                             </a>
                             <a
                                 href="#"
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-slate-200 flex items-center justify-center transition-colors"
+                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#F14624] group flex items-center justify-center transition-all duration-300 shadow-sm"
                                 aria-label="LinkedIn"
                             >
-                                <Linkedin className="w-5 h-5 text-slate-600" />
+                                <Linkedin className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                             </a>
                             <a
                                 href="#"
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-slate-200 flex items-center justify-center transition-colors"
+                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#F14624] group flex items-center justify-center transition-all duration-300 shadow-sm"
                                 aria-label="GitHub"
                             >
-                                <Github className="w-5 h-5 text-slate-600" />
+                                <Github className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                             </a>
                         </div>
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-foreground mb-4">Product</h3>
+                        <h3 className="font-semibold text-black mb-4">Product</h3>
                         <ul className="space-y-3">
                             {footerLinks.product.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-orange transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>
@@ -84,13 +81,13 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-foreground mb-4">Company</h3>
+                        <h3 className="font-semibold text-black mb-4">Company</h3>
                         <ul className="space-y-3">
                             {footerLinks.company.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-orange transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>
@@ -100,13 +97,13 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-foreground mb-4">Resources</h3>
+                        <h3 className="font-semibold text-black mb-4">Resources</h3>
                         <ul className="space-y-3">
                             {footerLinks.resources.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-orange transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>
@@ -116,13 +113,13 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-foreground mb-4">Legal</h3>
+                        <h3 className="font-semibold text-black mb-4">Legal</h3>
                         <ul className="space-y-3">
                             {footerLinks.legal.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-orange transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>

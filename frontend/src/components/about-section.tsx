@@ -1,4 +1,4 @@
-import { ArrowRight, Target, TrendingUp } from 'lucide-react';
+import { Target, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function AboutSection() {
@@ -43,7 +43,7 @@ export function AboutSection() {
                 {/* Bento Grid */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     {/* Large Feature Card - Mission */}
-                    <Card className="relative border-border bg-card hover:shadow-hover transition-all duration-300 group overflow-hidden">
+                    <Card className="relative border-border bg-card hover:shadow-2xl hover:border-primary/30 transition-all duration-300 group overflow-hidden transform hover:-translate-y-1">
                         <div className="absolute inset-0 bg-gradient-to-br from-bora-orange/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                         <CardContent className="p-8 xl:p-10 relative">
@@ -62,19 +62,14 @@ export function AboutSection() {
                                 Acreditamos que toda empresa merece acesso às melhores tecnologias de atendimento.
                             </p>
 
-                            {/* Hover Arrow */}
-                            <div className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300">
-                                <div className="w-12 h-12 rounded-full bg-bora-orange flex items-center justify-center">
-                                    <ArrowRight className="w-6 h-6 text-white" />
-                                </div>
-                            </div>
+
                         </CardContent>
                     </Card>
 
                     {/* Right Stack */}
                     <div className="flex flex-col gap-6">
                         {/* Stats Card */}
-                        <Card className="border-border bg-card hover:shadow-hover transition-all duration-300">
+                        <Card className="border-border bg-card hover:shadow-2xl hover:border-primary/30 transition-all duration-300 transform hover:-translate-y-1">
                             <CardContent className="p-8">
                                 <div className="grid grid-cols-2 gap-6">
                                     {stats.map((stat, i) => (
@@ -92,7 +87,7 @@ export function AboutSection() {
                         </Card>
 
                         {/* Vision Card */}
-                        <Card className="border-border bg-card hover:shadow-hover transition-all duration-300 group flex-1">
+                        <Card className="border-border bg-card hover:shadow-2xl hover:border-primary/30 transition-all duration-300 group flex-1 transform hover:-translate-y-1">
                             <CardContent className="p-8 h-full flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-center gap-4 mb-6">
@@ -100,7 +95,6 @@ export function AboutSection() {
                                             <div className="w-16 h-16 rounded-full bg-feature-green/20 flex items-center justify-center">
                                                 <TrendingUp className="w-8 h-8 text-feature-green" />
                                             </div>
-                                            <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-bora-orange animate-pulse" />
                                         </div>
                                     </div>
                                     <h3 className="text-2xl font-bold text-foreground mb-3">
