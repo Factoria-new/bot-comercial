@@ -52,10 +52,11 @@ const Landing = () => {
     useEffect(() => {
         const wrapper = videoWrapperRef.current;
         if (wrapper) {
+            const isMobile = window.innerWidth < 768;
             gsap.set(wrapper, {
-                width: "40vw",
-                height: "70vh",
-                top: "15vh",
+                width: isMobile ? "90vw" : "40vw",
+                height: isMobile ? "50vh" : "70vh",
+                top: isMobile ? "40vh" : "15vh",
                 right: "5vw",
                 borderRadius: "30px"
             });
@@ -401,11 +402,6 @@ const Landing = () => {
             borderRadius: "30px"
         });
 
-        // 4. Resetar estados
-        setPhase('initial');
-        zoomLevelRef.current = 1;
-        zoomEndLevelRef.current = 1;
-
         // 5. Scroll para o topo
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -440,17 +436,17 @@ const Landing = () => {
             </header>
 
             {/* Container Principal */}
-            <div className="relative bg-white min-h-screen">
+            < div className="relative bg-white min-h-screen" >
                 {/* Texto Hero (Lado Esquerdo) */}
-                <div
+                < div
                     ref={heroTextRef}
-                    className="absolute top-0 left-0 w-[50vw] h-screen flex flex-col justify-center pb-24 pl-8 md:pl-16 z-10"
+                    className="absolute top-0 left-0 w-full md:w-[50vw] h-screen flex flex-col justify-start md:justify-center pt-32 md:pt-0 pb-24 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto"
                 >
                     {/* Badge */}
-                    <div className="inline-flex items-center gap-2 bg-[#00A947]/10 text-[#00A947] px-4 py-2 rounded-full text-sm font-medium mb-6 w-fit">
+                    < div className="inline-flex items-center gap-2 bg-[#00A947]/10 text-[#00A947] px-4 py-2 rounded-full text-sm font-medium mb-6 w-fit pointer-events-auto" >
                         <span className="w-2 h-2 bg-[#00A947] rounded-full animate-pulse"></span>
-                        Tecnologia State-of-the-Art
-                    </div>
+                        Tecnologia State - of - the - Art
+                    </div >
 
                     <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left">
                         Inteligência <br />
@@ -463,7 +459,7 @@ const Landing = () => {
                     </p>
 
                     {/* Botões CTA */}
-                    <div className="flex flex-wrap gap-4 mt-8">
+                    <div className="flex flex-wrap gap-4 mt-8 pointer-events-auto">
                         <Button
                             onClick={handleSkipToPricing}
                             className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
@@ -474,16 +470,16 @@ const Landing = () => {
                             Ver Demonstração
                         </Button>
                     </div>
-                </div>
+                </div >
 
                 {/* Wrapper do Vídeo */}
-                <div
+                < div
                     ref={videoWrapperRef}
                     className="absolute bg-black overflow-hidden shadow-2xl z-20"
                     style={{ willChange: 'width, height, top, right, border-radius' }}
                 >
                     {/* Vídeo Loop Inicial */}
-                    <video
+                    < video
                         ref={videoLoopRef}
                         autoPlay
                         loop
@@ -493,10 +489,10 @@ const Landing = () => {
                         style={{ opacity: 1 }}
                     >
                         <source src="/videos-scroll/NAVIGATE_4K_S40_loop@md.mp4" type="video/mp4" />
-                    </video>
+                    </video >
 
                     {/* Vídeo Principal (toca após expansão) */}
-                    <video
+                    < video
                         ref={videoMainRef}
                         muted
                         playsInline
@@ -505,10 +501,10 @@ const Landing = () => {
                         style={{ opacity: 0 }}
                     >
                         <source src="/videos-scroll/NAVIGATE_4K_S40-scrolly@md.mp4" type="video/mp4" />
-                    </video>
+                    </video >
 
                     {/* Vídeo Reverso (otimizado para seek) */}
-                    <video
+                    < video
                         ref={videoReverseRef}
                         muted
                         playsInline
@@ -517,10 +513,10 @@ const Landing = () => {
                         style={{ opacity: 0 }}
                     >
                         <source src="/videos-scroll/NAVIGATE_4K_S40-scrolly@md_OPTIMIZED.mp4" type="video/mp4" />
-                    </video>
+                    </video >
 
                     {/* Vídeo Loop Final */}
-                    <video
+                    < video
                         ref={videoEndLoopRef}
                         loop
                         muted
@@ -529,7 +525,7 @@ const Landing = () => {
                         style={{ opacity: 0 }}
                     >
                         <source src="/videos-scroll/NAVIGATE_4K_S50_loop@md.mp4" type="video/mp4" />
-                    </video>
+                    </video >
 
                     {/* Chat Overlay - Only visible in expanded phase (100% screen) */}
                     {phase === 'expanded' && <ChatOverlay />}
@@ -549,212 +545,215 @@ const Landing = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Company Section - Sobre Nós */}
-            <AboutSection />
+            < AboutSection />
 
 
 
             {/* Resto do Site */}
-            {phase === 'ended' && (
-                <>
+            {
+                phase === 'ended' && (
+                    <>
 
-                    <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
-                        <div className="container mx-auto space-y-32" style={{ maxWidth: '100%' }}>
-                            {/* Feature 1 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2  gap-20 items-center" style={{ gap: 'auto', marginLeft: '5rem' }}>
-                                <div className="order-2 lg:order-1">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
-                                        Multiplicação de Força
-                                    </h3>
-                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                        Você não precisa de mais atendentes. Você precisa de super-atendentes. Clone sua capacidade de atendimento instantaneamente.
-                                    </p>
-                                    <ul className="space-y-4 mb-8">
-                                        {["Múltiplas instâncias simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-feature-green"></div>
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
+                        <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
+                            <div className="container mx-auto space-y-32">
+                                {/* Feature 1 */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                                    <div className="order-2 lg:order-1">
+                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                            Multiplicação de Força
+                                        </h3>
+                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                            Você não precisa de mais atendentes. Você precisa de super-atendentes. Clone sua capacidade de atendimento instantaneamente.
+                                        </p>
+                                        <ul className="space-y-4 mb-8">
+                                            {["Múltiplas instâncias simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
+                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                    <div className="w-2 h-2 rounded-full bg-feature-green"></div>
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="order-1 lg:order-2 flex justify-center relative">
+                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
+                                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                                <circle cx="9" cy="7" r="4" />
+                                                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="order-1 lg:order-2 flex justify-center relative" style={{ gap: 'auto' }}>
-                                    <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                                            <circle cx="9" cy="7" r="4" />
-                                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                        </svg>
+
+                                {/* Feature 2 */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                                    <div className="order-1 flex justify-center relative">
+                                        <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
+                                                <path d="M12 8V4H8" />
+                                                <rect width="16" height="12" x="4" y="8" rx="2" />
+                                                <path d="M2 14h2" />
+                                                <path d="M20 14h2" />
+                                                <path d="M15 13v2" />
+                                                <path d="M9 13v2" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div className="order-2">
+                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                            Funcionários Digitais (IA)
+                                        </h3>
+                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                            Cada instância é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
+                                        </p>
+                                        <ul className="space-y-4 mb-8">
+                                            {["Engenharia de Prompt Personalizada", "Humanização Extrema (Voz/TTS)", "Atendimento 24/7"].map((item, i) => (
+                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                    <div className="w-2 h-2 rounded-full bg-tan"></div>
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {/* Feature 3 */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center" style={{ gap: 'auto', marginLeft: '5rem' }}>
+                                    <div className="order-2 lg:order-1">
+                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                            Controle Total (Tempo Real)
+                                        </h3>
+                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                            Gestão não é achismo, é dado. Acompanhe sua operação com tecnologia WebSocket em tempo real.
+                                        </p>
+                                        <ul className="space-y-4 mb-8">
+                                            {["Sem 'F5' - Atualização instantânea", "Auto-Reconexão Inteligente", "Métricas de verdade"].map((item, i) => (
+                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                    <div className="w-2 h-2 rounded-full bg-feature-green"></div>
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="order-1 lg:order-2 flex justify-center relative">
+                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
+                                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                                <line x1="3" x2="21" y1="9" y2="9" />
+                                                <line x1="9" x2="9" y1="21" y2="9" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Feature 4 */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                                    <div className="order-1 flex justify-center relative">
+                                        <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
+                                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div className="order-2">
+                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                            Confiabilidade Enterprise
+                                        </h3>
+                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                            Sua operação não pode parar. Arquitetura robusta projetada para estabilidade máxima.
+                                        </p>
+                                        <ul className="space-y-4 mb-8">
+                                            {["Persistência de Sessão", "Zero Configuração Repetitiva", "Segurança de dados"].map((item, i) => (
+                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                    <div className="w-2 h-2 rounded-full bg-brown"></div>
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
+                        </section>
 
-                            {/* Feature 2 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center" style={{ gap: 'auto' }}>
-                                <div className="order-1 flex justify-center relative">
-                                    <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                            <path d="M12 8V4H8" />
-                                            <rect width="16" height="12" x="4" y="8" rx="2" />
-                                            <path d="M2 14h2" />
-                                            <path d="M20 14h2" />
-                                            <path d="M15 13v2" />
-                                            <path d="M9 13v2" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="order-2">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
-                                        Funcionários Digitais (IA)
-                                    </h3>
-                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                        Cada instância é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
+
+
+
+
+                        {/* Testimonials Section */}
+                        <TestimonialsSection />
+
+                        {/* Pricing Section */}
+                        <section id="pricing" className="relative min-h-screen flex flex-col justify-center py-24 px-6 md:px-12 bg-slate-900 overflow-hidden">
+                            {/* Background Video */}
+                            <div className="absolute inset-0 z-0">
+                                <video
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                    style={{ objectPosition: "50% 100%" }}
+                                >
+                                    <source src="/videos-scroll/NAVIGATE_4K_S20_loop@md.mp4" type="video/mp4" />
+                                </video>
+                            </div>
+
+                            <div className="container mx-auto relative z-10" style={{ maxWidth: "100%" }}>
+                                <div className="text-center mb-8">
+                                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+                                        Planos Flexíveis
+                                    </h2>
+                                    <p className="text-xl text-white max-w-2xl mx-auto font-medium">
+                                        Comece pequeno e escale conforme sua demanda cresce. Sem contratos de longo prazo.
                                     </p>
-                                    <ul className="space-y-4 mb-8">
-                                        {["Engenharia de Prompt Personalizada", "Humanização Extrema (Voz/TTS)", "Atendimento 24/7"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-tan"></div>
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                </div>
+
+                                <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap">
+                                    <PricingWrapper contactHref="/login" type="waves" className="bg-[#00A947]">
+                                        <Heading>Mensal</Heading>
+                                        <Price>
+                                            R$ 19,90<br /><span className="text-2xl">/mês</span>
+                                        </Price>
+                                        <Paragraph className="text-lg">
+                                            Acesso Completo<br />Sem fidelidade
+                                        </Paragraph>
+                                    </PricingWrapper>
+
+                                    <PricingWrapper contactHref="/login" type="crosses" className="bg-[#243B6B]">
+                                        <Heading>Anual</Heading>
+                                        <Price>
+                                            R$ 197<br /><span className="text-2xl">/ano</span>
+                                        </Price>
+                                        <Paragraph className="text-lg">
+                                            Economize 17%<br />Equivalente a R$16/mês
+                                        </Paragraph>
+                                    </PricingWrapper>
+
+                                    <PricingWrapper contactHref="/contact" type="waves" className="bg-slate-900" featured={true}>
+                                        <Heading>Vitalício</Heading>
+                                        <Price>
+                                            R$ 297<br /><span className="text-2xl">único</span>
+                                        </Price>
+                                        <Paragraph className="text-lg">
+                                            Pague uma vez<br />Acesso para sempre<br />Oferta Limitada
+                                        </Paragraph>
+                                    </PricingWrapper>
                                 </div>
                             </div>
+                        </section>
 
-                            {/* Feature 3 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center" style={{ gap: 'auto', marginLeft: '5rem' }}>
-                                <div className="order-2 lg:order-1">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
-                                        Controle Total (Tempo Real)
-                                    </h3>
-                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                        Gestão não é achismo, é dado. Acompanhe sua operação com tecnologia WebSocket em tempo real.
-                                    </p>
-                                    <ul className="space-y-4 mb-8">
-                                        {["Sem 'F5' - Atualização instantânea", "Auto-Reconexão Inteligente", "Métricas de verdade"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-feature-green"></div>
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div className="order-1 lg:order-2 flex justify-center relative">
-                                    <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                                            <line x1="3" x2="21" y1="9" y2="9" />
-                                            <line x1="9" x2="9" y1="21" y2="9" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Feature 4 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                <div className="order-1 flex justify-center relative">
-                                    <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="order-2">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
-                                        Confiabilidade Enterprise
-                                    </h3>
-                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                        Sua operação não pode parar. Arquitetura robusta projetada para estabilidade máxima.
-                                    </p>
-                                    <ul className="space-y-4 mb-8">
-                                        {["Persistência de Sessão", "Zero Configuração Repetitiva", "Segurança de dados"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-brown"></div>
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-
-
-
-
-                    {/* Testimonials Section */}
-                    <TestimonialsSection />
-
-                    {/* Pricing Section */}
-                    <section id="pricing" className="relative py-24 px-6 md:px-12 bg-slate-100 overflow-hidden">
-                        {/* Background Video */}
-                        <div className="absolute inset-0 z-0">
-                            <video
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="w-full h-full object-cover"
-                            >
-                                <source src="/videos-scroll/NAVIGATE_4K_S20_loop@md.mp4" type="video/mp4" />
-                            </video>
-                        </div>
-
-                        <div className="container mx-auto relative z-10" style={{ maxWidth: "100%" }}>
-                            <div className="text-center mb-8">
-                                <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                                    Planos Flexíveis
-                                </h2>
-                                <p className="text-xl text-white max-w-2xl mx-auto font-medium">
-                                    Comece pequeno e escale conforme sua demanda cresce. Sem contratos de longo prazo.
-                                </p>
-                            </div>
-
-                            <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap">
-                                <PricingWrapper contactHref="/login" type="waves" className="bg-[#00A947]">
-                                    <Heading>Mensal</Heading>
-                                    <Price>
-                                        R$ 19,90<br /><span className="text-2xl">/mês</span>
-                                    </Price>
-                                    <Paragraph className="text-lg">
-                                        Acesso Completo<br />Sem fidelidade
-                                    </Paragraph>
-                                </PricingWrapper>
-
-                                <PricingWrapper contactHref="/login" type="crosses" className="bg-[#243B6B]">
-                                    <Heading>Anual</Heading>
-                                    <Price>
-                                        R$ 197<br /><span className="text-2xl">/ano</span>
-                                    </Price>
-                                    <Paragraph className="text-lg">
-                                        Economize 17%<br />Equivalente a R$16/mês
-                                    </Paragraph>
-                                </PricingWrapper>
-
-                                <PricingWrapper contactHref="/contact" type="waves" className="bg-slate-900" featured={true}>
-                                    <Heading>Vitalício</Heading>
-                                    <Price>
-                                        R$ 297<br /><span className="text-2xl">único</span>
-                                    </Price>
-                                    <Paragraph className="text-lg">
-                                        Pague uma vez<br />Acesso para sempre<br />Oferta Limitada
-                                    </Paragraph>
-                                </PricingWrapper>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Footer */}
-                    {/* Footer */}
-                    <Footer />
-                </>
-            )}
-        </div>
+                        {/* Footer */}
+                        {/* Footer */}
+                        <Footer />
+                    </>
+                )
+            }
+        </div >
     );
 };
 
