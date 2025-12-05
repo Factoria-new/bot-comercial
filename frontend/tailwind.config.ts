@@ -44,6 +44,9 @@ const config: Config = {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        tan: "#E6B98D",
+        brown: "#8B5E3C",
+        "feature-green": "#7A9E7E",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -101,6 +104,24 @@ const config: Config = {
           '700': '#a16207',
           '800': '#854d0e',
           '900': '#713f12',
+        },
+        'bora-orange': {
+          DEFAULT: '#FF6B00',
+          '50': '#FFF7ED',
+          '100': '#FFEDD5',
+          '200': '#FED7AA',
+          '300': '#FDBA74',
+          '400': '#FB923C',
+          '500': '#F97316',
+          '600': '#EA580C',
+          '700': '#C2410C',
+          '800': '#9A3412',
+          '900': '#7C2D12',
+        },
+        navy: {
+          DEFAULT: '#0f172a',
+          light: '#1e293b',
+          dark: '#020617',
         }
       },
       borderRadius: {

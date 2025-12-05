@@ -5,13 +5,14 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { PricingWrapper, Heading, Price, Paragraph } from "@/components/ui/animated-pricing-cards";
 import { TestimonialsSection } from "@/components/testimonials-section";
+import { AboutSection } from "@/components/about-section";
+import Footer from "@/components/footer";
 
 
 gsap.registerPlugin(ScrollTrigger);
 
 const bgFeature1 = "/images/ImagemGemini5.png";
-const bgFeature2 = "/images/ImagemGemini2.png";
-const bgFeature3 = "/images/ImagemGemini6.png";
+
 const bgFeature4 = "/images/ImagemGemini4.png";
 
 
@@ -426,95 +427,7 @@ const Landing = () => {
             </div>
 
             {/* Company Section - Sobre Nós */}
-            <section id="sobre" className="relative py-24 px-6 md:px-12 bg-white text-[#1A1A1A] overflow-hidden">
-                <div className="container mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                        {/* Left Column */}
-                        <div className="flex flex-col gap-10">
-                            <div>
-                                <div className="flex items-center gap-3 mb-6">
-                                    <span className="text-sm font-semibold tracking-[0.2em] text-gray-500 uppercase">Our Story</span>
-                                    <div className="h-px w-12 bg-gray-300"></div>
-                                </div>
-                                <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] text-gray-900">
-
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF4D4D] to-[#F9CB28]">
-                                        Sobre Nós <br />
-                                    </span>
-                                </h2>
-                            </div>
-                            <div className="relative rounded-3xl overflow-hidden aspect-[4/3] w-full shadow-2xl border border-black/5 group">
-                                <img
-                                    src="/images/company-main.png"
-                                    alt="Team collaborating"
-                                    className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-60"></div>
-                            </div>
-                        </div>
-
-                        {/* Right Column */}
-                        <div className="flex flex-col gap-10">
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="relative rounded-3xl overflow-hidden aspect-video shadow-lg border border-black/5 group">
-                                    <div className="absolute top-3 right-3 flex gap-2 z-10">
-                                        <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-medium border border-black/5 text-gray-800">Tech Blog</span>
-                                        <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-medium border border-black/5 text-gray-800">Trends</span>
-                                    </div>
-                                    <img
-                                        src="/images/company-culture-1.png"
-                                        alt="Office culture"
-                                        className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
-                                    />
-                                </div>
-                                <div className="relative rounded-3xl overflow-hidden aspect-video shadow-lg border border-black/5 group">
-                                    <div className="absolute top-3 right-3 flex gap-2 z-10">
-                                        <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-medium border border-black/5 text-gray-800">Tech Blog</span>
-                                        <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-medium border border-black/5 text-gray-800">Trends</span>
-                                    </div>
-                                    <img
-                                        src="/images/company-culture-2.png"
-                                        alt="Meeting"
-                                        className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
-                                    />
-                                </div>
-                            </div>
-
-                            <p className="text-gray-600 text-lg leading-relaxed">
-                                Tempor commodo ullamcorper a lacus. Amet commodo nulla facilisi nullam. Molestie nunc non blandit massa enim nec. Felis bibendum ut tristique et egestas quis ipsum suspendisse ultrices. Eros in cursus turpis massa tincidunt dui.
-                            </p>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-gray-200 pt-8">
-                                {[
-                                    { number: "10k+", label: "Completed Projects" },
-                                    { number: "15k", label: "Satisfied Customers" },
-                                    { number: "10k+", label: "Years Of Mastery" },
-                                    { number: "45+", label: "Worldwide Honors" }
-                                ].map((stat, i) => (
-                                    <div key={i}>
-                                        <div className="text-3xl font-bold text-gray-900 mb-1">{stat.number}</div>
-                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{stat.label}</div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="flex items-center gap-8 pt-2">
-                                <div className="flex -space-x-4">
-                                    <img src="/images/avatars.png" alt="User avatars" className="h-12 w-auto object-contain rounded-full border-2 border-white" />
-                                </div>
-                                <button className="flex items-center gap-4 group cursor-pointer">
-                                    <div className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all duration-300 text-gray-900">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                            <path d="M5 3l14 9-14 9V3z" />
-                                        </svg>
-                                    </div>
-                                    <span className="text-sm font-bold tracking-wider text-gray-900 group-hover:text-gray-600 transition-colors">WATCH INTRO</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <AboutSection />
 
 
 
@@ -522,28 +435,28 @@ const Landing = () => {
             {phase === 'ended' && (
                 <>
 
-                    <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-[#1A1A1A] overflow-hidden">
-                        <div className="container mx-0 space-y-32" style={{ maxWidth: "full" }}>
+                    <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
+                        <div className="container mx-auto space-y-32">
                             {/* Feature 1 */}
-                            <div className="grid grid-cols-1 gap-12 g:grid-cols-2 items-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
                                 <div className="order-2 lg:order-1">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-[#1A1A1A]">
+                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Multiplicação de Força
                                     </h3>
-                                    <p className="text-lg text-[#4A4A4A] mb-8 leading-relaxed">
+                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                                         Você não precisa de mais atendentes. Você precisa de super-atendentes. Clone sua capacidade de atendimento instantaneamente.
                                     </p>
                                     <ul className="space-y-4 mb-8">
                                         {["Múltiplas instâncias simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-[#4A4A4A] font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-[#7A9E7E]"></div>
+                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                <div className="w-2 h-2 rounded-full bg-feature-green"></div>
                                                 {item}
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
                                 <div className="order-1 lg:order-2 flex justify-center relative">
-                                    <div className="w-full max-w-md aspect-square bg-[#7A9E7E] flex items-center justify-center shadow-inner" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
+                                    <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
                                             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                                             <circle cx="9" cy="7" r="4" />
@@ -555,9 +468,9 @@ const Landing = () => {
                             </div>
 
                             {/* Feature 2 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
                                 <div className="order-1 flex justify-center relative">
-                                    <div className="w-full max-w-md aspect-square bg-[#E6B98D] flex items-center justify-center shadow-inner" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
+                                    <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
                                             <path d="M12 8V4H8" />
                                             <rect width="16" height="12" x="4" y="8" rx="2" />
@@ -569,16 +482,16 @@ const Landing = () => {
                                     </div>
                                 </div>
                                 <div className="order-2">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-[#1A1A1A]">
+                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Funcionários Digitais (IA)
                                     </h3>
-                                    <p className="text-lg text-[#4A4A4A] mb-8 leading-relaxed">
+                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                                         Cada instância é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
                                     </p>
                                     <ul className="space-y-4 mb-8">
                                         {["Engenharia de Prompt Personalizada", "Humanização Extrema (Voz/TTS)", "Atendimento 24/7"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-[#4A4A4A] font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-[#E6B98D]"></div>
+                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                <div className="w-2 h-2 rounded-full bg-tan"></div>
                                                 {item}
                                             </li>
                                         ))}
@@ -587,25 +500,25 @@ const Landing = () => {
                             </div>
 
                             {/* Feature 3 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
                                 <div className="order-2 lg:order-1">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-[#1A1A1A]">
+                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Controle Total (Tempo Real)
                                     </h3>
-                                    <p className="text-lg text-[#4A4A4A] mb-8 leading-relaxed">
+                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                                         Gestão não é achismo, é dado. Acompanhe sua operação com tecnologia WebSocket em tempo real.
                                     </p>
                                     <ul className="space-y-4 mb-8">
                                         {["Sem 'F5' - Atualização instantânea", "Auto-Reconexão Inteligente", "Métricas de verdade"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-[#4A4A4A] font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-[#7A9E7E]"></div>
+                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                <div className="w-2 h-2 rounded-full bg-feature-green"></div>
                                                 {item}
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
                                 <div className="order-1 lg:order-2 flex justify-center relative">
-                                    <div className="w-full max-w-md aspect-square bg-[#7A9E7E] flex items-center justify-center shadow-inner" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
+                                    <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
                                             <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
                                             <line x1="3" x2="21" y1="9" y2="9" />
@@ -616,25 +529,25 @@ const Landing = () => {
                             </div>
 
                             {/* Feature 4 */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
                                 <div className="order-1 flex justify-center relative">
-                                    <div className="w-full max-w-md aspect-square bg-[#8B5E3C] flex items-center justify-center shadow-inner" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
+                                    <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
                                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                                         </svg>
                                     </div>
                                 </div>
                                 <div className="order-2">
-                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-[#1A1A1A]">
+                                    <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
                                         Confiabilidade Enterprise
                                     </h3>
-                                    <p className="text-lg text-[#4A4A4A] mb-8 leading-relaxed">
+                                    <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                                         Sua operação não pode parar. Arquitetura robusta projetada para estabilidade máxima.
                                     </p>
                                     <ul className="space-y-4 mb-8">
                                         {["Persistência de Sessão", "Zero Configuração Repetitiva", "Segurança de dados"].map((item, i) => (
-                                            <li key={i} className="flex items-center gap-3 text-[#4A4A4A] font-medium">
-                                                <div className="w-2 h-2 rounded-full bg-[#8B5E3C]"></div>
+                                            <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                <div className="w-2 h-2 rounded-full bg-brown"></div>
                                                 {item}
                                             </li>
                                         ))}
@@ -698,45 +611,8 @@ const Landing = () => {
                     </section>
 
                     {/* Footer */}
-                    <footer className="bg-navy-dark py-16 px-6 md:px-12 border-t border-foreground/5">
-                        <div className="container mx-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-                                <div className="col-span-1 md:col-span-2">
-                                    <div className="text-2xl font-bold text-foreground mb-6">
-                                        <span className="text-primary">Fact</span>oria
-                                    </div>
-                                    <p className="text-foreground/50 max-w-sm leading-relaxed">
-                                        Transformando o atendimento via WhatsApp com inteligência artificial de ponta. Escale seu negócio sem perder a humanidade.
-                                    </p>
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-lg mb-6 text-foreground">Produto</h4>
-                                    <ul className="space-y-4 text-foreground/50">
-                                        <li><a href="#" className="hover:text-primary transition-colors">Funcionalidades</a></li>
-                                        <li><a href="#" className="hover:text-primary transition-colors">Preços</a></li>
-                                        <li><a href="#" className="hover:text-primary transition-colors">Casos de Uso</a></li>
-                                        <li><a href="#" className="hover:text-primary transition-colors">API</a></li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-lg mb-6 text-foreground">Legal</h4>
-                                    <ul className="space-y-4 text-foreground/50">
-                                        <li><a href="#" className="hover:text-primary transition-colors">Termos de Uso</a></li>
-                                        <li><a href="#" className="hover:text-primary transition-colors">Privacidade</a></li>
-                                        <li><a href="#" className="hover:text-primary transition-colors">Contato</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div className="pt-8 border-t border-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-foreground/40">
-                                <p>© 2024 Factoria. Todos os direitos reservados.</p>
-                                <div className="flex gap-6">
-                                    <a href="#" className="hover:text-foreground transition-colors">Twitter</a>
-                                    <a href="#" className="hover:text-foreground transition-colors">LinkedIn</a>
-                                    <a href="#" className="hover:text-foreground transition-colors">Instagram</a>
-                                </div>
-                            </div>
-                        </div>
-                    </footer>
+                    {/* Footer */}
+                    <Footer />
                 </>
             )}
         </div>

@@ -480,3 +480,11 @@
     transform: translateY(0);
   }
 }
+/* Custom Footer Utilities */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #243B6B 0%, #2E4A8C 100%);
+}
+
+.text-orange {
+  color: #FF6B00;
+}
