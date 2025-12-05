@@ -93,98 +93,102 @@ export const PricingWrapper: React.FC<{
     );
 
     return (
-        <motion.article
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            style={{
-                rotateX,
-                rotateY,
-                transformStyle: "preserve-3d",
-            }}
-            className={cn(
-                'min-h-[300px] h-[600px] max-h-[500px] max-w-sm w-full relative sm:mx-6',
-                // Removed bg color and rounded from here, moved to inner face
-                // 'bg-purple-500 relative overflow-hidden rounded-2xl text-white transform-gpu border-2 border-white/20',
-                // className
-            )}
+        <div
+            className={'min-h-[300px] h-[600px] max-h-[500px] max-w-sm w-full relative sm:mx-6'}
+            style={{ perspective: "1000px" }}
         >
-            {/* THICKNESS LAYERS (Stacked behind) */}
-            <div
-                className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-4] border-2 border-transparent', className)}
-                style={{ transform: "translateZ(-16px)" }}
-            />
-            <div
-                className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-3] border-2 border-transparent', className)}
-                style={{ transform: "translateZ(-12px)" }}
-            />
-            <div
-                className={cn('absolute inset-[1px] rounded-2xl brightness-75 z-[-2] border-2 border-transparent', className)}
-                style={{ transform: "translateZ(-8px)" }}
-            />
-            <div
-                className={cn('absolute inset-[1px] rounded-2xl brightness-90 z-[-1] border-2 border-transparent', className)}
-                style={{ transform: "translateZ(-4px)" }}
-            />
-
-            {/* FRONT FACE (Main Content) */}
-            <motion.div
+            <motion.article
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
                 style={{
-                    transform: "translateZ(0px)",
+                    rotateX,
+                    rotateY,
                     transformStyle: "preserve-3d",
-                    boxShadow
+                    willChange: "transform",
                 }}
                 className={cn(
-                    'absolute inset-0 w-full h-full overflow-hidden rounded-2xl text-white border-2 border-white/20',
-                    className
+                    'w-full h-full relative duration-200',
                 )}
             >
-                {featured && <BorderBeam />}
+                {/* THICKNESS LAYERS (Stacked behind) */}
                 <div
-                    style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
-                    className={
-                        'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-start justify-start sm:gap-10 gap-7'
-                    }
+                    className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-4] border-2 border-transparent', className)}
+                    style={{ transform: "translateZ(-16px)", backfaceVisibility: 'hidden' }}
+                />
+                <div
+                    className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-3] border-2 border-transparent', className)}
+                    style={{ transform: "translateZ(-12px)", backfaceVisibility: 'hidden' }}
+                />
+                <div
+                    className={cn('absolute inset-[1px] rounded-2xl brightness-75 z-[-2] border-2 border-transparent', className)}
+                    style={{ transform: "translateZ(-8px)", backfaceVisibility: 'hidden' }}
+                />
+                <div
+                    className={cn('absolute inset-[1px] rounded-2xl brightness-90 z-[-1] border-2 border-transparent', className)}
+                    style={{ transform: "translateZ(-4px)", backfaceVisibility: 'hidden' }}
+                />
+
+                {/* FRONT FACE (Main Content) */}
+                <motion.div
+                    style={{
+                        transform: "translateZ(0px)",
+                        transformStyle: "preserve-3d",
+                        backfaceVisibility: 'hidden',
+                        boxShadow
+                    }}
+                    className={cn(
+                        'absolute inset-0 w-full h-full overflow-hidden rounded-2xl text-white border-2 border-white/20',
+                        className
+                    )}
                 >
-                    {children}
-                    <div style={{ transform: "translateZ(25px)" }} className={'w-full h-full flex items-end justify-end text-base'}>
-                        <Link to={contactHref} className={'w-full h-fit'}>
-                            <button className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold hover:bg-neutral-100 transition-colors shadow-lg'}>
-                                contact
-                            </button>
-                        </Link>
+                    <div
+                        style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d", backfaceVisibility: 'hidden' }}
+                        className={
+                            'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-start justify-start sm:gap-10 gap-7'
+                        }
+                    >
+                        {children}
+                        <div style={{ transform: "translateZ(25px)", backfaceVisibility: 'hidden' }} className={'w-full h-full flex items-end justify-end text-base'}>
+                            <Link to={contactHref} className={'w-full h-fit'}>
+                                <button className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold hover:bg-neutral-100 transition-colors shadow-lg'}>
+                                    contact
+                                </button>
+                            </Link>
+                        </div>
                     </div>
-                </div>
-                {type === 'waves' && (
-                    <>
-                        <div className={'w-fit h-fit absolute -top-[106px] sm:left-4 -left-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
-                            <Wave />
-                        </div>
-                        <div className={'w-fit h-fit absolute -top-[106px] sm:right-4 -right-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
-                            <Wave />
-                        </div>
-                    </>
-                )}
-                {type === 'crosses' && (
-                    <>
-                        <div
-                            className={'w-fit h-fit absolute top-0 -left-10 z-0 animate-[spin_5s_linear_infinite]'}
-                        >
-                            <Cross />
-                        </div>
-                        <div
-                            className={'w-fit h-fit absolute top-1/2 -right-12 z-0 animate-[spin_5s_linear_infinite]'}
-                        >
-                            <Cross />
-                        </div>
-                        <div
-                            className={'w-fit h-fit absolute top-[85%] -left-5 z-0 animate-[spin_5s_linear_infinite]'}
-                        >
-                            <Cross />
-                        </div>
-                    </>
-                )}
-            </motion.div>
-        </motion.article>
+                    {type === 'waves' && (
+                        <>
+                            <div className={'w-fit h-fit absolute -top-[106px] sm:left-4 -left-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
+                                <Wave />
+                            </div>
+                            <div className={'w-fit h-fit absolute -top-[106px] sm:right-4 -right-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
+                                <Wave />
+                            </div>
+                        </>
+                    )}
+                    {type === 'crosses' && (
+                        <>
+                            <div
+                                className={'w-fit h-fit absolute top-0 -left-10 z-0 animate-[spin_5s_linear_infinite]'}
+                            >
+                                <Cross />
+                            </div>
+                            <div
+                                className={'w-fit h-fit absolute top-1/2 -right-12 z-0 animate-[spin_5s_linear_infinite]'}
+                            >
+                                <Cross />
+                            </div>
+                            <div
+                                className={'w-fit h-fit absolute top-[85%] -left-5 z-0 animate-[spin_5s_linear_infinite]'}
+                            >
+                                <Cross />
+                            </div>
+                        </>
+                    )}
+                    {featured && <BorderBeam className="z-10" />}
+                </motion.div>
+            </motion.article>
+        </div>
     )
 }
 
