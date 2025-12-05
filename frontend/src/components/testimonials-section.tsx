@@ -75,8 +75,8 @@ export const TestimonialsSection = () => {
                 >
 
 
-                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-5">
-                        O que nossos usuarios dizem
+                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-5 text-[#00A947]">
+                        Transformando o atendimento do Brasil
                     </h2>
                     <p className="text-center mt-5 opacity-75">
                         Veja como empresas estão escalando suas vendas com nossa tecnologia.

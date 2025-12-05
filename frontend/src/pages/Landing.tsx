@@ -7,6 +7,7 @@ import { PricingWrapper, Heading, Price, Paragraph } from "@/components/ui/anima
 import { TestimonialsSection } from "@/components/testimonials-section";
 import { AboutSection } from "@/components/about-section";
 import Footer from "@/components/footer";
+import { ChatOverlay } from "@/components/chat-overlay";
 
 
 gsap.registerPlugin(ScrollTrigger);
@@ -472,6 +473,9 @@ const Landing = () => {
                     >
                         <source src="/videos-scroll/NAVIGATE_4K_S50_loop@md.mp4" type="video/mp4" />
                     </video>
+
+                    {/* Chat Overlay - Only visible in expanded phase (100% screen) */}
+                    {phase === 'expanded' && <ChatOverlay />}
 
                     {/* Overlay de Métricas */}
                     <div
