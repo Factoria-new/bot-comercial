@@ -714,7 +714,7 @@ const Landing = () => {
                                 </div>
 
                                 <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap">
-                                    <PricingWrapper contactHref="/login" type="waves" className="bg-[#4ADE80]">
+                                    <PricingWrapper contactHref="/login" type="waves" className="bg-[#D4A373]">
                                         <Heading>Mensal</Heading>
                                         <Price>
                                             R$ 19,90<br /><span className="text-2xl">/mês</span>
@@ -734,7 +734,7 @@ const Landing = () => {
                                         </Paragraph>
                                     </PricingWrapper>
 
-                                    <PricingWrapper contactHref="/contact" type="waves" className="bg-[#D4A373]" featured={true}>
+                                    <PricingWrapper contactHref="/contact" type="waves" className="bg-[#4ADE80]" featured={true}>
                                         <Heading>Vitalício</Heading>
                                         <Price>
                                             R$ 297<br /><span className="text-2xl">único</span>
