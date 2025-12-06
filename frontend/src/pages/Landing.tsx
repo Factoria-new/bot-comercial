@@ -535,13 +535,13 @@ const Landing = () => {
                         className={`absolute top-1/2 left-8 md:left-20 -translate-y-1/2 z-30 max-w-md transition-opacity duration-500 ${phase === 'ended' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                     >
                         <div className="space-y-6">
-                            <div className="bg-black/60 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-white/10">
-                                <h3 className="text-3xl font-bold text-white mb-2">Métricas em Tempo Real</h3>
-                                <p className="text-lg text-gray-200">Visão completa da sua operação.</p>
+                            <div className="bg-[#00A947] p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,169,71,0.3)] border border-[#4ADE80]/30 backdrop-blur-sm transform hover:-translate-y-1 transition-all duration-300">
+                                <h3 className="text-3xl font-bold text-white mb-2 tracking-tight">Métricas em Tempo Real</h3>
+                                <p className="text-lg text-white/90 font-medium leading-relaxed">Visão completa da sua operação.</p>
                             </div>
-                            <div className="bg-black/60 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-white/10">
-                                <h3 className="text-3xl font-bold text-white mb-2">+300% em Vendas</h3>
-                                <p className="text-lg text-gray-200">Resultados comprovados.</p>
+                            <div className="bg-[#00A947] p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,169,71,0.3)] border border-[#4ADE80]/30 backdrop-blur-sm transform hover:-translate-y-1 transition-all duration-300">
+                                <h3 className="text-3xl font-bold text-white mb-2 tracking-tight">+300% em Vendas</h3>
+                                <p className="text-lg text-white/90 font-medium leading-relaxed">Resultados comprovados.</p>
                             </div>
                         </div>
                     </div>
@@ -714,7 +714,7 @@ const Landing = () => {
                                 </div>
 
                                 <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap">
-                                    <PricingWrapper contactHref="/login" type="waves" className="bg-[#D4A373]">
+                                    <PricingWrapper contactHref="/login" type="waves" className="bg-[#FE601E]">
                                         <Heading>Mensal</Heading>
                                         <Price>
                                             R$ 19,90<br /><span className="text-2xl">/mês</span>

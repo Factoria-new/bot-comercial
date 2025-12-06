@@ -30,12 +30,12 @@ export function AboutSection() {
                             Quem Somos
                         </span>
                     </div>
-                    <h2 className="text-4xl xl:text-5xl font-bold text-foreground mb-6">
+                    <h2 className="text-4xl xl:text-5xl font-bold text-bora-orange mb-6">
                         Transformando o{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">atendimento</span>{' '}
+                        <span className="text-[#00A947]">atendimento</span>{' '}
                         do Brasil
                     </h2>
-                    <p className="text-lg text-slate-600">
+                    <p className="text-lg text-bora-orange">
                         Somos uma equipe apaixonada por tecnologia e inovação, dedicada a revolucionar a forma como empresas se comunicam.
                     </p>
                 </div>
