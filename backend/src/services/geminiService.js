@@ -924,17 +924,15 @@ export async function getCalendarTools(userId = 'default') {
 
     logger.info(`📅 Obtendo ferramentas do Google Calendar para user_id: ${userId}...`);
 
-    // Usar a API correta do Composio com user_id
-    const tools = await client.tools.get({
-      user_id: userId,
+    // Usar a API correta do Composio com user_id como primeiro argumento e options como segundo
+    const tools = await client.tools.get(userId, {
       toolkits: ['GOOGLECALENDAR']
     });
 
     logger.info(`✅ ${tools.length} ferramentas do Calendar carregadas`);
     return tools;
   } catch (error) {
-    logger.error('❌ Erro ao obter Calendar tools:', error.message);
-    logger.error('Stack:', error.stack);
+    logger.error('❌ Erro ao obter Calendar tools:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return null;
   }
 }
@@ -942,9 +940,10 @@ export async function getCalendarTools(userId = 'default') {
 /**
  * Processa mensagem com suporte a Google Calendar usando Function Calling
  */
-export async function processMessageWithCalendar(messageText, phoneNumber, apiKey, systemPrompt = '') {
+export async function processMessageWithCalendar(messageText, phoneNumber, apiKey, systemPrompt = '', calendarUserId = null) {
   try {
-    logger.info('📅 Processando mensagem COM suporte a Calendar');
+    const toolsUserId = calendarUserId || phoneNumber;
+    logger.info(`📅 Processando mensagem COM suporte a Calendar (User: ${toolsUserId})`);
 
     const client = getComposioClient();
 
@@ -953,13 +952,67 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
       return await processMessageWithGemini(messageText, phoneNumber, apiKey, FIXED_MODEL, systemPrompt, FIXED_TEMPERATURE);
     }
 
-    // Obter ferramentas do Calendar
-    const calendarTools = await getCalendarTools(phoneNumber);
+    // Obter ferramentas do Calendar usando o ID correto (da instância ou do usuário)
+    const calendarTools = await getCalendarTools(toolsUserId);
 
     if (!calendarTools || calendarTools.length === 0) {
       logger.warn('⚠️ Não foi possível carregar Calendar tools - usando processamento padrão');
       return await processMessageWithGemini(messageText, phoneNumber, apiKey, FIXED_MODEL, systemPrompt, FIXED_TEMPERATURE);
     }
+
+    // Obter o connected account ID para execução de ferramentas
+    let connectedAccountId = null;
+    try {
+      const accountsResponse = await client.connectedAccounts.list({ entityId: toolsUserId });
+      const accounts = accountsResponse.items || [];
+      if (accounts.length > 0) {
+        connectedAccountId = accounts[0].id;
+        logger.info(`🔗 Connected Account ID: ${connectedAccountId}`);
+      }
+    } catch (accError) {
+      logger.warn('⚠️ Não foi possível obter connected account ID:', accError.message);
+    }
+
+    // Composio retorna tools no formato OpenAI: { type: "function", function: { name, description, parameters } }
+    // Gemini espera: { name, description, parameters }
+    // Precisamos extrair o objeto 'function' e remover campos não suportados pelo Gemini
+
+    // Função recursiva para remover campos não suportados pelo Gemini
+    const sanitizeForGemini = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      if (Array.isArray(obj)) return obj.map(sanitizeForGemini);
+
+      const result = {};
+      const unsupportedFields = ['examples', 'additionalProperties', 'default', 'nullable', 'title', '$ref'];
+
+      for (const [key, value] of Object.entries(obj)) {
+        if (unsupportedFields.includes(key)) continue; // Skip unsupported fields
+        result[key] = sanitizeForGemini(value);
+      }
+      return result;
+    };
+
+    const toolNameMap = {};
+    const geminiTools = calendarTools.map(tool => {
+      // Extrair o objeto function (formato OpenAI -> Gemini)
+      const fn = tool.function || tool;
+      const originalName = fn.name;
+
+      // Mapear para execução
+      toolNameMap[originalName] = originalName;
+
+      // Sanitizar parameters removendo campos não suportados
+      const cleanParams = sanitizeForGemini(fn.parameters) || { type: 'object', properties: {} };
+
+      return {
+        name: originalName,
+        description: fn.description || '',
+        parameters: cleanParams
+      };
+    });
+
+    // Logar estrutura da primeira ferramenta sanitizada para debug
+    logger.info('🛠️ Tool Sanitizada para Gemini:', JSON.stringify(geminiTools[0], null, 2));
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -991,9 +1044,11 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
           topK: 40,
           maxOutputTokens: 8192,
         },
-        tools: {
-          functionDeclarations: calendarTools
-        }
+        tools: [
+          {
+            functionDeclarations: geminiTools
+          }
+        ]
       };
 
       // Se conseguiu cache, usa cachedContent. Se não, usa systemInstruction normal.
@@ -1026,7 +1081,7 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
     logger.info('===== ENVIANDO MENSAGEM PARA GEMINI (COM CALENDAR) =====');
     logger.info(`Telefone: ${phoneNumber}`);
     logger.info(`Modelo: ${FIXED_MODEL}`);
-    logger.info(`Calendar Tools: ${calendarTools.length} ações disponíveis`);
+    logger.info(`Calendar Tools: ${geminiTools.length} ações disponíveis`);
     logger.info(`Mensagem: ${messageText}`);
     logger.info('========================================================');
 
@@ -1044,12 +1099,20 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
       const functionResponses = [];
 
       for (const call of functionCalls) {
-        logger.info(`📞 Executando: ${call.name}`);
+        // Recuperar nome original da ação Composio
+        const originalActionName = toolNameMap[call.name] || call.name;
+
+        logger.info(`📞 Executando: ${call.name} (Original: ${originalActionName})`);
         logger.info(`📊 Parâmetros: ${JSON.stringify(call.args, null, 2)}`);
 
         try {
-          // Executar a ação via Composio
-          const toolResult = await client.executeAction(call.name, call.args);
+          // Executar a ação via Composio (usando client.client.tools.execute com parâmetros corretos)
+          // Requer: entity_id, connected_account_id, e arguments
+          const toolResult = await client.client.tools.execute(originalActionName, {
+            entity_id: toolsUserId,
+            connected_account_id: connectedAccountId,
+            arguments: call.args || {}
+          });
 
           logger.info(`✅ Resultado da ação: ${JSON.stringify(toolResult, null, 2)}`);
 
@@ -1060,7 +1123,23 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
             }
           });
         } catch (toolError) {
-          logger.error(`❌ Erro ao executar ${call.name}:`, toolError.message);
+          // Use console.error for full visibility (logger may truncate)
+          console.error('\n❌ TOOL EXECUTION ERROR:');
+          console.error('Message:', toolError.message);
+          console.error('Name:', toolError.name);
+          if (toolError.response) {
+            console.error('Response Status:', toolError.response.status);
+            console.error('Response Data:', JSON.stringify(toolError.response.data, null, 2));
+          }
+          if (toolError.errorDetails) {
+            console.error('Error Details:', JSON.stringify(toolError.errorDetails, null, 2));
+          }
+
+          logger.error(`❌ Erro ao executar ${call.name}:`, JSON.stringify(toolError, Object.getOwnPropertyNames(toolError)));
+
+          if (toolError.response && toolError.response.data) {
+            logger.error(`📦 Dados da resposta do erro:`, JSON.stringify(toolError.response.data, null, 2));
+          }
 
           functionResponses.push({
             functionResponse: {
@@ -1096,11 +1175,21 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
     }
 
   } catch (error) {
-    logger.error('❌ ERRO ao processar com Calendar:', error);
+    // Use console.error for full visibility (logger truncates)
+    console.error('\n❌ CALENDAR ERROR DETAILS:');
+    console.error('Message:', error.message);
+    console.error('Name:', error.name);
+    console.error('Stack:', error.stack);
+    if (error.errorDetails) {
+      console.error('Error Details:', JSON.stringify(error.errorDetails, null, 2));
+    }
+
+    logger.error('❌ ERRO FATAL ao processar com Calendar:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
     // Fallback para processamento padrão em caso de erro
     logger.warn('⚠️ Fallback para processamento padrão sem Calendar');
     return await processMessageWithGemini(messageText, phoneNumber, apiKey, FIXED_MODEL, systemPrompt, FIXED_TEMPERATURE);
   }
 }
+
 

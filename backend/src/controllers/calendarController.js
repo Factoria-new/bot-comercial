@@ -2,7 +2,8 @@ import logger from '../config/logger.js';
 import { Composio } from '@composio/core';
 
 class CalendarController {
-    constructor() {
+    constructor(whatsappService) {
+        this.whatsappService = whatsappService;
         // Inicializar Composio client
         console.log('🔧 Inicializando CalendarController...');
         console.log('   COMPOSIO_API_KEY:', process.env.COMPOSIO_API_KEY ? `Configurada (${process.env.COMPOSIO_API_KEY.substring(0, 10)}...)` : 'NÃO configurada');
@@ -213,6 +214,39 @@ class CalendarController {
                 logger.info(`✅ Conexão Calendar encontrada: ${calendarConnection.status}`);
             } else {
                 logger.warn(`⚠️ Nenhuma conexão Calendar encontrada para ${sessionId}`);
+            }
+
+            // SECONDA MUDANÇA: SALVAR O EMAIL NA CONFIG DA SESSÃO SE TIVER CONEXÃO ATIVA
+            if (calendarConnection && calendarConnection.status === 'ACTIVE' && this.whatsappService) {
+                try {
+                    // O email geralmente está no connnection.user.email ou precisamos derivar
+                    // No Composio, o email pode estar em connection.identifier ou connection.authConfig.id se o userId foi email
+                    // Se o userId original foi o email, ótimo. Se não, tentamos pegar dos metadados da conexão.
+
+                    // Estratégia: Se composioUserId parece um email, usamos ele.
+                    // Se não, tentamos ver se a conexão tem metadados de email.
+
+                    let emailToSave = null;
+                    if (composioUserId.includes('@')) {
+                        emailToSave = composioUserId;
+                    }
+
+                    if (emailToSave) {
+                        logger.info(`💾 Salvando Calendar ID (Email) na sessão ${sessionId}: ${emailToSave}`);
+
+                        // Obter config atual para preservar outros campos
+                        const currentConfig = this.whatsappService.getConfig(sessionId) || {};
+
+                        // Atualizar apenas se for diferente ou não existir
+                        if (currentConfig.calendarID !== emailToSave) {
+                            const newConfig = { ...currentConfig, calendarID: emailToSave };
+                            await this.whatsappService.saveConfig(sessionId, newConfig);
+                            logger.info('✅ Configuração de Calendar ID atualizada com sucesso');
+                        }
+                    }
+                } catch (saveErr) {
+                    logger.error('❌ Erro ao salvar Calendar ID na sessão:', saveErr);
+                }
             }
 
             if (!calendarConnection || calendarConnection.status !== 'ACTIVE') {

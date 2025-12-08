@@ -434,6 +434,7 @@ class WhatsAppService {
 
         // 3. Cache de Mensagens
         socket.ev.on('messages.upsert', ({ messages, type }) => {
+          console.log(`🔥 EVENTO UPSERT RECEBIDO: ${type}, ${messages.length} msg(s)`);
           if (type === 'notify') {
             logger.info(`📥 ${messages.length} nova(s) mensagem(ns) para ${sessionId}`);
           }
@@ -2007,7 +2008,8 @@ class WhatsAppService {
         temperature: config.temperature || 1.0, // Temperatura (0-2)
         ttsEnabled: config.ttsEnabled || false, // TTS habilitado
         ttsVoice: config.ttsVoice || 'Aoede', // Voz do TTS
-        enabled: config.enabled !== false // default true
+        enabled: config.enabled !== false, // default true
+        calendarID: config.calendarID || null // ID (email) do Google Calendar
       };
 
       sessionConfigs.set(sessionId, newConfig);
@@ -2111,7 +2113,8 @@ class WhatsAppService {
           combinedMessage,
           phoneNumber,
           geminiApiKey,
-          config?.systemPrompt || '' // Prompt personalizado do frontend
+          config?.systemPrompt || '', // Prompt personalizado do frontend
+          config?.calendarID || sessionId // Passar calendarID (email) ou sessionId como userId do Calendar
         );
       }
       console.log("aiResponse", aiResponse);

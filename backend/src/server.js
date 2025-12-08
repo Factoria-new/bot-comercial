@@ -85,7 +85,7 @@ console.log('COMPOSIO_API_KEY:', process.env.COMPOSIO_API_KEY ? `Presente (${pro
 console.log('COMPOSIO_AUTH_CONFIG_ID:', process.env.COMPOSIO_AUTH_CONFIG_ID || 'AUSENTE');
 console.log('=============================================================\n');
 
-const calendarController = new CalendarController();
+const calendarController = new CalendarController(whatsappService);
 
 // Rotas
 app.get('/', (req, res) => {
