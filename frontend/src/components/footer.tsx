@@ -3,28 +3,26 @@ import { MessageCircle, Mail, MapPin, Twitter, Linkedin, Github } from 'lucide-r
 export default function Footer() {
     const footerLinks = {
         product: [
-            { label: 'Features', href: '#features' },
-            { label: 'Products', href: '#products' },
-            { label: 'Pricing', href: '#pricing' },
-            { label: 'API', href: '#' }
+            { label: 'Funcionalidades', href: '#features' },
+            { label: 'Produtos', href: '#produto' },
+            { label: 'Preços', href: '#pricing' }
         ],
         company: [
-            { label: 'About Us', href: '#about' },
-            { label: 'Careers', href: '#' },
-            { label: 'Blog', href: '#' },
-            { label: 'Press Kit', href: '#' }
+            { label: 'Sobre Nós', href: '#sobre' },
+            { label: 'Carreiras', href: '#' },
+            { label: 'Imprensa', href: '#' }
         ],
         resources: [
-            { label: 'Documentation', href: '#' },
-            { label: 'Help Center', href: '#' },
-            { label: 'Community', href: '#' },
-            { label: 'Contact', href: '#' }
+            { label: 'Documentação', href: '#' },
+            { label: 'Central de Ajuda', href: '#' },
+            { label: 'Comunidade', href: '#' },
+            { label: 'Contato', href: '#' }
         ],
         legal: [
-            { label: 'Privacy Policy', href: '#' },
-            { label: 'Terms of Service', href: '#' },
-            { label: 'Cookie Policy', href: '#' },
-            { label: 'GDPR', href: '#' }
+            { label: 'Política de Privacidade', href: '#' },
+            { label: 'Termos de Serviço', href: '#' },
+            { label: 'Política de Cookies', href: '#' },
+            { label: 'LGPD', href: '#' }
         ]
     };
 
@@ -37,7 +35,7 @@ export default function Footer() {
                             <img src="/logo-header.png" alt="Factoria" className="h-8 md:h-10 w-auto object-contain" />
                         </div>
                         <p className="text-slate-600 mb-6 max-w-sm">
-                            Transform your WhatsApp into an intelligent AI assistant. Automate conversations and scale your business effortlessly.
+                            Transforme seu WhatsApp em um assistente de IA inteligente. Automatize conversas e escale seu negócio sem esforço.
                         </p>
                         <div className="flex gap-4">
                             <a
@@ -65,7 +63,7 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-black mb-4">Product</h3>
+                        <h3 className="font-semibold text-black mb-4">Produto</h3>
                         <ul className="space-y-3">
                             {footerLinks.product.map((link) => (
                                 <li key={link.label}>
@@ -81,7 +79,7 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-black mb-4">Company</h3>
+                        <h3 className="font-semibold text-black mb-4">Empresa</h3>
                         <ul className="space-y-3">
                             {footerLinks.company.map((link) => (
                                 <li key={link.label}>
@@ -97,7 +95,7 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-black mb-4">Resources</h3>
+                        <h3 className="font-semibold text-black mb-4">Recursos</h3>
                         <ul className="space-y-3">
                             {footerLinks.resources.map((link) => (
                                 <li key={link.label}>
@@ -132,20 +130,20 @@ export default function Footer() {
                 <div className="border-t border-border pt-8">
                     <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
                         <p className="text-sm text-slate-600">
-                            2025 Factoria
+                            © 2025 Factoria
                         </p>
                         <div className="flex flex-col xl:flex-row gap-4 xl:gap-6 text-sm text-slate-600">
                             <div className="flex items-center gap-2">
                                 <Mail className="w-4 h-4" />
-                                <span>contact@factoria.ai</span>
+                                <span>contato@factoria.ai</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <MessageCircle className="w-4 h-4" />
-                                <span>+1 (555) 123-4567</span>
+                                <span>+55 (11) 99999-9999</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4" />
-                                <span>San Francisco, CA</span>
+                                <span>São Paulo, SP</span>
                             </div>
                         </div>
                     </div>

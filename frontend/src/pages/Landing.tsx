@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Play, ThumbsUp, ShoppingBag } from "lucide-react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -12,12 +14,15 @@ import { ChatOverlay } from "@/components/chat-overlay";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const bgFeature1 = "/images/ImagemGemini5.png";
+const bgFeature1 = "/images/Cachorro.jpg";
 
-const bgFeature4 = "/images/ImagemGemini4.png";
 
 
 const Landing = () => {
+    const { scrollY } = useScroll();
+    const metricsOpacity = useTransform(scrollY, [0, 300], [1, 0]);
+    const metricsY = useTransform(scrollY, [0, 300], [0, -80]);
+
     const videoWrapperRef = useRef<HTMLDivElement>(null);
     const videoLoopRef = useRef<HTMLVideoElement>(null);
     const videoMainRef = useRef<HTMLVideoElement>(null);
@@ -34,6 +39,7 @@ const Landing = () => {
     const maxZoom = 1.05;
     const zoomStep = 0.015;
     const [isScrolled, setIsScrolled] = useState(false);
+    const [isShrinking, setIsShrinking] = useState(false);
 
     useEffect(() => {
         // Force scroll to top on mount
@@ -173,11 +179,13 @@ const Landing = () => {
                         });
                     } else {
                         isAnimatingRef.current = true;
+                        setIsShrinking(true);
 
                         const tl = gsap.timeline({
                             onComplete: () => {
                                 isAnimatingRef.current = false;
                                 setPhase('initial');
+                                setIsShrinking(false);
                             }
                         });
 
@@ -443,18 +451,17 @@ const Landing = () => {
                     className="absolute top-0 left-0 w-full md:w-[50vw] h-screen flex flex-col justify-start md:justify-center pt-32 md:pt-0 pb-24 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto"
                 >
                     {/* Badge */}
-                    < div className="inline-flex items-center gap-2 bg-[#00A947]/10 text-[#00A947] px-4 py-2 rounded-full text-sm font-medium mb-6 w-fit pointer-events-auto" >
+                    <div className="inline-flex items-center gap-2 bg-[#00A947]/10 text-[#00A947] px-4 py-2 rounded-full text-sm font-medium mb-6 w-fit pointer-events-auto">
                         <span className="w-2 h-2 bg-[#00A947] rounded-full animate-pulse"></span>
-                        Tecnologia State - of - the - Art
-                    </div >
+                        Tecnologia State-of-the-Art
+                    </div>
 
-                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left">
-                        Inteligência <br />
-                        que conversa, <br />
-                        <span className="text-[#00A947]">Vendas que <br />fecham</span>
+                    <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
+                        Inteligência que conversa,{' '}
+                        <span className="text-[#00A947] block mt-2">Vendas que fecham</span>
                     </h1>
 
-                    <p className="text-gray-600 text-left mt-6 text-xl max-w-lg mr-auto">
+                    <p className="text-gray-600 text-left mt-8 text-xl md:text-2xl w-full max-w-2xl mr-auto leading-relaxed">
                         Recupere 100% dos leads perdidos por demora na resposta. Atendimento instantâneo, inteligente e humano. A qualquer hora.
                     </p>
 
@@ -528,22 +535,64 @@ const Landing = () => {
                     </video >
 
                     {/* Chat Overlay - Only visible in expanded phase (100% screen) */}
-                    {phase === 'expanded' && <ChatOverlay />}
+                    <AnimatePresence>
+                        {phase === 'expanded' && !isShrinking && <ChatOverlay />}
+                    </AnimatePresence>
 
                     {/* Overlay de Métricas */}
                     <div
-                        className={`absolute top-1/2 left-8 md:left-20 -translate-y-1/2 z-30 max-w-md transition-opacity duration-500 ${phase === 'ended' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                        className={`absolute top-24 md:top-32 left-0 w-full z-30 transition-opacity duration-500 ${phase === 'ended' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                     >
-                        <div className="space-y-6">
-                            <div className="bg-[#00A947] p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,169,71,0.3)] border border-[#4ADE80]/30 backdrop-blur-sm transform hover:-translate-y-1 transition-all duration-300">
-                                <h3 className="text-3xl font-bold text-white mb-2 tracking-tight">Métricas em Tempo Real</h3>
-                                <p className="text-lg text-white/90 font-medium leading-relaxed">Visão completa da sua operação.</p>
+                        <motion.div
+                            className="flex flex-col gap-4 items-center justify-center w-full"
+                            style={{ opacity: metricsOpacity, y: metricsY, maxWidth: "50%" }}
+                        >
+                            <div className="group flex justify-center w-full">
+                                <h1 className="text-7xl md:text-8xl lg:text-9xl font-clash font-bold text-[#1E293B] text-center tracking-[-0.04em] leading-[0.85] group-hover:scale-105 transition-transform duration-500">
+                                    REAL TIME DATA
+                                </h1>
                             </div>
-                            <div className="bg-[#00A947] p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,169,71,0.3)] border border-[#4ADE80]/30 backdrop-blur-sm transform hover:-translate-y-1 transition-all duration-300">
-                                <h3 className="text-3xl font-bold text-white mb-2 tracking-tight">+300% em Vendas</h3>
-                                <p className="text-lg text-white/90 font-medium leading-relaxed">Resultados comprovados.</p>
+
+                            <div className="group">
+                                <p className="text-sm md:text-base font-clash font-bold text-[#1E293B]/70 tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
+                                    +300% SALES BOOST
+                                </p>
                             </div>
-                        </div>
+
+                            {/* Animated Arrow Cards */}
+                            <div className="flex flex-col gap-5 mt-52 w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
+                                {[
+                                    { icon: Play, color: "bg-[#FF6B4A]", value: "+100", label: "data points" },
+                                    { icon: ThumbsUp, color: "bg-[#6366F1]", value: "+80", label: "data points" },
+                                    { icon: ShoppingBag, color: "bg-[#EAB308]", value: "+50", label: "data points" }
+                                ].map((Item, i) => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, x: -40, scale: 0.8 }}
+                                        whileInView={{ opacity: 1, x: 0, scale: 1 }}
+                                        viewport={{ once: false, margin: "-50px" }}
+                                        transition={{ delay: i * 0.15, duration: 0.5, type: "spring", bounce: 0.4 }}
+                                        className="relative flex items-center h-20 md:h-24 group/card cursor-pointer"
+                                    >
+                                        {/* Main Body */}
+                                        <div className="flex-1 bg-[#0F172A] h-full rounded-l-2xl flex items-center pl-4 pr-6 gap-5 z-10 shadow-xl group-hover/card:bg-[#1E293B] transition-colors duration-300">
+                                            <div className={`w-12 h-12 md:w-16 md:h-16 ${Item.color} rounded-2xl flex items-center justify-center shrink-0 shadow-inner`}>
+                                                <Item.icon className="w-6 h-6 md:w-8 md:h-8 text-white" fill="currentColor" strokeWidth={2.5} />
+                                            </div>
+                                            <div className="flex flex-col leading-none gap-1">
+                                                <span className="text-white font-clash font-bold text-3xl md:text-4xl">{Item.value}</span>
+                                                <span className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-wider">{Item.label}</span>
+                                            </div>
+                                        </div>
+                                        {/* Arrow Tip */}
+                                        <div
+                                            className="absolute right-[-31px] top-0 h-full w-[32px] bg-[#0F172A] z-0 group-hover/card:bg-[#1E293B] transition-colors duration-300"
+                                            style={{ clipPath: "polygon(0 0, 0 100%, 100% 50%)" }}
+                                        />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.div>
                     </div>
                 </div >
             </div >
@@ -559,11 +608,22 @@ const Landing = () => {
                     <>
 
                         <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
-                            <div className="container mx-auto space-y-32">
+                            <div className="container mx-auto space-y-32" style={{ maxWidth: "100%" }}>
+                                {/* Section Header */}
+                                <div className="text-center max-w-3xl mx-auto mb-16">
+                                    <h2 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
+                                        Muito além de um simples <br className="hidden md:block" />
+                                        <span className="text-[#00A947]">Chatbot</span>
+                                    </h2>
+                                    <p className="text-xl text-slate-600 leading-relaxed">
+                                        Esqueça as respostas prontas. Nossa IA entende contexto, intenção e emoção para vender como seus melhores especialistas.
+                                    </p>
+                                </div>
+
                                 {/* Feature 1 */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                    <div className="order-2 lg:order-1">
-                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                    <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
+                                        <h3 className="text-4xl md:text-6xl text-[#F14624] font-extrabold mb-6 leading-tight text-slate-900">
                                             Multiplicação de Força
                                         </h3>
                                         <p className="text-lg text-slate-600 mb-8 leading-relaxed">
@@ -578,34 +638,30 @@ const Landing = () => {
                                             ))}
                                         </ul>
                                     </div>
-                                    <div className="order-1 lg:order-2 flex justify-center relative">
-                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                                                <circle cx="9" cy="7" r="4" />
-                                                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                            </svg>
+                                    <div className="order-1 lg:order-2 flex justify-end relative pr-20">
+                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
+                                            <img
+                                                src={bgFeature1}
+                                                alt="Multiplicação de Força"
+                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Feature 2 */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                    <div className="order-1 flex justify-center relative">
-                                        <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                                <path d="M12 8V4H8" />
-                                                <rect width="16" height="12" x="4" y="8" rx="2" />
-                                                <path d="M2 14h2" />
-                                                <path d="M20 14h2" />
-                                                <path d="M15 13v2" />
-                                                <path d="M9 13v2" />
-                                            </svg>
+                                    <div className="order-1 flex justify-start relative pl-20">
+                                        <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
+                                            <img
+                                                src={bgFeature1}
+                                                alt="Funcionários Digitais"
+                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                            />
                                         </div>
                                     </div>
-                                    <div className="order-2">
-                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                    <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
+                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
                                             Funcionários Digitais (IA)
                                         </h3>
                                         <p className="text-lg text-slate-600 mb-8 leading-relaxed">
@@ -623,9 +679,9 @@ const Landing = () => {
                                 </div>
 
                                 {/* Feature 3 */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center" style={{ gap: 'auto', marginLeft: '5rem' }}>
-                                    <div className="order-2 lg:order-1">
-                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                                    <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
+                                        <h3 className="text-4xl md:text-6xl text-[#F14624] font-extrabold mb-6 leading-tight text-slate-900" >
                                             Controle Total (Tempo Real)
                                         </h3>
                                         <p className="text-lg text-slate-600 mb-8 leading-relaxed">
@@ -640,28 +696,30 @@ const Landing = () => {
                                             ))}
                                         </ul>
                                     </div>
-                                    <div className="order-1 lg:order-2 flex justify-center relative">
-                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                                                <line x1="3" x2="21" y1="9" y2="9" />
-                                                <line x1="9" x2="9" y1="21" y2="9" />
-                                            </svg>
+                                    <div className="order-1 lg:order-2 flex justify-end relative pr-20">
+                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
+                                            <img
+                                                src={bgFeature1}
+                                                alt="Controle Total"
+                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Feature 4 */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                    <div className="order-1 flex justify-center relative">
-                                        <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
-                                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                                            </svg>
+                                    <div className="order-1 flex justify-start relative pl-20">
+                                        <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
+                                            <img
+                                                src={bgFeature1}
+                                                alt="Confiabilidade Enterprise"
+                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                            />
                                         </div>
                                     </div>
-                                    <div className="order-2">
-                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900">
+                                    <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
+                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
                                             Confiabilidade Enterprise
                                         </h3>
                                         <p className="text-lg text-slate-600 mb-8 leading-relaxed">
@@ -719,7 +777,7 @@ const Landing = () => {
                                         <Price>
                                             R$ 19,90<br /><span className="text-2xl">/mês</span>
                                         </Price>
-                                        <Paragraph className="text-lg">
+                                        <Paragraph className="text-lg w-full text-center">
                                             Acesso Completo<br />Sem fidelidade
                                         </Paragraph>
                                     </PricingWrapper>
@@ -729,7 +787,7 @@ const Landing = () => {
                                         <Price>
                                             R$ 197<br /><span className="text-2xl">/ano</span>
                                         </Price>
-                                        <Paragraph className="text-lg">
+                                        <Paragraph className="text-lg w-full text-center">
                                             Economize 17%<br />Equivalente a R$16/mês
                                         </Paragraph>
                                     </PricingWrapper>
@@ -739,7 +797,7 @@ const Landing = () => {
                                         <Price>
                                             R$ 297<br /><span className="text-2xl">único</span>
                                         </Price>
-                                        <Paragraph className="text-lg">
+                                        <Paragraph className="text-lg w-full text-center">
                                             Pague uma vez<br />Acesso para sempre<br />Oferta Limitada
                                         </Paragraph>
                                     </PricingWrapper>

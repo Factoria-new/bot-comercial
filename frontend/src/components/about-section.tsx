@@ -25,17 +25,17 @@ export function AboutSection() {
                 {/* Header */}
                 <div className="max-w-3xl mb-16">
                     <div className="inline-flex items-center gap-2 mb-4">
-                        <div className="w-1 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-                        <span className="text-sm font-semibold text-bora-orange uppercase tracking-wider">
+                        <div className="w-1 h-6 bg-[#FF6B00] rounded-full" />
+                        <span className="text-sm font-semibold text-[#FF6B00] uppercase tracking-wider">
                             Quem Somos
                         </span>
                     </div>
-                    <h2 className="text-4xl xl:text-5xl font-bold text-bora-orange mb-6">
+                    <h2 className="text-4xl xl:text-5xl font-bold text-black mb-6">
                         Transformando o{' '}
                         <span className="text-[#00A947]">atendimento</span>{' '}
                         do Brasil
                     </h2>
-                    <p className="text-lg text-bora-orange">
+                    <p className="text-lg text-black">
                         Somos uma equipe apaixonada por tecnologia e inovação, dedicada a revolucionar a forma como empresas se comunicam.
                     </p>
                 </div>
@@ -43,22 +43,22 @@ export function AboutSection() {
                 {/* Bento Grid */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     {/* Large Feature Card - Mission */}
-                    <Card className="relative border-border bg-card hover:shadow-2xl hover:border-primary/30 transition-all duration-300 group overflow-hidden transform hover:-translate-y-1">
-                        <div className="absolute inset-0 bg-gradient-to-br from-bora-orange/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <Card className="relative border-border bg-card hover:shadow-2xl hover:border-[#FF6B00]/30 transition-all duration-300 group overflow-hidden transform hover:-translate-y-1">
+                        <div className="absolute inset-0 bg-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                         <CardContent className="p-8 xl:p-10 relative">
-                            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mb-6">
+                            <div className="w-14 h-14 rounded-lg bg-[#FF6B00] flex items-center justify-center mb-6">
                                 <Target className="w-7 h-7 text-white" />
                             </div>
                             <CardHeader className="p-0 mb-4">
-                                <CardTitle className="text-2xl xl:text-3xl text-foreground">
+                                <CardTitle className="text-2xl xl:text-3xl text-black">
                                     Nossa Missão
                                 </CardTitle>
                             </CardHeader>
-                            <h3 className="text-xl font-semibold text-foreground mb-4">
+                            <h3 className="text-xl font-semibold text-black mb-4">
                                 Democratizar a IA para pequenas e médias empresas
                             </h3>
-                            <p className="text-slate-600 text-lg">
+                            <p className="text-black text-lg">
                                 Acreditamos que toda empresa merece acesso às melhores tecnologias de atendimento.
                             </p>
 
@@ -69,15 +69,15 @@ export function AboutSection() {
                     {/* Right Stack */}
                     <div className="flex flex-col gap-6">
                         {/* Stats Card */}
-                        <Card className="border-border bg-card hover:shadow-2xl hover:border-primary/30 transition-all duration-300 transform hover:-translate-y-1">
+                        <Card className="border-border bg-card hover:shadow-2xl hover:border-[#FF6B00]/30 transition-all duration-300 transform hover:-translate-y-1">
                             <CardContent className="p-8">
                                 <div className="grid grid-cols-2 gap-6">
                                     {stats.map((stat, i) => (
                                         <div key={i} className="text-center">
-                                            <div className="text-3xl xl:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent mb-2">
+                                            <div className="text-3xl xl:text-4xl font-bold text-[#000000] mb-2">
                                                 {stat.number}
                                             </div>
-                                            <div className="text-sm text-slate-600">
+                                            <div className="text-sm text-black">
                                                 {stat.label}
                                             </div>
                                         </div>
@@ -87,29 +87,29 @@ export function AboutSection() {
                         </Card>
 
                         {/* Vision Card */}
-                        <Card className="border-border bg-card hover:shadow-2xl hover:border-primary/30 transition-all duration-300 group flex-1 transform hover:-translate-y-1">
+                        <Card className="border-border bg-card hover:shadow-2xl hover:border-[#FF6B00]/30 transition-all duration-300 group flex-1 transform hover:-translate-y-1">
                             <CardContent className="p-8 h-full flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-center gap-4 mb-6">
                                         <div className="relative">
-                                            <div className="w-16 h-16 rounded-full bg-feature-green/20 flex items-center justify-center">
-                                                <TrendingUp className="w-8 h-8 text-feature-green" />
+                                            <div className="w-16 h-16 rounded-full bg-[#FF6B00]/20 flex items-center justify-center">
+                                                <TrendingUp className="w-8 h-8 text-[#FF6B00]" />
                                             </div>
                                         </div>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-foreground mb-3">
+                                    <h3 className="text-2xl font-bold text-black mb-3">
                                         Visão Global
                                     </h3>
-                                    <p className="text-slate-600 text-lg">
+                                    <p className="text-black text-lg">
                                         Expandindo fronteiras da inovação brasileira.
                                     </p>
                                 </div>
 
                                 {/* Decorative Elements */}
                                 <div className="mt-6 flex gap-2">
-                                    <div className="h-2 w-12 rounded-full bg-gradient-to-r from-primary to-accent" />
-                                    <div className="h-2 w-8 rounded-full bg-feature-green/30" />
-                                    <div className="h-2 w-6 rounded-full bg-bora-orange/30" />
+                                    <div className="h-2 w-12 rounded-full bg-[#FF6B00]" />
+                                    <div className="h-2 w-8 rounded-full bg-[#FF6B00]/60" />
+                                    <div className="h-2 w-6 rounded-full bg-[#FF6B00]/30" />
                                 </div>
                             </CardContent>
                         </Card>

@@ -144,15 +144,25 @@ export const PricingWrapper: React.FC<{
                     <div
                         style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d", backfaceVisibility: 'hidden' }}
                         className={
-                            'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-start justify-start sm:gap-10 gap-7'
+                            'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-center justify-start text-center sm:gap-10 gap-7'
                         }
                     >
                         {children}
                         <div style={{ transform: "translateZ(25px)", backfaceVisibility: 'hidden' }} className={'w-full h-full flex items-end justify-end text-base'}>
                             <Link to={contactHref} className={'w-full h-fit'}>
-                                <button className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold hover:bg-neutral-100 transition-colors shadow-lg'}>
+                                <motion.button
+                                    whileHover={{
+                                        scale: 1.05,
+                                        z: 50,
+                                        boxShadow: "0px 20px 40px rgba(0,0,0,0.4)"
+                                    }}
+                                    whileTap={{ scale: 0.95 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                                    style={{ transformStyle: "preserve-3d" }}
+                                    className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold transition-colors shadow-lg'}
+                                >
                                     contact
-                                </button>
+                                </motion.button>
                             </Link>
                         </div>
                     </div>
