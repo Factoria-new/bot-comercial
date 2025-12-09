@@ -40,6 +40,7 @@ const Landing = () => {
     const zoomStep = 0.015;
     const [isScrolled, setIsScrolled] = useState(false);
     const [isShrinking, setIsShrinking] = useState(false);
+    const [isInstantReset, setIsInstantReset] = useState(false);
 
     useEffect(() => {
         // Force scroll to top on mount
@@ -302,6 +303,7 @@ const Landing = () => {
             videoEndLoop.play();
             gsap.set(videoEndLoop, { autoAlpha: 1 });
             gsap.set(videoMain, { autoAlpha: 0 });
+            setIsInstantReset(false); // Resetar para usar animação normal
             setPhase('ended');
         };
 
@@ -435,6 +437,7 @@ const Landing = () => {
         const videoLoop = videoLoopRef.current;
         const videoMain = videoMainRef.current;
         const videoEndLoop = videoEndLoopRef.current;
+        const videoReverse = videoReverseRef.current;
 
         if (!wrapper || !heroText || !videoLoop || !videoMain || !videoEndLoop) return;
 
@@ -442,6 +445,7 @@ const Landing = () => {
         isAnimatingRef.current = false;
         if (reverseAnimationRef.current) {
             cancelAnimationFrame(reverseAnimationRef.current);
+            reverseAnimationRef.current = null;
         }
 
         // 2. Resetar vídeos
@@ -453,8 +457,15 @@ const Landing = () => {
         videoEndLoop.currentTime = 0;
         gsap.set(videoEndLoop, { autoAlpha: 0 });
 
+        if (videoReverse) {
+            videoReverse.pause();
+            videoReverse.currentTime = 0;
+            gsap.set(videoReverse, { autoAlpha: 0 });
+        }
+
+        videoLoop.currentTime = 0;
         videoLoop.play();
-        gsap.set(videoLoop, { autoAlpha: 1 });
+        gsap.set(videoLoop, { autoAlpha: 1, scale: 1 });
 
         // 3. Resetar layout (Hero Text e Wrapper)
         gsap.set(heroText, {
@@ -470,7 +481,17 @@ const Landing = () => {
             borderRadius: "30px"
         });
 
-        // 5. Scroll para o topo
+        // 4. Resetar zoom levels
+        zoomLevelRef.current = 1;
+        zoomEndLevelRef.current = 1;
+
+        // 5. Ativar reset instantâneo (sem animação de saída)
+        setIsInstantReset(true);
+
+        // 6. Atualizar estado React para esconder overlays
+        setPhase('initial');
+
+        // 7. Scroll para o topo
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -599,91 +620,98 @@ const Landing = () => {
                         {phase === 'expanded' && !isShrinking && <ChatOverlay />}
                     </AnimatePresence>
 
-                    {/* Overlay de Métricas */}
-                    <div
-                        className="absolute top-24 md:top-32 left-0 w-full z-30 pointer-events-none"
-                    >
-                        <motion.div
-                            className="flex flex-col gap-4 items-center justify-center w-full"
-                            style={{ y: metricsY, maxWidth: "50%" }}
-                        >
-                            <div className={`transition-opacity duration-500 ${phase === 'ended' ? 'opacity-100' : 'opacity-0'}`}>
-                                <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
-                                    <div className="group flex justify-center w-full">
-                                        <h1 className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-[-0.04em] leading-[0.85] group-hover:scale-105 transition-transform duration-500">
-                                            REAL TIME DATA
-                                        </h1>
-                                    </div>
-
-                                    <div className="group flex justify-center w-full">
-                                        <p className="text-[clamp(0.75rem,2vw,1rem)] font-clash font-bold text-[#1E293B]/70 text-center tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
-                                            +300% SALES BOOST
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            </div>
-
-                            {/* Animated Arrow Cards */}
-                            <div className="flex flex-col gap-6 mt-[15vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
-                                {[
-                                    { icon: Play, color: "bg-[#027831]", value: "+100", label: "data points", width: "100%" },
-                                    { icon: ThumbsUp, color: "bg-[#6366F1]", value: "+80", label: "data points", width: "85%" },
-                                    { icon: ShoppingBag, color: "bg-[#EAB308]", value: "+50", label: "data points", width: "70%" }
-                                ].map((Item, i) => (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ opacity: 0, width: "141px" }}
-                                        animate={phase === 'ended' ? { opacity: 1, width: Item.width } : { opacity: 0, width: "141px" }}
-                                        transition={{
-                                            opacity: {
-                                                delay: phase === 'ended' ? (i * 0.2 + 0.2) : 0.7,
-                                                duration: phase === 'ended' ? 0.5 : 0.3
-                                            },
-                                            width: {
-                                                delay: phase === 'ended' ? (i * 0.2 + 0.8) : 0,
-                                                duration: phase === 'ended' ? 1.5 : 0.6,
-                                                ease: phase === 'ended' ? [0.16, 1, 0.3, 1] : "easeInOut"
-                                            }
-                                        }}
-                                        className="flex items-center h-20 md:h-24 group/card cursor-pointer"
-                                    >
-                                        {/* Main Body (Animates Width) */}
-                                        <div
-                                            className="flex-1 bg-[#0F172A] h-full rounded-l-2xl flex items-center pl-4 gap-5 z-20 shadow-xl group-hover/card:bg-[#1E293B] transition-colors duration-300 relative overflow-hidden"
-                                        >
-                                            {/* Icon (Always Visible) */}
-                                            <div className={`w-12 h-12 md:w-16 md:h-16 ${Item.color} rounded-3xl flex items-center justify-center shrink-0 shadow-inner z-30`}>
-                                                <Item.icon className="w-6 h-6 md:w-8 md:h-8 text-white" fill="currentColor" strokeWidth={2.5} />
-                                            </div>
-
-                                            {/* Text (Fades In) */}
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={phase === 'ended' ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
-                                                transition={{
-                                                    delay: phase === 'ended' ? (i * 0.2 + 1.2) : 0,
-                                                    duration: phase === 'ended' ? 1.2 : 0.2
-                                                }}
-                                                className="flex flex-col leading-none gap-1 min-w-max pr-6"
-                                            >
-                                                <span className="text-white font-clash font-bold text-3xl md:text-4xl">{Item.value}</span>
-                                                <span className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-wider">{Item.label}</span>
-                                            </motion.div>
+                    {/* Overlay de Métricas - AnimatePresence controla a saída */}
+                    <AnimatePresence mode={isInstantReset ? "sync" : "wait"}>
+                        {phase === 'ended' && (
+                            <motion.div
+                                key="metrics-overlay"
+                                className="absolute top-24 md:top-32 left-0 w-full z-30 pointer-events-none"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: isInstantReset ? 0 : 0, transition: { duration: isInstantReset ? 0 : 0.3 } }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <motion.div
+                                    className="flex flex-col gap-4 items-center justify-center w-full"
+                                    style={{ y: metricsY, maxWidth: "50%" }}
+                                >
+                                    <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
+                                        <div className="group flex justify-center w-full">
+                                            <h1 className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-[-0.04em] leading-[0.85] group-hover:scale-105 transition-transform duration-500">
+                                                REAL TIME DATA
+                                            </h1>
                                         </div>
 
-                                        {/* Arrow Tip (Pushed by Body) */}
-                                        <svg
-                                            className="h-full w-[32px] shrink-0 fill-[#0F172A] group-hover/card:fill-[#1E293B] transition-colors duration-300 pointer-events-none -ml-[1px]"
-                                            viewBox="0 0 32 100"
-                                            preserveAspectRatio="none"
-                                        >
-                                            <path d="M0,0 L0,100 L25,58 Q32,50 25,42 L0,0 Z" />
-                                        </svg>
+                                        <div className="group flex justify-center w-full">
+                                            <p className="text-[clamp(0.75rem,2vw,1rem)] font-clash font-bold text-[#1E293B]/70 text-center tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
+                                                +300% SALES BOOST
+                                            </p>
+                                        </div>
                                     </motion.div>
-                                ))}
-                            </div>
-                        </motion.div>
-                    </div>
+
+                                    {/* Animated Arrow Cards */}
+                                    <div className="flex flex-col gap-6 mt-[15vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
+                                        {[
+                                            { icon: Play, color: "bg-[#027831]", value: "+100", label: "data points", width: "100%" },
+                                            { icon: ThumbsUp, color: "bg-[#6366F1]", value: "+80", label: "data points", width: "85%" },
+                                            { icon: ShoppingBag, color: "bg-[#EAB308]", value: "+50", label: "data points", width: "70%" }
+                                        ].map((Item, i) => (
+                                            <motion.div
+                                                key={i}
+                                                initial={{ opacity: 0, width: "141px" }}
+                                                animate={{ opacity: 1, width: Item.width }}
+                                                transition={{
+                                                    opacity: {
+                                                        delay: i * 0.2 + 0.2,
+                                                        duration: 0.5
+                                                    },
+                                                    width: {
+                                                        delay: i * 0.2 + 0.8,
+                                                        duration: 1.5,
+                                                        ease: [0.16, 1, 0.3, 1]
+                                                    }
+                                                }}
+                                                className="flex items-center h-20 md:h-24 group/card cursor-pointer"
+                                            >
+                                                {/* Main Body (Animates Width) */}
+                                                <div
+                                                    className="flex-1 bg-[#0F172A] h-full rounded-l-2xl flex items-center pl-4 gap-5 z-20 shadow-xl group-hover/card:bg-[#1E293B] transition-colors duration-300 relative overflow-hidden"
+                                                >
+                                                    {/* Icon (Always Visible) */}
+                                                    <div className={`w-12 h-12 md:w-16 md:h-16 ${Item.color} rounded-3xl flex items-center justify-center shrink-0 shadow-inner z-30`}>
+                                                        <Item.icon className="w-6 h-6 md:w-8 md:h-8 text-white" fill="currentColor" strokeWidth={2.5} />
+                                                    </div>
+
+                                                    {/* Text (Fades In) */}
+                                                    <motion.div
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{
+                                                            delay: i * 0.2 + 1.2,
+                                                            duration: 1.2
+                                                        }}
+                                                        className="flex flex-col leading-none gap-1 min-w-max pr-6"
+                                                    >
+                                                        <span className="text-white font-clash font-bold text-3xl md:text-4xl">{Item.value}</span>
+                                                        <span className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-wider">{Item.label}</span>
+                                                    </motion.div>
+                                                </div>
+
+                                                {/* Arrow Tip (Pushed by Body) */}
+                                                <svg
+                                                    className="h-full w-[32px] shrink-0 fill-[#0F172A] group-hover/card:fill-[#1E293B] transition-colors duration-300 pointer-events-none -ml-[1px]"
+                                                    viewBox="0 0 32 100"
+                                                    preserveAspectRatio="none"
+                                                >
+                                                    <path d="M0,0 L0,100 L25,58 Q32,50 25,42 L0,0 Z" />
+                                                </svg>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div >
             </div >
 
