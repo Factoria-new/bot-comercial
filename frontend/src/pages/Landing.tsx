@@ -72,8 +72,9 @@ const Landing = () => {
     const playReverse = useCallback(() => {
         const videoReverse = videoReverseRef.current;
         const videoEndLoop = videoEndLoopRef.current;
+        const videoLoop = videoLoopRef.current;
 
-        if (!videoReverse || !videoEndLoop) return;
+        if (!videoReverse || !videoEndLoop || !videoLoop) return;
 
         videoEndLoop.pause();
         gsap.set(videoEndLoop, { autoAlpha: 0 });
@@ -95,7 +96,10 @@ const Landing = () => {
                 reverseAnimationRef.current = requestAnimationFrame(animateReverse);
             } else {
                 gsap.set(videoReverse, { autoAlpha: 0 });
-                gsap.set(videoLoopRef.current, { autoAlpha: 1 });
+                // Garantir que o vídeo de loop volte a tocar
+                videoLoop.currentTime = 0;
+                videoLoop.play();
+                gsap.set(videoLoop, { autoAlpha: 1 });
                 setPhase('expanded');
                 reverseAnimationRef.current = null;
             }
@@ -367,6 +371,62 @@ const Landing = () => {
             }
         }, 100);
     };
+    // Handler para navegação para seções sem bloquear o scroll
+    const handleNavigateToSection = (e: React.MouseEvent, sectionId: string) => {
+        e.preventDefault();
+
+        const wrapper = videoWrapperRef.current;
+        const heroText = heroTextRef.current;
+        const videoLoop = videoLoopRef.current;
+        const videoMain = videoMainRef.current;
+        const videoEndLoop = videoEndLoopRef.current;
+
+        if (!wrapper || !heroText || !videoLoop || !videoMain || !videoEndLoop) return;
+
+        // 1. Parar animações em andamento imediatamente
+        isAnimatingRef.current = false;
+        if (reverseAnimationRef.current) {
+            cancelAnimationFrame(reverseAnimationRef.current);
+            reverseAnimationRef.current = null;
+        }
+
+        // 2. Definir estado visual final (Expanded) instantaneamente
+        gsap.set(wrapper, {
+            width: "100vw",
+            height: "100vh",
+            top: "0vh",
+            right: "0vw",
+            borderRadius: "0px"
+        });
+
+        gsap.set(heroText, {
+            x: -100,
+            autoAlpha: 0
+        });
+
+        // 3. Configurar vídeos para o estado final
+        videoLoop.pause();
+        gsap.set(videoLoop, { autoAlpha: 0 });
+
+        videoMain.pause();
+        gsap.set(videoMain, { autoAlpha: 0 });
+
+        videoEndLoop.currentTime = 0;
+        videoEndLoop.play();
+        gsap.set(videoEndLoop, { autoAlpha: 1, scale: 1 });
+
+        // 4. Atualizar estado React
+        setPhase('ended');
+        zoomEndLevelRef.current = 1;
+
+        // 5. Scroll para a seção imediatamente (sem bloquear)
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            // Usar scrollIntoView com behavior 'smooth' mas não bloquear
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
     const handleResetToHome = (e: React.MouseEvent) => {
         e.preventDefault();
 
@@ -428,10 +488,10 @@ const Landing = () => {
                     <a href="#home" onClick={handleResetToHome} className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full cursor-pointer">
                         Home
                     </a>
-                    <a href="#sobre" className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full">
+                    <a href="#sobre" onClick={(e) => handleNavigateToSection(e, 'sobre')} className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full cursor-pointer">
                         Sobre Nós
                     </a>
-                    <a href="#produto" className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full">
+                    <a href="#produto" onClick={(e) => handleNavigateToSection(e, 'produto')} className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full cursor-pointer">
                         Produto
                     </a>
                 </nav>
