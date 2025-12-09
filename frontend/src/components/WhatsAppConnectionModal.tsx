@@ -72,7 +72,7 @@ const WhatsAppConnectionModal = ({
 
             <Button
               type="submit"
-              className="w-full bg-mint-glow text-[#243B6B] text-white hover:bg-mint-glow/90 font-semibold"
+              className="w-full bg-white text-[#243B6B] hover:bg-white/90 font-semibold"
               disabled={!phoneNumber || phoneNumber.length < 10}
             >
               Gerar Código de Pareamento
