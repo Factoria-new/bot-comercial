@@ -615,8 +615,8 @@ const Landing = () => {
                                         </h1>
                                     </div>
 
-                                    <div className="group">
-                                        <p className="text-[clamp(0.75rem,2vw,1rem)] font-clash font-bold text-[#1E293B]/70 tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
+                                    <div className="group flex justify-center w-full">
+                                        <p className="text-[clamp(0.75rem,2vw,1rem)] font-clash font-bold text-[#1E293B]/70 text-center tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
                                             +300% SALES BOOST
                                         </p>
                                     </div>
@@ -632,28 +632,24 @@ const Landing = () => {
                                 ].map((Item, i) => (
                                     <motion.div
                                         key={i}
-                                        initial={{ opacity: 0 }}
-                                        animate={phase === 'ended' ? { opacity: 1 } : { opacity: 0 }}
+                                        initial={{ opacity: 0, width: "141px" }}
+                                        animate={phase === 'ended' ? { opacity: 1, width: Item.width } : { opacity: 0, width: "141px" }}
                                         transition={{
                                             opacity: {
                                                 delay: phase === 'ended' ? (i * 0.2 + 0.2) : 0.7,
                                                 duration: phase === 'ended' ? 0.5 : 0.3
+                                            },
+                                            width: {
+                                                delay: phase === 'ended' ? (i * 0.2 + 0.8) : 0,
+                                                duration: phase === 'ended' ? 1.5 : 0.6,
+                                                ease: phase === 'ended' ? [0.16, 1, 0.3, 1] : "easeInOut"
                                             }
                                         }}
                                         className="flex items-center h-20 md:h-24 group/card cursor-pointer"
                                     >
                                         {/* Main Body (Animates Width) */}
-                                        <motion.div
-                                            initial={{ width: "110px" }}
-                                            animate={phase === 'ended' ? { width: Item.width } : { width: "110px" }}
-                                            transition={{
-                                                width: {
-                                                    delay: phase === 'ended' ? (i * 0.2 + 0.8) : 0, // Instant start on exit
-                                                    duration: phase === 'ended' ? 1.5 : 0.6, // Slower, smooth enter
-                                                    ease: phase === 'ended' ? [0.16, 1, 0.3, 1] : "easeInOut"
-                                                }
-                                            }}
-                                            className="bg-[#0F172A] h-full rounded-l-2xl flex items-center pl-4 gap-5 z-20 shadow-xl group-hover/card:bg-[#1E293B] transition-colors duration-300 relative overflow-hidden"
+                                        <div
+                                            className="flex-1 bg-[#0F172A] h-full rounded-l-2xl flex items-center pl-4 gap-5 z-20 shadow-xl group-hover/card:bg-[#1E293B] transition-colors duration-300 relative overflow-hidden"
                                         >
                                             {/* Icon (Always Visible) */}
                                             <div className={`w-12 h-12 md:w-16 md:h-16 ${Item.color} rounded-3xl flex items-center justify-center shrink-0 shadow-inner z-30`}>
@@ -673,11 +669,11 @@ const Landing = () => {
                                                 <span className="text-white font-clash font-bold text-3xl md:text-4xl">{Item.value}</span>
                                                 <span className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-wider">{Item.label}</span>
                                             </motion.div>
-                                        </motion.div>
+                                        </div>
 
                                         {/* Arrow Tip (Pushed by Body) */}
                                         <svg
-                                            className="h-full w-[32px] fill-[#0F172A] group-hover/card:fill-[#1E293B] transition-colors duration-300 pointer-events-none -ml-[1px]"
+                                            className="h-full w-[32px] shrink-0 fill-[#0F172A] group-hover/card:fill-[#1E293B] transition-colors duration-300 pointer-events-none -ml-[1px]"
                                             viewBox="0 0 32 100"
                                             preserveAspectRatio="none"
                                         >
