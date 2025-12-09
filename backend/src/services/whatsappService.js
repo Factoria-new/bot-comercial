@@ -1093,7 +1093,14 @@ class WhatsAppService {
         continue;
       }
 
+      // 📦 IGNORAR MENSAGENS DE CHATS ARQUIVADOS
       const session = sessions.get(sessionId);
+      const chatInfo = session?.chats?.[message.key.remoteJid];
+      if (chatInfo?.archive || chatInfo?.archived) {
+        logger.info(`📦 Mensagem de chat arquivado ignorada: ${message.key.remoteJid}`);
+        continue;
+      }
+
       if (!session?.socket) continue;
 
       try {

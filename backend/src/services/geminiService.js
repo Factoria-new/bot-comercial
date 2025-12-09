@@ -52,6 +52,7 @@ Diretrizes:
 - Se não souber algo, admita honestamente
 - Adapte seu tom ao contexto da conversa
 - Mantenha as respostas concisas quando possível
+- IMPORTANTE: Quando o usuário solicitar ações de calendário (agendar, cancelar, remarcar reuniões), EXECUTE IMEDIATAMENTE sem pedir confirmação. NÃO pergunte "Posso prosseguir?" ou "Confirma?". Apenas faça a ação e informe o resultado.
 `;
 
 /**
@@ -1016,8 +1017,12 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Build system prompt com contexto temporal
+    // Build system prompt COM contexto temporal (para enviar ao Gemini)
     const finalSystemPrompt = buildSystemPrompt(systemPrompt, true);
+
+    // Build system prompt SEM contexto temporal (para comparação estável)
+    // Isso evita recriar a conversa a cada mensagem só porque a hora mudou
+    const baseSystemPrompt = buildSystemPrompt(systemPrompt, false);
 
     // Criar chave única para histórico
     const conversationKey = phoneNumber;
@@ -1025,16 +1030,17 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
     // Obter ou criar histórico de conversa
     let conversationData = userConversations.get(conversationKey);
 
-    // Verificar se o prompt mudou
-    const promptChanged = conversationData && conversationData.systemPrompt !== finalSystemPrompt;
+    // Verificar se o prompt BASE mudou (ignorando datetime que muda a cada segundo)
+    const promptChanged = conversationData && conversationData.basePrompt !== baseSystemPrompt;
 
     if (!conversationData || promptChanged) {
       if (promptChanged) {
         logger.info(`🔄 Prompt alterado para ${phoneNumber} - recriando conversa com Calendar tools`);
       }
 
-      // Tentar obter cache para o system prompt
-      let cachedContent = await getOrCreateCache(apiKey, finalSystemPrompt);
+      // IMPORTANTE: NÃO usar cache quando há tools/function calling
+      // A API do Gemini não permite usar cachedContent junto com tools
+      // Erro: "CachedContent can not be used with GenerateContent request setting tools or tool_config"
 
       const modelConfig = {
         model: FIXED_MODEL,
@@ -1048,15 +1054,10 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
           {
             functionDeclarations: geminiTools
           }
-        ]
+        ],
+        // Sempre usar systemInstruction quando há tools (não pode usar cache)
+        systemInstruction: finalSystemPrompt
       };
-
-      // Se conseguiu cache, usa cachedContent. Se não, usa systemInstruction normal.
-      if (cachedContent) {
-        modelConfig.cachedContent = cachedContent;
-      } else {
-        modelConfig.systemInstruction = finalSystemPrompt;
-      }
 
       const model = genAI.getGenerativeModel(modelConfig);
 
@@ -1067,7 +1068,8 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
       conversationData = {
         chat,
         model,
-        systemPrompt: finalSystemPrompt
+        systemPrompt: finalSystemPrompt,
+        basePrompt: baseSystemPrompt  // Prompt estável para comparação (sem datetime)
       };
 
       userConversations.set(conversationKey, conversationData);
@@ -1087,13 +1089,33 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
 
     // Enviar mensagem
     const result = await chat.sendMessage(messageText);
-    const response = result.response;
+    let currentResponse = result.response;
+    let iterationCount = 0;
+    const MAX_ITERATIONS = 10; // Limite de segurança para evitar loops infinitos
 
-    // Verificar se há function calls
-    const functionCalls = response.functionCalls();
+    // Loop para processar múltiplas rodadas de function calls (ex: cancelar + reagendar)
+    while (iterationCount < MAX_ITERATIONS) {
+      iterationCount++;
 
-    if (functionCalls && functionCalls.length > 0) {
-      logger.info(`🔧 ${functionCalls.length} function call(s) detectada(s)`);
+      // Verificar se há function calls
+      const functionCalls = currentResponse.functionCalls();
+
+      if (!functionCalls || functionCalls.length === 0) {
+        // Sem mais function calls, retornar resposta de texto
+        const responseText = currentResponse.text();
+
+        if (iterationCount === 1) {
+          logger.info('===== RESPOSTA DIRETA (SEM FUNCTION CALLS) =====');
+        } else {
+          logger.info(`===== RESPOSTA FINAL (APÓS ${iterationCount - 1} RODADA(S) DE FUNCTION CALLS) =====`);
+        }
+        logger.info(`Resposta: ${responseText}`);
+        logger.info('===============================================');
+
+        return responseText;
+      }
+
+      logger.info(`🔧 Rodada ${iterationCount}: ${functionCalls.length} function call(s) detectada(s)`);
 
       // Processar cada function call
       const functionResponses = [];
@@ -1106,8 +1128,7 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
         logger.info(`📊 Parâmetros: ${JSON.stringify(call.args, null, 2)}`);
 
         try {
-          // Executar a ação via Composio (usando client.client.tools.execute com parâmetros corretos)
-          // Requer: entity_id, connected_account_id, e arguments
+          // Executar a ação via Composio
           const toolResult = await client.client.tools.execute(originalActionName, {
             entity_id: toolsUserId,
             connected_account_id: connectedAccountId,
@@ -1123,7 +1144,6 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
             }
           });
         } catch (toolError) {
-          // Use console.error for full visibility (logger may truncate)
           console.error('\n❌ TOOL EXECUTION ERROR:');
           console.error('Message:', toolError.message);
           console.error('Name:', toolError.name);
@@ -1154,25 +1174,16 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
       }
 
       // Enviar resultados das funções de volta ao modelo
-      logger.info('📤 Enviando resultados das funções para o modelo gerar resposta final...');
-      const finalResult = await chat.sendMessage(functionResponses);
-      const finalResponse = finalResult.response.text();
+      logger.info('📤 Enviando resultados das funções para o modelo...');
+      const nextResult = await chat.sendMessage(functionResponses);
+      currentResponse = nextResult.response;
 
-      logger.info('===== RESPOSTA FINAL (APÓS FUNCTION CALLS) =====');
-      logger.info(`Resposta: ${finalResponse}`);
-      logger.info('===============================================');
-
-      return finalResponse;
-    } else {
-      // Sem function calls, retornar resposta direta
-      const responseText = response.text();
-
-      logger.info('===== RESPOSTA DIRETA (SEM FUNCTION CALLS) =====');
-      logger.info(`Resposta: ${responseText}`);
-      logger.info('===============================================');
-
-      return responseText;
+      // O loop continuará e verificará se há mais function calls ou uma resposta de texto
     }
+
+    // Se chegamos aqui, atingimos o limite de iterações
+    logger.warn(`⚠️ Limite de ${MAX_ITERATIONS} iterações de function calls atingido`);
+    return 'Desculpe, houve um problema ao processar sua solicitação. Por favor, tente novamente.';
 
   } catch (error) {
     // Use console.error for full visibility (logger truncates)
