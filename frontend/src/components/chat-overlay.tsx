@@ -29,7 +29,7 @@ const TypingIndicator = () => (
         exit={{ opacity: 0, scale: 0.9 }}
         className="flex justify-end"
     >
-        <div className="bg-[#FF8566] p-4 rounded-2xl rounded-tr-none shadow-lg backdrop-blur-sm flex gap-1.5 items-center w-fit h-12 min-w-[60px] justify-center">
+        <div className="bg-[#027831] p-4 rounded-2xl rounded-tr-none shadow-lg backdrop-blur-sm flex gap-1.5 items-center w-fit h-12 min-w-[60px] justify-center">
             <motion.div
                 className="w-1.5 h-1.5 bg-white rounded-full"
                 animate={{ y: [0, -4, 0] }}
@@ -118,7 +118,7 @@ export const ChatOverlay = () => {
                     transition={{ duration: 0.5 }}
                     className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10"
                 >
-                    <div className="bg-[#FF8566] p-2 rounded-full shadow-lg">
+                    <div className="bg-[#027831] p-2 rounded-full shadow-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white">
                             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
                             <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
@@ -151,7 +151,7 @@ export const ChatOverlay = () => {
                                     <div
                                         className={`max-w-[85%] p-3.5 rounded-2xl text-sm font-medium shadow-sm backdrop-blur-sm ${msg.sender === 'user'
                                             ? 'bg-white text-slate-800 rounded-tl-none'
-                                            : 'bg-[#FF8566] text-white rounded-tr-none'
+                                            : 'bg-[#027831] text-white rounded-tr-none'
                                             }`}
                                     >
                                         {msg.text}

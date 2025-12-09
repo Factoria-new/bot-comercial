@@ -40,21 +40,21 @@ export default function Footer() {
                         <div className="flex gap-4">
                             <a
                                 href="#"
-                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#F14624] group flex items-center justify-center transition-all duration-300 shadow-sm"
+                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#00A947] group flex items-center justify-center transition-all duration-300 shadow-sm"
                                 aria-label="Twitter"
                             >
                                 <Twitter className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                             </a>
                             <a
                                 href="#"
-                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#F14624] group flex items-center justify-center transition-all duration-300 shadow-sm"
+                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#00A947] group flex items-center justify-center transition-all duration-300 shadow-sm"
                                 aria-label="LinkedIn"
                             >
                                 <Linkedin className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                             </a>
                             <a
                                 href="#"
-                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#F14624] group flex items-center justify-center transition-all duration-300 shadow-sm"
+                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#00A947] group flex items-center justify-center transition-all duration-300 shadow-sm"
                                 aria-label="GitHub"
                             >
                                 <Github className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
@@ -69,7 +69,7 @@ export default function Footer() {
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#00A947] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>
@@ -85,7 +85,7 @@ export default function Footer() {
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#00A947] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>
@@ -101,7 +101,7 @@ export default function Footer() {
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#00A947] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>
@@ -117,7 +117,7 @@ export default function Footer() {
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-slate-600 hover:text-[#F14624] transition-colors text-sm"
+                                        className="text-slate-600 hover:text-[#00A947] transition-colors text-sm"
                                     >
                                         {link.label}
                                     </a>

@@ -541,54 +541,88 @@ const Landing = () => {
 
                     {/* Overlay de Métricas */}
                     <div
-                        className={`absolute top-24 md:top-32 left-0 w-full z-30 transition-opacity duration-500 ${phase === 'ended' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                        className="absolute top-24 md:top-32 left-0 w-full z-30 pointer-events-none"
                     >
                         <motion.div
                             className="flex flex-col gap-4 items-center justify-center w-full"
-                            style={{ opacity: metricsOpacity, y: metricsY, maxWidth: "50%" }}
+                            style={{ y: metricsY, maxWidth: "50%" }}
                         >
-                            <div className="group flex justify-center w-full">
-                                <h1 className="text-7xl md:text-8xl lg:text-9xl font-clash font-bold text-[#1E293B] text-center tracking-[-0.04em] leading-[0.85] group-hover:scale-105 transition-transform duration-500">
-                                    REAL TIME DATA
-                                </h1>
-                            </div>
+                            <div className={`transition-opacity duration-500 ${phase === 'ended' ? 'opacity-100' : 'opacity-0'}`}>
+                                <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
+                                    <div className="group flex justify-center w-full">
+                                        <h1 className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-[-0.04em] leading-[0.85] group-hover:scale-105 transition-transform duration-500">
+                                            REAL TIME DATA
+                                        </h1>
+                                    </div>
 
-                            <div className="group">
-                                <p className="text-sm md:text-base font-clash font-bold text-[#1E293B]/70 tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
-                                    +300% SALES BOOST
-                                </p>
+                                    <div className="group">
+                                        <p className="text-[clamp(0.75rem,2vw,1rem)] font-clash font-bold text-[#1E293B]/70 tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
+                                            +300% SALES BOOST
+                                        </p>
+                                    </div>
+                                </motion.div>
                             </div>
 
                             {/* Animated Arrow Cards */}
-                            <div className="flex flex-col gap-5 mt-52 w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
+                            <div className="flex flex-col gap-6 mt-[15vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
                                 {[
-                                    { icon: Play, color: "bg-[#FF6B4A]", value: "+100", label: "data points" },
-                                    { icon: ThumbsUp, color: "bg-[#6366F1]", value: "+80", label: "data points" },
-                                    { icon: ShoppingBag, color: "bg-[#EAB308]", value: "+50", label: "data points" }
+                                    { icon: Play, color: "bg-[#027831]", value: "+100", label: "data points", width: "100%" },
+                                    { icon: ThumbsUp, color: "bg-[#6366F1]", value: "+80", label: "data points", width: "85%" },
+                                    { icon: ShoppingBag, color: "bg-[#EAB308]", value: "+50", label: "data points", width: "70%" }
                                 ].map((Item, i) => (
                                     <motion.div
                                         key={i}
-                                        initial={{ opacity: 0, x: -40, scale: 0.8 }}
-                                        whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                                        viewport={{ once: false, margin: "-50px" }}
-                                        transition={{ delay: i * 0.15, duration: 0.5, type: "spring", bounce: 0.4 }}
-                                        className="relative flex items-center h-20 md:h-24 group/card cursor-pointer"
+                                        initial={{ opacity: 0 }}
+                                        animate={phase === 'ended' ? { opacity: 1 } : { opacity: 0 }}
+                                        transition={{
+                                            opacity: {
+                                                delay: phase === 'ended' ? (i * 0.2 + 0.2) : 0.7,
+                                                duration: phase === 'ended' ? 0.5 : 0.3
+                                            }
+                                        }}
+                                        className="flex items-center h-20 md:h-24 group/card cursor-pointer"
                                     >
-                                        {/* Main Body */}
-                                        <div className="flex-1 bg-[#0F172A] h-full rounded-l-2xl flex items-center pl-4 pr-6 gap-5 z-10 shadow-xl group-hover/card:bg-[#1E293B] transition-colors duration-300">
-                                            <div className={`w-12 h-12 md:w-16 md:h-16 ${Item.color} rounded-2xl flex items-center justify-center shrink-0 shadow-inner`}>
+                                        {/* Main Body (Animates Width) */}
+                                        <motion.div
+                                            initial={{ width: "110px" }}
+                                            animate={phase === 'ended' ? { width: Item.width } : { width: "110px" }}
+                                            transition={{
+                                                width: {
+                                                    delay: phase === 'ended' ? (i * 0.2 + 0.8) : 0, // Instant start on exit
+                                                    duration: phase === 'ended' ? 1.5 : 0.6, // Slower, smooth enter
+                                                    ease: phase === 'ended' ? [0.16, 1, 0.3, 1] : "easeInOut"
+                                                }
+                                            }}
+                                            className="bg-[#0F172A] h-full rounded-l-2xl flex items-center pl-4 gap-5 z-20 shadow-xl group-hover/card:bg-[#1E293B] transition-colors duration-300 relative overflow-hidden"
+                                        >
+                                            {/* Icon (Always Visible) */}
+                                            <div className={`w-12 h-12 md:w-16 md:h-16 ${Item.color} rounded-3xl flex items-center justify-center shrink-0 shadow-inner z-30`}>
                                                 <Item.icon className="w-6 h-6 md:w-8 md:h-8 text-white" fill="currentColor" strokeWidth={2.5} />
                                             </div>
-                                            <div className="flex flex-col leading-none gap-1">
+
+                                            {/* Text (Fades In) */}
+                                            <motion.div
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={phase === 'ended' ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
+                                                transition={{
+                                                    delay: phase === 'ended' ? (i * 0.2 + 1.2) : 0,
+                                                    duration: phase === 'ended' ? 1.2 : 0.2
+                                                }}
+                                                className="flex flex-col leading-none gap-1 min-w-max pr-6"
+                                            >
                                                 <span className="text-white font-clash font-bold text-3xl md:text-4xl">{Item.value}</span>
                                                 <span className="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-wider">{Item.label}</span>
-                                            </div>
-                                        </div>
-                                        {/* Arrow Tip */}
-                                        <div
-                                            className="absolute right-[-31px] top-0 h-full w-[32px] bg-[#0F172A] z-0 group-hover/card:bg-[#1E293B] transition-colors duration-300"
-                                            style={{ clipPath: "polygon(0 0, 0 100%, 100% 50%)" }}
-                                        />
+                                            </motion.div>
+                                        </motion.div>
+
+                                        {/* Arrow Tip (Pushed by Body) */}
+                                        <svg
+                                            className="h-full w-[32px] fill-[#0F172A] group-hover/card:fill-[#1E293B] transition-colors duration-300 pointer-events-none -ml-[1px]"
+                                            viewBox="0 0 32 100"
+                                            preserveAspectRatio="none"
+                                        >
+                                            <path d="M0,0 L0,100 L25,58 Q32,50 25,42 L0,0 Z" />
+                                        </svg>
                                     </motion.div>
                                 ))}
                             </div>
@@ -607,10 +641,13 @@ const Landing = () => {
                 phase === 'ended' && (
                     <>
 
-                        <section id="produto" className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden">
-                            <div className="container mx-auto space-y-32" style={{ maxWidth: "100%" }}>
+                        <section
+                            id="produto"
+                            className="relative py-24 px-6 md:px-12 bg-[#FFFFFF] text-slate-900 overflow-hidden"
+                        >
+                            <div className="container mx-auto mb-32" style={{ maxWidth: "100%" }}>
                                 {/* Section Header */}
-                                <div className="text-center max-w-3xl mx-auto mb-16">
+                                <div className="text-center max-w-3xl mx-auto">
                                     <h2 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
                                         Muito além de um simples <br className="hidden md:block" />
                                         <span className="text-[#00A947]">Chatbot</span>
@@ -619,121 +656,177 @@ const Landing = () => {
                                         Esqueça as respostas prontas. Nossa IA entende contexto, intenção e emoção para vender como seus melhores especialistas.
                                     </p>
                                 </div>
+                            </div>
+
+                            <div className="container mx-auto space-y-32 relative" style={{ maxWidth: "100%" }}>
+
 
                                 {/* Feature 1 */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                    <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
-                                        <h3 className="text-4xl md:text-6xl text-[#F14624] font-extrabold mb-6 leading-tight text-slate-900">
-                                            Multiplicação de Força
-                                        </h3>
-                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                            Você não precisa de mais atendentes. Você precisa de super-atendentes. Clone sua capacidade de atendimento instantaneamente.
-                                        </p>
-                                        <ul className="space-y-4 mb-8">
-                                            {["Múltiplas instâncias simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
-                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                    <div className="w-2 h-2 rounded-full bg-feature-green"></div>
-                                                    {item}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div className="order-1 lg:order-2 flex justify-end relative pr-20">
-                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
-                                            <img
-                                                src={bgFeature1}
-                                                alt="Multiplicação de Força"
-                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
-                                            />
+                                <div className="relative">
+                                    {/* Timeline Line Part (Start) */}
+                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "50%", bottom: "-4rem" }} />
+                                    {/* Timeline Dot */}
+                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 50 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true, margin: "-20%" }}
+                                        transition={{ duration: 0.9 }}
+                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
+                                    >
+                                        <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
+                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
+                                                Multiplicação de Força
+                                            </h3>
+                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                                Você não precisa de mais atendentes. Você precisa de super-atendentes. Clone sua capacidade de atendimento instantaneamente.
+                                            </p>
+                                            <ul className="space-y-4 mb-8">
+                                                {["Múltiplas instâncias simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
+                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
+                                                        {item}
+                                                    </li>
+                                                ))}
+                                            </ul>
                                         </div>
-                                    </div>
+                                        <div className="order-1 lg:order-2 flex justify-end relative pr-20">
+                                            <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
+                                                <img
+                                                    src={bgFeature1}
+                                                    alt="Multiplicação de Força"
+                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
                                 </div>
 
                                 {/* Feature 2 */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                    <div className="order-1 flex justify-start relative pl-20">
-                                        <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
-                                            <img
-                                                src={bgFeature1}
-                                                alt="Funcionários Digitais"
-                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
-                                            />
+                                <div className="relative">
+                                    {/* Timeline Line Part (Middle) */}
+                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "-4rem", bottom: "-4rem" }} />
+                                    {/* Timeline Dot */}
+                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 50 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true, margin: "-20%" }}
+                                        transition={{ duration: 0.9 }}
+                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
+                                    >
+                                        <div className="order-1 flex justify-start relative pl-20">
+                                            <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
+                                                <img
+                                                    src={bgFeature1}
+                                                    alt="Funcionários Digitais"
+                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
-                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                            Funcionários Digitais (IA)
-                                        </h3>
-                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                            Cada instância é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
-                                        </p>
-                                        <ul className="space-y-4 mb-8">
-                                            {["Engenharia de Prompt Personalizada", "Humanização Extrema (Voz/TTS)", "Atendimento 24/7"].map((item, i) => (
-                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                    <div className="w-2 h-2 rounded-full bg-tan"></div>
-                                                    {item}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                                        <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
+                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
+                                                Funcionários Digitais (IA)
+                                            </h3>
+                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                                Cada instância é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
+                                            </p>
+                                            <ul className="space-y-4 mb-8">
+                                                {["Engenharia de Prompt Personalizada", "Humanização Extrema (Voz/TTS)", "Atendimento 24/7"].map((item, i) => (
+                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
+                                                        {item}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </motion.div>
                                 </div>
 
                                 {/* Feature 3 */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                    <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
-                                        <h3 className="text-4xl md:text-6xl text-[#F14624] font-extrabold mb-6 leading-tight text-slate-900" >
-                                            Controle Total (Tempo Real)
-                                        </h3>
-                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                            Gestão não é achismo, é dado. Acompanhe sua operação com tecnologia WebSocket em tempo real.
-                                        </p>
-                                        <ul className="space-y-4 mb-8">
-                                            {["Sem 'F5' - Atualização instantânea", "Auto-Reconexão Inteligente", "Métricas de verdade"].map((item, i) => (
-                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                    <div className="w-2 h-2 rounded-full bg-feature-green"></div>
-                                                    {item}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div className="order-1 lg:order-2 flex justify-end relative pr-20">
-                                        <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
-                                            <img
-                                                src={bgFeature1}
-                                                alt="Controle Total"
-                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
-                                            />
+                                <div className="relative">
+                                    {/* Timeline Line Part (Middle) */}
+                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "-4rem", bottom: "-4rem" }} />
+                                    {/* Timeline Dot */}
+                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 50 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true, margin: "-20%" }}
+                                        transition={{ duration: 0.9 }}
+                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
+                                    >
+                                        <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
+                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }} >
+                                                Controle Total (Tempo Real)
+                                            </h3>
+                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                                Gestão não é achismo, é dado. Acompanhe sua operação com tecnologia WebSocket em tempo real.
+                                            </p>
+                                            <ul className="space-y-4 mb-8">
+                                                {["Sem 'F5' - Atualização instantânea", "Auto-Reconexão Inteligente", "Métricas de verdade"].map((item, i) => (
+                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
+                                                        {item}
+                                                    </li>
+                                                ))}
+                                            </ul>
                                         </div>
-                                    </div>
+                                        <div className="order-1 lg:order-2 flex justify-end relative pr-20">
+                                            <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
+                                                <img
+                                                    src={bgFeature1}
+                                                    alt="Controle Total"
+                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
                                 </div>
 
                                 {/* Feature 4 */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                    <div className="order-1 flex justify-start relative pl-20">
-                                        <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
-                                            <img
-                                                src={bgFeature1}
-                                                alt="Confiabilidade Enterprise"
-                                                className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
-                                            />
+                                <div className="relative">
+                                    {/* Timeline Line Part (End) */}
+                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "-4rem", bottom: "50%" }} />
+                                    {/* Timeline Dot */}
+                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 50 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true, margin: "-20%" }}
+                                        transition={{ duration: 0.9 }}
+                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
+                                    >
+                                        <div className="order-1 flex justify-start relative pl-20">
+                                            <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
+                                                <img
+                                                    src={bgFeature1}
+                                                    alt="Confiabilidade Enterprise"
+                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
-                                        <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                            Confiabilidade Enterprise
-                                        </h3>
-                                        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                            Sua operação não pode parar. Arquitetura robusta projetada para estabilidade máxima.
-                                        </p>
-                                        <ul className="space-y-4 mb-8">
-                                            {["Persistência de Sessão", "Zero Configuração Repetitiva", "Segurança de dados"].map((item, i) => (
-                                                <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                    <div className="w-2 h-2 rounded-full bg-brown"></div>
-                                                    {item}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                                        <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
+                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
+                                                Confiabilidade Enterprise
+                                            </h3>
+                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                                Sua operação não pode parar. Arquitetura robusta projetada para estabilidade máxima.
+                                            </p>
+                                            <ul className="space-y-4 mb-8">
+                                                {["Persistência de Sessão", "Zero Configuração Repetitiva", "Segurança de dados"].map((item, i) => (
+                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
+                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
+                                                        {item}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </motion.div>
                                 </div>
                             </div>
                         </section>
@@ -792,7 +885,7 @@ const Landing = () => {
                                         </Paragraph>
                                     </PricingWrapper>
 
-                                    <PricingWrapper contactHref="/contact" type="waves" className="bg-[#4ADE80]" featured={true}>
+                                    <PricingWrapper contactHref="/contact" type="waves" className="bg-[#00A947]" featured={true}>
                                         <Heading>Vitalício</Heading>
                                         <Price>
                                             R$ 297<br /><span className="text-2xl">único</span>
