@@ -471,7 +471,7 @@ const Dashboard = () => {
               <Button
                 variant="outline"
                 onClick={handleLogout}
-                className="w-full sm:w-auto bg-white/50 hover:bg-[#19B159] hover:text-white border-[#19B159]/20 text-[#19B159] transition-colors"
+                className="w-full sm:w-auto bg-white/50 hover:bg-[#FE601E] hover:text-white border-[#FE601E]/20 text-[#FE601E] transition-colors"
               >
                 <LogOut className="mr-2" size={18} />
                 <span className="text-sm sm:text-base">Sair</span>

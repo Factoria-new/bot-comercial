@@ -142,10 +142,10 @@ const AgentConfigModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogPortal>
         <DialogOverlay className="fixed inset-0 z-50 backdrop-blur-md bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 border border-[#243B6B]/20 backdrop-blur-xl shadow-2xl mx-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 border border-gray-200 backdrop-blur-xl shadow-2xl mx-auto">
           <DialogHeader className="px-6 pt-6 space-y-2">
-            <DialogTitle className="text-2xl font-bold text-[#243B6B] flex items-center gap-2">
-              <Bot className="w-6 h-6 text-[#243B6B]" />
+            <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Bot className="w-6 h-6 text-gray-900" />
               Editar Agente
             </DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -156,8 +156,8 @@ const AgentConfigModal = ({
           <div className="px-6 pb-6 space-y-6">
             {/* Tabs de Provedor */}
             <Tabs value={aiProvider} onValueChange={(v) => setAiProvider(v as 'gemini')} className="w-full ">
-              <TabsList className="items-center justify-center w-full grid-cols-2 bg-white/70 border border-[#243B6B]/20 backdrop-blur-md">
-                <TabsTrigger value="gemini" className="data-[state=active]:bg-[#243B6B] data-[state=active]:text-white">
+              <TabsList className="items-center justify-center w-full grid-cols-2 bg-white/70 border border-gray-200 backdrop-blur-md">
+                <TabsTrigger value="gemini" className="data-[state=active]:bg-gray-900 data-[state=active]:text-white">
                   <Sparkles className="w-4 h-4 mr-2" />
                   Google Gemini
                 </TabsTrigger>
@@ -169,8 +169,8 @@ const AgentConfigModal = ({
 
                 {/* API Key do Gemini */}
                 <div className="space-y-2">
-                  <Label htmlFor="api-key" className="text-[#243B6B] flex items-center gap-2 font-medium">
-                    <Sparkles className="w-4 h-4" />
+                  <Label htmlFor="api-key" className="text-gray-900 flex items-center gap-2 font-medium">
+                    <Sparkles className="w-4 h-4 text-gray-900" />
                     API Key do Google Gemini <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
@@ -180,18 +180,18 @@ const AgentConfigModal = ({
                       placeholder="AIza..."
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/90 border border-[#243B6B]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#243B6B]/50 text-sm font-mono"
+                      className="w-full px-3 py-2 bg-white/90 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A947]/50 text-sm font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#243B6B] text-xs"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-900 text-xs"
                     >
                       {showApiKey ? 'Ocultar' : 'Mostrar'}
                     </button>
                   </div>
                   <p className="text-xs text-gray-500">
-                    🔑 Obtenha sua chave em: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[#243B6B] hover:underline font-semibold">Google AI Studio</a>
+                    🔑 Obtenha sua chave em: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[#00A947] hover:underline font-semibold">Google AI Studio</a>
                     <br />
                     💳 Você precisa de sua própria chave de API para usar o sistema. É gratuito para começar!
                   </p>
@@ -200,8 +200,8 @@ const AgentConfigModal = ({
                 {/* Prompt do Sistema */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="system-prompt" className="text-[#243B6B] flex items-center gap-2 font-medium">
-                      <FileText className="w-4 h-4" />
+                    <Label htmlFor="system-prompt" className="text-[#00A947] flex items-center gap-2 font-medium">
+                      <FileText className="w-4 h-4 text-[#00A947]" />
                       Prompt do Sistema
                     </Label>
                     <Button
@@ -209,7 +209,7 @@ const AgentConfigModal = ({
                       variant="ghost"
                       size="sm"
                       onClick={resetToDefault}
-                      className="text-xs text-gray-600 hover:text-[#243B6B] hover:bg-[#243B6B]/10"
+                      className="text-xs text-[#00A947] hover:text-[#00A947]/80 hover:bg-[#00A947]/10"
                     >
                       Resetar padrão
                     </Button>
@@ -220,7 +220,7 @@ const AgentConfigModal = ({
                     value={systemPrompt}
                     onChange={(e) => setSystemPrompt(e.target.value)}
                     rows={8}
-                    className="resize-none bg-[#243B6B] border-[#243B6B] focus:border-[#1e3257] text-white placeholder:text-white/60 font-mono text-sm shadow-inner"
+                    className="resize-none bg-white focus:border-gray-200 focus-visible:ring-[#00A947] text-gray-900 placeholder:text-gray-400 font-mono text-sm shadow-inner"
                   />
                   <p className="text-xs text-gray-500">
                     Instrua o modelo sobre como ele deve se comportar, seu tom, personalidade e diretrizes.
@@ -228,32 +228,33 @@ const AgentConfigModal = ({
                 </div>
 
                 {/* Configurações de TTS */}
-                <div className="space-y-4 p-4 bg-[#243B6B]/5 border border-[#243B6B]/20 rounded-xl backdrop-blur-sm">
+                <div className="space-y-4 p-4 bg-gray-50 border border-gray-200 rounded-xl backdrop-blur-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Volume2 className="w-4 h-4 text-[#243B6B]" />
-                      <Label htmlFor="tts-enabled" className="text-sm font-medium text-[#243B6B] cursor-pointer">
-                        Respostas em Áudio (TTS)
+                      <Volume2 className="w-4 h-4 text-gray-900" />
+                      <Label htmlFor="tts-enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                        Respostas em Áudio (<span className="text-[#00A947]">TTS</span>)
                       </Label>
                     </div>
                     <Switch
                       id="tts-enabled"
                       checked={ttsEnabled}
                       onCheckedChange={setTtsEnabled}
+                      className="data-[state=checked]:bg-[#00A947]"
                     />
                   </div>
 
                   {ttsEnabled && (
                     <div className="space-y-2 animate-fade-in">
-                      <Label htmlFor="tts-voice" className="text-sm text-[#243B6B] font-medium">
+                      <Label htmlFor="tts-voice" className="text-sm text-gray-900 font-medium">
                         Voz do Assistente
                       </Label>
                       <Select value={ttsVoice} onValueChange={setTtsVoice}>
-                        <SelectTrigger className="bg-white/90 backdrop-blur-sm border-[#243B6B]/30 text-gray-900 hover:bg-white transition-colors">
+                        <SelectTrigger className="bg-white/90 backdrop-blur-sm border-gray-200 text-gray-900 hover:bg-white transition-colors">
                           <SelectValue placeholder="Selecione a voz" />
                         </SelectTrigger>
                         <SelectContent
-                          className="bg-white/95 backdrop-blur-md border-[#243B6B]/20 shadow-xl"
+                          className="bg-white/95 backdrop-blur-md border-gray-200 shadow-xl"
                           side="bottom"
                           sideOffset={4}
                         >
@@ -261,7 +262,7 @@ const AgentConfigModal = ({
                             <SelectItem
                               key={voice.value}
                               value={voice.value}
-                              className="text-gray-900 hover:bg-[#243B6B]/10 focus:bg-[#243B6B]/10 cursor-pointer"
+                              className="text-gray-900 hover:bg-gray-100 focus:bg-gray-100 cursor-pointer"
                             >
                               <div>
                                 <div className="font-medium">{voice.label}</div>
@@ -272,7 +273,7 @@ const AgentConfigModal = ({
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-gray-500">
-                        ℹ️ O TTS funciona perfeitamente com o Gemini 2.5 Flash configurado no sistema.
+                        ℹ️ O <span className="text-[#00A947]">TTS</span> funciona perfeitamente com o Gemini 2.5 Flash configurado no sistema.
                       </p>
                     </div>
                   )}
@@ -290,7 +291,7 @@ const AgentConfigModal = ({
             </Tabs>
 
             {/* Botões de Ação */}
-            <div className="flex gap-3 pt-4 border-t border-[#243B6B]/20">
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
               <Button
                 onClick={onClose}
                 variant="outline"

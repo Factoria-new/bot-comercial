@@ -221,7 +221,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
     return (
         <Card className="w-full max-w-[320px] aspect-square flex flex-col overflow-hidden">
             <CardHeader className="pb-2 pt-4 px-4 shrink-0">
-                <CardTitle className="flex items-center gap-2 text-base">
+                <CardTitle className="flex items-center gap-2 text-base text-[#00A947]">
                     <Calendar className="h-4 w-4" />
                     Google Calendar
                 </CardTitle>
@@ -235,11 +235,11 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                 <div className="flex flex-col items-center justify-center flex-1 gap-3 py-2">
                     {isConnected ? (
                         <div className="text-center space-y-2">
-                            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full w-fit mx-auto">
-                                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                            <div className="bg-[#00A947]/10 p-3 rounded-full w-fit mx-auto">
+                                <CheckCircle className="h-8 w-8 text-[#00A947]" />
                             </div>
                             <div>
-                                <p className="font-medium text-sm">Conectado</p>
+                                <p className="font-medium text-sm text-[#00A947]">Conectado</p>
                                 <p className="text-xs text-muted-foreground mt-1 px-2">
                                     Pronto para agendar e listar eventos
                                 </p>
@@ -247,11 +247,11 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                         </div>
                     ) : (
                         <div className="text-center space-y-2">
-                            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-full w-fit mx-auto">
-                                <Calendar className="h-8 w-8 text-gray-400" />
+                            <div className="bg-[#FE601E]/10 p-3 rounded-full w-fit mx-auto">
+                                <Calendar className="h-8 w-8 text-[#FE601E]" />
                             </div>
                             <div>
-                                <p className="font-medium text-sm">Não Conectado</p>
+                                <p className="font-medium text-sm text-[#FE601E]">Não Conectado</p>
                                 <p className="text-xs text-muted-foreground mt-1 px-2">
                                     Conecte para habilitar agendamentos
                                 </p>
@@ -275,7 +275,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                         <Button
                             onClick={handleConnect}
                             disabled={isConnecting}
-                            className="w-full gap-2 text-xs h-8"
+                            className="w-full gap-2 text-xs h-8 bg-[#00A947] hover:bg-[#00A947]/90 text-white shadow-sm"
                         >
                             {isConnecting ? (
                                 <>
