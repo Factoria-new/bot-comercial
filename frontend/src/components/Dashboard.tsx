@@ -65,13 +65,8 @@ const Dashboard = () => {
         title: "Logout realizado",
         description: "Você saiu do sistema com sucesso.",
       });
-      // Substitui a entrada atual (Dashboard) pela Landing Page
-      navigate('/', { replace: true });
-      // Navega para o Login (criando uma nova entrada)
-      // Pequeno delay para garantir que a navegação anterior processou
-      setTimeout(() => {
-        navigate('/login');
-      }, 50);
+      // Navega diretamente para o login, substituindo o histórico
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
       toast({
@@ -431,8 +426,8 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#f1f4f9] to-white">
       {/* Efeito de luz sutil */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#243B6B]/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#243B6B]/3 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#19B159]/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#19B159]/3 rounded-full blur-3xl"></div>
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 relative z-10">
@@ -440,8 +435,8 @@ const Dashboard = () => {
         {isInitializing && (
           <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="text-center space-y-4 max-w-sm">
-              <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#243B6B]/10 to-[#243B6B]/20 rounded-full flex items-center justify-center animate-pulse shadow-lg">
-                <Loader size={24} className="sm:w-8 sm:h-8 text-[#243B6B] animate-spin" />
+              <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#19B159]/10 to-[#19B159]/20 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                <Loader size={24} className="sm:w-8 sm:h-8 text-[#19B159] animate-spin" />
               </div>
               <div className="space-y-2">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">Verificando sessões ativas...</h3>
@@ -476,7 +471,7 @@ const Dashboard = () => {
               <Button
                 variant="outline"
                 onClick={handleLogout}
-                className="w-full sm:w-auto bg-white/50 hover:bg-[#243B6B] hover:text-white border-[#243B6B]/20 text-[#243B6B] transition-colors"
+                className="w-full sm:w-auto bg-white/50 hover:bg-[#19B159] hover:text-white border-[#19B159]/20 text-[#19B159] transition-colors"
               >
                 <LogOut className="mr-2" size={18} />
                 <span className="text-sm sm:text-base">Sair</span>
@@ -509,44 +504,44 @@ const Dashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-          <Card className="bg-white/70 border border-[#243B6B]/20 backdrop-blur-md card-stats shadow-lg">
+          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
             <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
               <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Total</CardTitle>
             </CardHeader>
             <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#243B6B]">{stats.totalInstances}/4</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.totalInstances}/4</div>
               <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 {stats.totalInstances >= 4 ? 'limite atingido' : `${4 - stats.totalInstances} disponíveis`}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/70 border border-[#243B6B]/20 backdrop-blur-md card-stats shadow-lg">
+          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
             <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
               <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Conectadas</CardTitle>
             </CardHeader>
             <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#243B6B]">{stats.connectedInstances}</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.connectedInstances}</div>
               <p className="text-xs sm:text-sm text-gray-600 mt-1">ativas</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/70 border border-[#243B6B]/20 backdrop-blur-md card-stats shadow-lg">
+          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
             <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
               <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Mensagens</CardTitle>
             </CardHeader>
             <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#243B6B]">{stats.totalMessages}</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.totalMessages}</div>
               <p className="text-xs sm:text-sm text-gray-600 mt-1">processadas</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/70 border border-[#243B6B]/20 backdrop-blur-md card-stats shadow-lg">
+          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
             <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
               <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Assistentes</CardTitle>
             </CardHeader>
             <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#243B6B]">{stats.configuredInstances}</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.configuredInstances}</div>
               <p className="text-xs sm:text-sm text-gray-600 mt-1">configurados</p>
             </CardContent>
           </Card>
@@ -563,9 +558,9 @@ const Dashboard = () => {
           <div className="xl:col-span-2 order-1 xl:order-2">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Instâncias WhatsApp</h2>
             {instances.length === 0 ? (
-              <Card className="border-dashed border-2 border-[#243B6B]/30 bg-white/70 backdrop-blur-md shadow-lg">
+              <Card className="border-dashed border-2 border-[#19B159]/30 bg-white/70 backdrop-blur-md shadow-lg">
                 <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
-                  <MessageSquare className="mx-auto text-[#243B6B]/60 mb-4" size={40} />
+                  <MessageSquare className="mx-auto text-[#19B159]/60 mb-4" size={40} />
                   <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Nenhuma instância criada</h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-4">Comece criando sua primeira instância do WhatsApp</p>
                   <TooltipProvider>

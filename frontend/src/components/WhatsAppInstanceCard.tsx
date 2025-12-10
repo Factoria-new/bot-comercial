@@ -254,7 +254,7 @@ const WhatsAppInstanceCard = ({
                 <Input
                   value={tempName}
                   onChange={(e) => setTempName(e.target.value)}
-                  className="h-8 w-48 text-sm text-blue-600 font-semibold"
+                  className="h-8 w-48 text-sm text-[#19B159] font-semibold"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSaveName();

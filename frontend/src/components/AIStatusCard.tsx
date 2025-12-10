@@ -18,7 +18,7 @@ const AIStatusCard = () => {
     averageResponseTime: 0,
     errors: 0
   });
-  
+
   const { socket } = useSocket();
 
   useEffect(() => {
@@ -91,9 +91,9 @@ const AIStatusCard = () => {
   }, [socket]);
 
   return (
-    <Card className="bg-white/90 border border-bora-blue/30 backdrop-blur-sm shadow-lg">
+    <Card className="bg-white/90 border border-gray-200 backdrop-blur-sm shadow-lg">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-bora-blue text-base sm:text-lg">
+        <CardTitle className="flex items-center gap-2 text-gray-800 text-base sm:text-lg">
           <Bot size={16} className="sm:w-5 sm:h-5" />
           Status do Assistente AI
         </CardTitle>
@@ -102,30 +102,30 @@ const AIStatusCard = () => {
         {/* Instâncias Ativas */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Activity size={12} className="sm:w-4 sm:h-4 text-bora-blue/80" />
-            <span className="text-xs sm:text-sm text-bora-blue/70">Instâncias Ativas</span>
+            <Activity size={12} className="sm:w-4 sm:h-4 text-gray-500" />
+            <span className="text-xs sm:text-sm text-gray-600">Instâncias Ativas</span>
           </div>
-          <p className="text-lg sm:text-2xl font-bold text-bora-blue">{status.activeInstances}</p>
+          <p className="text-lg sm:text-2xl font-bold text-[#19B159]">{status.activeInstances}</p>
         </div>
 
         {/* Mensagens Processadas */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageSquare size={12} className="sm:w-4 sm:h-4 text-bora-blue/80" />
-            <span className="text-xs sm:text-sm text-bora-blue/70">Mensagens</span>
+            <MessageSquare size={12} className="sm:w-4 sm:h-4 text-gray-500" />
+            <span className="text-xs sm:text-sm text-gray-600">Mensagens</span>
           </div>
-          <p className="text-lg sm:text-2xl font-bold text-bora-blue">{status.totalMessages}</p>
+          <p className="text-lg sm:text-2xl font-bold text-[#19B159]">{status.totalMessages}</p>
         </div>
 
         {/* Tempo de Resposta */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle size={12} className="sm:w-4 sm:h-4 text-bora-blue" />
-            <span className="text-xs sm:text-sm text-bora-blue/70">Tempo Resposta</span>
+            <CheckCircle size={12} className="sm:w-4 sm:h-4 text-gray-500" />
+            <span className="text-xs sm:text-sm text-gray-600">Tempo Resposta</span>
           </div>
-          <p className="text-sm sm:text-lg font-semibold text-bora-blue">
-            {status.averageResponseTime === 'N/A' 
-              ? 'N/A' 
+          <p className="text-sm sm:text-lg font-semibold text-[#19B159]">
+            {status.averageResponseTime === 'N/A'
+              ? 'N/A'
               : `${status.averageResponseTime}ms`
             }
           </p>
@@ -134,14 +134,14 @@ const AIStatusCard = () => {
         {/* Erros */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm text-bora-blue/70">Erros</span>
+            <span className="text-xs sm:text-sm text-gray-600">Erros</span>
           </div>
-          <p className="text-lg sm:text-2xl font-bold text-red-500">{status.errors}</p>
+          <p className="text-lg sm:text-2xl font-bold text-[#FE601E]">{status.errors}</p>
         </div>
 
         {/* Badge do Gemini */}
-        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-bora-blue/20">
-          <Badge className="bg-bora-blue/20 text-bora-blue hover:bg-bora-blue/30 border border-bora-blue/30 text-xs sm:text-sm">
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
+          <Badge className="bg-[#19B159]/20 text-[#19B159] hover:bg-[#19B159]/30 border border-[#19B159]/30 text-xs sm:text-sm">
             Gemini
           </Badge>
         </div>

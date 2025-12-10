@@ -7,6 +7,7 @@ import { AnimatedCharactersLogin } from "@/components/ui/animated-characters-log
 
 const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
@@ -16,8 +17,14 @@ const Login = () => {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
+            setIsLoading(false);
+            setIsSuccess(true);
             toast.success("Login realizado com sucesso!");
-            navigate("/dashboard");
+
+            // Delay para mostrar animação de sucesso antes de navegar
+            setTimeout(() => {
+                navigate("/dashboard");
+            }, 1500);
         } catch (err: any) {
             console.error("Login error:", err);
             let errorMessage = "Erro ao realizar login. Verifique suas credenciais.";
@@ -30,7 +37,6 @@ const Login = () => {
 
             setError(errorMessage);
             toast.error(errorMessage);
-        } finally {
             setIsLoading(false);
         }
     };
@@ -39,6 +45,7 @@ const Login = () => {
         <AnimatedCharactersLogin
             onSubmit={handleLogin}
             isLoading={isLoading}
+            isSuccess={isSuccess}
             error={error}
             brandName="Factoria"
             brandLogo="/logo-header.png"

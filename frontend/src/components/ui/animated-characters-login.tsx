@@ -4,8 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Mail, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Sparkles, Loader2, Check } from "lucide-react";
 
 
 interface PupilProps {
@@ -178,6 +177,7 @@ interface AnimatedCharactersLoginProps {
     onSubmit: (email: string, password: string) => Promise<void>;
     isLoading?: boolean;
     error?: string;
+    isSuccess?: boolean;
     brandName?: string;
     brandLogo?: string;
 }
@@ -186,6 +186,7 @@ export function AnimatedCharactersLogin({
     onSubmit,
     isLoading = false,
     error = "",
+    isSuccess = false,
     brandName = "Factoria",
     brandLogo
 }: AnimatedCharactersLoginProps) {
@@ -199,10 +200,26 @@ export function AnimatedCharactersLogin({
     const [isTyping, setIsTyping] = useState(false);
     const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
     const [isPurplePeeking, setIsPurplePeeking] = useState(false);
+    const [isHoveringButton, setIsHoveringButton] = useState(false);
+    const [isSad, setIsSad] = useState(false);
+    const [isSurprised, setIsSurprised] = useState(false);
+    const [savedEmails, setSavedEmails] = useState<string[]>([]);
     const purpleRef = useRef<HTMLDivElement>(null);
     const blackRef = useRef<HTMLDivElement>(null);
     const yellowRef = useRef<HTMLDivElement>(null);
     const orangeRef = useRef<HTMLDivElement>(null);
+
+    // Carregar emails salvos do localStorage
+    useEffect(() => {
+        const stored = localStorage.getItem('savedEmails');
+        if (stored) {
+            try {
+                setSavedEmails(JSON.parse(stored));
+            } catch (e) {
+                console.error('Erro ao carregar emails:', e);
+            }
+        }
+    }, []);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -311,31 +328,81 @@ export function AnimatedCharactersLogin({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Salvar email no localStorage (máximo 5 emails)
+        if (email && !savedEmails.includes(email)) {
+            const updatedEmails = [email, ...savedEmails].slice(0, 5);
+            setSavedEmails(updatedEmails);
+            localStorage.setItem('savedEmails', JSON.stringify(updatedEmails));
+        }
+
         await onSubmit(email, password);
     };
 
     return (
         <div className="min-h-screen grid lg:grid-cols-2">
             {/* Left Content Section */}
-            <div className="relative hidden lg:flex flex-col justify-between bg-white p-12 text-gray-800">
-                <div className="relative z-20">
-                    <div className="flex items-center gap-2 text-lg font-semibold">
-                        {brandLogo ? (
-                            <img src={brandLogo} alt={brandName} className="h-10 w-auto" />
-                        ) : (
-                            <>
-                                <div className="size-8 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                                    <Sparkles className="size-4" />
-                                </div>
-                                <span>{brandName}</span>
-                            </>
-                        )}
-                    </div>
-                </div>
-
+            <div className="relative hidden lg:flex flex-col justify-center bg-white p-12 text-gray-800 overflow-hidden">
+                {/* Main content with characters */}
                 <div className="relative z-20 flex items-end justify-end h-[500px] pr-[-50px]">
                     {/* Cartoon Characters */}
                     <div className="relative" style={{ width: '550px', height: '400px', marginRight: '-100px' }}>
+                        {/* Ground Shadow */}
+                        <div
+                            className="absolute z-0"
+                            style={{
+                                bottom: '-65px',
+                                left: '10px',
+                                width: '430px',
+                                height: '20px',
+                                background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 50%, transparent 70%)',
+                                borderRadius: '50%',
+                            }}
+                        />
+
+                        {/* Wooden Platform/Crate - Under characters */}
+                        <div
+                            className="absolute z-0"
+                            style={{
+                                bottom: '-55px',
+                                left: '0px',
+                                width: '450px',
+                                height: '55px',
+                            }}
+                        >
+                            {/* Wooden crate SVG with legs */}
+                            <svg width="100%" height="100%" viewBox="0 0 450 55" preserveAspectRatio="none">
+                                {/* Wooden legs/feet */}
+                                <rect x="20" y="40" width="25" height="15" fill="#6B4423" rx="2" />
+                                <rect x="125" y="40" width="25" height="15" fill="#6B4423" rx="2" />
+                                <rect x="300" y="40" width="25" height="15" fill="#6B4423" rx="2" />
+                                <rect x="405" y="40" width="25" height="15" fill="#6B4423" rx="2" />
+                                {/* Leg highlights */}
+                                <rect x="20" y="40" width="25" height="4" fill="#7A4F26" rx="2" />
+                                <rect x="125" y="40" width="25" height="4" fill="#7A4F26" rx="2" />
+                                <rect x="300" y="40" width="25" height="4" fill="#7A4F26" rx="2" />
+                                <rect x="405" y="40" width="25" height="4" fill="#7A4F26" rx="2" />
+
+                                {/* Main wood surface */}
+                                <rect x="0" y="0" width="450" height="40" fill="#8B5A2B" rx="4" />
+                                {/* Wood planks */}
+                                <rect x="0" y="0" width="90" height="40" fill="#7A4F26" rx="4" />
+                                <rect x="90" y="0" width="90" height="40" fill="#8B5A2B" />
+                                <rect x="180" y="0" width="90" height="40" fill="#7A4F26" />
+                                <rect x="270" y="0" width="90" height="40" fill="#8B5A2B" />
+                                <rect x="360" y="0" width="90" height="40" fill="#7A4F26" rx="4" />
+                                {/* Top highlight */}
+                                <rect x="0" y="0" width="450" height="6" fill="#9D6B3A" rx="4" />
+                                {/* Bottom shadow */}
+                                <rect x="0" y="34" width="450" height="6" fill="#6B4423" rx="4" />
+                                {/* Vertical wood lines */}
+                                <line x1="90" y1="0" x2="90" y2="40" stroke="#5D3A1A" strokeWidth="2" />
+                                <line x1="180" y1="0" x2="180" y2="40" stroke="#5D3A1A" strokeWidth="2" />
+                                <line x1="270" y1="0" x2="270" y2="40" stroke="#5D3A1A" strokeWidth="2" />
+                                <line x1="360" y1="0" x2="360" y2="40" stroke="#5D3A1A" strokeWidth="2" />
+                            </svg>
+                        </div>
+
                         {/* Purple tall rectangle character - Back layer */}
                         <div
                             ref={purpleRef}
@@ -347,6 +414,8 @@ export function AnimatedCharactersLogin({
                                 backgroundColor: '#6C3FF5',
                                 borderRadius: '10px 10px 0 0',
                                 zIndex: 1,
+                                overflow: 'hidden',
+                                boxShadow: '0 10px 40px rgba(108, 63, 245, 0.3)',
                                 transform: (password.length > 0 && showPassword)
                                     ? `skewX(0deg)`
                                     : (isTyping || (password.length > 0 && !showPassword))
@@ -384,6 +453,18 @@ export function AnimatedCharactersLogin({
                                     forceLookY={(password.length > 0 && showPassword) ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
                                 />
                             </div>
+                            {/* Mouth - White, expression changes based on state */}
+                            <div
+                                className="absolute transition-all duration-300 ease-out"
+                                style={{
+                                    left: (password.length > 0 && showPassword) ? `${35}px` : isLookingAtEachOther ? `${75}px` : `${60 + purplePos.faceX}px`,
+                                    top: (password.length > 0 && showPassword) ? `${70}px` : isLookingAtEachOther ? `${105}px` : `${80 + purplePos.faceY}px`,
+                                    width: isHoveringButton ? '60px' : isSad ? '40px' : isSurprised ? '20px' : '60px',
+                                    height: isHoveringButton ? '25px' : isSad ? '18px' : isSurprised ? '20px' : '4px',
+                                    backgroundColor: 'white',
+                                    borderRadius: isHoveringButton ? '0 0 30px 30px' : isSad ? '20px 20px 0 0' : isSurprised ? '50%' : '4px',
+                                }}
+                            />
                         </div>
 
                         {/* Black tall rectangle character - Middle layer */}
@@ -397,6 +478,8 @@ export function AnimatedCharactersLogin({
                                 backgroundColor: '#2D2D2D',
                                 borderRadius: '8px 8px 0 0',
                                 zIndex: 2,
+                                overflow: 'hidden',
+                                boxShadow: '0 10px 40px rgba(45, 45, 45, 0.4)',
                                 transform: (password.length > 0 && showPassword)
                                     ? `skewX(0deg)`
                                     : isLookingAtEachOther
@@ -436,6 +519,18 @@ export function AnimatedCharactersLogin({
                                     forceLookY={(password.length > 0 && showPassword) ? -4 : isLookingAtEachOther ? -4 : undefined}
                                 />
                             </div>
+                            {/* Mouth - White, expression changes based on state */}
+                            <div
+                                className="absolute transition-all duration-300 ease-out"
+                                style={{
+                                    left: (password.length > 0 && showPassword) ? `${25}px` : isLookingAtEachOther ? `${40}px` : `${38 + blackPos.faceX}px`,
+                                    top: (password.length > 0 && showPassword) ? `${65}px` : isLookingAtEachOther ? `${52}px` : `${72 + blackPos.faceY}px`,
+                                    width: isHoveringButton ? '44px' : isSad ? '30px' : isSurprised ? '16px' : '44px',
+                                    height: isHoveringButton ? '20px' : isSad ? '14px' : isSurprised ? '16px' : '4px',
+                                    backgroundColor: 'white',
+                                    borderRadius: isHoveringButton ? '0 0 22px 22px' : isSad ? '15px 15px 0 0' : isSurprised ? '50%' : '4px',
+                                }}
+                            />
                         </div>
 
                         {/* Orange semi-circle character - Front left */}
@@ -447,7 +542,7 @@ export function AnimatedCharactersLogin({
                                 width: '240px',
                                 height: '200px',
                                 zIndex: 3,
-                                backgroundColor: '#FF9B6B',
+                                backgroundColor: '#FE601E',
                                 borderRadius: '120px 120px 0 0',
                                 transform: (password.length > 0 && showPassword) ? `skewX(0deg)` : `skewX(${orangePos.bodySkew || 0}deg)`,
                                 transformOrigin: 'bottom center',
@@ -464,6 +559,18 @@ export function AnimatedCharactersLogin({
                                 <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? -4 : undefined} />
                                 <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? -4 : undefined} />
                             </div>
+                            {/* Mouth - Dark, expression changes based on state */}
+                            <div
+                                className="absolute transition-all duration-300 ease-out"
+                                style={{
+                                    left: (password.length > 0 && showPassword) ? `${70}px` : `${95 + (orangePos.faceX || 0)}px`,
+                                    top: (password.length > 0 && showPassword) ? `${120}px` : `${125 + (orangePos.faceY || 0)}px`,
+                                    width: isHoveringButton ? '50px' : isSad ? '35px' : isSurprised ? '18px' : '50px',
+                                    height: isHoveringButton ? '22px' : isSad ? '16px' : isSurprised ? '18px' : '4px',
+                                    backgroundColor: '#2D2D2D',
+                                    borderRadius: isHoveringButton ? '0 0 25px 25px' : isSad ? '18px 18px 0 0' : isSurprised ? '50%' : '4px',
+                                }}
+                            />
                         </div>
 
                         {/* Yellow tall rectangle character - Front right */}
@@ -474,7 +581,7 @@ export function AnimatedCharactersLogin({
                                 left: '310px',
                                 width: '140px',
                                 height: '230px',
-                                backgroundColor: '#E8D754',
+                                backgroundColor: '#19B159',
                                 borderRadius: '70px 70px 0 0',
                                 zIndex: 4,
                                 transform: (password.length > 0 && showPassword) ? `skewX(0deg)` : `skewX(${yellowPos.bodySkew || 0}deg)`,
@@ -492,25 +599,20 @@ export function AnimatedCharactersLogin({
                                 <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? -4 : undefined} />
                                 <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? -4 : undefined} />
                             </div>
-                            {/* Horizontal line for mouth */}
+                            {/* Mouth - Dark, expression changes based on state */}
                             <div
-                                className="absolute w-20 h-[4px] bg-[#2D2D2D] rounded-full transition-all duration-200 ease-out"
+                                className="absolute transition-all duration-300 ease-out"
                                 style={{
-                                    left: (password.length > 0 && showPassword) ? `${10}px` : `${40 + (yellowPos.faceX || 0)}px`,
+                                    left: (password.length > 0 && showPassword) ? `${30}px` : `${50 + (yellowPos.faceX || 0)}px`,
                                     top: (password.length > 0 && showPassword) ? `${88}px` : `${88 + (yellowPos.faceY || 0)}px`,
+                                    width: isHoveringButton ? '60px' : isSad ? '40px' : isSurprised ? '18px' : '60px',
+                                    height: isHoveringButton ? '22px' : isSad ? '18px' : isSurprised ? '18px' : '4px',
+                                    backgroundColor: '#2D2D2D',
+                                    borderRadius: isHoveringButton ? '0 0 30px 30px' : isSad ? '20px 20px 0 0' : isSurprised ? '50%' : '4px',
                                 }}
                             />
                         </div>
                     </div>
-                </div>
-
-                <div className="relative z-20 flex items-center gap-8 text-sm text-gray-500">
-                    <a href="/" className="hover:text-[#00A947] transition-colors">
-                        ← Voltar para Home
-                    </a>
-                    <a href="#" className="hover:text-[#00A947] transition-colors">
-                        Política de Privacidade
-                    </a>
                 </div>
             </div>
 
@@ -547,12 +649,25 @@ export function AnimatedCharactersLogin({
                                 placeholder="seu@email.com"
                                 value={email}
                                 autoComplete="off"
+                                list="saved-emails"
                                 onChange={(e) => setEmail(e.target.value)}
                                 onFocus={() => setIsTyping(true)}
                                 onBlur={() => setIsTyping(false)}
                                 required
                                 className="h-12 bg-background border-border/60 focus:border-[#00A947]"
+                                style={{
+                                    WebkitAppearance: 'none',
+                                    MozAppearance: 'none',
+                                    appearance: 'none'
+                                }}
                             />
+                            {savedEmails.length > 0 && (
+                                <datalist id="saved-emails">
+                                    {savedEmails.map((savedEmail, index) => (
+                                        <option key={index} value={savedEmail} />
+                                    ))}
+                                </datalist>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -564,12 +679,21 @@ export function AnimatedCharactersLogin({
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    onFocus={() => setIsSurprised(!showPassword)}
+                                    onBlur={() => setIsSurprised(false)}
                                     required
                                     className="h-12 pr-10 bg-background border-border/60 focus:border-[#00A947]"
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
+                                    onClick={() => {
+                                        const newShowPassword = !showPassword;
+                                        setShowPassword(newShowPassword);
+                                        // Se está focado no campo de senha, ajusta a expressão
+                                        if (document.activeElement?.id === 'password') {
+                                            setIsSurprised(!newShowPassword);
+                                        }
+                                    }}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     {showPassword ? (
@@ -582,18 +706,17 @@ export function AnimatedCharactersLogin({
                         </div>
 
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox id="remember" />
-                                <Label
-                                    htmlFor="remember"
-                                    className="text-sm font-normal cursor-pointer"
-                                >
-                                    Lembrar por 30 dias
-                                </Label>
-                            </div>
+                            <a
+                                href="/"
+                                className="text-sm text-gray-500 hover:text-[#00A947] transition-colors"
+                            >
+                                ← Voltar para Home
+                            </a>
                             <a
                                 href="#"
                                 className="text-sm text-[#00A947] hover:underline font-medium"
+                                onMouseEnter={() => setIsSad(true)}
+                                onMouseLeave={() => setIsSad(false)}
                             >
                                 Esqueceu a senha?
                             </a>
@@ -607,17 +730,33 @@ export function AnimatedCharactersLogin({
 
                         <Button
                             type="submit"
-                            className="w-full h-12 text-base font-medium bg-[#00A947] hover:bg-[#00A947]/90"
+                            className="w-full h-12 text-base font-medium bg-[#00A947] hover:bg-[#00A947]/90 relative overflow-hidden"
                             size="lg"
-                            disabled={isLoading}
+                            disabled={isLoading || isSuccess}
+                            onMouseEnter={() => setIsHoveringButton(true)}
+                            onMouseLeave={() => setIsHoveringButton(false)}
                         >
-                            {isLoading ? "Entrando..." : "Entrar"}
+                            {isSuccess ? (
+                                <span className="flex items-center justify-center gap-2 animate-in fade-in zoom-in duration-300">
+                                    <Check className="size-5" />
+                                    Sucesso!
+                                </span>
+                            ) : isLoading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <Loader2 className="size-5 animate-spin" />
+                                    Entrando...
+                                </span>
+                            ) : (
+                                "Entrar"
+                            )}
                         </Button>
                     </form>
 
-                    {/* Sign Up Link */}
-                    <div className="text-center text-sm text-muted-foreground mt-8">
-                        © {new Date().getFullYear()} {brandName}. Todos os direitos reservados.
+                    {/* Footer */}
+                    <div className="text-center text-sm text-muted-foreground mt-8 flex items-center justify-center gap-2">
+                        <span>© {new Date().getFullYear()} {brandName}. Todos os direitos reservados.</span>
+                        <span>•</span>
+                        <a href="#" className="hover:text-[#00A947] transition-colors">Política de Privacidade</a>
                     </div>
                 </div>
             </div>

@@ -154,6 +154,18 @@
       font-size: 16px;
     }
   }
+
+  /* Esconde o ícone de dropdown do datalist */
+  input[list]::-webkit-calendar-picker-indicator {
+    display: none !important;
+    opacity: 0 !important;
+  }
+
+  input[list] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
 }
 
 /* Efeitos de luz desfocados */
@@ -307,14 +319,14 @@
   z-index: 1;
 }
 
-/* Botão de nova instância com efeito especial - Azul #243B6B */
+/* Botão de nova instância com efeito especial - Verde #19B159 */
 .btn-new-instance {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #243B6B 0%, #2E4A8C 100%);
+  background: linear-gradient(135deg, #19B159 0%, #14a34e 100%);
   border: none;
   color: white;
-  box-shadow: 0 4px 6px -1px rgba(36, 59, 107, 0.3), 0 2px 4px -1px rgba(36, 59, 107, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(25, 177, 89, 0.3), 0 2px 4px -1px rgba(25, 177, 89, 0.2);
   transition: all 0.3s ease;
 }
 
@@ -331,23 +343,23 @@
 
 .btn-new-instance:hover {
   transform: translateY(-1px);
-  background: linear-gradient(135deg, #1e3257 0%, #253d73 100%);
+  background: linear-gradient(135deg, #14a34e 0%, #0f8a3e 100%);
   box-shadow:
-    0 10px 20px rgba(36, 59, 107, 0.35),
-    0 6px 6px rgba(36, 59, 107, 0.25);
+    0 10px 20px rgba(25, 177, 89, 0.35),
+    0 6px 6px rgba(25, 177, 89, 0.25);
 }
 
 .btn-new-instance:hover::before {
   left: 100%;
 }
 
-/* Botão Gerar Código - Hover azul #243B6B com texto branco */
+/* Botão Gerar Código - Hover verde #19B159 com texto branco */
 .btn-qr-code {
   position: relative;
   overflow: hidden;
   background: transparent;
-  border: 1px solid rgba(36, 59, 107, 0.4);
-  color: #243B6B;
+  border: 1px solid rgba(25, 177, 89, 0.4);
+  color: #19B159;
   transition: all 0.3s ease;
 }
 
@@ -364,13 +376,13 @@
 }
 
 .btn-qr-code:hover {
-  border-color: #243B6B;
-  background: linear-gradient(135deg, #243B6B 0%, #2E4A8C 100%);
+  border-color: #19B159;
+  background: linear-gradient(135deg, #19B159 0%, #14a34e 100%);
   color: white;
   transform: translateY(-1px);
   box-shadow:
-    0 8px 16px rgba(36, 59, 107, 0.35),
-    0 4px 4px rgba(36, 59, 107, 0.25);
+    0 8px 16px rgba(25, 177, 89, 0.35),
+    0 4px 4px rgba(25, 177, 89, 0.25);
 }
 
 .btn-qr-code:hover::before {
@@ -382,13 +394,13 @@
   z-index: 2;
 }
 
-/* Botão destrutivo - Vermelho no hover */
+/* Botão destrutivo - Laranja no hover */
 .btn-destructive {
   position: relative;
   overflow: hidden;
   background: transparent;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: rgb(239, 68, 68);
+  border: 1px solid rgba(254, 96, 30, 0.4);
+  color: #FE601E;
   transition: all 0.3s ease;
 }
 
@@ -405,13 +417,13 @@
 }
 
 .btn-destructive:hover {
-  border-color: rgb(239, 68, 68);
-  background: linear-gradient(135deg, rgb(239, 68, 68) 0%, rgb(220, 38, 38) 100%);
+  border-color: #FE601E;
+  background: linear-gradient(135deg, #FE601E 0%, #e54d0a 100%);
   color: white;
   transform: translateY(-1px);
   box-shadow:
-    0 8px 16px rgba(239, 68, 68, 0.35),
-    0 4px 4px rgba(239, 68, 68, 0.25);
+    0 8px 16px rgba(254, 96, 30, 0.35),
+    0 4px 4px rgba(254, 96, 30, 0.25);
 }
 
 .btn-destructive:hover::before {
@@ -481,6 +493,7 @@
     transform: translateY(0);
   }
 }
+
 /* Custom Footer Utilities */
 .bg-gradient-primary {
   background: linear-gradient(135deg, #243B6B 0%, #2E4A8C 100%);
