@@ -421,12 +421,14 @@ const Landing = () => {
         setPhase('ended');
         zoomEndLevelRef.current = 1;
 
-        // 5. Scroll para a seção imediatamente (sem bloquear)
-        const targetSection = document.getElementById(sectionId);
-        if (targetSection) {
-            // Usar scrollIntoView com behavior 'smooth' mas não bloquear
-            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        // 5. Scroll para a seção imediatamente (sem bloquear) - Com delay para garantir renderização
+        setTimeout(() => {
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                // Usar scrollIntoView com behavior 'smooth' mas não bloquear
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
     };
 
     const handleResetToHome = (e: React.MouseEvent) => {
@@ -514,6 +516,9 @@ const Landing = () => {
                     </a>
                     <a href="#produto" onClick={(e) => handleNavigateToSection(e, 'produto')} className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full cursor-pointer">
                         Produto
+                    </a>
+                    <a href="#pricing" onClick={(e) => handleNavigateToSection(e, 'pricing')} className="text-gray-700 hover:text-[#00A947] hover:bg-gray-100 transition-all font-medium py-2 px-5 rounded-full cursor-pointer">
+                        Preços
                     </a>
                 </nav>
 

@@ -8,20 +8,16 @@ export default function Footer() {
             { label: 'Preços', href: '#pricing' }
         ],
         company: [
-            { label: 'Sobre Nós', href: '#sobre' },
-            { label: 'Carreiras', href: '#' },
-            { label: 'Imprensa', href: '#' }
+            { label: 'Sobre Nós', href: '#sobre' }
         ],
         resources: [
             { label: 'Documentação', href: '#' },
             { label: 'Central de Ajuda', href: '#' },
-            { label: 'Comunidade', href: '#' },
             { label: 'Contato', href: '#' }
         ],
         legal: [
             { label: 'Política de Privacidade', href: '#' },
             { label: 'Termos de Serviço', href: '#' },
-            { label: 'Política de Cookies', href: '#' },
             { label: 'LGPD', href: '#' }
         ]
     };
