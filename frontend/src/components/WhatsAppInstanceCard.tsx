@@ -231,13 +231,13 @@ const WhatsAppInstanceCard = ({
     }
     if (instance.isConnected) {
       return (
-        <Badge className="bg-primary text-primary-foreground flex items-center gap-1">
+        <Badge className="bg-[#00A947] text-white hover:bg-[#00A947]/90 flex items-center gap-1">
           <Check size={12} />
           Conectado
         </Badge>
       );
     }
-    return <Badge variant="secondary">Desconectado</Badge>;
+    return <Badge className="bg-[#FE601E] text-white hover:bg-[#FE601E]/90">Desconectado</Badge>;
   };
 
   // Determinar o nome de exibição da instância
@@ -248,7 +248,7 @@ const WhatsAppInstanceCard = ({
       }`}>
       <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex items-center gap-2">
+          <CardTitle className="text-base sm:text-lg font-bold text-[#00A947] flex items-center gap-2">
             {isEditingName ? (
               <div className="flex items-center gap-2">
                 <Input
@@ -318,7 +318,7 @@ const WhatsAppInstanceCard = ({
               </Button>
             )}
 
-            <p className="text-xs text-mint-glow/50">
+            <p className="text-xs text-[#000000] text-mint-glow/50">
               Clique para iniciar conexão
             </p>
           </div>
