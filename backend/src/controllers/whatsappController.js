@@ -138,6 +138,11 @@ class WhatsAppController {
         });
       }
 
+      // Obter User ID do middleware de autenticação
+      const userId = req.user.uid;
+
+      logger.info(`Salvando configuração para usuário: ${userId} na sessão ${sessionId}`);
+
 
       // Modelo SaaS: API Key é OBRIGATÓRIA - cada cliente usa sua própria chave
       // if (aiProvider === 'gemini' && !apiKey) {
@@ -157,6 +162,7 @@ class WhatsAppController {
       }
 
       const result = this.whatsappService.setSessionConfig(sessionId, {
+        userId, // Associar sessão ao usuário
         name: name || `Instância ${sessionId}`,
         apiKey: apiKey, // Usa APENAS a chave fornecida pelo usuário
         aiProvider: aiProvider || 'gemini',
@@ -207,7 +213,9 @@ class WhatsAppController {
 
   async getAllSessions(req, res) {
     try {
-      const sessions = this.whatsappService.getAllSessions();
+      // Obter User ID do middleware de autenticação
+      const userId = req.user.uid;
+      const sessions = this.whatsappService.getAllSessions(userId);
 
       return res.json({
         success: true,

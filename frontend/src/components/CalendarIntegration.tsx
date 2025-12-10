@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar, CheckCircle, XCircle, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import API_CONFIG from '@/config/api';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 interface CalendarIntegrationProps {
     sessionId: string;
@@ -11,6 +12,7 @@ interface CalendarIntegrationProps {
 }
 
 const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, userEmail }) => {
+    const { authenticatedFetch } = useAuthenticatedFetch();
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -65,7 +67,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                 url += `?${params.toString()}`;
             }
 
-            const response = await fetch(url);
+            const response = await authenticatedFetch(url);
             const data = await response.json();
 
             setIsConnected(data.connected || false);
@@ -86,9 +88,8 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
 
         setIsConnecting(true);
         try {
-            const response = await fetch(`${API_CONFIG.BASE_URL}/api/calendar/connect`, {
+            const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/calendar/connect`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId, userId: userEmail }),
             });
 
@@ -146,7 +147,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                             let statusUrl = `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}?connectionId=${data.connectionId}`;
                             if (userEmail) statusUrl += `&userId=${userEmail}`;
 
-                            const statusResponse = await fetch(statusUrl);
+                            const statusResponse = await authenticatedFetch(statusUrl);
                             const statusData = await statusResponse.json();
 
                             if (statusData.connected) {
@@ -185,7 +186,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
             let disconnectUrl = `${API_CONFIG.BASE_URL}/api/calendar/disconnect/${sessionId}`;
             if (userEmail) disconnectUrl += `?userId=${userEmail}`;
 
-            const response = await fetch(disconnectUrl, {
+            const response = await authenticatedFetch(disconnectUrl, {
                 method: 'DELETE',
             });
 

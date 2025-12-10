@@ -19,9 +19,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import API_CONFIG from '@/config/api';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 const Dashboard = () => {
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
+  const { authenticatedFetch } = useAuthenticatedFetch();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentInstance, setCurrentInstance] = useState<number | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('generating');
@@ -105,7 +107,7 @@ const Dashboard = () => {
       console.log('🔍 Verificando todas as sessões no backend...');
 
       // Buscar TODAS as sessões (ativas e inativas) do backend
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/whatsapp/sessions`);
+      const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/whatsapp/sessions`);
       const data = await response.json();
 
       if (!data.success) {
@@ -292,11 +294,8 @@ const Dashboard = () => {
       };
 
       // Salvar no backend
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/whatsapp/config/instance_${newId}`, {
+      const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/whatsapp/config/instance_${newId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(initialConfig)
       });
 
@@ -369,7 +368,7 @@ const Dashboard = () => {
 
     try {
       // Chamar API para remover a sessão (backend cuidará do logout e limpeza de arquivos)
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/whatsapp/sessions/instance_${instanceId}`, {
+      const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/whatsapp/sessions/instance_${instanceId}`, {
         method: 'DELETE',
       });
 

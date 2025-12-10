@@ -204,9 +204,10 @@ io.on('connection', (socket) => {
   });
 
   // Obter status do AI
-  socket.on('get-ai-status', async () => {
+  socket.on('get-ai-status', async (data) => {
     try {
-      const sessions = whatsappService.getAllSessions();
+      const userId = data?.userId;
+      const sessions = whatsappService.getAllSessions(userId);
       const activeInstances = sessions.filter(s => s.connected).length;
 
       // Por enquanto, retornamos valores padrão

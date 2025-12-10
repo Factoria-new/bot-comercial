@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 service-account.json
+src/config/serviceAccountKey.json
 
 # Environment
 .env

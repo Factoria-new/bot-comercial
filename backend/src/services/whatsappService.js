@@ -1926,13 +1926,21 @@ class WhatsAppService {
     return sessionConfigs.get(sessionId) || null;
   }
 
-  getAllSessions() {
+  getAllSessions(userId) {
     const sessionsList = [];
     const allIds = new Set([...sessions.keys(), ...sessionConfigs.keys()]);
 
     allIds.forEach((sessionId) => {
-      const session = sessions.get(sessionId);
       const config = sessionConfigs.get(sessionId);
+
+      // Filtrar por usuário (Multi-Tenancy)
+      // Se userId for fornecido, só mostramos sessões desse usuário
+      // Sessões sem userId (legado) não serão mostradas para usuários novos por segurança
+      if (userId && config?.userId !== userId) {
+        return;
+      }
+
+      const session = sessions.get(sessionId);
 
       sessionsList.push({
         sessionId,
@@ -2006,6 +2014,7 @@ class WhatsAppService {
   setSessionConfig(sessionId, config) {
     try {
       const newConfig = {
+        userId: config.userId, // Salvar ID do usuário dono da sessão
         name: config.name,
         aiProvider: config.aiProvider || 'gemini', // 'gemini' ou 'openai'
         apiKey: config.apiKey || process.env.GEMINI_API_KEY, // API key da instância ou padrão do sistema

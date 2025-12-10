@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import { verifyToken } from '../middleware/authMiddleware.js';
 
 // Configurar multer para upload de arquivos em memória
 const upload = multer({
@@ -12,29 +13,29 @@ const upload = multer({
 const createWhatsAppRoutes = (whatsappController) => {
   const router = express.Router();
 
-  // Gerar Código para nova sessão
-  router.post('/qr/:sessionId', (req, res) => whatsappController.generateQR(req, res));
+  // Gerar Código para nova sessão - Protegido
+  router.post('/qr/:sessionId', verifyToken, (req, res) => whatsappController.generateQR(req, res));
 
-  // Desconectar sessão
-  router.post('/logout/:sessionId', (req, res) => whatsappController.logout(req, res));
+  // Desconectar sessão - Protegido
+  router.post('/logout/:sessionId', verifyToken, (req, res) => whatsappController.logout(req, res));
 
-  // Excluir sessão (logout + remover arquivos)
-  router.delete('/sessions/:sessionId', (req, res) => whatsappController.deleteSession(req, res));
+  // Excluir sessão (logout + remover arquivos) - Protegido
+  router.delete('/sessions/:sessionId', verifyToken, (req, res) => whatsappController.deleteSession(req, res));
 
-  // Obter status da sessão
-  router.get('/status/:sessionId', (req, res) => whatsappController.getStatus(req, res));
+  // Obter status da sessão - Protegido
+  router.get('/status/:sessionId', verifyToken, (req, res) => whatsappController.getStatus(req, res));
 
-  // Salvar configuração do assistente
-  router.post('/config/:sessionId', (req, res) => whatsappController.saveConfig(req, res));
+  // Salvar configuração do assistente - Protegido
+  router.post('/config/:sessionId', verifyToken, (req, res) => whatsappController.saveConfig(req, res));
 
-  // Obter configuração
-  router.get('/config/:sessionId', (req, res) => whatsappController.getConfig(req, res));
+  // Obter configuração - Protegido
+  router.get('/config/:sessionId', verifyToken, (req, res) => whatsappController.getConfig(req, res));
 
-  // Listar todas as sessões
-  router.get('/sessions', (req, res) => whatsappController.getAllSessions(req, res));
+  // Listar todas as sessões - Protegido
+  router.get('/sessions', verifyToken, (req, res) => whatsappController.getAllSessions(req, res));
 
-  // Forçar reconexão
-  router.post('/reconnect/:sessionId', (req, res) => whatsappController.forceReconnect(req, res));
+  // Forçar reconexão - Protegido
+  router.post('/reconnect/:sessionId', verifyToken, (req, res) => whatsappController.forceReconnect(req, res));
 
   // Testar assistente OpenAI
   router.post('/test-assistant/:sessionId', (req, res) => whatsappController.testAssistant(req, res));

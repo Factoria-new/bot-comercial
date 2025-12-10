@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Activity, MessageSquare, AlertCircle, CheckCircle } from 'lucide-react';
 import { useSocket } from '@/contexts/SocketContext';
+import { auth } from '@/config/firebase';
 
 interface AIStatus {
   activeInstances: number;
@@ -68,7 +69,7 @@ const AIStatusCard = () => {
     });
 
     // Solicitar status inicial
-    socket.emit('get-ai-status');
+    socket.emit('get-ai-status', { userId: auth.currentUser?.uid });
 
     // Escutar resposta do status inicial
     socket.on('ai-status-response', (data) => {
@@ -124,7 +125,7 @@ const AIStatusCard = () => {
             <span className="text-xs sm:text-sm text-gray-600">Tempo Resposta</span>
           </div>
           <p className="text-sm sm:text-lg font-semibold text-[#19B159]">
-            {status.averageResponseTime === 'N/A'
+            {status.averageResponseTime === 0
               ? 'N/A'
               : `${status.averageResponseTime}ms`
             }
