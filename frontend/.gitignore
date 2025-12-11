@@ -14,9 +14,6 @@ frontend/build/
 .env.test.local
 .env.production.local
 
-# Firebase Config (Local)
-src/config/firebase.ts
-
 # IDE files
 .vscode/
 .idea/

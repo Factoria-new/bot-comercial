@@ -109,27 +109,23 @@ const WhatsAppInstanceCard = ({
         throw new Error(errorData.error || 'Erro ao salvar configuração');
       }
 
+
+
       // Atualizar estado local
       setAgentConfig(newConfig);
       setConfig(prev => ({
         ...prev,
-        apiKey: newConfig.apiKey,
+        ...newConfig,
+        apiKey: newConfig.apiKey,// Manter a chave
         assistantId: newConfig.assistantId || ''
       }));
 
       await onSaveConfig(instance.id, {
         ...config,
+        ...newConfig,
         apiKey: newConfig.apiKey,
         assistantId: newConfig.assistantId || ''
       });
-
-      // Também enviar via socket para garantir sincronização
-      if (socket) {
-        socket.emit('save-config', {
-          sessionId: `instance_${instance.id}`,
-          config: newConfig
-        });
-      }
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
       throw error;

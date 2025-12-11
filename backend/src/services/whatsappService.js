@@ -874,7 +874,11 @@ class WhatsAppService {
         sessions.delete(sessionId);
 
         // Logout definitivo - REMOVER ARQUIVOS se for device_removed
-        // So remove a configuração se for um logout explícito ou conflito
+        // 🛡️ ALTERAÇÃO DE SEGURANÇA: Não remover configurações automaticamente em caso de erro!
+        // Isso evita que a instância "suma" da lista se houver um erro de conexão.
+        // O usuário deve remover manualmente se desejar.
+
+        /* CÓDIGO ANTIGO QUE REMOVIA AUTOMATICAMENTE:
         if (isLoggedOutFlag || is401Conflict || isDeviceRemoved) {
           sessionConfigs.delete(sessionId);
           logger.info(`Configuração removida para sessão ${sessionId} devido a logout/conflito`);
@@ -894,9 +898,19 @@ class WhatsAppService {
             }
           }
         }
+        */
 
-        this.io.emit('logged-out', { sessionId });
-        logger.warn(`Sessão ${sessionId} deslogada. É necessário escanear Código novamente.`);
+        // Novo comportamento: Apenas logar e notificar. A config permanece.
+        logger.warn(`Sessão ${sessionId} desconectada (Flag: LoggedOut=${isLoggedOutFlag}, Conflict=${is401Conflict}, DeviceRemoved=${isDeviceRemoved}). Configuração mantida.`);
+
+        // NÃO emitir logged-out, pois isso faz o frontend remover o card.
+        // this.io.emit('logged-out', { sessionId });
+
+        this.io.emit('connection-update', {
+          sessionId,
+          status: 'disconnected',
+          error: payloadMessage || 'Desconectado'
+        });
       }
     } else if (connection === 'open') {
       logger.info(`Conexão estabelecida para ${sessionId}`);
@@ -1795,7 +1809,18 @@ class WhatsAppService {
       const session = sessions.get(sessionId);
 
       if (!session) {
-        throw new Error('Sessão não encontrada');
+        // Se a sessão não está em memória, mas existe no disco e estamos pedindo para remover...
+        if (options.removeFiles !== false) {
+          // Verifica se existe pasta no disco
+          const sessionPath = path.join(SESSIONS_PATH, sessionId);
+          if (fs.existsSync(sessionPath)) {
+            // ... removê-la? Talvez não devêssemos ser tão agressivos se não temos certeza.
+            // Mas se o usuário pediu logout, provavelmente quer desconectar.
+            // Vamos manter por enquanto.
+          }
+        }
+        // throw new Error('Sessão não encontrada'); // Não lançar erro se não encontrar, apenas retornar sucesso (idempotente)
+        return { success: true, message: 'Sessão já desconectada' };
       }
 
       // Limpar todos os intervals antes de fazer logout
@@ -2013,19 +2038,23 @@ class WhatsAppService {
   // Configurar assistente (Gemini ou OpenAI) para uma sessão
   setSessionConfig(sessionId, config) {
     try {
+      // Obter configuração existente para preservar dados como userId
+      const existingConfig = sessionConfigs.get(sessionId) || {};
+
       const newConfig = {
-        userId: config.userId, // Salvar ID do usuário dono da sessão
-        name: config.name,
-        aiProvider: config.aiProvider || 'gemini', // 'gemini' ou 'openai'
-        apiKey: config.apiKey || process.env.GEMINI_API_KEY, // API key da instância ou padrão do sistema
-        assistantId: config.assistantId, // Apenas para OpenAI
-        model: config.model || 'gemini-2.0-flash-exp', // Modelo Gemini
-        systemPrompt: config.systemPrompt || '', // Prompt do sistema
-        temperature: config.temperature || 1.0, // Temperatura (0-2)
-        ttsEnabled: config.ttsEnabled || false, // TTS habilitado
-        ttsVoice: config.ttsVoice || 'Aoede', // Voz do TTS
-        enabled: config.enabled !== false, // default true
-        calendarID: config.calendarID || null // ID (email) do Google Calendar
+        userId: config.userId || existingConfig.userId, // Salvar ID do usuário dono da sessão (preserva existente se não vier no update)
+        name: config.name || existingConfig.name || `Instância ${sessionId}`,
+        aiProvider: config.aiProvider || existingConfig.aiProvider || 'gemini', // 'gemini' ou 'openai'
+        apiKey: config.apiKey || existingConfig.apiKey || process.env.GEMINI_API_KEY, // API key da instância ou padrão do sistema
+        assistantId: config.assistantId || existingConfig.assistantId, // Apenas para OpenAI
+        model: config.model || existingConfig.model || 'gemini-2.0-flash-exp', // Modelo Gemini
+        systemPrompt: (config.systemPrompt !== undefined) ? config.systemPrompt : (existingConfig.systemPrompt || ''), // Prompt do sistema
+        temperature: (config.temperature !== undefined) ? config.temperature : (existingConfig.temperature || 1.0), // Temperatura (0-2)
+        ttsEnabled: (config.ttsEnabled !== undefined) ? config.ttsEnabled : (existingConfig.ttsEnabled || false), // TTS habilitado
+        ttsVoice: config.ttsVoice || existingConfig.ttsVoice || 'Aoede', // Voz do TTS
+        enabled: (config.enabled !== undefined) ? config.enabled : (existingConfig.enabled !== false), // default true
+        calendarID: config.calendarID || existingConfig.calendarID || null, // ID (email) do Google Calendar
+        calendarSettings: config.calendarSettings || existingConfig.calendarSettings // Persistir settings do calendario
       };
 
       sessionConfigs.set(sessionId, newConfig);

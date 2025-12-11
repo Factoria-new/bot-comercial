@@ -34,8 +34,12 @@ class CalendarController {
                 return res.status(400).json({ error: 'sessionId é obrigatório' });
             }
 
-            // Se userId (email) for fornecido, usar ele. Senão, fallback para sessionId (comportamento antigo)
-            const composioUserId = userId || sessionId;
+            // PADRONIZAÇÃO: Usar UID do Firebase como ID no Composio (garante persistência e unicidade)
+            // Se não houver UID (rota publica?), tenta email ou session
+            const firebaseUid = req.user?.uid;
+            const composioUserId = firebaseUid || req.user?.email || userId || sessionId;
+
+            logger.info(`🔑 Identificação Composio: UID=${firebaseUid}, Email=${req.user?.email}, Final=${composioUserId}`);
 
             if (!this.composioClient) {
                 return res.status(500).json({ error: 'Composio não está configurado. Verifique COMPOSIO_API_KEY' });
@@ -51,6 +55,23 @@ class CalendarController {
             // Isso garante que o usuário não fique preso na tela do Composio
             const backendUrl = process.env.BACKEND_URL || 'http://localhost:3003';
             const redirectUrl = `${backendUrl}/api/calendar/callback`;
+
+            // 0. Se houver settings, salvar na configuração da sessão
+            if (req.body.settings && this.whatsappService) {
+                try {
+                    logger.info(`💾 [Connect] Recebendo settings para salvar: ${JSON.stringify(req.body.settings)}`);
+                    logger.info(`💾 [Connect] SessionId alvo: ${sessionId}`);
+
+                    const currentConfig = this.whatsappService.getConfig(sessionId) || {};
+                    const newConfig = {
+                        ...currentConfig,
+                        calendarSettings: req.body.settings
+                    };
+                    await this.whatsappService.setSessionConfig(sessionId, newConfig);
+                } catch (saveErr) {
+                    logger.error('❌ Erro ao salvar configurações do Calendar:', saveErr);
+                }
+            }
 
             // 1. Verificar se já existe uma conexão para este usuário
             try {
@@ -157,8 +178,11 @@ class CalendarController {
             const { sessionId } = req.params;
             const { connectionId, userId } = req.query;
 
-            // Se userId (email) for fornecido, usar ele. Senão, fallback para sessionId
-            const composioUserId = userId || sessionId;
+            // PADRONIZAÇÃO: Usar UID do Firebase como ID no Composio
+            const firebaseUid = req.user?.uid;
+            const composioUserId = firebaseUid || req.user?.email || userId || sessionId;
+
+            logger.info(`🔑 [Status] Identificação Composio: UID=${firebaseUid}, Email=${req.user?.email}, Final=${composioUserId}`);
 
             if (!this.composioClient) {
                 return res.status(500).json({ error: 'Composio não está configurado' });
@@ -183,37 +207,73 @@ class CalendarController {
 
             // Fallback: Buscar na lista se não achou pelo ID
             if (!calendarConnection) {
-                // Buscar connections desta sessão/usuário
-                const response = await this.composioClient.connectedAccounts.list({
-                    userId: composioUserId
-                });
+                // Estratégia de Múltiplos Identificadores:
+                // Tentar encontrar conexão para UID (novo padrão) OU Email (legado/fallback) OU SessionId (legado profundo)
+                const identifiersToCheck = [];
+                if (firebaseUid) identifiersToCheck.push(firebaseUid);
+                if (req.user?.email && req.user.email !== firebaseUid) identifiersToCheck.push(req.user.email);
+                if (userId && !identifiersToCheck.includes(userId)) identifiersToCheck.push(userId);
+                // Adicionando sessionId como último recurso (para conexões muito antigas ou criadas sem auth)
+                if (sessionId && !identifiersToCheck.includes(sessionId)) identifiersToCheck.push(sessionId);
 
-                logger.info(`📦 Resposta bruta do Composio list: ${JSON.stringify(response, null, 2)}`);
+                logger.info(`🔍 [getConnectionStatus] Identificadores candidatos: ${identifiersToCheck.join(', ')}`);
 
-                let connections = [];
-                if (Array.isArray(response)) {
-                    connections = response;
-                } else if (response && Array.isArray(response.items)) {
-                    connections = response.items;
-                } else if (response && Array.isArray(response.data)) {
-                    connections = response.data;
+                // LOG DEBUG PROFUNDO
+                logger.info(`🕵️‍♂️ [Deep Debug] Req.User: ${JSON.stringify(req.user)}`);
+                logger.info(`🕵️‍♂️ [Deep Debug] Identificadores: ${JSON.stringify(identifiersToCheck)}`);
+
+                for (const idToCheck of identifiersToCheck) {
+                    if (calendarConnection) break; // Já achou
+
+                    try {
+                        logger.info(`👉 Verificando conexões para: ${idToCheck}`);
+                        const response = await this.composioClient.connectedAccounts.list({
+                            userId: idToCheck
+                        });
+
+                        // Logar estrutura exata da resposta
+                        logger.info(`📦 [Id: ${idToCheck}] RAW Response Keys: ${Object.keys(response || {}).join(', ')}`);
+
+                        let connections = [];
+                        if (Array.isArray(response)) {
+                            connections = response;
+                        } else if (response && Array.isArray(response.items)) {
+                            connections = response.items;
+                        } else if (response && Array.isArray(response.data)) {
+                            connections = response.data;
+                        }
+
+                        logger.info(`   🔢 Itens extraídos: ${connections.length}`);
+                        if (connections.length > 0) {
+                            logger.info(`   📝 Primeiro item (amostra): ${JSON.stringify(connections[0])}`);
+                        }
+
+                        // Tentar encontrar Calendar
+
+                        // Tentar encontrar Calendar
+                        const found = connections.find(c =>
+                            (c.appUniqueId && c.appUniqueId.toLowerCase().includes('calendar')) ||
+                            (c.appName && c.appName.toLowerCase().includes('calendar')) ||
+                            (c.appUniqueId && c.appUniqueId.toLowerCase().includes('google')) ||
+                            // Support new Composio structure (toolkit.slug)
+                            (c.toolkit && c.toolkit.slug && c.toolkit.slug.toLowerCase().includes('googlecalendar')) ||
+                            (c.toolkit && c.toolkit.slug && c.toolkit.slug.toLowerCase().includes('calendar'))
+                        );
+
+                        if (found) {
+                            calendarConnection = found;
+                            logger.info(`✅ Conexão encontrada para identificador: ${idToCheck} (Status: ${found.status})`);
+                        }
+                    } catch (listError) {
+                        logger.warn(`⚠️ Erro ao listar para ${idToCheck}: ${listError.message}`);
+                    }
                 }
-
-                logger.info(`🔍 Conexões processadas para ${sessionId}: ${connections.length}`);
-
-                // Filtrar localmente por app se necessário
-                // Usando includes e toLowerCase para ser mais robusto
-                calendarConnection = connections.find(c =>
-                    (c.appUniqueId && c.appUniqueId.toLowerCase().includes('calendar')) ||
-                    (c.appName && c.appName.toLowerCase().includes('calendar')) ||
-                    (c.appUniqueId && c.appUniqueId.toLowerCase().includes('google'))
-                );
             }
 
             if (calendarConnection) {
-                logger.info(`✅ Conexão Calendar encontrada: ${calendarConnection.status}`);
+                logger.info(`✅ Conexão Calendar encontrada: ${calendarConnection.status} (ID: ${calendarConnection.id})`);
             } else {
-                logger.warn(`⚠️ Nenhuma conexão Calendar encontrada para ${sessionId}`);
+                logger.warn(`⚠️ Nenhuma conexão Calendar encontrada para ${sessionId} (User: ${composioUserId})`);
             }
 
             // SECONDA MUDANÇA: SALVAR O EMAIL NA CONFIG DA SESSÃO SE TIVER CONEXÃO ATIVA
@@ -240,7 +300,7 @@ class CalendarController {
                         // Atualizar apenas se for diferente ou não existir
                         if (currentConfig.calendarID !== emailToSave) {
                             const newConfig = { ...currentConfig, calendarID: emailToSave };
-                            await this.whatsappService.saveConfig(sessionId, newConfig);
+                            await this.whatsappService.setSessionConfig(sessionId, newConfig);
                             logger.info('✅ Configuração de Calendar ID atualizada com sucesso');
                         }
                     }
@@ -256,21 +316,46 @@ class CalendarController {
                 });
             }
 
+            // Recuperar configurações salvas para retornar ao frontend
+            let savedSettings = null;
+            if (this.whatsappService) {
+                // FORCE RELOAD FROM DISK to ensure we have the latest settings saved
+                // This prevents race conditions where memory might be stale or setSessionConfig didn't update map deep enough
+                const config = this.whatsappService.loadSessionConfig(sessionId);
+
+                logger.info(`🔍 [Status] Recuperando config (Disk Force) para ${sessionId}. Encontrado? ${!!config}`);
+                if (config) {
+                    logger.info(`🔍 [Status] Keys na config: ${Object.keys(config).join(', ')}`);
+                    if (config.calendarSettings) {
+                        logger.info(`🔍 [Status] calendarSettings encontrado: ${JSON.stringify(config.calendarSettings)}`);
+                        savedSettings = config.calendarSettings;
+                    } else {
+                        logger.info(`⚠️ [Status] calendarSettings NÃO encontrado na config.`);
+                    }
+                }
+            }
+
             return res.json({
                 connected: true,
                 status: calendarConnection.status,
                 connectionId: calendarConnection.id,
                 createdAt: calendarConnection.createdAt,
-                appName: calendarConnection.appName
+                appName: calendarConnection.appName,
+                settings: savedSettings
             });
 
         } catch (error) {
-            logger.error('❌ Erro ao verificar status da conexão:', error.message);
-            logger.error('Stack trace:', error.stack);
-            logger.error('Error details:', JSON.stringify(error, null, 2));
+            console.error('❌ FATAL ERROR in getConnectionStatus:', error);
+            logger.error('❌ Erro ao verificar status da conexão (Details):', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+                code: error.code
+            });
+
             return res.status(500).json({
                 error: 'Erro ao verificar status',
-                details: error.message
+                details: error.message || 'Erro desconhecido'
             });
         }
     }
@@ -282,10 +367,11 @@ class CalendarController {
     async disconnectCalendar(req, res) {
         try {
             const { sessionId } = req.params;
-            const { userId } = req.query;
+            // PADRONIZAÇÃO: Usar UID do Firebase como ID no Composio
+            const firebaseUid = req.user?.uid;
+            const composioUserId = firebaseUid || req.user?.email || userId || sessionId;
 
-            // Se userId (email) for fornecido, usar ele. Senão, fallback para sessionId
-            const composioUserId = userId || sessionId;
+            logger.info(`🔑 [Disconnect] Identificação Composio: UID=${firebaseUid}, Final=${composioUserId}`);
 
             logger.info(`🔌 [disconnectCalendar] Iniciando desconexão...`);
             logger.info(`   Params: sessionId=${sessionId}, userId=${userId}`);

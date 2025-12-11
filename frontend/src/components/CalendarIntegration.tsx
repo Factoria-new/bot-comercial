@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, CheckCircle, XCircle, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
+import { Calendar, CheckCircle, Loader2, ExternalLink, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import API_CONFIG from '@/config/api';
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
+import CalendarSettingsModal from './CalendarSettingsModal';
 
 interface CalendarIntegrationProps {
     sessionId: string;
@@ -16,7 +17,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionStatus, setConnectionStatus] = useState<string>('');
+
     const { toast } = useToast();
 
     // Verificar status da conexão ao carregar
@@ -71,7 +72,9 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
             const data = await response.json();
 
             setIsConnected(data.connected || false);
-            setConnectionStatus(data.status || '');
+            if (data.settings) {
+                setSavedSettings(data.settings);
+            }
 
             if (data.connected && isConnecting) {
                 setIsConnecting(false);
@@ -83,14 +86,30 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
         }
     };
 
-    const handleConnect = async () => {
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [savedSettings, setSavedSettings] = useState<any>(null);
+
+    // ... existing checkConnectionStatus ...
+
+    const handleConnectClick = () => {
+        setShowSettingsModal(true);
+    };
+
+    const handleModalConfirm = async (settings: any) => {
         if (!sessionId) return;
 
         setIsConnecting(true);
+        // Fechar modal após iniciar conexão ou manter aberto com loading?
+        // O modal tem loading state, então vamos manter e fechar só no sucesso/erro ou redirecionamento
+
         try {
             const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/calendar/connect`, {
                 method: 'POST',
-                body: JSON.stringify({ sessionId, userId: userEmail }),
+                body: JSON.stringify({
+                    sessionId,
+                    userId: userEmail,
+                    settings // Enviando as configurações junto
+                }),
             });
 
             const data = await response.json();
@@ -98,6 +117,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
             if (data.alreadyConnected) {
                 setIsConnected(true);
                 setIsConnecting(false);
+                setShowSettingsModal(false);
                 toast({
                     title: "Conexão Reativada",
                     description: "Sua conta do Google Calendar foi reativada com sucesso.",
@@ -107,6 +127,8 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
             }
 
             if (data.authUrl && data.connectionId) {
+                setShowSettingsModal(false); // Fecha o modal pois vai abrir popup
+
                 // Abrir em uma nova janela/popup
                 const width = 600;
                 const height = 700;
@@ -195,7 +217,6 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
             }
 
             setIsConnected(false);
-            setConnectionStatus('');
 
             toast({
                 title: "Desconectado",
@@ -264,17 +285,28 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                 {/* Botão de Ação */}
                 <div className="mt-auto pt-2 shrink-0">
                     {isConnected ? (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDisconnect}
-                            className="w-full text-xs h-8"
-                        >
-                            Desconectar
-                        </Button>
+                        <div className="flex gap-2 w-full">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowSettingsModal(true)}
+                                className="flex-1 text-xs h-8 gap-2 hover:bg-gray-50"
+                            >
+                                <Settings className="h-3 w-3" />
+                                Editar
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleDisconnect}
+                                className="flex-1 text-xs h-8 border-[#FE601E] text-[#FE601E] hover:bg-[#FE601E]/10 hover:text-[#FE601E]"
+                            >
+                                Desconectar
+                            </Button>
+                        </div>
                     ) : (
                         <Button
-                            onClick={handleConnect}
+                            onClick={handleConnectClick}
                             disabled={isConnecting}
                             className="w-full gap-2 text-xs h-8 bg-[#00A947] hover:bg-[#00A947]/90 text-white shadow-sm"
                         >
@@ -299,6 +331,14 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                     )}
                 </div>
             </CardContent>
+
+            <CalendarSettingsModal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                onConfirm={handleModalConfirm}
+                isLoading={isConnecting}
+                initialSettings={savedSettings}
+            />
         </Card>
     );
 };
