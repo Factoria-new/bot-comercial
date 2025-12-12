@@ -2168,7 +2168,8 @@ class WhatsAppService {
           phoneNumber,
           geminiApiKey,
           config?.systemPrompt || '', // Prompt personalizado do frontend
-          config?.calendarID || sessionId // Passar calendarID (email) ou sessionId como userId do Calendar
+          config?.calendarID || sessionId, // Passar calendarID (email) ou sessionId como userId do Calendar
+          config?.calendarSettings // Passar configurações do calendário
         );
       }
       console.log("aiResponse", aiResponse);

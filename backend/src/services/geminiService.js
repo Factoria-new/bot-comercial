@@ -52,19 +52,74 @@ Diretrizes:
 - Se não souber algo, admita honestamente
 - Adapte seu tom ao contexto da conversa
 - Mantenha as respostas concisas quando possível
-- IMPORTANTE: Quando o usuário solicitar ações de calendário (agendar, cancelar, remarcar reuniões), EXECUTE IMEDIATAMENTE sem pedir confirmação. NÃO pergunte "Posso prosseguir?" ou "Confirma?". Apenas faça a ação e informe o resultado.
+- IMPORTANTE: Quando o usuário solicitar ações de calendário (agendar, cancelar, remarcar agendamentos), EXECUTE IMEDIATAMENTE sem pedir confirmação. NÃO pergunte "Posso prosseguir?" ou "Confirma?". Apenas faça a ação e informe o resultado.
 `;
+
+/**
+ * Formata as configurações do calendário para o prompt do sistema
+ */
+function formatCalendarSettings(settings) {
+  if (!settings || !settings.schedule) return '';
+
+  let scheduleText = '\n### DIRETRIZES DE AGENDAMENTO (Segunda Diretriz):\n\nHORÁRIOS DE ATENDIMENTO:\n';
+  const schedule = settings.schedule;
+
+  const WEEKDAYS_MAP = {
+    'seg': 'Segunda-feira',
+    'ter': 'Terça-feira',
+    'qua': 'Quarta-feira',
+    'qui': 'Quinta-feira',
+    'sex': 'Sexta-feira',
+    'sab': 'Sábado',
+    'dom': 'Domingo'
+  };
+
+  for (const [key, label] of Object.entries(WEEKDAYS_MAP)) {
+    const day = schedule[key];
+    if (day && day.enabled && day.slots && day.slots.length > 0) {
+      const slotsStr = day.slots.map(slot => `${slot.start}-${slot.end}`).join(', ');
+      scheduleText += `- ${label}: ${slotsStr}\n`;
+    } else {
+      scheduleText += `- ${label}: Fechado\n`;
+    }
+  }
+
+  if (settings.meetingDuration) {
+    scheduleText += `\nDuração padrão do agendamento: ${settings.meetingDuration} minutos\n`;
+  }
+
+  if (settings.meetingType) {
+    scheduleText += `Tipo de agendamento: ${settings.meetingType === 'online' ? 'Online (Google Meet)' : 'Presencial'}\n`;
+  }
+
+  scheduleText += '\nREQUISITOS OBRIGATÓRIOS PARA AGENDAMENTO:\n';
+  scheduleText += 'Para realizar um agendamento, você DEVE obter as seguintes informações do usuário:\n';
+  scheduleText += '1. Nome do cliente\n';
+  scheduleText += '2. E-mail do cliente\n';
+  scheduleText += '3. Assunto do agendamento\n';
+  scheduleText += '4. Horário desejado\n\n';
+  scheduleText += 'Não chame a função de agendamento sem ter TODAS essas informações.\n';
+
+  scheduleText += '\nIMPORTANTE: Respeite RIGOROSAMENTE estes horários. Não realize agendamentos fora dos horários permitidos ou em dias fechados. Se o usuário pedir um horário indisponível, sugira o próximo horário disponível dentro do expediente.\n';
+
+  return scheduleText;
+}
 
 /**
  * Combina o prompt personalizado do usuário com as diretrizes fixas do sistema
  */
-function buildSystemPrompt(customPrompt = '', includeDateTime = false) {
+function buildSystemPrompt(customPrompt = '', includeDateTime = false, calendarSettings = null) {
   let prompt = '';
 
   if (customPrompt && customPrompt.trim()) {
-    prompt = `${customPrompt.trim()}\n\n${SYSTEM_GUIDELINES}`;
+    prompt = `${customPrompt.trim()}\n\n### DIRETRIZES DO SISTEMA:\n${SYSTEM_GUIDELINES}`;
   } else {
-    prompt = `Você é um assistente virtual prestativo e profissional.\n${SYSTEM_GUIDELINES}`;
+    prompt = `Você é um assistente virtual prestativo e profissional.\n\n### DIRETRIZES DO SISTEMA:\n${SYSTEM_GUIDELINES}`;
+  }
+
+  // Adicionar configurações do calendário se houver
+  if (calendarSettings) {
+    prompt += formatCalendarSettings(calendarSettings);
   }
 
   // Adicionar contexto de data/hora se solicitado (útil para Calendar)
@@ -74,7 +129,8 @@ function buildSystemPrompt(customPrompt = '', includeDateTime = false) {
     const dateStr = now.toLocaleDateString('pt-BR', { timeZone: timezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit' });
 
-    prompt += `\n\nContexto Temporal:\n- Data atual: ${dateStr}\n- Hora atual: ${timeStr}\n- Fuso horário: ${timezone}`;
+
+    prompt += `\n\n### CONTEXTO TEMPORAL:\n- Data atual: ${dateStr}\n- Hora atual: ${timeStr}\n- Fuso horário: ${timezone}`;
   }
 
   return prompt;
@@ -941,7 +997,7 @@ export async function getCalendarTools(userId = 'default') {
 /**
  * Processa mensagem com suporte a Google Calendar usando Function Calling
  */
-export async function processMessageWithCalendar(messageText, phoneNumber, apiKey, systemPrompt = '', calendarUserId = null) {
+export async function processMessageWithCalendar(messageText, phoneNumber, apiKey, systemPrompt = '', calendarUserId = null, calendarSettings = null) {
   try {
     const toolsUserId = calendarUserId || phoneNumber;
     logger.info(`📅 Processando mensagem COM suporte a Calendar (User: ${toolsUserId})`);
@@ -1018,11 +1074,12 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
     const genAI = new GoogleGenerativeAI(apiKey);
 
     // Build system prompt COM contexto temporal (para enviar ao Gemini)
-    const finalSystemPrompt = buildSystemPrompt(systemPrompt, true);
+    // E COM configurações de calendário
+    const finalSystemPrompt = buildSystemPrompt(systemPrompt, true, calendarSettings);
 
     // Build system prompt SEM contexto temporal (para comparação estável)
     // Isso evita recriar a conversa a cada mensagem só porque a hora mudou
-    const baseSystemPrompt = buildSystemPrompt(systemPrompt, false);
+    const baseSystemPrompt = buildSystemPrompt(systemPrompt, false, calendarSettings);
 
     // Criar chave única para histórico
     const conversationKey = phoneNumber;

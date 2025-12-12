@@ -590,7 +590,7 @@ const AgentConfigModal = ({
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || (calendarEnabled && !calendarConnected)}
                 className="flex-1 btn-new-instance rounded-xl"
               >
                 {isSaving ? (
