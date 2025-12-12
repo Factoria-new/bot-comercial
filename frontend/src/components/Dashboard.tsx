@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import WhatsAppInstanceCard from './WhatsAppInstanceCard';
 import WhatsAppConnectionModal, { ConnectionState } from './WhatsAppConnectionModal';
 import AIStatusCard from '@/components/AIStatusCard';
-import CalendarIntegration from '@/components/CalendarIntegration';
 import { WhatsAppInstance, WhatsAppConfig } from '@/types/whatsapp';
 import { useToast } from '@/hooks/use-toast';
 import { useSocket } from '@/contexts/SocketContext';
@@ -449,11 +448,11 @@ const Dashboard = () => {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="text-center sm:text-left">
-              <div className="flex justify-center sm:justify-start mb-2">
+              <div className="flex justify-start mb-2">
                 <img
                   src="/texto-logo.png"
                   alt="Bora Expandir - Agência de Viagens e Assessoria de Imigração"
-                  className="h-16 sm:h-20 lg:h-24 w-auto"
+                  className="h-16 sm:h-20 lg:h-24 w-auto -ml-4"
                 />
               </div>
               <p className="text-gray-600 mt-1 text-sm sm:text-base">
@@ -604,16 +603,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Google Calendar Integration */}
-        {instances.length > 0 && instances.some(i => i.isConnected) && (
-          <div className="mt-6 sm:mt-8">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Integrações</h2>
-            <CalendarIntegration
-              sessionId={`instance_${instances.find(i => i.isConnected)?.id}`}
-              userEmail={auth.currentUser?.email || ''}
-            />
-          </div>
-        )}
 
         {/* Connection Modal */}
         <WhatsAppConnectionModal

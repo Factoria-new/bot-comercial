@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useSocket } from '@/contexts/SocketContext';
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import API_CONFIG from '@/config/api';
+import { auth } from '@/config/firebase';
 import AgentConfigModal, { AgentConfig } from './AgentConfigModal';
 
 interface WhatsAppInstanceCardProps {
@@ -416,6 +417,8 @@ const WhatsAppInstanceCard = ({
         onSave={handleSaveAgentConfig}
         initialConfig={agentConfig}
         instanceName={displayName}
+        instanceId={instance.id}
+        userEmail={auth.currentUser?.email || ''}
       />
     </Card>
   );
