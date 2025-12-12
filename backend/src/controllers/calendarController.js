@@ -1,24 +1,24 @@
 import logger from '../config/logger.js';
 import { Composio } from '@composio/core';
+import calendarService from '../services/calendarService.js';
 
 class CalendarController {
     constructor(whatsappService) {
         this.whatsappService = whatsappService;
-        // Inicializar Composio client
+        // Inicializar Composio client (apenas para métodos que ainda não foram migrados se houver, ou manter para compatibilidade temporária)
+        // No futuro, tudo deve ir para o service.
         console.log('🔧 Inicializando CalendarController...');
-        console.log('   COMPOSIO_API_KEY:', process.env.COMPOSIO_API_KEY ? `Configurada (${process.env.COMPOSIO_API_KEY.substring(0, 10)}...)` : 'NÃO configurada');
-        console.log('   COMPOSIO_AUTH_CONFIG_ID:', process.env.COMPOSIO_AUTH_CONFIG_ID || 'NÃO configurada');
+
+        // AINDA MANTEMOS O CLIENTE AQUI PARA OS MÉTODOS NÃO MIGRADOS COMPLETAMENTE (initiateConnection, getConnectionStatus)
+        // Idealmente refatorar tudo, mas o foco agora é o disconnect na remoção da instância.
 
         this.composioClient = null;
         if (process.env.COMPOSIO_API_KEY) {
             try {
                 this.composioClient = new Composio({ apiKey: process.env.COMPOSIO_API_KEY });
-                console.log('✅ Composio client inicializado');
             } catch (error) {
-                console.error('❌ Erro ao inicializar Composio:', error.message);
+                console.error('❌ Erro ao inicializar Composio (Controller):', error.message);
             }
-        } else {
-            console.warn('⚠️ COMPOSIO_API_KEY não encontrada - Calendar não disponível');
         }
     }
 
@@ -333,70 +333,21 @@ class CalendarController {
     async disconnectCalendar(req, res) {
         try {
             const { sessionId } = req.params;
-            // PADRONIZAÇÃO: Usar SessionId como ID no Composio (cada instância tem seu próprio Calendar)
-            const composioUserId = sessionId;
 
-            logger.info(`🔑 [Disconnect] Identificação Composio: SessionId=${sessionId} (conexão independente por instância)`);
-            logger.info(`🔌 [disconnectCalendar] Iniciando desconexão para ${composioUserId}...`);
+            // USANDO O NOVO SERVICE
+            const result = await calendarService.disconnectCalendar(sessionId);
 
-            if (!this.composioClient) {
-                logger.error('❌ Composio client não inicializado');
-                return res.status(500).json({ error: 'Composio não está configurado' });
-            }
-
-            logger.info(`🔌 Desconectando Google Calendar para: ${composioUserId} (Sessão: ${sessionId})`);
-
-            // Buscar connections desta sessão/usuário
-            const response = await this.composioClient.connectedAccounts.list({
-                userId: composioUserId
-            });
-
-            logger.info(`📦 [disconnectCalendar] Resposta list: ${JSON.stringify(response)}`);
-
-            let connections = [];
-            if (Array.isArray(response)) {
-                connections = response;
-            } else if (response && Array.isArray(response.items)) {
-                connections = response.items;
-            } else if (response && Array.isArray(response.data)) {
-                connections = response.data;
-            }
-
-            logger.info(`🔍 [disconnectCalendar] Conexões encontradas: ${connections.length}`);
-
-            if (connections.length > 0) {
-                for (const connection of connections) {
-                    try {
-                        logger.info(`🔎 Verificando conexão ${connection.id}...`);
-
-                        // Verificar se é Google Calendar (usando toolkit.slug que vem no list)
-                        const isCalendar =
-                            (connection.toolkit && connection.toolkit.slug === 'googlecalendar') ||
-                            connection.appUniqueId === 'googlecalendar' ||
-                            connection.appName === 'googlecalendar';
-
-                        if (isCalendar) {
-                            logger.info(`�️ Deletando conexão ${connection.id} (status: ${connection.status})...`);
-                            await this.composioClient.connectedAccounts.delete(connection.id);
-                            logger.info(`✅ Connection ${connection.id} deletada com sucesso`);
-                        } else {
-                            logger.info(`ℹ️ Ignorando conexão ${connection.id} (App: ${connection.appUniqueId || connection.appName})`);
-                        }
-                    } catch (err) {
-                        logger.error(`❌ Erro ao processar/desativar conexão ${connection.id}:`, err);
-                    }
-                }
+            if (result.success) {
+                return res.json(result);
             } else {
-                logger.warn(`⚠️ Nenhuma conexão encontrada para o usuário ${composioUserId}`);
+                return res.status(500).json({
+                    error: 'Erro ao desconectar',
+                    details: result.message || result.error
+                });
             }
-
-            return res.json({
-                success: true,
-                message: 'Google Calendar desconectado (desativado) com sucesso'
-            });
 
         } catch (error) {
-            logger.error('❌ Erro ao desconectar Calendar:', error);
+            logger.error('❌ Erro ao desconectar Calendar (Controller):', error);
             return res.status(500).json({
                 error: 'Erro ao desconectar',
                 details: error.message
@@ -431,3 +382,4 @@ class CalendarController {
 }
 
 export default CalendarController;
+

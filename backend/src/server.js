@@ -9,6 +9,7 @@ import WhatsAppController from './controllers/whatsappController.js';
 import CalendarController from './controllers/calendarController.js';
 import createWhatsAppRoutes from './routes/whatsappRoutes.js';
 import createCalendarRoutes from './routes/calendarRoutes.js';
+import calendarService from './services/calendarService.js';
 
 
 dotenv.config();
@@ -159,7 +160,16 @@ io.on('connection', (socket) => {
     try {
       const { sessionId } = data;
       logger.info(`Logout solicitado para sessão: ${sessionId}`);
-      await whatsappService.logout(sessionId);
+
+      // NOVO: Desconectar Calendar ao desconectar instância (pedido do usuário)
+      try {
+        await calendarService.disconnectCalendar(sessionId);
+      } catch (calErr) {
+        logger.warn(`Erro ao desconectar calendar no logout: ${calErr.message}`);
+      }
+
+      // NOVO: removeFiles: false para manter a instância na lista (apenas desconectar)
+      await whatsappService.logout(sessionId, { removeFiles: false });
     } catch (error) {
       logger.error('Erro ao fazer logout via socket:', error);
       socket.emit('logout-error', {

@@ -30,6 +30,7 @@ import {
   saveTempAudio,
   cleanupTempAudio
 } from './ttsService.js';
+import calendarService from './calendarService.js';
 
 const sessions = new Map();
 const sessionConfigs = new Map();
@@ -1886,6 +1887,14 @@ class WhatsAppService {
   async deleteSession(sessionId) {
     try {
       logger.info(`Solicitação de exclusão da sessão ${sessionId}`);
+
+      // NOVO: Desconectar Calendar associado antes de tudo
+      try {
+        await calendarService.disconnectCalendar(sessionId);
+      } catch (calError) {
+        logger.warn(`Erro não fatal ao desconectar Calendar para ${sessionId}:`, calError);
+        // Continua exclusão mesmo se falhar o calendar
+      }
 
       // 1. Se a sessão estiver ativa na memória, fazer logout completo
       if (sessions.has(sessionId)) {
