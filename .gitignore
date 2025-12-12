@@ -37,3 +37,8 @@ build/
 # Temporary files
 temp/
 
+
+# Frontend Config
+frontend/src/config/firebase.ts
+backend/src/config/serviceAccountKey.json
+frontend/src/config/firebase.ts

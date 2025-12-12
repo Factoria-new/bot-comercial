@@ -532,22 +532,19 @@ const Landing = () => {
             {/* Container Principal */}
             < div className="relative bg-white min-h-screen" >
                 {/* Texto Hero (Lado Esquerdo) */}
-                < div
+                <div
                     ref={heroTextRef}
-                    className="absolute top-0 left-0 w-full md:w-[50vw] h-screen flex flex-col justify-start md:justify-center pt-32 md:pt-0 pb-24 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto"
+                    className="absolute top-0 left-0 w-full md:w-[60vw] lg:w-[50vw] h-screen flex flex-col justify-start md:justify-center pt-32 md:pt-28 pb-24 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto"
                 >
                     {/* Badge */}
-                    <div className="inline-flex items-center gap-2 bg-[#00A947]/10 text-[#00A947] px-4 py-2 rounded-full text-sm font-medium mb-6 w-fit pointer-events-auto">
-                        <span className="w-2 h-2 bg-[#00A947] rounded-full animate-pulse"></span>
-                        Tecnologia State-of-the-Art
-                    </div>
 
-                    <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
+
+                    <h1 className="text-[clamp(2.5rem,5vw,6rem)] font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
                         Inteligência que conversa,{' '}
                         <span className="text-[#00A947] block mt-2">Vendas que fecham</span>
                     </h1>
 
-                    <p className="text-gray-600 text-left mt-8 text-xl md:text-2xl w-full max-w-2xl mr-auto leading-relaxed">
+                    <p className="text-gray-600 text-left mt-8 text-[clamp(1.25rem,2vw,1.5rem)] w-full max-w-2xl mr-auto leading-relaxed">
                         Recupere 100% dos leads perdidos por demora na resposta. Atendimento instantâneo, inteligente e humano. A qualquer hora.
                     </p>
 
