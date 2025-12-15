@@ -100,6 +100,19 @@ function formatCalendarSettings(settings) {
   scheduleText += '4. Horário desejado\n\n';
   scheduleText += 'Não chame a função de agendamento sem ter TODAS essas informações.\n';
 
+  scheduleText += '\n### FLUXO PARA CANCELAMENTO OU REMARCAÇÃO:\n';
+  scheduleText += 'Quando o cliente solicitar CANCELAR ou REMARCAR um agendamento, siga ESTE FLUXO OBRIGATÓRIO:\n\n';
+  scheduleText += '1. PERGUNTE O E-MAIL: Peça o e-mail do cliente para buscar os agendamentos.\n';
+  scheduleText += '2. BUSQUE OS AGENDAMENTOS: Use a função de busca de eventos para encontrar agendamentos com o e-mail informado.\n';
+  scheduleText += '3. LISTE OS AGENDAMENTOS: Mostre ao cliente TODOS os agendamentos encontrados para aquele e-mail, com data e horário.\n';
+  scheduleText += '4. CONFIRME QUAL AGENDAMENTO: Se houver mais de um agendamento, pergunte qual deles o cliente deseja cancelar/remarcar.\n';
+  scheduleText += '5. EXECUTE A AÇÃO: Após o cliente confirmar qual agendamento, execute o cancelamento ou remarcação.\n\n';
+  scheduleText += 'IMPORTANTE: NÃO tente adivinhar o agendamento pelo nome ou horário mencionado. SEMPRE busque pelos agendamentos usando o e-mail.\n\n';
+  scheduleText += '### SE NÃO ENCONTRAR AGENDAMENTOS:\n';
+  scheduleText += 'Se a busca não retornar nenhum agendamento para o e-mail informado, responda de forma SIMPLES e CURTA:\n';
+  scheduleText += '"Não encontrei nenhum agendamento cadastrado com o e-mail [email]. Por favor, verifique se o e-mail está correto."\n';
+  scheduleText += 'NÃO dê explicações técnicas sobre a API, calendário, filtros ou como a busca funciona. Seja direto e amigável.\n';
+
   scheduleText += '\nIMPORTANTE: Respeite RIGOROSAMENTE estes horários. Não realize agendamentos fora dos horários permitidos ou em dias fechados. Se o usuário pedir um horário indisponível, sugira o próximo horário disponível dentro do expediente.\n';
 
   return scheduleText;
@@ -1185,11 +1198,35 @@ export async function processMessageWithCalendar(messageText, phoneNumber, apiKe
         logger.info(`📊 Parâmetros: ${JSON.stringify(call.args, null, 2)}`);
 
         try {
+          // Preparar argumentos, possivelmente com Google Meet para reuniões online
+          let actionArgs = call.args || {};
+
+          // Se for criação de evento E o tipo de reunião for 'online', adicionar Google Meet
+          if (originalActionName === 'GOOGLECALENDAR_CREATE_EVENT' && calendarSettings?.meetingType === 'online') {
+            logger.info('📹 Tipo de reunião ONLINE detectado - Adicionando Google Meet ao evento...');
+
+            // Adicionar conferenceData para criar link do Google Meet
+            actionArgs = {
+              ...actionArgs,
+              conferenceDataVersion: 1,
+              conferenceData: {
+                createRequest: {
+                  requestId: `meet-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                  conferenceSolutionKey: {
+                    type: 'hangoutsMeet'
+                  }
+                }
+              }
+            };
+
+            logger.info('✅ Parâmetros do Google Meet adicionados:', JSON.stringify(actionArgs.conferenceData, null, 2));
+          }
+
           // Executar a ação via Composio
           const toolResult = await client.client.tools.execute(originalActionName, {
             entity_id: toolsUserId,
             connected_account_id: connectedAccountId,
-            arguments: call.args || {}
+            arguments: actionArgs
           });
 
           logger.info(`✅ Resultado da ação: ${JSON.stringify(toolResult, null, 2)}`);
