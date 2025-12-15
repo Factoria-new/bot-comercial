@@ -6,7 +6,7 @@ import API_CONFIG from '@/config/api';
 interface SocketContextData {
   socket: Socket | null;
   isConnected: boolean;
-  generateQR: (sessionId: string) => void;
+  generateQR: (sessionId: string, phoneNumber?: string) => void;
   logout: (sessionId: string) => void;
   forceReconnect: (sessionId: string) => void;
 }
@@ -37,7 +37,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      maxReconnectionAttempts: 5,
+      reconnectionAttempts: 5,
       timeout: 20000,
       forceNew: false
     });
@@ -130,7 +130,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     socketInstance.on('already-connected', ({ sessionId, user }) => {
       toast({
         title: "Já Conectado",
-        description: "Esta instância já está conectada ao WhatsApp.",
+        description: "Esta conexão já está conectada ao WhatsApp.",
       });
       window.dispatchEvent(new CustomEvent('whatsapp-already-connected', {
         detail: { sessionId, user }
@@ -190,12 +190,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Executar apenas uma vez ao montar (toast não deve ser dependência)
 
-  const generateQR = (sessionId: string) => {
-    console.log('🔍 generateQR chamado:', { sessionId, socketConnected: !!socket, isConnected });
+  const generateQR = (sessionId: string, phoneNumber?: string) => {
+    console.log('🔍 generateQR chamado:', { sessionId, phoneNumber, socketConnected: !!socket, isConnected });
 
     if (socket && isConnected) {
-      console.log('📡 Emitindo evento generate-qr:', { sessionId });
-      socket.emit('generate-qr', { sessionId });
+      console.log('📡 Emitindo evento generate-qr:', { sessionId, phoneNumber });
+      socket.emit('generate-qr', { sessionId, phoneNumber });
     } else {
       console.error('❌ Socket não conectado:', { socket: !!socket, isConnected });
       toast({
@@ -227,7 +227,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
       toast({
         title: "Reconexão Iniciada",
-        description: "Tentando reconectar a instância...",
+        description: "Tentando reconectar a conexão...",
       });
     } catch (error) {
       toast({

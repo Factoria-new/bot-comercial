@@ -769,7 +769,7 @@ const Landing = () => {
                                                 Você não precisa de mais atendentes. Você precisa de super-atendentes. Clone sua capacidade de atendimento instantaneamente.
                                             </p>
                                             <ul className="space-y-4 mb-8">
-                                                {["Múltiplas instâncias simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
+                                                {["Múltiplas conexões simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
                                                     <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
                                                         <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
                                                         {item}
@@ -817,7 +817,7 @@ const Landing = () => {
                                                 Funcionários Digitais (IA)
                                             </h3>
                                             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Cada instância é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
+                                                Cada conexão é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
                                             </p>
                                             <ul className="space-y-4 mb-8">
                                                 {["Engenharia de Prompt Personalizada", "Humanização Extrema (Voz/TTS)", "Atendimento 24/7"].map((item, i) => (

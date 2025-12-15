@@ -44,7 +44,7 @@ const AIStatusCard = () => {
       }
     });
 
-    // Escutar conexões de instâncias
+    // Escutar conexões de conexões
     socket.on('instance-connected', (data) => {
       setStatus(prev => ({
         ...prev,
@@ -52,7 +52,7 @@ const AIStatusCard = () => {
       }));
     });
 
-    // Escutar desconexões de instâncias
+    // Escutar desconexões de conexões
     socket.on('instance-disconnected', (data) => {
       setStatus(prev => ({
         ...prev,
@@ -100,11 +100,11 @@ const AIStatusCard = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 sm:space-y-4">
-        {/* Instâncias Ativas */}
+        {/* Conexões Ativas */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity size={12} className="sm:w-4 sm:h-4 text-gray-500" />
-            <span className="text-xs sm:text-sm text-gray-600">Instâncias Ativas</span>
+            <span className="text-xs sm:text-sm text-gray-600">Conexões Ativas</span>
           </div>
           <p className="text-lg sm:text-2xl font-bold text-[#19B159]">{status.activeInstances}</p>
         </div>

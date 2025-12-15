@@ -45,7 +45,7 @@ const WhatsAppInstanceCard = ({
   const { socket } = useSocket();
   const { authenticatedFetch } = useAuthenticatedFetch();
 
-  // Carregar configuração do backend quando a instância conectar
+  // Carregar configuração do backend quando a conexão conectar
   useEffect(() => {
     if (instance.isConnected) {
       fetchConfig();
@@ -84,7 +84,7 @@ const WhatsAppInstanceCard = ({
   const handleSaveAgentConfig = async (newConfig: AgentConfig) => {
     try {
       const payload = {
-        name: config.name || instance.name || `Instância ${instance.id}`,
+        name: config.name || instance.name || `Conexão ${instance.id}`,
         aiProvider: newConfig.aiProvider,
         apiKey: newConfig.apiKey,
         model: newConfig.model || 'gemini-2.0-flash-exp',
@@ -171,7 +171,7 @@ const WhatsAppInstanceCard = ({
       setIsEditingName(false);
       toast({
         title: "Nome atualizado",
-        description: "O nome da instância foi alterado com sucesso.",
+        description: "O nome da conexão foi alterado com sucesso.",
       });
     } catch (error) {
       console.error('Erro ao salvar nome:', error);
@@ -201,7 +201,7 @@ const WhatsAppInstanceCard = ({
       console.error('Erro ao desconectar:', error);
       toast({
         title: "Erro ao desconectar",
-        description: "Não foi possível desconectar a instância.",
+        description: "Não foi possível desconectar a conexão.",
         variant: "destructive",
       });
     } finally {
@@ -237,7 +237,7 @@ const WhatsAppInstanceCard = ({
     return <Badge className="bg-[#FE601E] text-white hover:bg-[#FE601E]/90">Desconectado</Badge>;
   };
 
-  // Determinar o nome de exibição da instância
+  // Determinar o nome de exibição da conexão
   const displayName = instance.name;
 
   return (
@@ -303,7 +303,7 @@ const WhatsAppInstanceCard = ({
               Conectar
             </Button>
 
-            {/* Botão Remover Instância */}
+            {/* Botão Remover Conexão */}
             {onRemove && (
               <Button
                 onClick={() => onRemove(instance.id)}
@@ -311,7 +311,7 @@ const WhatsAppInstanceCard = ({
                 className="w-full btn-destructive rounded-xl flex items-center gap-2 h-10 sm:h-11 text-sm sm:text-base"
               >
                 <Trash2 size={14} className="sm:w-4 sm:h-4" />
-                Remover Instância
+                Remover Conexão
               </Button>
             )}
 

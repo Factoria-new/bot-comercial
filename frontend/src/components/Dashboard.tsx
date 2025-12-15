@@ -83,7 +83,7 @@ const Dashboard = () => {
     checkActiveSessions();
   }, []); // Executar apenas uma vez ao montar
 
-  // Verificar status das instâncias periodicamente (silencioso)
+  // Verificar status das conexões periodicamente (silencioso)
   useEffect(() => {
     const interval = setInterval(() => {
       checkActiveSessions(true); // true = verificação silenciosa, sem toasts
@@ -93,7 +93,7 @@ const Dashboard = () => {
   }, []); // Executar apenas uma vez ao montar
 
   const checkActiveSessions = async (silent = false) => {
-    // Se estiver removendo alguma instância, não atualizar a lista para evitar race conditions
+    // Se estiver removendo alguma conexão, não atualizar a lista para evitar race conditions
     if (isRemovingRef.current) {
       console.log('⏳ Ignorando checkActiveSessions pois há remoções em andamento');
       return;
@@ -131,7 +131,7 @@ const Dashboard = () => {
         };
       });
 
-      console.log('✅ Instâncias carregadas do backend:', instancesFromBackend);
+      console.log('✅ Conexões carregadas do backend:', instancesFromBackend);
       setInstances(instancesFromBackend);
 
       // Mostrar toast apenas se não for verificação silenciosa e houver sessões
@@ -145,7 +145,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('❌ Erro ao verificar sessões ativas:', error);
 
-      // Em caso de erro, manter instâncias existentes mas marcar como desconectadas
+      // Em caso de erro, manter conexões existentes mas marcar como desconectadas
       setInstances(prevInstances =>
         prevInstances.map(instance => ({
           ...instance,
@@ -193,7 +193,13 @@ const Dashboard = () => {
 
     socket.on('connecting', (data) => {
       if (data.sessionId === `instance_${currentInstance}`) {
-        setConnectionState('connecting');
+        setConnectionState(prev => {
+          // Se estivermos em states iniciais, ignorar o evento 'connecting'
+          if (['generating', 'ready', 'selection', 'input-phone', 'pairing'].includes(prev)) {
+            return prev;
+          }
+          return 'connecting';
+        });
       }
     });
 
@@ -257,11 +263,11 @@ const Dashboard = () => {
   };
 
   const addInstance = async () => {
-    // Verificar se já existem 4 instâncias
+    // Verificar se já existem 4 conexões
     if (instances.length >= 4) {
       toast({
         title: "Limite atingido",
-        description: "Você pode criar no máximo 4 instâncias do WhatsApp.",
+        description: "Você pode criar no máximo 4 conexões do WhatsApp.",
         variant: "destructive",
       });
       return;
@@ -302,16 +308,16 @@ const Dashboard = () => {
         throw new Error('Falha ao salvar configuração');
       }
 
-      console.log('✅ Nova instância persistida no backend:', newId);
+      console.log('✅ Nova conexão persistida no backend:', newId);
 
       // Atualizar estado local apenas após sucesso no backend
       setInstances(prev => [...prev, newInstance]);
 
     } catch (error) {
-      console.error('Erro ao persistir nova instância:', error);
+      console.error('Erro ao persistir nova conexão:', error);
       toast({
-        title: "Erro ao criar instância",
-        description: "Não foi possível salvar a nova instância no servidor.",
+        title: "Erro ao criar conexão",
+        description: "Não foi possível salvar a nova conexão no servidor.",
         variant: "destructive",
       });
     }
@@ -321,9 +327,40 @@ const Dashboard = () => {
     console.log('🎯 Dashboard handleGenerateQR:', instanceId);
     setCurrentInstance(instanceId);
     setIsModalOpen(true);
-    setConnectionState('input-phone'); // Start with phone input
+
+    // Default to QR Code generation immediately
+    const sessionId = `instance_${instanceId}`;
+    console.log('📡 Dashboard emitindo generate-qr (Default):', sessionId);
+
+    setConnectionState('generating');
     setQrCode('');
     setPairingCode('');
+
+    if (socket) {
+      socket.emit('generate-qr', { sessionId });
+    } else {
+      console.error('❌ Socket não disponível no Dashboard');
+    }
+  };
+
+  const handleMethodSelected = (method: 'qr' | 'code') => {
+    if (method === 'code') {
+      setConnectionState('input-phone');
+    } else {
+      // QR Code selected - generate immediately
+      if (!currentInstance) return;
+
+      const sessionId = `instance_${currentInstance}`;
+      console.log('📡 Dashboard emitindo generate-qr (QR Mode):', sessionId);
+
+      setConnectionState('generating');
+
+      if (socket) {
+        socket.emit('generate-qr', { sessionId });
+      } else {
+        console.error('❌ Socket não disponível no Dashboard');
+      }
+    }
   };
 
   const handleConnect = (phoneNumber: string) => {
@@ -361,7 +398,7 @@ const Dashboard = () => {
   // ...
 
   const handleRemoveInstance = async (instanceId: number) => {
-    // Adicionar à lista de instâncias sendo removidas
+    // Adicionar à lista de conexões sendo removidas
     setRemovingInstances(prev => new Set(prev).add(instanceId));
     isRemovingRef.current = true;
 
@@ -372,15 +409,15 @@ const Dashboard = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Falha ao remover instância no backend');
+        throw new Error('Falha ao remover conexão no backend');
       }
 
       // Aguardar a animação antes de remover da UI
       setTimeout(() => {
-        // Remover a instância da lista
+        // Remover a conexão da lista
         setInstances(prev => prev.filter(inst => inst.id !== instanceId));
 
-        // Remover da lista de instâncias sendo removidas
+        // Remover da lista de conexões sendo removidas
         setRemovingInstances(prev => {
           const newSet = new Set(prev);
           newSet.delete(instanceId);
@@ -390,16 +427,16 @@ const Dashboard = () => {
         });
 
         toast({
-          title: "Instância removida",
-          description: "A instância foi removida com sucesso.",
+          title: "Conexão removida",
+          description: "A conexão foi removida com sucesso.",
         });
       }, 500); // Tempo da animação
 
     } catch (error) {
-      console.error('Erro ao remover instância:', error);
+      console.error('Erro ao remover conexão:', error);
       toast({
         title: "Erro ao remover",
-        description: "Não foi possível remover a instância. Tente novamente.",
+        description: "Não foi possível remover a conexão. Tente novamente.",
         variant: "destructive",
       });
 
@@ -438,7 +475,7 @@ const Dashboard = () => {
               </div>
               <div className="space-y-2">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">Verificando sessões ativas...</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Aguarde enquanto sincronizamos suas instâncias</p>
+                <p className="text-xs sm:text-sm text-gray-600">Aguarde enquanto sincronizamos suas conexões</p>
               </div>
             </div>
           </div>
@@ -485,13 +522,13 @@ const Dashboard = () => {
                         disabled={instances.length >= 4}
                       >
                         <PlusCircle className="mr-2" size={18} />
-                        <span className="text-sm sm:text-base">Nova Instância</span>
+                        <span className="text-sm sm:text-base">Nova Conexão</span>
                       </Button>
                     </span>
                   </TooltipTrigger>
                   {instances.length >= 4 && (
                     <TooltipContent>
-                      <p>Limite máximo de 4 instâncias atingido</p>
+                      <p>Limite máximo de 4 conexões atingido</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -554,13 +591,13 @@ const Dashboard = () => {
 
           {/* Instances Grid */}
           <div className="xl:col-span-2 order-1 xl:order-2">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Instâncias WhatsApp</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Conexões WhatsApp</h2>
             {instances.length === 0 ? (
               <Card className="border-dashed border-2 border-[#19B159]/30 bg-white/70 backdrop-blur-md shadow-lg">
                 <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
                   <MessageSquare className="mx-auto text-[#19B159]/60 mb-4" size={40} />
-                  <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Nenhuma instância criada</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-4">Comece criando sua primeira instância do WhatsApp</p>
+                  <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Nenhuma conexão criada</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-4">Comece criando sua primeira conexão do WhatsApp</p>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -571,13 +608,13 @@ const Dashboard = () => {
                             disabled={instances.length >= 4}
                           >
                             <PlusCircle className="mr-2" size={18} />
-                            <span className="text-sm sm:text-base">Criar Primeira Instância</span>
+                            <span className="text-sm sm:text-base">Criar Primeira Conexão</span>
                           </Button>
                         </span>
                       </TooltipTrigger>
                       {instances.length >= 4 && (
                         <TooltipContent>
-                          <p>Limite máximo de 4 instâncias atingido</p>
+                          <p>Limite máximo de 4 conexões atingido</p>
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -614,6 +651,7 @@ const Dashboard = () => {
           errorMessage={errorMessage}
           instanceName={instances.find(i => i.id === currentInstance)?.name || ''}
           onConnect={handleConnect}
+          onMethodSelected={handleMethodSelected}
         />
       </div>
     </div>

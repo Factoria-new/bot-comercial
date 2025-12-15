@@ -7,13 +7,13 @@ import {
   DialogPortal,
   DialogOverlay,
 } from '@/components/ui/dialog';
-import { Loader, CheckCircle2, XCircle, QrCode } from 'lucide-react';
+import { Loader, CheckCircle2, XCircle, QrCode, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export type ConnectionState = 'generating' | 'ready' | 'scanning' | 'connecting' | 'connected' | 'error' | 'input-phone' | 'pairing';
+export type ConnectionState = 'selection' | 'generating' | 'ready' | 'scanning' | 'connecting' | 'connected' | 'error' | 'input-phone' | 'pairing';
 
 interface WhatsAppConnectionModalProps {
   isOpen: boolean;
@@ -23,6 +23,7 @@ interface WhatsAppConnectionModalProps {
   errorMessage?: string;
   instanceName: string;
   onConnect: (phoneNumber: string) => void;
+  onMethodSelected: (method: 'qr' | 'code') => void;
   pairingCode?: string;
 }
 
@@ -34,6 +35,7 @@ const WhatsAppConnectionModal = ({
   errorMessage,
   instanceName,
   onConnect,
+  onMethodSelected,
   pairingCode
 }: WhatsAppConnectionModalProps) => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -49,6 +51,44 @@ const WhatsAppConnectionModal = ({
 
   const renderContent = () => {
     switch (connectionState) {
+      case 'selection':
+        return (
+          <div className="flex flex-col space-y-6 py-6 px-4">
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-semibold text-gray-900">Como deseja conectar?</h3>
+              <p className="text-sm text-gray-600">Escolha o método de conexão para {instanceName}</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={() => onMethodSelected('qr')}
+                className="flex flex-col items-center justify-center p-6 space-y-3 bg-white border-2 border-dashed border-gray-200 rounded-xl hover:border-[#19B159] hover:bg-[#19B159]/5 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-[#19B159]/20 transition-colors">
+                  <QrCode className="w-6 h-6 text-gray-600 group-hover:text-[#19B159]" />
+                </div>
+                <div className="text-center">
+                  <span className="block font-medium text-gray-900">QR Code</span>
+                  <span className="text-xs text-gray-500">Escanear com a câmera</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => onMethodSelected('code')}
+                className="flex flex-col items-center justify-center p-6 space-y-3 bg-white border-2 border-dashed border-gray-200 rounded-xl hover:border-[#19B159] hover:bg-[#19B159]/5 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-[#19B159]/20 transition-colors">
+                  <Smartphone className="w-6 h-6 text-gray-600 group-hover:text-[#19B159]" />
+                </div>
+                <div className="text-center">
+                  <span className="block font-medium text-gray-900">Código</span>
+                  <span className="text-xs text-gray-500">Digitar número</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        );
+
       case 'input-phone':
         return (
           <form onSubmit={handleConnectSubmit} className="flex flex-col space-y-4 py-4 px-4">
@@ -64,7 +104,7 @@ const WhatsAppConnectionModal = ({
                 placeholder="Ex: 5511999999999"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-[#00A947] focus:border-[##BCBCBC] transition-colors"
+                className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus-visible:ring-[#00A947] focus:border-[#BCBCBC] transition-colors"
                 autoFocus
               />
               <p className="text-xs text-gray-500">Inclua o código do país (ex: 55 para Brasil)</p>
@@ -76,6 +116,16 @@ const WhatsAppConnectionModal = ({
               disabled={!phoneNumber || phoneNumber.length < 10}
             >
               Gerar Código de Pareamento
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onMethodSelected('qr')}
+              className="w-full flex items-center justify-center gap-2 border-dashed border-gray-300 hover:border-[#19B159] text-gray-600 hover:text-[#19B159] hover:bg-[#19B159]/5 transition-all h-10 items-center justify-center"
+            >
+              <QrCode size={16} />
+              Conectar com QR Code
             </Button>
           </form>
         );
@@ -93,6 +143,7 @@ const WhatsAppConnectionModal = ({
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Gerando Código</h3>
               <p className="text-xs sm:text-sm text-gray-600">Preparando código para {instanceName}...</p>
             </div>
+
           </div>
         );
 
@@ -146,6 +197,18 @@ const WhatsAppConnectionModal = ({
                     <p className="text-xs sm:text-sm text-gray-600">3. Clique em "Conectar um aparelho"</p>
                     <p className="text-xs sm:text-sm text-gray-600">4. Escaneie este código</p>
                   </div>
+                </div>
+
+                <div className="pt-2 w-full">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onMethodSelected('code')}
+                    className="w-full flex items-center justify-center gap-2 border-dashed border-gray-300 hover:border-[#19B159] text-gray-600 hover:text-[#19B159] hover:bg-[#19B159]/5 transition-all h-10"
+                  >
+                    <Smartphone size={16} />
+                    Conectar com número de telefone
+                  </Button>
                 </div>
               </>
             )}
@@ -235,7 +298,7 @@ const WhatsAppConnectionModal = ({
           {renderContent()}
 
           {/* Botão Cancelar para estados em progresso */}
-          {(connectionState === 'generating' || connectionState === 'ready' || connectionState === 'scanning' || connectionState === 'connecting' || connectionState === 'input-phone' || connectionState === 'pairing') && (
+          {(connectionState === 'generating' || connectionState === 'ready' || connectionState === 'scanning' || connectionState === 'connecting' || connectionState === 'input-phone' || connectionState === 'pairing' || connectionState === 'selection') && (
             <div className="flex justify-center pb-4 px-4 sm:px-6">
               <Button
                 onClick={onClose}

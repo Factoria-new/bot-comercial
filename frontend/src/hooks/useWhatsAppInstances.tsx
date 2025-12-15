@@ -21,22 +21,22 @@ export const useWhatsAppInstances = () => {
   });
   const { generateQR, logout } = useSocket();
 
-  // Inicializar instâncias
+  // Inicializar conexões
   useEffect(() => {
     const initialInstances: WhatsAppInstance[] = [1, 2, 3, 4].map(id => ({
       id,
-      name: `Instância ${id}`,
+      name: `Conexão ${id}`,
       isConnected: false,
       apiKey: '',
       assistantId: ''
     }));
     setInstances(initialInstances);
 
-    // Verificar status das instâncias no backend
+    // Verificar status das conexões no backend
     checkInstancesStatus();
   }, []);
 
-  // Verificar status das instâncias
+  // Verificar status das conexões
   const checkInstancesStatus = async () => {
     try {
       for (let i = 1; i <= 4; i++) {
@@ -55,7 +55,7 @@ export const useWhatsAppInstances = () => {
         }
       }
     } catch (error) {
-      console.error('Erro ao verificar status das instâncias:', error);
+      console.error('Erro ao verificar status das conexões:', error);
     }
   };
 
@@ -65,7 +65,7 @@ export const useWhatsAppInstances = () => {
       const { qr, sessionId } = event.detail;
       const instanceId = parseInt(sessionId.split('_')[1]);
 
-      // Atualizar instância com código
+      // Atualizar conexão com código
       setInstances(prev => prev.map(instance =>
         instance.id === instanceId ? {
           ...instance,
@@ -94,8 +94,16 @@ export const useWhatsAppInstances = () => {
       const instanceId = parseInt(sessionId.split('_')[1]);
 
       // Atualizar modal para mostrar que está conectando
+      // FIX: Só mostrar "conectando" se já tivermos passado pelo scan ('scanning')
+      // Isso evita mostrar "Conectando..." prematuramente enquanto o QR ainda está sendo gerado
       if (modalState.isOpen && modalState.instanceId === instanceId) {
-        setModalState(prev => ({ ...prev, connectionState: 'connecting' }));
+        setModalState(prev => {
+          // Se estivermos em states iniciais, ignorar o evento 'connecting'
+          if (['generating', 'ready', 'selection', 'input-phone', 'pairing'].includes(prev.connectionState)) {
+            return prev;
+          }
+          return { ...prev, connectionState: 'connecting' };
+        });
       }
     };
 
@@ -103,7 +111,7 @@ export const useWhatsAppInstances = () => {
       const { sessionId } = event.detail;
       const instanceId = parseInt(sessionId.split('_')[1]);
 
-      // Atualizar instância como conectada
+      // Atualizar conexão como conectada
       setInstances(prev => prev.map(instance =>
         instance.id === instanceId ? {
           ...instance,
@@ -205,7 +213,7 @@ export const useWhatsAppInstances = () => {
       const { sessionId, reason, willReconnect } = event.detail;
       const instanceId = parseInt(sessionId.split('_')[1]);
 
-      // Atualizar instância como desconectada
+      // Atualizar conexão como desconectada
       setInstances(prev => prev.map(instance =>
         instance.id === instanceId ? {
           ...instance,
@@ -220,7 +228,7 @@ export const useWhatsAppInstances = () => {
       const { sessionId, error } = event.detail;
       const instanceId = parseInt(sessionId.split('_')[1]);
 
-      // Atualizar instância para indicar que a reconexão falhou
+      // Atualizar conexão para indicar que a reconexão falhou
       setInstances(prev => prev.map(instance =>
         instance.id === instanceId ? {
           ...instance,
@@ -292,14 +300,14 @@ export const useWhatsAppInstances = () => {
     ));
 
     // Aqui você pode adicionar uma chamada à API para salvar as configurações no backend
-    console.log(`Configurações salvas para instância ${instanceId}:`, config);
+    console.log(`Configurações salvas para conexão ${instanceId}:`, config);
   }, []);
 
   const closeModal = useCallback(() => {
     // Limpar o estado isGeneratingQR ao fechar o modal
     setIsGeneratingQR(null);
 
-    // Limpar código da instância se o modal foi fechado sem conectar
+    // Limpar código da conexão se o modal foi fechado sem conectar
     if (modalState.instanceId) {
       setInstances(prev => prev.map(instance =>
         instance.id === modalState.instanceId && !instance.isConnected ? {

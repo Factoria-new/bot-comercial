@@ -802,6 +802,13 @@ class WhatsAppService {
           return;
         }
 
+        // ⚠️ FIX: Se estamos gerando QR code manualmente (backend controlando), 
+        // impedir que a desconexão do socket antigo dispare uma reconexão automática
+        if (generatingQR.has(sessionId)) {
+          logger.info(`🚫 Bloqueando reconexão automática para ${sessionId} pois estamos gerando QR Code manualmente (sessão sendo recriada)`);
+          return;
+        }
+
         // Para outros erros de conexão, tentar reconectar com backoff exponencial
         logger.info(`Conexão perdida para ${sessionId} (statusCode=${statusCode}) - tentando reconectar...`);
 
@@ -1722,6 +1729,13 @@ class WhatsAppService {
 
       // 🧹 Limpar APENAS a sessão atual (não todas!)
       logger.info(`🧹 Limpando sessão ${sessionId} para gerar novo QR...`);
+
+      // ⚠️ FIX: Se houver uma criação de sessão pendente (ex: travada em retry ou timeout),
+      // forçar a remoção do lock, pois estamos prestes a nukar tudo e recomeçar.
+      if (activeSessionCreations.has(sessionId)) {
+        logger.warn(`🔓 generateQR: Removendo lock de criação anterior travada para ${sessionId}`);
+        activeSessionCreations.delete(sessionId);
+      }
 
       // Fechar socket atual se existir
       const existingSession = sessions.get(sessionId);
