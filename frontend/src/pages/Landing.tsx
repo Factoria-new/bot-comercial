@@ -5,7 +5,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { PricingWrapper, Heading, Price, Paragraph } from "@/components/ui/animated-pricing-cards";
+import { PricingWrapper, Heading, Price } from "@/components/ui/animated-pricing-cards";
 import { TestimonialsSection } from "@/components/testimonials-section";
 import { AboutSection } from "@/components/about-section";
 import Footer from "@/components/footer";
@@ -41,6 +41,32 @@ const Landing = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isShrinking, setIsShrinking] = useState(false);
     const [isInstantReset, setIsInstantReset] = useState(false);
+    const [rotation, setRotation] = useState(0);
+    const [isFrontAnnual, setIsFrontAnnual] = useState(false);
+    const [isFanOpen, setIsFanOpen] = useState(true);
+
+    const handleToggle = () => {
+        if (!isFanOpen) return; // Prevent double clicks
+
+        // 1. Fan In
+        setIsFanOpen(false);
+
+        // 2. Start Spin (Wait for Fan In)
+        setTimeout(() => {
+            setRotation(prev => prev + 360);
+        }, 400);
+
+        // 3. Swap Content (At 270deg - 75% of 600ms spin = 450ms)
+        // Total delay = 400 + 450 = 850
+        setTimeout(() => {
+            setIsFrontAnnual(prev => !prev);
+        }, 850);
+
+        // 4. Fan Out (After spin completes)
+        setTimeout(() => {
+            setIsFanOpen(true);
+        }, 1100); // 400 + 700 (padding)
+    };
 
     useEffect(() => {
         // Force scroll to top on mount
@@ -950,36 +976,179 @@ const Landing = () => {
                                     </p>
                                 </div>
 
-                                <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap">
-                                    <PricingWrapper contactHref="/login" type="waves" className="bg-[#FE601E]">
-                                        <Heading>Mensal</Heading>
-                                        <Price>
-                                            R$ 19,90<br /><span className="text-2xl">/mês</span>
-                                        </Price>
-                                        <Paragraph className="text-lg w-full text-center">
-                                            Acesso Completo<br />Sem fidelidade
-                                        </Paragraph>
-                                    </PricingWrapper>
+                                <div className="flex justify-center mb-12">
+                                    <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer" onClick={handleToggle}>
+                                        <div
+                                            className={`absolute top-1 bottom-1 w-[50%] bg-[#00A947] rounded-full transition-all duration-300 ${isFrontAnnual ? 'left-[49%]' : 'left-1'}`}
+                                        />
+                                        <div className={`relative z-10 px-8 py-2 rounded-full transition-colors duration-300 ${!isFrontAnnual ? 'text-white font-bold' : 'text-slate-400'}`}>
+                                            Mensal
+                                        </div>
+                                        <div className={`relative z-10 px-8 py-2 rounded-full transition-colors duration-300 ${isFrontAnnual ? 'text-white font-bold' : 'text-slate-400'}`}>
+                                            Anual
+                                        </div>
+                                    </div>
+                                </div>
 
-                                    <PricingWrapper contactHref="/login" type="crosses" className="bg-[#60A5FA]">
-                                        <Heading>Anual</Heading>
-                                        <Price>
-                                            R$ 197<br /><span className="text-2xl">/ano</span>
-                                        </Price>
-                                        <Paragraph className="text-lg w-full text-center">
-                                            Economize 17%<br />Equivalente a R$16/mês
-                                        </Paragraph>
-                                    </PricingWrapper>
+                                <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap relative h-[600px] w-full">
+                                    {/* Used explicit height for the container since cards are absolute positioned during animation? 
+                                       Actually, let's keep them in flow but use transforms. 
+                                       If we use transforms, they might overlap visually. 
+                                       Gap is 8 (2rem). MD: flex-row.
+                                     */}
 
-                                    <PricingWrapper contactHref="/contact" type="waves" className="bg-[#00A947]" featured={true}>
-                                        <Heading>Vitalício</Heading>
-                                        <Price>
-                                            R$ 297<br /><span className="text-2xl">único</span>
-                                        </Price>
-                                        <Paragraph className="text-lg w-full text-center">
-                                            Pague uma vez<br />Acesso para sempre<br />Oferta Limitada
-                                        </Paragraph>
-                                    </PricingWrapper>
+                                    <motion.div
+                                        animate={{
+                                            x: isFanOpen ? 0 : "50%",
+                                            rotate: isFanOpen ? 0 : -5,
+                                            zIndex: isFanOpen ? 1 : 10
+                                        }}
+                                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                                        className="relative z-10 w-full max-w-sm"
+                                    >
+                                        <PricingWrapper
+                                            contactHref="/login"
+                                            type="waves"
+                                            className="bg-[#FE601E]"
+                                            rotation={rotation}
+                                            backChildren={
+                                                !isFrontAnnual ? (
+                                                    // Back shows Annual (if front is Monthly)
+                                                    <>
+                                                        <Heading>Básico</Heading>
+                                                        <Price>
+                                                            R$ 970<br /><span className="text-2xl">/ano</span>
+                                                        </Price>
+                                                        <div className="w-full text-left pl-4">
+                                                            <ul className="list-disc list-inside text-lg">
+                                                                <li>Bot de WhatsApp</li>
+                                                            </ul>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    // Back shows Monthly (if front is Annual)
+                                                    <>
+                                                        <Heading>Básico</Heading>
+                                                        <Price>
+                                                            R$ 97<br /><span className="text-2xl">/mês</span>
+                                                        </Price>
+                                                        <div className="w-full text-left pl-4">
+                                                            <ul className="list-disc list-inside text-lg">
+                                                                <li>Bot de WhatsApp</li>
+                                                            </ul>
+                                                        </div>
+                                                    </>
+                                                )
+                                            }
+                                        >
+                                            {isFrontAnnual ? (
+                                                // Front shows Annual
+                                                <>
+                                                    <Heading>Básico</Heading>
+                                                    <Price>
+                                                        R$ 970<br /><span className="text-2xl">/ano</span>
+                                                    </Price>
+                                                    <div className="w-full text-left pl-4">
+                                                        <ul className="list-disc list-inside text-lg">
+                                                            <li>Bot de WhatsApp</li>
+                                                        </ul>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                // Front shows Monthly
+                                                <>
+                                                    <Heading>Básico</Heading>
+                                                    <Price>
+                                                        R$ 97<br /><span className="text-2xl">/mês</span>
+                                                    </Price>
+                                                    <div className="w-full text-left pl-4">
+                                                        <ul className="list-disc list-inside text-lg">
+                                                            <li>Bot de WhatsApp</li>
+                                                        </ul>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </PricingWrapper>
+                                    </motion.div>
+
+                                    <motion.div
+                                        animate={{
+                                            x: isFanOpen ? 0 : "-50%",
+                                            rotate: isFanOpen ? 0 : 5,
+                                            zIndex: isFanOpen ? 1 : 20
+                                        }}
+                                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                                        className="relative z-10 w-full max-w-sm"
+                                    >
+                                        <PricingWrapper
+                                            contactHref="/contact"
+                                            type="waves"
+                                            className="bg-[#00A947]"
+                                            featured={true}
+                                            rotation={rotation}
+                                            backChildren={
+                                                !isFrontAnnual ? (
+                                                    <>
+                                                        <Heading>Pro</Heading>
+                                                        <Price>
+                                                            R$ 1.970<br /><span className="text-2xl">/ano</span>
+                                                        </Price>
+                                                        <div className="w-full text-left pl-4">
+                                                            <ul className="list-disc list-inside text-lg">
+                                                                <li>Bot de WhatsApp</li>
+                                                                <li>Google Calendar</li>
+                                                                <li>TTS (Áudio)</li>
+                                                            </ul>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Heading>Pro</Heading>
+                                                        <Price>
+                                                            R$ 197<br /><span className="text-2xl">/mês</span>
+                                                        </Price>
+                                                        <div className="w-full text-left pl-4">
+                                                            <ul className="list-disc list-inside text-lg">
+                                                                <li>Bot de WhatsApp</li>
+                                                                <li>Google Calendar</li>
+                                                                <li>TTS (Áudio)</li>
+                                                            </ul>
+                                                        </div>
+                                                    </>
+                                                )
+                                            }
+                                        >
+                                            {isFrontAnnual ? (
+                                                <>
+                                                    <Heading>Pro</Heading>
+                                                    <Price>
+                                                        R$ 1.970<br /><span className="text-2xl">/ano</span>
+                                                    </Price>
+                                                    <div className="w-full text-left pl-4">
+                                                        <ul className="list-disc list-inside text-lg">
+                                                            <li>Bot de WhatsApp</li>
+                                                            <li>Google Calendar</li>
+                                                            <li>TTS (Áudio)</li>
+                                                        </ul>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Heading>Pro</Heading>
+                                                    <Price>
+                                                        R$ 197<br /><span className="text-2xl">/mês</span>
+                                                    </Price>
+                                                    <div className="w-full text-left pl-4">
+                                                        <ul className="list-disc list-inside text-lg">
+                                                            <li>Bot de WhatsApp</li>
+                                                            <li>Google Calendar</li>
+                                                            <li>TTS (Áudio)</li>
+                                                        </ul>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </PricingWrapper>
+                                    </motion.div>
                                 </div>
                             </div>
                         </section>

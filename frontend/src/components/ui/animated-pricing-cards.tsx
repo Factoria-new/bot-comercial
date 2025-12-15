@@ -57,7 +57,9 @@ export const PricingWrapper: React.FC<{
     contactHref: string
     className?: string
     featured?: boolean
-}> = ({ children, contactHref, className, type = 'waves', featured = false }) => {
+    rotation?: number
+    backChildren?: React.ReactNode
+}> = ({ children, contactHref, className, type = 'waves', featured = false, rotation = 0, backChildren }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
 
@@ -110,97 +112,164 @@ export const PricingWrapper: React.FC<{
                     'w-full h-full relative duration-200',
                 )}
             >
-                {/* THICKNESS LAYERS (Stacked behind) */}
-                <div
-                    className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-4] border-2 border-transparent', className)}
-                    style={{ transform: "translateZ(-16px)", backfaceVisibility: 'hidden' }}
-                />
-                <div
-                    className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-3] border-2 border-transparent', className)}
-                    style={{ transform: "translateZ(-12px)", backfaceVisibility: 'hidden' }}
-                />
-                <div
-                    className={cn('absolute inset-[1px] rounded-2xl brightness-75 z-[-2] border-2 border-transparent', className)}
-                    style={{ transform: "translateZ(-8px)", backfaceVisibility: 'hidden' }}
-                />
-                <div
-                    className={cn('absolute inset-[1px] rounded-2xl brightness-90 z-[-1] border-2 border-transparent', className)}
-                    style={{ transform: "translateZ(-4px)", backfaceVisibility: 'hidden' }}
-                />
-
-                {/* FRONT FACE (Main Content) */}
+                {/* FLIPPER CONTAINER - Handles the 180deg rotation */}
                 <motion.div
+                    initial={false}
+                    animate={{ rotateY: rotation }}
+                    transition={{ duration: 0.6, ease: "easeInOut" }}
                     style={{
-                        transform: "translateZ(0px)",
+                        width: "100%",
+                        height: "100%",
                         transformStyle: "preserve-3d",
-                        backfaceVisibility: 'hidden',
-                        boxShadow
                     }}
-                    className={cn(
-                        'absolute inset-0 w-full h-full overflow-hidden rounded-2xl text-white border-2 border-white/20',
-                        className
-                    )}
                 >
+                    {/* THICKNESS LAYERS (Stacked behind - Attached to Flipper) */}
+                    {/* We need thickness to follow the flip, so they should be inside the flipper or duplicated? 
+                         actually, thickness usually stays "behind" the current face. 
+                         For simplicity in this specific "card" style, let's keep thickness attached to the "Front" mentally, 
+                         but since it rotates, we might need a "Back Thickness" or just let it rotate.
+                         Let's try keeping them here, they will rotate with the card.
+                     */}
                     <div
-                        style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d", backfaceVisibility: 'hidden' }}
-                        className={
-                            'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-center justify-start text-center sm:gap-10 gap-7'
-                        }
+                        className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-4] border-2 border-transparent', className)}
+                        style={{ transform: "translateZ(-16px)", backfaceVisibility: 'hidden' }}
+                    />
+                    <div
+                        className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-3] border-2 border-transparent', className)}
+                        style={{ transform: "translateZ(-12px)", backfaceVisibility: 'hidden' }}
+                    />
+                    <div
+                        className={cn('absolute inset-[1px] rounded-2xl brightness-75 z-[-2] border-2 border-transparent', className)}
+                        style={{ transform: "translateZ(-8px)", backfaceVisibility: 'hidden' }}
+                    />
+                    <div
+                        className={cn('absolute inset-[1px] rounded-2xl brightness-90 z-[-1] border-2 border-transparent', className)}
+                        style={{ transform: "translateZ(-4px)", backfaceVisibility: 'hidden' }}
+                    />
+
+                    {/* FRONT FACE (Main Content) */}
+                    <div
+                        style={{
+                            backfaceVisibility: 'hidden',
+                            transform: "rotateY(0deg)", // Explicitly front
+                            position: "absolute",
+                            inset: 0,
+                            borderRadius: "1rem",
+                            overflow: "hidden"
+                        }}
                     >
-                        {children}
-                        <div style={{ transform: "translateZ(25px)", backfaceVisibility: 'hidden' }} className={'w-full h-full flex items-end justify-end text-base'}>
-                            <Link to={contactHref} className={'w-full h-fit'}>
-                                <motion.button
-                                    whileHover={{
-                                        scale: 1.05,
-                                        z: 50,
-                                        boxShadow: "0px 20px 40px rgba(0,0,0,0.4)"
-                                    }}
-                                    whileTap={{ scale: 0.95 }}
-                                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                                    style={{ transformStyle: "preserve-3d" }}
-                                    className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold transition-colors shadow-lg'}
-                                >
-                                    contact
-                                </motion.button>
-                            </Link>
-                        </div>
+                        <motion.div
+                            style={{
+                                transform: "translateZ(0px)",
+                                transformStyle: "preserve-3d",
+                                boxShadow
+                            }}
+                            className={cn(
+                                'w-full h-full relative text-white border-2 border-white/20',
+                                className
+                            )}
+                        >
+                            <ContentLayer contactHref={contactHref} type={type} featured={featured}>{children}</ContentLayer>
+                        </motion.div>
                     </div>
-                    {type === 'waves' && (
-                        <>
-                            <div className={'w-fit h-fit absolute -top-[106px] sm:left-4 -left-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
-                                <Wave />
-                            </div>
-                            <div className={'w-fit h-fit absolute -top-[106px] sm:right-4 -right-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
-                                <Wave />
-                            </div>
-                        </>
-                    )}
-                    {type === 'crosses' && (
-                        <>
-                            <div
-                                className={'w-fit h-fit absolute top-0 -left-10 z-0 animate-[spin_5s_linear_infinite]'}
-                            >
-                                <Cross />
-                            </div>
-                            <div
-                                className={'w-fit h-fit absolute top-1/2 -right-12 z-0 animate-[spin_5s_linear_infinite]'}
-                            >
-                                <Cross />
-                            </div>
-                            <div
-                                className={'w-fit h-fit absolute top-[85%] -left-5 z-0 animate-[spin_5s_linear_infinite]'}
-                            >
-                                <Cross />
-                            </div>
-                        </>
-                    )}
-                    {featured && <BorderBeam className="z-10" />}
+
+                    {/* BACK FACE (Annual Content) */}
+                    <div
+                        style={{
+                            backfaceVisibility: 'hidden',
+                            transform: "rotateY(180deg)", // Explicitly back
+                            position: "absolute",
+                            inset: 0,
+                            borderRadius: "1rem",
+                            overflow: "hidden"
+                        }}
+                    >
+                        <motion.div
+                            style={{
+                                transform: "translateZ(0px)", // Should match front
+                                transformStyle: "preserve-3d",
+                                boxShadow // Shadow might look weird if light source text doesn't change, but ok for now
+                            }}
+                            className={cn(
+                                'w-full h-full relative text-white border-2 border-white/20',
+                                className
+                            )}
+                        >
+                            <ContentLayer contactHref={contactHref} type={type} featured={featured}>{backChildren}</ContentLayer>
+                        </motion.div>
+                    </div>
                 </motion.div>
             </motion.article>
         </div>
     )
 }
+
+// Extracted Content Layer to reuse for Front/Back
+const ContentLayer: React.FC<{
+    children: React.ReactNode,
+    contactHref: string,
+    type: 'waves' | 'crosses',
+    featured: boolean
+}> = ({ children, contactHref, type, featured }) => (
+    <>
+        <div
+            style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
+            className={
+                'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-center justify-start text-center sm:gap-10 gap-7'
+            }
+        >
+            {children}
+            <div style={{ transform: "translateZ(25px)" }} className={'w-full h-full flex items-end justify-end text-base'}>
+                <Link to={contactHref} className={'w-full h-fit'}>
+                    <motion.button
+                        whileHover={{
+                            scale: 1.05,
+                            z: 50,
+                            boxShadow: "0px 20px 40px rgba(0,0,0,0.4)"
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                        style={{ transformStyle: "preserve-3d" }}
+                        className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold transition-colors shadow-lg'}
+                    >
+                        contact
+                    </motion.button>
+                </Link>
+            </div>
+        </div>
+        {type === 'waves' && (
+            <>
+                <div className={'w-fit h-fit absolute -top-[106px] sm:left-4 -left-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
+                    <Wave />
+                </div>
+                <div className={'w-fit h-fit absolute -top-[106px] sm:right-4 -right-0 waves z-0 animate-[waves_10s_linear_infinite]'}>
+                    <Wave />
+                </div>
+            </>
+        )}
+        {type === 'crosses' && (
+            <>
+                <div
+                    className={'w-fit h-fit absolute top-0 -left-10 z-0 animate-[spin_5s_linear_infinite]'}
+                >
+                    <Cross />
+                </div>
+                <div
+                    className={'w-fit h-fit absolute top-1/2 -right-12 z-0 animate-[spin_5s_linear_infinite]'}
+                >
+                    <Cross />
+                </div>
+                <div
+                    className={'w-fit h-fit absolute top-[85%] -left-5 z-0 animate-[spin_5s_linear_infinite]'}
+                >
+                    <Cross />
+                </div>
+            </>
+        )}
+        {featured && <BorderBeam className="z-10" />}
+    </>
+)
+
 
 export const Heading: React.FC<{ children: React.ReactNode; className?: string }> = ({
     children,
