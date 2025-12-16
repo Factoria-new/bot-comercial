@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import API_CONFIG from '@/config/api';
 import CalendarSettingsModal from './CalendarSettingsModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface AgentConfig {
   aiProvider: 'gemini' | 'openai';
@@ -71,6 +72,8 @@ const AgentConfigModal = ({
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { authenticatedFetch } = useAuthenticatedFetch();
+  const { user } = useAuth();
+  const isPro = user?.role === 'pro' || user?.role === 'admin';
 
   // Estados para integração do Google Calendar
   const [calendarEnabled, setCalendarEnabled] = useState(false);
@@ -318,6 +321,11 @@ const AgentConfigModal = ({
     }
   };
 
+  const handleUpgrade = () => {
+    window.location.href = '/#pricing';
+    onClose();
+  };
+
   const resetToDefault = () => {
     setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
     setTtsEnabled(false);
@@ -425,15 +433,29 @@ const AgentConfigModal = ({
                         Respostas em Áudio (<span className="text-[#00A947]">TTS</span>)
                       </Label>
                     </div>
-                    <Switch
-                      id="tts-enabled"
-                      checked={ttsEnabled}
-                      onCheckedChange={setTtsEnabled}
-                      className="data-[state=checked]:bg-[#00A947]"
-                    />
+                    {isPro ? (
+                      <Switch
+                        id="tts-enabled"
+                        checked={ttsEnabled}
+                        onCheckedChange={setTtsEnabled}
+                        className="data-[state=checked]:bg-[#00A947]"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-[#FE601E] bg-[#FE601E]/10 px-2 py-1 rounded-full border border-[#FE601E]/20">
+                          PRO
+                        </span>
+                        <Switch
+                          id="tts-enabled"
+                          checked={false}
+                          disabled={true}
+                          className="opacity-50 cursor-not-allowed"
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  {ttsEnabled && (
+                  {isPro && ttsEnabled && (
                     <div className="space-y-2 animate-fade-in">
                       <Label htmlFor="tts-voice" className="text-sm text-gray-900 font-medium">
                         Voz do Assistente
@@ -467,9 +489,26 @@ const AgentConfigModal = ({
                     </div>
                   )}
 
-                  <p className="text-xs text-gray-600">
-                    Ative para permitir que o assistente envie mensagens em áudio.
-                  </p>
+                  {!isPro && (
+                    <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                      <p className="text-xs text-amber-800">
+                        Faça upgrade para o Plano Pro para usar este recurso.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="default" // or a custom variant if available, default is usually primary
+                        className="h-7 text-xs bg-[#FE601E] hover:bg-[#FE601E]/90 text-white border-0"
+                        onClick={handleUpgrade}
+                      >
+                        Fazer Upgrade
+                      </Button>
+                    </div>
+                  )}
+                  {isPro && !ttsEnabled && (
+                    <p className="text-xs text-gray-600">
+                      Ative para permitir que o assistente envie mensagens em áudio.
+                    </p>
+                  )}
                 </div>
 
                 {/* Integração Google Calendar - Seção Expansível */}
@@ -484,33 +523,48 @@ const AgentConfigModal = ({
                         )}
                       </Label>
                       {isCheckingCalendar && (
-                        <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />
+                        <Loader2 className="w-3 h-3 text-gray-400 animate-spin ml-2" />
                       )}
                     </div>
+
                     <div className="flex items-center gap-2">
                       {calendarConnected && (
                         <CheckCircle className="w-4 h-4 text-[#00A947]" />
                       )}
-                      <Switch
-                        id="calendar-enabled"
-                        checked={calendarEnabled}
-                        onCheckedChange={(checked) => {
-                          if (checked && !calendarConnected) {
-                            setCalendarEnabled(true);
-                          } else if (!checked && calendarConnected) {
-                            // Se desativar e está conectado, perguntar se quer desconectar
-                            setCalendarEnabled(false);
-                          } else {
-                            setCalendarEnabled(checked);
-                          }
-                        }}
-                        className="data-[state=checked]:bg-[#00A947]"
-                      />
+
+                      {isPro ? (
+                        <Switch
+                          id="calendar-enabled"
+                          checked={calendarEnabled}
+                          onCheckedChange={(checked) => {
+                            if (checked && !calendarConnected) {
+                              setCalendarEnabled(true);
+                            } else if (!checked && calendarConnected) {
+                              setCalendarEnabled(false);
+                            } else {
+                              setCalendarEnabled(checked);
+                            }
+                          }}
+                          className="data-[state=checked]:bg-[#00A947]"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-[#FE601E] bg-[#FE601E]/10 px-2 py-1 rounded-full border border-[#FE601E]/20">
+                            PRO
+                          </span>
+                          <Switch
+                            id="calendar-enabled"
+                            checked={false}
+                            disabled={true}
+                            className="opacity-50 cursor-not-allowed"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {calendarEnabled && (
-                    <div className="space-y-3 animate-fade-in">
+                    <div className="space-y-3 animate-fade-in pt-2 border-t border-gray-200/50">
                       <p className="text-xs text-gray-500">
                         📅 Permita que o assistente agende eventos automaticamente via WhatsApp.
                       </p>
@@ -569,9 +623,27 @@ const AgentConfigModal = ({
                   )}
 
                   {!calendarEnabled && (
-                    <p className="text-xs text-gray-600">
-                      Ative para permitir agendamentos automáticos de reuniões.
-                    </p>
+                    <div className="mt-2">
+                      {isPro ? (
+                        <p className="text-xs text-gray-600">
+                          Ative para permitir agendamentos automáticos de reuniões.
+                        </p>
+                      ) : (
+                        <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                          <p className="text-xs text-amber-800">
+                            Faça upgrade para o Plano Pro para usar este recurso.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="h-7 text-xs bg-[#FE601E] hover:bg-[#FE601E]/90 text-white border-0"
+                            onClick={handleUpgrade}
+                          >
+                            Fazer Upgrade
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </TabsContent>
@@ -618,7 +690,7 @@ const AgentConfigModal = ({
         isLoading={isConnectingCalendar}
         initialSettings={calendarSettings}
       />
-    </Dialog>
+    </Dialog >
   );
 };
 

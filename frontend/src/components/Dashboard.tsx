@@ -11,6 +11,7 @@ import AIStatusCard from '@/components/AIStatusCard';
 import { WhatsAppInstance, WhatsAppConfig } from '@/types/whatsapp';
 import { useToast } from '@/hooks/use-toast';
 import { useSocket } from '@/contexts/SocketContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const isRemovingRef = useRef(false);
   const { toast } = useToast();
   const { socket, isConnected } = useSocket();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Bloquear botão de voltar
@@ -499,6 +501,12 @@ const Dashboard = () => {
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
                   {isConnected ? 'Servidor Online' : 'Servidor Offline'}
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ml-2 ${user?.role === 'pro' || user?.role === 'admin'
+                  ? 'text-[#00A947] bg-[#00A947]/10 border-[#00A947]/20'
+                  : 'text-gray-500 bg-gray-100 border-gray-200'
+                  }`}>
+                  {user?.role === 'pro' || user?.role === 'admin' ? 'PRO' : 'BÁSICO'}
                 </span>
               </div>
             </div>

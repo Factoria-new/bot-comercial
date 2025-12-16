@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion"
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
 
 const Wave = () => (
     <svg
@@ -220,21 +221,8 @@ const ContentLayer: React.FC<{
         >
             {children}
             <div style={{ transform: "translateZ(25px)" }} className={'w-full h-full flex items-end justify-end text-base'}>
-                <Link to={contactHref} className={'w-full h-fit'}>
-                    <motion.button
-                        whileHover={{
-                            scale: 1.05,
-                            z: 50,
-                            boxShadow: "0px 20px 40px rgba(0,0,0,0.4)"
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                        style={{ transformStyle: "preserve-3d" }}
-                        className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold transition-colors shadow-lg'}
-                    >
-                        contact
-                    </motion.button>
-                </Link>
+                {/* Logic to determine button state based on plan */}
+                <PricingButton contactHref={contactHref} isProCard={featured} />
             </div>
         </div>
         {type === 'waves' && (
@@ -306,3 +294,66 @@ export const Paragraph: React.FC<{ children: React.ReactNode; className?: string
         {children}
     </p>
 )
+
+const PricingButton: React.FC<{ contactHref: string; isProCard: boolean }> = ({ contactHref, isProCard }) => {
+    const { user } = useAuth();
+
+    // Determine if this is the user's current plan
+    // If user is not logged in, they don't have a "current plan" visible here usually, or defaults to basic logic
+    if (!user) {
+        return (
+            <Link to={contactHref} className={'w-full h-fit'}>
+                <motion.button
+                    whileHover={{
+                        scale: 1.05,
+                        z: 50,
+                        boxShadow: "0px 20px 40px rgba(0,0,0,0.4)"
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    style={{ transformStyle: "preserve-3d" }}
+                    className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold transition-colors shadow-lg'}
+                >
+                    Começar Agora
+                </motion.button>
+            </Link>
+        );
+    }
+
+    const isCurrentPlan = (
+        (isProCard && (user.role === 'pro' || user.role === 'admin')) ||
+        (!isProCard && user.role === 'basic')
+    );
+
+    if (isCurrentPlan) {
+        return (
+            <div className={'w-full h-fit'}>
+                <button
+                    disabled
+                    className={'h-12 w-full bg-white/20 backdrop-blur-md rounded-lg text-white font-bold border border-white/30 cursor-default flex items-center justify-center gap-2'}
+                >
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                    Plano Atual
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <Link to={contactHref} className={'w-full h-fit'}>
+            <motion.button
+                whileHover={{
+                    scale: 1.05,
+                    z: 50,
+                    boxShadow: "0px 20px 40px rgba(0,0,0,0.4)"
+                }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                style={{ transformStyle: "preserve-3d" }}
+                className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold transition-colors shadow-lg'}
+            >
+                {isProCard ? 'Fazer Upgrade' : 'Voltar para Básico'}
+            </motion.button>
+        </Link>
+    );
+}

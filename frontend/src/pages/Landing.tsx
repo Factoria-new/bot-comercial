@@ -69,11 +69,62 @@ const Landing = () => {
     };
 
     useEffect(() => {
-        // Force scroll to top on mount
+        // Force scroll to top on mount ONLY if no hash
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
         }
-        window.scrollTo(0, 0);
+
+        const hash = window.location.hash;
+        if (hash) {
+            // Se tiver hash (ex: #pricing), preparar a página imediatamente
+            const sectionId = hash.replace('#', '');
+
+            // Pequeno delay para garantir que refs estão prontos
+            setTimeout(() => {
+                const wrapper = videoWrapperRef.current;
+                const heroText = heroTextRef.current;
+                const videoLoop = videoLoopRef.current;
+                const videoMain = videoMainRef.current;
+                const videoEndLoop = videoEndLoopRef.current;
+
+                if (wrapper && heroText && videoLoop && videoMain && videoEndLoop) {
+                    // 1. Estado visual final (Expanded)
+                    gsap.set(wrapper, {
+                        width: "100vw",
+                        height: "100vh",
+                        top: "0vh",
+                        right: "0vw",
+                        borderRadius: "0px"
+                    });
+
+                    gsap.set(heroText, { x: -100, autoAlpha: 0 });
+
+                    // 2. Configurar vídeos
+                    videoLoop.pause();
+                    gsap.set(videoLoop, { autoAlpha: 0 });
+                    videoMain.pause();
+                    gsap.set(videoMain, { autoAlpha: 0 });
+                    videoEndLoop.currentTime = 0;
+                    videoEndLoop.play().catch(() => { }); // Catch autoplay errors
+                    gsap.set(videoEndLoop, { autoAlpha: 1, scale: 1 });
+
+                    // 3. Estado React
+                    setPhase('ended');
+                    zoomEndLevelRef.current = 1;
+
+                    // 4. Scroll para a seção
+                    setTimeout(() => {
+                        const targetSection = document.getElementById(sectionId);
+                        if (targetSection) {
+                            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
+                }
+            }, 100);
+
+        } else {
+            window.scrollTo(0, 0);
+        }
 
         const link = document.createElement('link');
         link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap';

@@ -1,25 +1,14 @@
-import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Loader } from 'lucide-react';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
+    requiredRole?: "basic" | "pro" | "admin";
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-    const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
+const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
+    const { user, loading } = useAuth();
 
     if (loading) {
         return (
@@ -34,6 +23,19 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
     if (!user) {
         return <Navigate to="/login" replace />;
+    }
+
+    // Role check
+    if (requiredRole) {
+        // If user doesn't have the required role (and isn't admin)
+        if (user.role !== requiredRole && user.role !== "admin") {
+            // You could redirect to a "Upgrade Plan" page or similar
+            // For now, maybe just redirect to dashboard or show forbidden?
+            // Let's redirect to dashboard if they try to access a pro route
+            // But if they ARE at dashboard, this might loop if dashboard requires pro.
+            // Assumption: Dashboard is basic.
+            return <Navigate to="/dashboard" replace />;
+        }
     }
 
     return <>{children}</>;
