@@ -352,7 +352,7 @@ const PricingButton: React.FC<{ contactHref: string; isProCard: boolean }> = ({ 
                 style={{ transformStyle: "preserve-3d" }}
                 className={'h-12 w-full bg-white rounded-lg text-neutral-900 font-bold transition-colors shadow-lg'}
             >
-                {isProCard ? 'Fazer Upgrade' : 'Voltar para Básico'}
+                {isProCard ? 'Fazer Upgrade' : 'Alterar Assinatura'}
             </motion.button>
         </Link>
     );
