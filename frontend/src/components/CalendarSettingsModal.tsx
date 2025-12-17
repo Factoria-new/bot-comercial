@@ -27,6 +27,7 @@ export interface CalendarSettings {
     meetingDuration: number; // minutes
     breakDuration: number; // minutes
     meetingType: 'online' | 'in-person';
+    meetingAddress?: string; // Endereço para reuniões presenciais
 }
 
 interface CalendarSettingsModalProps {
@@ -71,7 +72,8 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
                 schedule: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)), // Deep copy
                 meetingDuration: 30,
                 breakDuration: 10,
-                meetingType: 'online'
+                meetingType: 'online',
+                meetingAddress: ''
             };
         }
 
@@ -105,7 +107,8 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
             schedule: migratedSchedule,
             meetingDuration: initialSettings.meetingDuration || 30,
             breakDuration: initialSettings.breakDuration || 0,
-            meetingType: initialSettings.meetingType || 'online'
+            meetingType: initialSettings.meetingType || 'online',
+            meetingAddress: initialSettings.meetingAddress || ''
         };
     };
 
@@ -363,6 +366,18 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
                                                 Presencial
                                             </Label>
                                         </div>
+
+                                        {settings.meetingType === 'in-person' && (
+                                            <div className="pt-3 pl-6 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                <Label className="text-xs text-gray-500 mb-1.5 block">Endereço do Local</Label>
+                                                <Input
+                                                    placeholder="Ex: Av. Paulista, 1000 - Sala 42"
+                                                    value={settings.meetingAddress || ''}
+                                                    onChange={(e) => setSettings({ ...settings, meetingAddress: e.target.value })}
+                                                    className="bg-white text-sm focus-visible:ring-[#00A947]"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </RadioGroup>
                             </div>

@@ -5,6 +5,9 @@ import makeWASocket, {
   makeCacheableSignalKeyStore,
   downloadMediaMessage
 } from '@whiskeysockets/baileys';
+import { useFirestoreAuthState } from './firebaseAuth.js';
+import { addToQueue, startWorker } from './queueService.js';
+
 import QRCode from 'qrcode';
 import { Boom } from '@hapi/boom';
 import fs from 'fs';
@@ -57,6 +60,7 @@ if (!fs.existsSync(SESSIONS_PATH)) {
 class WhatsAppService {
   constructor(io) {
     this.io = io;
+    startWorker(this.processQueueMessage.bind(this));
   }
 
   async createSession(sessionId, options = {}) {
@@ -139,86 +143,14 @@ class WhatsAppService {
       } catch (listErr) {
         logger.warn(`createSession: falha ao listar conteúdo de ${sessionPath}: ${listErr?.message || listErr}`);
       }
-      console.log(`createSession: auth state será carregado de ${sessionPath}`);
-      let state, saveCreds;
-      const MAX_AUTH_RETRIES = 5;
-      for (let attempt = 0; attempt < MAX_AUTH_RETRIES; attempt++) {
-        try {
-          // Garantir que a pasta exista antes de pedir ao Baileys para usá-la
-          if (!fs.existsSync(sessionPath)) {
-            fs.mkdirSync(sessionPath, { recursive: true });
-          }
-          const auth = await useMultiFileAuthState(sessionPath);
-          state = auth.state;
-          saveCreds = auth.saveCreds;
+      console.log(`createSession: auth state será carregado do Firestore para ${sessionId}`);
 
-          // Envolve saveCreds para ser resiliente a deleções/renomeações concorrentes da pasta da sessão.
-          // Se a escrita falhar com ENOENT, recria a pasta e tenta novamente algumas vezes.
-          const saveCredsSafe = async (data) => {
-            const MAX_SAVE_RETRIES = 4;
-            for (let attempt = 0; attempt < MAX_SAVE_RETRIES; attempt++) {
-              try {
-                // Garante que o diretório exista antes de delegar para o saveCreds do Baileys
-                if (!fs.existsSync(sessionPath)) {
-                  fs.mkdirSync(sessionPath, { recursive: true });
-                }
-                await saveCreds(data);
-                return;
-              } catch (err) {
-                const isENOENT = err && (err.code === 'ENOENT' || (err.message && err.message.includes('ENOENT')));
-                logger.warn(`saveCredsSafe: tentativa ${attempt + 1}/${MAX_SAVE_RETRIES} falhou para ${sessionPath}: ${err?.message || err}`);
-                if (isENOENT) {
-                  try {
-                    fs.mkdirSync(sessionPath, { recursive: true });
-                    logger.warn(`saveCredsSafe: diretório recriado ${sessionPath} após ENOENT`);
-                  } catch (mkErr) {
-                    logger.error(`saveCredsSafe: falha ao recriar diretório ${sessionPath}:`, mkErr);
-                  }
-                  // backoff
-                  await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
-                  continue;
-                }
+      // Carregar Auth State do Firestore
+      const auth = await useFirestoreAuthState(sessionId);
+      const state = auth.state;
+      const saveCreds = auth.saveCreds;
 
-                // Non-ENOENT -> log and rethrow
-                logger.error('saveCredsSafe: erro não recuperável ao salvar credenciais:', err);
-                throw err;
-              }
-            }
-
-            logger.error(`saveCredsSafe: não foi possível salvar credenciais em ${sessionPath} após múltiplas tentativas`);
-          };
-          logger.info(`createSession: auth state carregado (creds keys: ${Object.keys(state.creds || {}).length})`);
-          try {
-            const postFiles = fs.existsSync(sessionPath) ? fs.readdirSync(sessionPath) : [];
-            logger.info(`createSession: após load auth, conteúdo de ${sessionPath}: ${postFiles.length} files -> ${postFiles.join(', ')}`);
-          } catch (listErr2) {
-            logger.warn(`createSession: falha ao listar conteúdo após auth load ${sessionPath}: ${listErr2?.message || listErr2}`);
-          }
-          break;
-        } catch (err) {
-          // Se for ENOENT, tentar recriar a pasta e re-tentar após pequeno delay
-          const isENOENT = err && (err.code === 'ENOENT' || (err.message && err.message.includes('ENOENT')));
-          logger.warn(`createSession: falha ao carregar auth state (attempt ${attempt + 1}/${MAX_AUTH_RETRIES}): ${err?.message || err}`);
-          if (isENOENT) {
-            try {
-              fs.mkdirSync(sessionPath, { recursive: true });
-              logger.warn(`createSession: diretório recriado ${sessionPath} após ENOENT`);
-            } catch (mkErr) {
-              logger.error(`createSession: falha ao recriar diretório ${sessionPath}:`, mkErr);
-            }
-            // aguardar um pouco antes da próxima tentativa
-            await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-            continue;
-          }
-
-          // Para outros erros, re-throw após log
-          logger.error('createSession: erro fatal ao carregar auth state:', err);
-          throw err;
-        }
-      }
-      if (!state || !saveCreds) {
-        throw new Error('Não foi possível carregar auth state após múltiplas tentativas');
-      }
+      logger.info(`createSession: auth state carregado do Firestore (creds keys: ${Object.keys(state.creds || {}).length})`);
 
       const { version } = await fetchLatestBaileysVersion();
       logger.info(`createSession: versão do Baileys obtida: ${JSON.stringify(version)}`);
@@ -1123,6 +1055,19 @@ class WhatsAppService {
         continue;
       }
 
+      // ==================================================================================
+      // 🔒 WHITELIST DE TESTE
+      // Configuração para o bot responder APENAS a um número específico.
+      // Substitua o número abaixo pelo número que você deseja testar.
+      // ==================================================================================
+      const ALLOWED_NUMBER = '5522999799359@s.whatsapp.net'; // 
+
+      if (message.key.remoteJid !== ALLOWED_NUMBER) {
+        logger.warn(`⛔ Bloqueado pela Whitelist: ${message.key.remoteJid} (Permitido: ${ALLOWED_NUMBER})`);
+        continue;
+      }
+      // ==================================================================================
+
       if (!session?.socket) continue;
 
       try {
@@ -1132,366 +1077,27 @@ class WhatsAppService {
         const documentMessage = message.message?.documentMessage;
         const messageText = this.extractMessageText(message);
         console.log(messageText);
+
         if (!audioMessage && !imageMessage && !documentMessage && !messageText) continue;
 
-        // Se tem configuração de IA, processar com buffer para agrupar mensagens
+        // Se tem API Key (IA habilitada), adicionar na FILA
         if (apiKey) {
           const phoneNumber = message.key.remoteJid;
 
-          // Se for mensagem de texto, usar buffer de 10 segundos
-          if (messageText && !audioMessage && !imageMessage && !documentMessage) {
-            await this.bufferTextMessage(sessionId, phoneNumber, messageText, config, session);
-            continue; // Não processar imediatamente
-          }
+          // Adiciona mensagem na Fila do Firestore para ser processada por um Worker
+          const queueId = await addToQueue(sessionId, phoneNumber, message);
+          logger.info(`Mensagem de ${phoneNumber} adicionada à fila (ID: ${queueId})`);
 
-          // Para áudio, imagem e documentos, processar imediatamente (sem buffer)
-          // Mas antes, enviar qualquer mensagem em buffer
-          await this.flushMessageBuffer(sessionId, phoneNumber, config, session);
-          console.log("flushMessageBuffer acabou");
-          // Agora processar mídia
-          let aiResponse;
-          let transcription = null;
-          let imageAnalysis = null;
-          let documentContent = null;
-
-          const useGemini = true;
-
-
-          if (audioMessage) {
-            // Processar mensagem de áudio
-            logger.info(`Mensagem de áudio recebida em ${sessionId}`, {
-              from: message.key.remoteJid,
-              messageId: message.key.id,
-              audioInfo: {
-                mimetype: audioMessage.mimetype,
-                fileLength: audioMessage.fileLength,
-                seconds: audioMessage.seconds,
-                ptt: audioMessage.ptt
-              }
-            });
-
-            try {
-              // Verificar se a mensagem tem conteúdo de áudio válido
-              if (!audioMessage.url && !audioMessage.directPath) {
-                throw new Error('Mensagem de áudio não possui URL ou directPath');
-              }
-
-              // Baixar o áudio
-              logger.info('Tentando baixar áudio...');
-              const audioBuffer = await this.downloadAudio(session.socket, message);
-
-              if (!audioBuffer || audioBuffer.length === 0) {
-                throw new Error('Buffer de áudio vazio ou inválido');
-              }
-
-              logger.info(`Buffer de áudio válido recebido: ${audioBuffer.length} bytes`);
-
-              logger.info(`Iniciando processamento com ${useGemini ? 'Gemini' : 'OpenAI'}...`);
-
-              let result;
-              if (useGemini) {
-                result = await processAudioMessageWithGemini(
-                  audioBuffer,
-                  message.key.remoteJid,
-                  apiKey,
-                  'gemini-2.5-flash', // Modelo fixo
-                  config.systemPrompt || '', // Prompt personalizado
-                  1.0 // Temperatura fixa
-                );
-              }
-
-              if (result) {
-                console.log(result);
-                aiResponse = result.aiResponse;
-                transcription = result.transcription;
-                logger.info(`Áudio processado com sucesso: "${transcription?.substring(0, 50)}..."`);
-              }
-            } catch (audioError) {
-              logger.error('Erro detalhado ao processar áudio:', {
-                error: audioError.message,
-                stack: audioError.stack,
-                sessionId,
-                from: message.key.remoteJid,
-                audioMessage: {
-                  mimetype: audioMessage.mimetype,
-                  fileLength: audioMessage.fileLength,
-                  hasUrl: !!audioMessage.url,
-                  hasDirectPath: !!audioMessage.directPath
-                }
-              });
-              aiResponse = 'Desculpe, não consegui processar seu áudio. Pode enviar como texto?';
-            }
-          } else if (imageMessage) {
-            // Processar mensagem com imagem
-            logger.info(`Mensagem com imagem recebida em ${sessionId}`, {
-              from: message.key.remoteJid,
-              messageId: message.key.id,
-              imageInfo: {
-                mimetype: imageMessage.mimetype,
-                fileLength: imageMessage.fileLength,
-                caption: imageMessage.caption || 'Sem legenda'
-              }
-            });
-
-            try {
-              // Verificar se a mensagem tem conteúdo de imagem válido
-              if (!imageMessage.url && !imageMessage.directPath) {
-                throw new Error('Mensagem de imagem não possui URL ou directPath');
-              }
-
-              // Baixar a imagem
-              logger.info('Tentando baixar imagem...');
-              const imageBuffer = await this.downloadImage(session.socket, message);
-
-              if (!imageBuffer || imageBuffer.length === 0) {
-                throw new Error('Buffer de imagem vazio ou inválido');
-              }
-
-              logger.info(`Buffer de imagem válido recebido: ${imageBuffer.length} bytes`);
-
-              // Processar imagem com IA
-              logger.info(`Iniciando processamento de imagem com ${useGemini ? 'Gemini Vision' : 'OpenAI Vision'}...`);
-
-              let result;
-              if (useGemini) {
-                result = await processImageMessageWithGemini(
-                  imageBuffer,
-                  message.key.remoteJid,
-                  apiKey,
-                  'gemini-2.5-flash', // Modelo fixo
-                  config.systemPrompt || '', // Prompt personalizado
-                  1.0, // Temperatura fixa
-                  imageMessage.caption || ''
-                );
-              }
-
-              if (result) {
-                aiResponse = result.aiResponse;
-                imageAnalysis = result.imageAnalysis;
-                logger.info(`Imagem processada com ${useGemini ? 'Gemini' : 'OpenAI'}`);
-                logger.info(`Análise enviada (${aiResponse?.length} caracteres)`);
-              }
-            } catch (imageError) {
-              logger.error('Erro detalhado ao processar imagem:', {
-                error: imageError.message,
-                stack: imageError.stack,
-                sessionId,
-                from: message.key.remoteJid,
-                imageMessage: {
-                  mimetype: imageMessage.mimetype,
-                  fileLength: imageMessage.fileLength,
-                  hasUrl: !!imageMessage.url,
-                  hasDirectPath: !!imageMessage.directPath
-                }
-              });
-              aiResponse = 'Desculpe, não consegui processar sua imagem. Pode tentar enviar novamente?';
-            }
-          } else if (documentMessage) {
-            // Processar mensagem com documento
-            logger.info(`Mensagem com documento recebida em ${sessionId}`, {
-              from: message.key.remoteJid,
-              messageId: message.key.id,
-              documentInfo: {
-                mimetype: documentMessage.mimetype,
-                fileLength: documentMessage.fileLength,
-                fileName: documentMessage.fileName || 'documento',
-                caption: documentMessage.caption || 'Sem legenda'
-              }
-            });
-
-            try {
-              // Verificar se a mensagem tem conteúdo de documento válido
-              if (!documentMessage.url && !documentMessage.directPath) {
-                throw new Error('Mensagem de documento não possui URL ou directPath');
-              }
-
-              // Baixar o documento
-              logger.info('Tentando baixar documento...');
-              const documentBuffer = await this.downloadDocument(session.socket, message);
-              if (!documentBuffer || documentBuffer.length === 0) {
-                throw new Error('Buffer de documento vazio ou inválido');
-              }
-              logger.info(`Buffer de documento válido recebido: ${documentBuffer.length} bytes`);
-              // Processar documento com IA
-              logger.info(`Iniciando processamento de documento com ${useGemini ? 'Gemini' : 'OpenAI'}...`);
-
-              let result;
-              if (useGemini) {
-                result = await processDocumentMessageWithGemini(
-                  documentBuffer,
-                  documentMessage.fileName || 'documento',
-                  message.key.remoteJid,
-                  apiKey,
-                  'gemini-2.5-flash', // Modelo fixo
-                  config.systemPrompt || '', // Prompt personalizado
-                  1.0, // Temperatura fixa
-                  documentMessage.caption || ''
-                );
-              }
-
-              if (result) {
-                aiResponse = result.aiResponse;
-                documentContent = result.documentContent;
-                logger.info(`Documento processado com ${useGemini ? 'Gemini' : 'OpenAI'}`);
-                logger.info(`Análise enviada (${aiResponse?.length} caracteres)`);
-              }
-            } catch (documentError) {
-              logger.error('Erro detalhado ao processar documento:', {
-                error: documentError.message,
-                stack: documentError.stack,
-                sessionId,
-                from: message.key.remoteJid,
-                documentMessage: {
-                  mimetype: documentMessage.mimetype,
-                  fileLength: documentMessage.fileLength,
-                  fileName: documentMessage.fileName,
-                  hasUrl: !!documentMessage.url,
-                  hasDirectPath: !!documentMessage.directPath
-                }
-              });
-              aiResponse = 'Desculpe, não consegui processar seu documento. Pode tentar converter para PDF ou imagem?';
-            }
-          }
-
-          if (aiResponse) {
-            // Verificar se deve enviar como áudio (TTS)
-            const receivedAudio = !!audioMessage;
-            const sendAsAudio = config?.ttsEnabled &&
-              receivedAudio &&
-              shouldSendAsAudio(aiResponse, '', config.ttsEnabled, receivedAudio);
-
-            // Separar texto de links
-            const { textWithoutLinks, links, hasLinks } = separateTextAndLinks(aiResponse);
-
-            if (sendAsAudio) {
-              try {
-                const geminiApiKey = config?.apiKey || process.env.GEMINI_API_KEY;
-
-                // Se tem links, enviar texto como áudio e links como texto separado
-                if (hasLinks && textWithoutLinks.length > 0) {
-                  logger.info(`🎤📝 Resposta tem texto + links - enviando áudio e texto separados`);
-
-                  // 1. Enviar texto como áudio
-                  logger.info(`🎤 Gerando áudio para texto (sem links)...`);
-
-                  // Mostrar "gravando áudio..."
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'recording');
-
-                  const audioBuffer = await generateSpeech(
-                    textWithoutLinks,
-                    geminiApiKey,
-                    config.ttsVoice || 'Aoede',
-                    'pt-BR'
-                  );
-
-                  const audioPath = saveTempAudio(audioBuffer);
-
-                  await this.sendMessageSafe(sessionId, message.key.remoteJid, {
-                    audio: audioBuffer,
-                    mimetype: 'audio/ogg; codecs=opus',
-                    ptt: true
-                  });
-
-                  // Parar indicador
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'paused');
-
-                  cleanupTempAudio(audioPath);
-                  logger.info(`✅ Áudio (texto) enviado`);
-
-                  // 2. Enviar links como texto (após pequeno delay)
-                  await new Promise(resolve => setTimeout(resolve, 500));
-
-                  // Mostrar "digitando..."
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'composing');
-
-                  const linksText = links.length === 1
-                    ? `🔗 Link: ${links[0]}`
-                    : `🔗 Links:\n${links.map((link, i) => `${i + 1}. ${link}`).join('\n')}`;
-
-                  await this.sendMessageSafe(sessionId, message.key.remoteJid, { text: linksText });
-
-                  // Parar indicador
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'paused');
-
-                  logger.info(`✅ Links enviados como texto separado`);
-
-                } else if (hasLinks && textWithoutLinks.length === 0) {
-                  // Se só tem links, enviar como texto
-                  logger.info(`🔗 Resposta contém apenas links - enviando como texto`);
-
-                  // Mostrar "digitando..."
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'composing');
-
-                  await this.sendMessageSafe(sessionId, message.key.remoteJid, { text: aiResponse });
-
-                  // Parar indicador
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'paused');
-
-                } else {
-                  // Se não tem links, enviar tudo como áudio
-                  logger.info(`🎤 Gerando resposta em áudio (sem links)...`);
-
-                  // Mostrar "gravando áudio..."
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'recording');
-
-                  const audioBuffer = await generateSpeech(
-                    aiResponse,
-                    geminiApiKey,
-                    config.ttsVoice || 'Aoede',
-                    'pt-BR'
-                  );
-
-                  const audioPath = saveTempAudio(audioBuffer);
-
-                  await this.sendMessageSafe(sessionId, message.key.remoteJid, {
-                    audio: audioBuffer,
-                    mimetype: 'audio/ogg; codecs=opus',
-                    ptt: true
-                  });
-
-                  // Parar indicador
-                  await this.sendPresence(sessionId, message.key.remoteJid, 'paused');
-
-                  cleanupTempAudio(audioPath);
-                  logger.info(`✅ Resposta em áudio enviada`);
-                }
-
-              } catch (ttsError) {
-                logger.error('Erro ao gerar/enviar áudio, enviando texto:', ttsError);
-                // Fallback para texto se falhar
-                // Mostrar "digitando..."
-                await this.sendPresence(sessionId, message.key.remoteJid, 'composing');
-                await this.sendMessageSafe(sessionId, message.key.remoteJid, { text: aiResponse });
-                await this.sendPresence(sessionId, message.key.remoteJid, 'paused');
-              }
-            } else {
-              // Enviar como texto
-              // Mostrar "digitando..."
-              await this.sendPresence(sessionId, message.key.remoteJid, 'composing');
-              await this.sendMessageSafe(sessionId, message.key.remoteJid, { text: aiResponse });
-              await this.sendPresence(sessionId, message.key.remoteJid, 'paused');
-            }
-
-            logger.info(`Resposta AI enviada para ${message.key.remoteJid}`);
-
-            this.io.emit('message-processed', {
-              sessionId,
-              from: message.key.remoteJid,
-              userMessage: transcription || imageAnalysis || documentContent || messageText,
-              aiResponse,
-              isAudio: !!audioMessage,
-              isImage: !!imageMessage,
-              isDocument: !!documentMessage,
-              sentAsAudio: sendAsAudio,
-              transcription,
-              imageAnalysis,
-              documentContent,
-              fileName: documentMessage?.fileName
-            });
-          }
+          // Emite evento para UI saber que chegou
+          this.io.emit('message-queued', {
+            sessionId,
+            queueId,
+            from: phoneNumber,
+            type: audioMessage ? 'audio' : imageMessage ? 'image' : documentMessage ? 'document' : 'text'
+          });
         }
       } catch (error) {
-        logger.error(`Erro ao processar mensagem em ${sessionId}:`, error);
+        logger.error(`Erro ao adicionar mensagem à fila em ${sessionId}:`, error);
         this.io.emit('message-error', {
           sessionId,
           error: error.message
@@ -2326,25 +1932,33 @@ class WhatsAppService {
 
       let restored = 0;
 
-      for (const sessionId of sessionDirs) {
-        // Verificar se existem arquivos de credenciais básicos antes de tentar reconectar
-        const sessionPath = path.join(SESSIONS_PATH, sessionId);
-        const hasFiles = fs.readdirSync(sessionPath).length > 0;
-        if (!hasFiles) {
-          logger.info(`Sessão ${sessionId} ignorada (sem arquivos de credenciais)`);
-          continue;
-        }
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < sessionDirs.length; i += CHUNK_SIZE) {
+        const chunk = sessionDirs.slice(i, i + CHUNK_SIZE);
 
-        try {
-          logger.info(`Tentando restaurar sessão ${sessionId}...`);
-          await this.createSession(sessionId);
-          restored += 1;
-          // Pequena espera para evitar spikes de conexão
-          await new Promise(r => setTimeout(r, 1000));
-        } catch (error) {
-          logger.error(`Falha ao restaurar sessão ${sessionId}:`, error.message || error);
-          this.io.emit('connection-error', { sessionId, error: error.message || String(error) });
-        }
+        await Promise.all(chunk.map(async (sessionId) => {
+          // Verificar se existem arquivos de credenciais básicos antes de tentar reconectar
+          // Nota: Com Firestore, isso é menos crítico, mas mantemos para evitar pastas vazias
+          const sessionPath = path.join(SESSIONS_PATH, sessionId);
+          const hasFiles = fs.readdirSync(sessionPath).length > 0;
+          if (!hasFiles) {
+            logger.info(`Sessão ${sessionId} ignorada (pasta vazia)`);
+            return;
+          }
+
+          try {
+            logger.info(`Tentando restaurar sessão ${sessionId}...`);
+            // Pequeno delay aleatório para evitar colisão exata de timestamps
+            await new Promise(r => setTimeout(r, Math.random() * 1000));
+            await this.createSession(sessionId);
+            restored += 1;
+          } catch (error) {
+            logger.error(`Falha ao restaurar sessão ${sessionId}:`, error.message || error);
+            this.io.emit('connection-error', { sessionId, error: error.message || String(error) });
+          }
+        }));
+
+        logger.info(`Processado lote ${Math.min(i + CHUNK_SIZE, sessionDirs.length)}/${sessionDirs.length} sessões`);
       }
 
       logger.info(`Restauração completa. Sessões restauradas: ${restored}`);
@@ -2353,6 +1967,166 @@ class WhatsAppService {
     } catch (error) {
       logger.error('Erro ao tentar restaurar sessões:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  // Helper para reviver Buffers do JSON
+  reviveBuffers(obj) {
+    if (!obj) return obj;
+    if (typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(v => this.reviveBuffers(v));
+    if (obj.type === 'Buffer' && Array.isArray(obj.data)) return Buffer.from(obj.data);
+    const newObj = {};
+    for (const key in obj) {
+      newObj[key] = this.reviveBuffers(obj[key]);
+    }
+    return newObj;
+  }
+
+  async processQueueMessage(sessionId, chatId, rawMessage) {
+    try {
+      const message = this.reviveBuffers(rawMessage);
+      const session = sessions.get(sessionId);
+      const config = sessionConfigs.get(sessionId);
+      const apiKey = config?.apiKey || process.env.GEMINI_API_KEY;
+
+      if (!session?.socket) {
+        logger.warn(`processQueueMessage: Socket não encontrado para ${sessionId}`);
+        throw new Error('Socket disconnected');
+      }
+
+      // Setup Logger context
+      const msgLog = { sessionId, from: chatId, messageId: message.key.id };
+
+      // Extract Content
+      const audioMessage = message.message?.audioMessage;
+      const imageMessage = message.message?.imageMessage;
+      const documentMessage = message.message?.documentMessage;
+      const messageText = this.extractMessageText(message);
+
+      let aiResponse;
+      let transcription = null;
+      let imageAnalysis = null;
+      let documentContent = null;
+
+      // Check whitelist
+      const ALLOWED_NUMBER = '5522999799359@s.whatsapp.net';
+      if (chatId !== ALLOWED_NUMBER) {
+        // logger.warn(`⛔ Bloqueado pela Whitelist na fila: ${chatId}`);
+        // return;
+      }
+
+      const useGemini = true;
+
+      if (audioMessage) {
+        logger.info(`Mensagem de áudio da fila ${sessionId}`, msgLog);
+        if (!audioMessage.url && !audioMessage.directPath) throw new Error('Áudio sem URL');
+        const audioBuffer = await this.downloadAudio(session.socket, message);
+        if (!audioBuffer) throw new Error('Buffer audio vazio');
+
+        const result = await processAudioMessageWithGemini(
+          audioBuffer, chatId, apiKey, 'gemini-2.5-flash', config.systemPrompt || '', 1.0
+        );
+        if (result) {
+          aiResponse = result.aiResponse;
+          transcription = result.transcription;
+        }
+      } else if (imageMessage) {
+        logger.info(`Mensagem de imagem da fila ${sessionId}`, msgLog);
+        const imageBuffer = await this.downloadImage(session.socket, message);
+        const result = await processImageMessageWithGemini(
+          imageBuffer, chatId, apiKey, 'gemini-2.5-flash', config.systemPrompt || '', 1.0, imageMessage.caption || ''
+        );
+        if (result) {
+          aiResponse = result.aiResponse;
+          imageAnalysis = result.imageAnalysis;
+        }
+      } else if (documentMessage) {
+        logger.info(`Mensagem de documento da fila ${sessionId}`, msgLog);
+        const documentBuffer = await this.downloadDocument(session.socket, message);
+        const result = await processDocumentMessageWithGemini(
+          documentBuffer, documentMessage.fileName || 'doc', chatId, apiKey, 'gemini-2.5-flash', config.systemPrompt || '', 1.0, documentMessage.caption || ''
+        );
+        if (result) {
+          aiResponse = result.aiResponse;
+          documentContent = result.documentContent;
+        }
+      } else if (messageText) {
+        logger.info(`Mensagem de texto da fila ${sessionId}: "${messageText.substring(0, 20)}..."`);
+        aiResponse = await processMessageWithGemini(
+          messageText, chatId, apiKey, 'gemini-2.5-flash', config.systemPrompt || '', 1.0
+        );
+      }
+
+      if (aiResponse) {
+        const receivedAudio = !!audioMessage;
+        const sendAsAudio = config?.ttsEnabled &&
+          receivedAudio &&
+          shouldSendAsAudio(aiResponse, '', config.ttsEnabled, receivedAudio);
+
+        const { textWithoutLinks, links, hasLinks } = separateTextAndLinks(aiResponse);
+
+        if (sendAsAudio) {
+          try {
+            const geminiApiKey = config?.apiKey || process.env.GEMINI_API_KEY;
+
+            if (hasLinks && textWithoutLinks.length > 0) {
+              await this.sendPresence(sessionId, chatId, 'recording');
+              const audioBuffer = await generateSpeech(textWithoutLinks, geminiApiKey, config.ttsVoice || 'Aoede', 'pt-BR');
+              const audioPath = saveTempAudio(audioBuffer);
+              await this.sendMessageSafe(sessionId, chatId, { audio: audioBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+              await this.sendPresence(sessionId, chatId, 'paused');
+              cleanupTempAudio(audioPath);
+
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await this.sendPresence(sessionId, chatId, 'composing');
+              const linksText = links.length === 1 ? `🔗 Link: ${links[0]}` : `🔗 Links:\n${links.map((l, i) => `${i + 1}. ${l}`).join('\n')}`;
+              await this.sendMessageSafe(sessionId, chatId, { text: linksText });
+              await this.sendPresence(sessionId, chatId, 'paused');
+
+            } else if (hasLinks) {
+              await this.sendPresence(sessionId, chatId, 'composing');
+              await this.sendMessageSafe(sessionId, chatId, { text: aiResponse });
+              await this.sendPresence(sessionId, chatId, 'paused');
+            } else {
+              await this.sendPresence(sessionId, chatId, 'recording');
+              const audioBuffer = await generateSpeech(aiResponse, geminiApiKey, config.ttsVoice || 'Aoede', 'pt-BR');
+              const audioPath = saveTempAudio(audioBuffer);
+              await this.sendMessageSafe(sessionId, chatId, { audio: audioBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+              await this.sendPresence(sessionId, chatId, 'paused');
+              cleanupTempAudio(audioPath);
+            }
+          } catch (ttsError) {
+            logger.error('TTS falhou, enviando texto:', ttsError);
+            await this.sendPresence(sessionId, chatId, 'composing');
+            await this.sendMessageSafe(sessionId, chatId, { text: aiResponse });
+            await this.sendPresence(sessionId, chatId, 'paused');
+          }
+        } else {
+          await this.sendPresence(sessionId, chatId, 'composing');
+          await this.sendMessageSafe(sessionId, chatId, { text: aiResponse });
+          await this.sendPresence(sessionId, chatId, 'paused');
+        }
+
+        this.io.emit('message-processed', {
+          sessionId,
+          from: chatId,
+          userMessage: transcription || imageAnalysis || documentContent || messageText,
+          aiResponse,
+          isAudio: !!audioMessage,
+          isImage: !!imageMessage,
+          isDocument: !!documentMessage,
+          sentAsAudio: sendAsAudio,
+          transcription,
+          imageAnalysis,
+          documentContent,
+          fileName: documentMessage?.fileName
+        });
+      }
+
+    } catch (error) {
+      logger.error(`processQueueMessage Error ${sessionId}:`, error);
+      throw error;
     }
   }
 

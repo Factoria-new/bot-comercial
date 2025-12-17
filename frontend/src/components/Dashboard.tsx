@@ -485,7 +485,7 @@ const Dashboard = () => {
 
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
             <div className="text-center sm:text-left">
               <div className="flex justify-start mb-2">
                 <img
@@ -502,45 +502,53 @@ const Dashboard = () => {
                 <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
                   {isConnected ? 'Servidor Online' : 'Servidor Offline'}
                 </span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ml-2 ${user?.role === 'pro' || user?.role === 'admin'
+              </div>
+            </div>
+            <div className="flex flex-col items-center sm:items-end gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="w-full sm:w-auto bg-white/50 hover:bg-[#FE601E] hover:text-white border-[#FE601E]/20 text-[#FE601E] transition-colors"
+                >
+                  <LogOut className="mr-2" size={18} />
+                  <span className="text-sm sm:text-base">Sair</span>
+                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="w-full sm:w-auto">
+                        <Button
+                          onClick={addInstance}
+                          className="btn-new-instance disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                          size="default"
+                          disabled={instances.length >= 4}
+                        >
+                          <PlusCircle className="mr-2" size={18} />
+                          <span className="text-sm sm:text-base">Nova Conexão</span>
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {instances.length >= 4 && (
+                      <TooltipContent>
+                        <p>Limite máximo de 4 conexões atingido</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center gap-3 px-3 py-1.5 bg-white/60 backdrop-blur-sm rounded-full border border-gray-100 shadow-sm">
+                <span className="text-xs text-gray-600 font-medium">
+                  {user?.email}
+                </span>
+                <div className="h-3 w-px bg-gray-300"></div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${user?.role === 'pro' || user?.role === 'admin'
                   ? 'text-[#00A947] bg-[#00A947]/10 border-[#00A947]/20'
                   : 'text-gray-500 bg-gray-100 border-gray-200'
                   }`}>
                   {user?.role === 'pro' || user?.role === 'admin' ? 'PRO' : 'BÁSICO'}
                 </span>
               </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="w-full sm:w-auto bg-white/50 hover:bg-[#FE601E] hover:text-white border-[#FE601E]/20 text-[#FE601E] transition-colors"
-              >
-                <LogOut className="mr-2" size={18} />
-                <span className="text-sm sm:text-base">Sair</span>
-              </Button>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="w-full sm:w-auto">
-                      <Button
-                        onClick={addInstance}
-                        className="btn-new-instance disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                        size="default"
-                        disabled={instances.length >= 4}
-                      >
-                        <PlusCircle className="mr-2" size={18} />
-                        <span className="text-sm sm:text-base">Nova Conexão</span>
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {instances.length >= 4 && (
-                    <TooltipContent>
-                      <p>Limite máximo de 4 conexões atingido</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
             </div>
           </div>
         </div>
