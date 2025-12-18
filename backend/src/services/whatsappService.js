@@ -1057,8 +1057,6 @@ class WhatsAppService {
 
       // ==================================================================================
       // 🔒 WHITELIST DE TESTE
-      // Configuração para o bot responder APENAS a um número específico.
-      // Substitua o número abaixo pelo número que você deseja testar.
       // ==================================================================================
       const ALLOWED_NUMBER = '5522999799359@s.whatsapp.net'; // 
 
