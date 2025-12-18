@@ -39,5 +39,4 @@ temp/
 
 
 # Frontend Config
-frontend/src/config/firebase.ts
 backend/src/config/serviceAccountKey.json
