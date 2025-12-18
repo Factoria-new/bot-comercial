@@ -262,7 +262,7 @@ app.use((req, res) => {
 });
 
 // Iniciar servidor
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3003;
 
 // Start server after attempting to restore sessions from disk
 async function startServer() {

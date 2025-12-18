@@ -17,10 +17,10 @@ export const verifyToken = async (req, res, next) => {
 
         const token = authHeader.split('Bearer ')[1];
 
-        if (!token) {
+        if (!token || !token.trim()) {
             return res.status(401).json({
                 success: false,
-                error: 'Token malformado'
+                error: 'Token malformado ou vazio'
             });
         }
 
@@ -29,7 +29,7 @@ export const verifyToken = async (req, res, next) => {
             req.user = decodedToken;
             next();
         } catch (error) {
-            logger.warn(`Falha na verificação do token: ${error.code || error.message}`);
+            logger.warn(`Falha na verificação do token: ${error.code} - ${error.message}`);
             return res.status(401).json({
                 success: false,
                 error: 'Token inválido ou expirado'

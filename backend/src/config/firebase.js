@@ -16,7 +16,7 @@ try {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
-        logger.info('Firebase Admin inicializado com serviceAccountKey.json');
+        logger.info(`Firebase Admin inicializado com serviceAccountKey.json (Project ID: ${serviceAccount.project_id})`);
     } else {
         // Fallback para variáveis de ambiente (Produção/Deploy)
         logger.warn('serviceAccountKey.json não encontrado. Tentando variáveis de ambiente...');
@@ -27,7 +27,7 @@ try {
         // Ou inicialização manual se preferir
         if (process.env.FIREBASE_PROJECT_ID) {
             admin.initializeApp({
-                projectId: process.env.FIREBASE_PROJECT_ID,
+                projectId: process.env.FIREBASE_PROJECT_ID || 'bot-comercial-9dc5e',
             });
             logger.info('Firebase Admin inicializado com variáveis de ambiente');
         } else {

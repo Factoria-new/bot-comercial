@@ -109,6 +109,12 @@ const Dashboard = () => {
 
       // Buscar TODAS as sessões (ativas e inativas) do backend
       const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/whatsapp/sessions`);
+
+      if (response.status === 401) {
+        console.log('⛔ Sessão não autorizada, aguardando redirecionamento/login');
+        return;
+      }
+
       const data = await response.json();
 
       if (!data.success) {

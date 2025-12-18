@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth } from "@/config/firebase";
 import { db } from "@/config/db";
 
@@ -33,50 +33,58 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        let unsubscribeSnapshot: (() => void) | null = null;
+
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             setUserRaw(currentUser);
 
-            if (currentUser) {
-                try {
-                    // Fetch additional data from Firestore 'users' collection
-                    const userDocRef = doc(db, "users", currentUser.uid);
-                    const userSnapshot = await getDoc(userDocRef);
+            // Clean up previous snapshot listener if it exists (e.g. user switch)
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+                unsubscribeSnapshot = null;
+            }
 
-                    if (userSnapshot.exists()) {
-                        const userData = userSnapshot.data();
-                        console.log(`[AuthContext] User document found for UID: ${currentUser.uid}, Role: ${userData.role}`);
+            if (currentUser) {
+                // Subscribe to real-time updates for the user document
+                const userDocRef = doc(db, "users", currentUser.uid);
+
+                unsubscribeSnapshot = onSnapshot(userDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const userData = docSnapshot.data();
+                        console.log(`[AuthContext] User update: ${currentUser.uid}, Role: ${userData.role}`);
                         setUser({
                             uid: currentUser.uid,
                             email: currentUser.email,
-                            role: userData.role || "basic", // Default to basic if no role defined
+                            role: (userData.role ? String(userData.role).toLowerCase().trim() : "basic") as "basic" | "pro" | "admin",
                             ...userData,
                         } as UserProfile);
                     } else {
-                        console.warn(`[AuthContext] No user document found for UID: ${currentUser.uid}. using basic role.`);
-                        // User exists in Auth but not in Firestore (legacy or new user)
-                        // You might want to create the document here, or just treat as basic
+                        console.warn(`[AuthContext] No user document found for UID: ${currentUser.uid}. Using basic role.`);
                         setUser({
                             uid: currentUser.uid,
                             email: currentUser.email,
                             role: "basic",
                         });
                     }
-                } catch (error) {
-                    console.error("Error fetching user profile:", error);
-                    // Fallback to basic auth user if Firestore fails
-                    setUser({
-                        uid: currentUser.uid,
-                        email: currentUser.email,
-                        role: "basic",
-                    });
-                }
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error listening to user profile:", error);
+                    // On error, keep existing user but maybe valid defaults?
+                    // If this is the first load, we need to stop loading
+                    setLoading(false);
+                });
             } else {
                 setUser(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+            }
+        };
     }, []);
 
     return (
