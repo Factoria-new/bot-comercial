@@ -1,25 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, MessageSquare, Users, Activity, Bot, Loader, LogOut } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { useSocket } from '@/contexts/SocketContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import API_CONFIG from '@/config/api';
+
+// Chat Interface
+import FactoriaChatInterface from '@/components/ui/factoria-chat-interface';
+import DashboardSidebar from '@/components/DashboardSidebar';
+import IntegrationsPanel from '@/components/chat/IntegrationsPanel';
+
+// Legacy Components (for sidebar panels)
 import WhatsAppInstanceCard from './WhatsAppInstanceCard';
 import WhatsAppConnectionModal, { ConnectionState } from './WhatsAppConnectionModal';
 import AIStatusCard from '@/components/AIStatusCard';
 import { WhatsAppInstance, WhatsAppConfig } from '@/types/whatsapp';
-import { useToast } from '@/hooks/use-toast';
-import { useSocket } from '@/contexts/SocketContext';
-import { useAuth } from '@/contexts/AuthContext';
+
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { PlusCircle, MessageSquare, Loader, ArrowLeft } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import API_CONFIG from '@/config/api';
-import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
+import { cn } from '@/lib/utils';
+
+type DashboardPage = "chat" | "connections" | "integrations" | "ai-status" | "calendar" | "settings";
 
 const Dashboard = () => {
+  // Current page state
+  const [currentPage, setCurrentPage] = useState<DashboardPage>("chat");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Onboarding state
+  const { state: onboardingState, hasConnectedIntegrations } = useOnboarding();
+
+  // WhatsApp instances state (preserved from original)
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
   const { authenticatedFetch } = useAuthenticatedFetch();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,32 +52,25 @@ const Dashboard = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [removingInstances, setRemovingInstances] = useState<Set<number>>(new Set());
   const isRemovingRef = useRef(false);
+
   const { toast } = useToast();
   const { socket, isConnected } = useSocket();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Bloquear botão de voltar
+  // Block back button
   useEffect(() => {
-    // Adiciona um estado ao histórico para "prender" o usuário
     window.history.pushState(null, document.title, window.location.href);
-
-    const handlePopState = (event: PopStateEvent) => {
-      // Impede a navegação voltando para o estado anterior (que é o atual)
+    const handlePopState = () => {
       window.history.go(1);
-
       toast({
         title: "Ação não permitida",
         description: "Para voltar à tela de login, você deve sair da conta.",
         variant: "destructive",
       });
     };
-
     window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const handleLogout = async () => {
@@ -66,7 +80,6 @@ const Dashboard = () => {
         title: "Logout realizado",
         description: "Você saiu do sistema com sucesso.",
       });
-      // Navega diretamente para o login, substituindo o histórico
       navigate('/login', { replace: true });
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
@@ -78,54 +91,34 @@ const Dashboard = () => {
     }
   };
 
-  // Carregar todas as sessões do backend ao iniciar
+  // Load sessions on mount
   useEffect(() => {
     checkActiveSessions();
-  }, []); // Executar apenas uma vez ao montar
+  }, []);
 
-  // Verificar status das conexões periodicamente (silencioso)
+  // Periodic silent check
   useEffect(() => {
     const interval = setInterval(() => {
-      checkActiveSessions(true); // true = verificação silenciosa, sem toasts
-    }, 30000); // Verificar a cada 30 segundos
-
+      checkActiveSessions(true);
+    }, 30000);
     return () => clearInterval(interval);
-  }, []); // Executar apenas uma vez ao montar
+  }, []);
 
   const checkActiveSessions = async (silent = false) => {
-    // Se estiver removendo alguma conexão, não atualizar a lista para evitar race conditions
-    if (isRemovingRef.current) {
-      console.log('⏳ Ignorando checkActiveSessions pois há remoções em andamento');
-      return;
-    }
+    if (isRemovingRef.current) return;
 
     try {
-      if (!silent) {
-        setIsInitializing(true);
-      }
-      console.log('🔍 Verificando todas as sessões no backend...');
+      if (!silent) setIsInitializing(true);
 
-      // Buscar TODAS as sessões (ativas e inativas) do backend
       const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/whatsapp/sessions`);
-
-      if (response.status === 401) {
-        console.log('⛔ Sessão não autorizada, aguardando redirecionamento/login');
-        return;
-      }
+      if (response.status === 401) return;
 
       const data = await response.json();
-
-      if (!data.success) {
-        throw new Error('Falha ao buscar sessões');
-      }
+      if (!data.success) throw new Error('Falha ao buscar sessões');
 
       const backendSessions = data.sessions || [];
-      console.log(`📊 Encontradas ${backendSessions.length} sessões no backend`);
-
-      // SEMPRE usar as sessões do backend como fonte única da verdade
       const instancesFromBackend: WhatsAppInstance[] = backendSessions.map((session: any) => {
         const instanceId = parseInt(session.sessionId.replace('instance_', ''));
-
         return {
           id: instanceId,
           name: session.config?.name || 'Nome do Agente',
@@ -137,43 +130,16 @@ const Dashboard = () => {
         };
       });
 
-      console.log('✅ Conexões carregadas do backend:', instancesFromBackend);
       setInstances(instancesFromBackend);
-
-      // Mostrar toast apenas se não for verificação silenciosa e houver sessões
-      const connectedCount = instancesFromBackend.filter(i => i.isConnected).length;
-      if (!silent && connectedCount > 0) {
-        toast({
-          title: "Sessões verificadas",
-          description: `${connectedCount} sessão(ões) ativa(s) encontrada(s).`,
-        });
-      }
     } catch (error) {
       console.error('❌ Erro ao verificar sessões ativas:', error);
-
-      // Em caso de erro, manter conexões existentes mas marcar como desconectadas
-      setInstances(prevInstances =>
-        prevInstances.map(instance => ({
-          ...instance,
-          isConnected: false
-        }))
-      );
-
-      // Mostrar erro apenas se não for verificação silenciosa
-      if (!silent) {
-        toast({
-          title: "Erro de conexão",
-          description: "Não foi possível verificar o servidor. Verifique sua conexão.",
-          variant: "destructive",
-        });
-      }
+      setInstances(prev => prev.map(instance => ({ ...instance, isConnected: false })));
     } finally {
-      if (!silent) {
-        setIsInitializing(false);
-      }
+      if (!silent) setIsInitializing(false);
     }
   };
 
+  // Socket event handlers
   useEffect(() => {
     if (!socket) return;
 
@@ -200,7 +166,6 @@ const Dashboard = () => {
     socket.on('connecting', (data) => {
       if (data.sessionId === `instance_${currentInstance}`) {
         setConnectionState(prev => {
-          // Se estivermos em states iniciais, ignorar o evento 'connecting'
           if (['generating', 'ready', 'selection', 'input-phone', 'pairing'].includes(prev)) {
             return prev;
           }
@@ -210,18 +175,13 @@ const Dashboard = () => {
     });
 
     socket.on('connected', (data) => {
-      const instanceId = parseInt(data.sessionId.replace('instance_', ''));
-
       if (data.sessionId === `instance_${currentInstance}`) {
         setConnectionState('connected');
-
         setTimeout(() => {
           setIsModalOpen(false);
           setConnectionState('generating');
         }, 2000);
       }
-
-      // Atualizar lista para TODOS os clientes conectados
       checkActiveSessions(true);
     });
 
@@ -237,10 +197,7 @@ const Dashboard = () => {
       }
     });
 
-    socket.on('logged-out', (data) => {
-      const instanceId = parseInt(data.sessionId.replace('instance_', ''));
-
-      // Atualizar lista para TODOS os clientes conectados
+    socket.on('logged-out', () => {
       checkActiveSessions(true);
     });
 
@@ -256,9 +213,9 @@ const Dashboard = () => {
     };
   }, [socket, currentInstance]);
 
-  const updateInstanceStatus = (instanceId: number, isConnected: boolean) => {
+  const updateInstanceStatus = (instanceId: number, connected: boolean) => {
     setInstances(prev => prev.map(inst =>
-      inst.id === instanceId ? { ...inst, isConnected } : inst
+      inst.id === instanceId ? { ...inst, isConnected: connected } : inst
     ));
   };
 
@@ -269,7 +226,6 @@ const Dashboard = () => {
   };
 
   const addInstance = async () => {
-    // Verificar se já existem 4 conexões
     if (instances.length >= 4) {
       toast({
         title: "Limite atingido",
@@ -289,7 +245,6 @@ const Dashboard = () => {
       lastConnected: new Date(),
     };
 
-    // Persistir imediatamente no backend para evitar que suma no refresh/sync
     try {
       const initialConfig = {
         name: 'Nome do Agente',
@@ -304,21 +259,14 @@ const Dashboard = () => {
         enabled: true
       };
 
-      // Salvar no backend
       const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/whatsapp/config/instance_${newId}`, {
         method: 'POST',
         body: JSON.stringify(initialConfig)
       });
 
-      if (!response.ok) {
-        throw new Error('Falha ao salvar configuração');
-      }
+      if (!response.ok) throw new Error('Falha ao salvar configuração');
 
-      console.log('✅ Nova conexão persistida no backend:', newId);
-
-      // Atualizar estado local apenas após sucesso no backend
       setInstances(prev => [...prev, newInstance]);
-
     } catch (error) {
       console.error('Erro ao persistir nova conexão:', error);
       toast({
@@ -330,22 +278,14 @@ const Dashboard = () => {
   };
 
   const handleGenerateQR = (instanceId: number) => {
-    console.log('🎯 Dashboard handleGenerateQR:', instanceId);
     setCurrentInstance(instanceId);
     setIsModalOpen(true);
-
-    // Default to QR Code generation immediately
     const sessionId = `instance_${instanceId}`;
-    console.log('📡 Dashboard emitindo generate-qr (Default):', sessionId);
-
     setConnectionState('generating');
     setQrCode('');
     setPairingCode('');
-
     if (socket) {
       socket.emit('generate-qr', { sessionId });
-    } else {
-      console.error('❌ Socket não disponível no Dashboard');
     }
   };
 
@@ -353,42 +293,27 @@ const Dashboard = () => {
     if (method === 'code') {
       setConnectionState('input-phone');
     } else {
-      // QR Code selected - generate immediately
       if (!currentInstance) return;
-
       const sessionId = `instance_${currentInstance}`;
-      console.log('📡 Dashboard emitindo generate-qr (QR Mode):', sessionId);
-
       setConnectionState('generating');
-
       if (socket) {
         socket.emit('generate-qr', { sessionId });
-      } else {
-        console.error('❌ Socket não disponível no Dashboard');
       }
     }
   };
 
   const handleConnect = (phoneNumber: string) => {
     if (!currentInstance) return;
-
     const sessionId = `instance_${currentInstance}`;
-    console.log('📡 Dashboard emitindo generate-qr com phone:', sessionId, phoneNumber);
-
     setConnectionState('generating');
-
     if (socket) {
       socket.emit('generate-qr', { sessionId, phoneNumber });
-    } else {
-      console.error('❌ Socket não disponível no Dashboard');
     }
   };
 
   const handleSaveConfig = async (instanceId: number, config: WhatsAppConfig) => {
     setInstances(prev => prev.map(inst =>
-      inst.id === instanceId
-        ? { ...inst, ...config }
-        : inst
+      inst.id === instanceId ? { ...inst, ...config } : inst
     ));
   };
 
@@ -399,54 +324,37 @@ const Dashboard = () => {
     updateInstanceStatus(instanceId, false);
   };
 
-  // ... (existing code)
-
-  // ...
-
   const handleRemoveInstance = async (instanceId: number) => {
-    // Adicionar à lista de conexões sendo removidas
     setRemovingInstances(prev => new Set(prev).add(instanceId));
     isRemovingRef.current = true;
 
     try {
-      // Chamar API para remover a sessão (backend cuidará do logout e limpeza de arquivos)
       const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/whatsapp/sessions/instance_${instanceId}`, {
         method: 'DELETE',
       });
 
-      if (!response.ok) {
-        throw new Error('Falha ao remover conexão no backend');
-      }
+      if (!response.ok) throw new Error('Falha ao remover conexão');
 
-      // Aguardar a animação antes de remover da UI
       setTimeout(() => {
-        // Remover a conexão da lista
         setInstances(prev => prev.filter(inst => inst.id !== instanceId));
-
-        // Remover da lista de conexões sendo removidas
         setRemovingInstances(prev => {
           const newSet = new Set(prev);
           newSet.delete(instanceId);
-          // Update ref if set is empty
           if (newSet.size === 0) isRemovingRef.current = false;
           return newSet;
         });
-
         toast({
           title: "Conexão removida",
           description: "A conexão foi removida com sucesso.",
         });
-      }, 500); // Tempo da animação
-
+      }, 500);
     } catch (error) {
       console.error('Erro ao remover conexão:', error);
       toast({
         title: "Erro ao remover",
-        description: "Não foi possível remover a conexão. Tente novamente.",
+        description: "Não foi possível remover a conexão.",
         variant: "destructive",
       });
-
-      // Remover da lista de loading em caso de erro
       setRemovingInstances(prev => {
         const newSet = new Set(prev);
         newSet.delete(instanceId);
@@ -459,192 +367,63 @@ const Dashboard = () => {
   const stats = {
     totalInstances: instances.length,
     connectedInstances: instances.filter(i => i.isConnected).length,
-    totalMessages: 0,
-    configuredInstances: instances.filter(i => i.apiKey && i.assistantId).length,
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f1f4f9] to-white">
-      {/* Efeito de luz sutil */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#19B159]/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#19B159]/3 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 relative z-10">
-        {/* Loading Inicial */}
-        {isInitializing && (
-          <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="text-center space-y-4 max-w-sm">
-              <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#19B159]/10 to-[#19B159]/20 rounded-full flex items-center justify-center animate-pulse shadow-lg">
-                <Loader size={24} className="sm:w-8 sm:h-8 text-[#19B159] animate-spin" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Verificando sessões ativas...</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Aguarde enquanto sincronizamos suas conexões</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-            <div className="text-center sm:text-left">
-              <div className="flex justify-start mb-2">
-                <Link to="/">
-                  <img
-                    src="/texto-logo.png"
-                    alt="Bora Expandir - Agência de Viagens e Assessoria de Imigração"
-                    className="h-16 sm:h-20 lg:h-24 w-auto -ml-4 hover:opacity-80 transition-opacity"
-                  />
-                </Link>
-              </div>
-              <p className="text-gray-600 mt-1 text-sm sm:text-base">
-                Painel de Controle
-              </p>
-              <div className="flex items-center gap-2 mt-2 justify-center sm:justify-start">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-                  {isConnected ? 'Servidor Online' : 'Servidor Offline'}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-center sm:items-end gap-3">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+  // Render panel content based on current page
+  const renderPanelContent = () => {
+    switch (currentPage) {
+      case "connections":
+        return (
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <Button
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="w-full sm:w-auto bg-white/50 hover:bg-[#FE601E] hover:text-white border-[#FE601E]/20 text-[#FE601E] transition-colors"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setCurrentPage("chat")}
+                  className="text-gray-600 hover:text-gray-900"
                 >
-                  <LogOut className="mr-2" size={18} />
-                  <span className="text-sm sm:text-base">Sair</span>
+                  <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="w-full sm:w-auto">
-                        <Button
-                          onClick={addInstance}
-                          className="btn-new-instance disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                          size="default"
-                          disabled={instances.length >= 4}
-                        >
-                          <PlusCircle className="mr-2" size={18} />
-                          <span className="text-sm sm:text-base">Nova Conexão</span>
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {instances.length >= 4 && (
-                      <TooltipContent>
-                        <p>Limite máximo de 4 conexões atingido</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Conexões WhatsApp</h1>
               </div>
-              <div className="flex items-center gap-3 px-3 py-1.5 bg-white/60 backdrop-blur-sm rounded-full border border-gray-100 shadow-sm">
-                <span className="text-xs text-gray-600 font-medium">
-                  {user?.email}
-                </span>
-                <div className="h-3 w-px bg-gray-300"></div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${user?.role === 'pro' || user?.role === 'admin'
-                  ? 'text-[#00A947] bg-[#00A947]/10 border-[#00A947]/20'
-                  : 'text-gray-500 bg-gray-100 border-gray-200'
-                  }`}>
-                  {user?.role === 'pro' || user?.role === 'admin' ? 'PRO' : 'BÁSICO'}
-                </span>
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        onClick={addInstance}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+                        disabled={instances.length >= 4}
+                      >
+                        <PlusCircle className="mr-2" size={18} />
+                        Nova Conexão
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {instances.length >= 4 && (
+                    <TooltipContent>
+                      <p>Limite de 4 conexões atingido</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
-          </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
-            <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
-              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Total</CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.totalInstances}/4</div>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                {stats.totalInstances >= 4 ? 'limite atingido' : `${4 - stats.totalInstances} disponíveis`}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
-            <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
-              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Conectadas</CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.connectedInstances}</div>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">ativas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
-            <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
-              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Mensagens</CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.totalMessages}</div>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">processadas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/70 border border-[#19B159]/20 backdrop-blur-md card-stats shadow-lg">
-            <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
-              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-900">Assistentes</CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#19B159]">{stats.configuredInstances}</div>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">configurados</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-          {/* AI Status Card */}
-          <div className="xl:col-span-1 order-2 xl:order-1">
-            <AIStatusCard />
-          </div>
-
-          {/* Instances Grid */}
-          <div className="xl:col-span-2 order-1 xl:order-2">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Conexões WhatsApp</h2>
             {instances.length === 0 ? (
-              <Card className="border-dashed border-2 border-[#19B159]/30 bg-white/70 backdrop-blur-md shadow-lg">
-                <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
-                  <MessageSquare className="mx-auto text-[#19B159]/60 mb-4" size={40} />
-                  <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Nenhuma conexão criada</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-4">Comece criando sua primeira conexão do WhatsApp</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="w-full sm:w-auto">
-                          <Button
-                            onClick={addInstance}
-                            className="btn-new-instance disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                            disabled={instances.length >= 4}
-                          >
-                            <PlusCircle className="mr-2" size={18} />
-                            <span className="text-sm sm:text-base">Criar Primeira Conexão</span>
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {instances.length >= 4 && (
-                        <TooltipContent>
-                          <p>Limite máximo de 4 conexões atingido</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+              <Card className="border-dashed border-2 border-emerald-200 bg-white/70">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <MessageSquare className="mx-auto text-emerald-500/60 mb-4" size={48} />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma conexão criada</h3>
+                  <p className="text-gray-600 mb-4">Comece criando sua primeira conexão do WhatsApp</p>
+                  <Button onClick={addInstance} className="bg-emerald-600 hover:bg-emerald-700">
+                    <PlusCircle className="mr-2" size={18} />
+                    Criar Primeira Conexão
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {instances.map((instance) => (
                   <WhatsAppInstanceCard
                     key={instance.id}
@@ -660,23 +439,176 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+        );
+
+      case "integrations":
+        return (
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentPage("chat")}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Integrações</h1>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {onboardingState.integrations.map((integration) => (
+                <Card key={integration.id} className={cn(
+                  "bg-white/70 transition-all",
+                  integration.connected ? "border-emerald-500" : "border-gray-200"
+                )}>
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: integration.color }}
+                    >
+                      <span className="text-white text-xl font-bold">
+                        {integration.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{integration.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {integration.connected ? "Conectado" : "Não conectado"}
+                      </p>
+                    </div>
+                    {integration.connected && (
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "ai-status":
+        return (
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentPage("chat")}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Status da IA</h1>
+            </div>
+            <AIStatusCard />
+          </div>
+        );
+
+      case "calendar":
+        return (
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentPage("chat")}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Calendário</h1>
+            </div>
+            <Card className="bg-white/70">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-gray-600">Integração com Google Calendar em breve.</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case "settings":
+        return (
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentPage("chat")}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Configurações</h1>
+            </div>
+            <Card className="bg-white/70">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-gray-600">Configurações em desenvolvimento.</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+      {/* Loading Overlay */}
+      {isInitializing && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-emerald-600/20 rounded-full flex items-center justify-center animate-pulse">
+              <Loader className="w-8 h-8 text-emerald-500 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Verificando sessões...</h3>
+              <p className="text-sm text-white/60">Aguarde enquanto sincronizamos</p>
+            </div>
+          </div>
         </div>
+      )}
 
-
-        {/* Connection Modal */}
-        <WhatsAppConnectionModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          connectionState={connectionState}
-          qrCode={qrCode}
-          pairingCode={pairingCode}
-          errorMessage={errorMessage}
-          instanceName={instances.find(i => i.id === currentInstance)?.name || ''}
-          onConnect={handleConnect}
-          onMethodSelected={handleMethodSelected}
+      {/* Main Content */}
+      {currentPage === "chat" ? (
+        <FactoriaChatInterface
+          onLogout={handleLogout}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
         />
-      </div>
-    </div>
+      ) : (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+          {renderPanelContent()}
+        </div>
+      )}
+
+      {/* Sidebar */}
+      <DashboardSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNavigate={setCurrentPage}
+        currentPage={currentPage}
+        connectedInstances={stats.connectedInstances}
+        totalInstances={stats.totalInstances}
+        integrations={onboardingState.integrations}
+      />
+
+      {/* Connection Modal */}
+      <WhatsAppConnectionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        connectionState={connectionState}
+        qrCode={qrCode}
+        pairingCode={pairingCode}
+        errorMessage={errorMessage}
+        instanceName={instances.find(i => i.id === currentInstance)?.name || ''}
+        onConnect={handleConnect}
+        onMethodSelected={handleMethodSelected}
+      />
+    </>
   );
 };
 
