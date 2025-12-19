@@ -1,45 +1,18 @@
-import { auth } from '../config/firebase.js';
-import logger from '../config/logger.js';
+import jwt from 'jsonwebtoken';
 
-/**
- * Middleware para verificar o token de autenticação do Firebase
- */
-export const verifyToken = async (req, res, next) => {
-    try {
-        const authHeader = req.headers.authorization;
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_dev';
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
-                success: false,
-                error: 'Token de autenticação não fornecido'
-            });
-        }
+export const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-        const token = authHeader.split('Bearer ')[1];
+    if (!token) return res.sendStatus(401);
 
-        if (!token || !token.trim()) {
-            return res.status(401).json({
-                success: false,
-                error: 'Token malformado ou vazio'
-            });
-        }
-
-        try {
-            const decodedToken = await auth.verifyIdToken(token);
-            req.user = decodedToken;
-            next();
-        } catch (error) {
-            logger.warn(`Falha na verificação do token: ${error.code} - ${error.message}`);
-            return res.status(401).json({
-                success: false,
-                error: 'Token inválido ou expirado'
-            });
-        }
-    } catch (error) {
-        logger.error('Erro interno na autenticação:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Erro interno de autenticação'
-        });
-    }
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
 };
+// Alias for backward compatibility or preferred naming
+export const verifyToken = authenticateToken;

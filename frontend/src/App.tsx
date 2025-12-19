@@ -9,6 +9,9 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
+import Payment from "./pages/Payment";
+import CheckEmail from "./pages/CheckEmail";
+import SetupPassword from "./pages/SetupPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -29,6 +32,9 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/login" element={<Login />} />
+              <Route path="/payment" element={<Payment />} />
+              <Route path="/check-email" element={<CheckEmail />} />
+              <Route path="/setup-password" element={<SetupPassword />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

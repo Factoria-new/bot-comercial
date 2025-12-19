@@ -60,7 +60,8 @@ export const PricingWrapper: React.FC<{
     featured?: boolean
     rotation?: number
     backChildren?: React.ReactNode
-}> = ({ children, contactHref, className, type = 'waves', featured = false, rotation = 0, backChildren }) => {
+    linkState?: any
+}> = ({ children, contactHref, className, type = 'waves', featured = false, rotation = 0, backChildren, linkState }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
 
@@ -170,7 +171,7 @@ export const PricingWrapper: React.FC<{
                                 className
                             )}
                         >
-                            <ContentLayer contactHref={contactHref} type={type} featured={featured}>{children}</ContentLayer>
+                            <ContentLayer contactHref={contactHref} type={type} featured={featured} linkState={linkState}>{children}</ContentLayer>
                         </motion.div>
                     </div>
 
@@ -196,7 +197,7 @@ export const PricingWrapper: React.FC<{
                                 className
                             )}
                         >
-                            <ContentLayer contactHref={contactHref} type={type} featured={featured}>{backChildren}</ContentLayer>
+                            <ContentLayer contactHref={contactHref} type={type} featured={featured} linkState={linkState}>{backChildren}</ContentLayer>
                         </motion.div>
                     </div>
                 </motion.div>
@@ -210,8 +211,9 @@ const ContentLayer: React.FC<{
     children: React.ReactNode,
     contactHref: string,
     type: 'waves' | 'crosses',
-    featured: boolean
-}> = ({ children, contactHref, type, featured }) => (
+    featured: boolean,
+    linkState?: any
+}> = ({ children, contactHref, type, featured, linkState }) => (
     <>
         <div
             style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
@@ -222,7 +224,7 @@ const ContentLayer: React.FC<{
             {children}
             <div style={{ transform: "translateZ(25px)" }} className={'w-full h-full flex items-end justify-end text-base'}>
                 {/* Logic to determine button state based on plan */}
-                <PricingButton contactHref={contactHref} isProCard={featured} />
+                <PricingButton contactHref={contactHref} isProCard={featured} linkState={linkState} />
             </div>
         </div>
         {type === 'waves' && (
@@ -295,14 +297,14 @@ export const Paragraph: React.FC<{ children: React.ReactNode; className?: string
     </p>
 )
 
-const PricingButton: React.FC<{ contactHref: string; isProCard: boolean }> = ({ contactHref, isProCard }) => {
+const PricingButton: React.FC<{ contactHref: string; isProCard: boolean; linkState?: any }> = ({ contactHref, isProCard, linkState }) => {
     const { user } = useAuth();
 
     // Determine if this is the user's current plan
     // If user is not logged in, they don't have a "current plan" visible here usually, or defaults to basic logic
     if (!user) {
         return (
-            <Link to={contactHref} className={'w-full h-fit'}>
+            <Link to={contactHref} state={linkState} className={'w-full h-fit'}>
                 <motion.button
                     whileHover={{
                         scale: 1.05,
@@ -340,7 +342,7 @@ const PricingButton: React.FC<{ contactHref: string; isProCard: boolean }> = ({ 
     }
 
     return (
-        <Link to={contactHref} className={'w-full h-fit'}>
+        <Link to={contactHref} state={linkState} className={'w-full h-fit'}>
             <motion.button
                 whileHover={{
                     scale: 1.05,

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/config/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { AnimatedCharactersLogin } from "@/components/ui/animated-characters-login";
 
@@ -11,12 +10,14 @@ const Login = () => {
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
+    const { login } = useAuth();
+
     const handleLogin = async (email: string, password: string) => {
         setError("");
         setIsLoading(true);
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            await login(email, password);
             setIsLoading(false);
             setIsSuccess(true);
             toast.success("Login realizado com sucesso!");
@@ -24,16 +25,10 @@ const Login = () => {
             // Delay para mostrar animação de sucesso antes de navegar
             setTimeout(() => {
                 navigate("/dashboard");
-            }, 1500);
+            }, 1000);
         } catch (err: any) {
             console.error("Login error:", err);
-            let errorMessage = "Erro ao realizar login. Verifique suas credenciais.";
-
-            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-                errorMessage = "Email ou senha incorretos.";
-            } else if (err.code === 'auth/too-many-requests') {
-                errorMessage = "Muitas tentativas falhas. Tente novamente mais tarde.";
-            }
+            let errorMessage = err.message || "Erro ao realizar login. Verifique suas credenciais.";
 
             setError(errorMessage);
             toast.error(errorMessage);

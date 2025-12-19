@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, MessageSquare, Users, Activity, Bot, Loader, LogOut } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/config/firebase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import WhatsAppInstanceCard from './WhatsAppInstanceCard';
 import WhatsAppConnectionModal, { ConnectionState } from './WhatsAppConnectionModal';
 import AIStatusCard from '@/components/AIStatusCard';
@@ -494,11 +494,13 @@ const Dashboard = () => {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
             <div className="text-center sm:text-left">
               <div className="flex justify-start mb-2">
-                <img
-                  src="/texto-logo.png"
-                  alt="Bora Expandir - Agência de Viagens e Assessoria de Imigração"
-                  className="h-16 sm:h-20 lg:h-24 w-auto -ml-4"
-                />
+                <Link to="/">
+                  <img
+                    src="/texto-logo.png"
+                    alt="Bora Expandir - Agência de Viagens e Assessoria de Imigração"
+                    className="h-16 sm:h-20 lg:h-24 w-auto -ml-4 hover:opacity-80 transition-opacity"
+                  />
+                </Link>
               </div>
               <p className="text-gray-600 mt-1 text-sm sm:text-base">
                 Painel de Controle

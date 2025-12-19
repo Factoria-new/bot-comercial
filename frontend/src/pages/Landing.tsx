@@ -1055,7 +1055,8 @@ const Landing = () => {
                                         className="relative z-10 w-full max-w-sm"
                                     >
                                         <PricingWrapper
-                                            contactHref="/login"
+                                            contactHref="/payment"
+                                            linkState={{ plan: 'basic', period: pricingPeriod, price: pricingPeriod === 'monthly' ? 'R$ 97/mês' : pricingPeriod === 'semiannual' ? 'R$ 582/semestre' : 'R$ 970/ano' }}
                                             type="waves"
                                             className="bg-[#FE601E]"
                                             rotation={rotation}
@@ -1125,7 +1126,8 @@ const Landing = () => {
                                         className="relative z-10 w-full max-w-sm"
                                     >
                                         <PricingWrapper
-                                            contactHref="/contact"
+                                            contactHref="/payment"
+                                            linkState={{ plan: 'pro', period: pricingPeriod, price: pricingPeriod === 'monthly' ? 'R$ 197/mês' : pricingPeriod === 'semiannual' ? 'R$ 1.182/semestre' : 'R$ 1.970/ano' }}
                                             type="waves"
                                             className="bg-[#00A947]"
                                             featured={true}

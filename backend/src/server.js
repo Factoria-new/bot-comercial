@@ -1,16 +1,10 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import logger from './config/logger.js';
-import WhatsAppService from './services/whatsappService.js';
-import WhatsAppController from './controllers/whatsappController.js';
-import CalendarController from './controllers/calendarController.js';
-import createWhatsAppRoutes from './routes/whatsappRoutes.js';
-import createCalendarRoutes from './routes/calendarRoutes.js';
-import calendarService from './services/calendarService.js';
-
+import stripeRoutes from './routes/stripeRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
 
@@ -35,24 +29,6 @@ const isOriginAllowed = (origin) => {
     origin.includes('vercel.app');
 };
 
-// Configuração do Socket.io com CORS
-const io = new Server(httpServer, {
-  cors: {
-    origin: (origin, callback) => {
-      if (isOriginAllowed(origin)) {
-        callback(null, true);
-      } else {
-        logger.warn(`Origem bloqueada por CORS: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
-  },
-  allowEIO3: true
-});
-
 // Middlewares CORS
 app.use(cors({
   origin: (origin, callback) => {
@@ -65,10 +41,17 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature']
 }));
 
-app.use(express.json());
+// Configuração para Webhook do Stripe (precisa do raw body)
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith('/api/stripe/webhook')) {
+      req.rawBody = buf.toString();
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Logging de requisições
@@ -77,22 +60,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Inicializar serviços
-const whatsappService = new WhatsAppService(io);
-const whatsappController = new WhatsAppController(whatsappService);
-
-console.log('\n=== Verificando ENV antes de inicializar CalendarController ===');
-console.log('COMPOSIO_API_KEY:', process.env.COMPOSIO_API_KEY ? `Presente (${process.env.COMPOSIO_API_KEY.substring(0, 10)}...)` : 'AUSENTE');
-console.log('COMPOSIO_AUTH_CONFIG_ID:', process.env.COMPOSIO_AUTH_CONFIG_ID || 'AUSENTE');
-console.log('=============================================================\n');
-
-const calendarController = new CalendarController(whatsappService);
-
 // Rotas
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'WhatsApp AI Backend API',
+    message: 'Factoria Backend API',
     version: '1.0.0',
     status: 'running'
   });
@@ -102,147 +74,15 @@ app.get('/api/status', (req, res) => {
   res.json({
     success: true,
     status: 'online',
-    timestamp: new Date().toISOString(),
-    sessions: whatsappService.getAllSessions()
+    timestamp: new Date().toISOString()
   });
 });
 
-// Rota para verificar sessões ativas (compatibilidade com frontend)
-app.get('/sessions/active', (req, res) => {
-  const sessions = whatsappService.getAllSessions();
-  const activeSessions = sessions.filter(s => s.connected);
+// Rotas do Stripe
+app.use('/api/stripe', stripeRoutes);
 
-  res.json({
-    success: true,
-    count: activeSessions.length,
-    sessions: activeSessions.map(s => ({
-      sessionId: s.sessionId,
-      connected: s.connected,
-      user: s.user || null
-    }))
-  });
-});
-
-// Rotas do WhatsApp
-app.use('/api/whatsapp', createWhatsAppRoutes(whatsappController));
-
-// Rotas do Google Calendar
-app.use('/api/calendar', createCalendarRoutes(calendarController));
-
-// Socket.io event handlers
-io.on('connection', (socket) => {
-  logger.info(`Cliente conectado: ${socket.id}`);
-
-  // Gerar Código
-  socket.on('generate-qr', async (data) => {
-    try {
-      logger.info(`Recebido evento generate-qr:`, data);
-      const { sessionId } = data;
-
-      if (!sessionId) {
-        throw new Error('SessionId não fornecido');
-      }
-
-      logger.info(`Solicitação de QR/Pairing para sessão: ${sessionId} com telefone: ${data.phoneNumber || 'N/A'}`);
-      const result = await whatsappService.generateQR(sessionId, data.phoneNumber);
-      logger.info(`Resultado da geração de QR/Pairing:`, result);
-    } catch (error) {
-      logger.error('Erro ao gerar QR via socket:', error);
-      socket.emit('qr-error', {
-        sessionId: data?.sessionId || 'unknown',
-        error: error.message
-      });
-    }
-  });
-
-  // Logout
-  socket.on('logout', async (data) => {
-    try {
-      const { sessionId } = data;
-      logger.info(`Logout solicitado para sessão: ${sessionId}`);
-
-      // NOVO: Desconectar Calendar ao desconectar instância (pedido do usuário)
-      try {
-        await calendarService.disconnectCalendar(sessionId);
-      } catch (calErr) {
-        logger.warn(`Erro ao desconectar calendar no logout: ${calErr.message}`);
-      }
-
-      // NOVO: removeFiles: false para manter a instância na lista (apenas desconectar)
-      await whatsappService.logout(sessionId, { removeFiles: false });
-    } catch (error) {
-      logger.error('Erro ao fazer logout via socket:', error);
-      socket.emit('logout-error', {
-        sessionId: data.sessionId,
-        error: error.message
-      });
-    }
-  });
-
-  // Forçar reconexão
-  socket.on('force-reconnect', async (data) => {
-    try {
-      const { sessionId } = data;
-      logger.info(`Reconexão forçada para sessão: ${sessionId}`);
-      await whatsappService.forceReconnect(sessionId);
-    } catch (error) {
-      logger.error('Erro ao reconectar via socket:', error);
-      socket.emit('reconnection-failed', {
-        sessionId: data.sessionId,
-        error: error.message
-      });
-    }
-  });
-
-  // Salvar configuração
-  socket.on('save-config', async (data) => {
-    try {
-      const { sessionId, config } = data;
-      logger.info(`Salvando configuração para sessão: ${sessionId}`);
-      await whatsappService.saveConfig(sessionId, config);
-      socket.emit('config-updated', {
-        sessionId,
-        success: true
-      });
-    } catch (error) {
-      logger.error('Erro ao salvar config via socket:', error);
-      socket.emit('config-error', {
-        sessionId: data.sessionId,
-        error: error.message
-      });
-    }
-  });
-
-  // Obter status do AI
-  socket.on('get-ai-status', async (data) => {
-    try {
-      const userId = data?.userId;
-      const sessions = whatsappService.getAllSessions(userId);
-      const activeInstances = sessions.filter(s => s.connected).length;
-
-      // Por enquanto, retornamos valores padrão
-      // Futuramente, estes valores podem ser obtidos de um banco de dados ou cache
-      socket.emit('ai-status-response', {
-        activeInstances: activeInstances,
-        totalMessages: 0,
-        averageResponseTime: 0,
-        errors: 0
-      });
-    } catch (error) {
-      logger.error('Erro ao obter status do AI:', error);
-      socket.emit('ai-status-response', {
-        activeInstances: 0,
-        totalMessages: 0,
-        averageResponseTime: 0,
-        errors: 0
-      });
-    }
-  });
-
-  socket.on('disconnect', () => {
-    logger.info(`Cliente desconectado: ${socket.id}`);
-  });
-});
+// Rotas de Autenticação
+app.use('/api/auth', authRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -264,57 +104,17 @@ app.use((req, res) => {
 // Iniciar servidor
 const PORT = process.env.PORT || 3003;
 
-// Start server after attempting to restore sessions from disk
-async function startServer() {
-  try {
-    // Tentar restaurar sessões persistidas (se houver)
-    if (typeof whatsappService.restoreSessions === 'function') {
-      logger.info('Chamando restoreSessions para restaurar sessões salvas...');
-      const result = await whatsappService.restoreSessions();
-      logger.info('Resultado da restauração de sessões:', result);
-    }
-  } catch (err) {
-    logger.error('Erro ao restaurar sessões na inicialização:', err);
-  }
-
-  httpServer.listen(PORT, () => {
-    console.log('='.repeat(60));
-    console.log('');
-    console.log('   WhatsApp AI Backend Server');
-    console.log('');
-    console.log(`   Servidor rodando em: http://localhost:${PORT}`);
-    console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-
-    console.log('   Socket.io: Ativo');
-    console.log('   CORS: Vercel habilitado (.vercel.app)');
-    console.log('');
-    console.log('   Pronto para receber conexoes WhatsApp!');
-    console.log('');
-    console.log('='.repeat(60));
-  });
-}
-
-startServer();
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('Encerrando servidor gracefully...');
-
-  // Fechar todas as sessões
-  const sessions = whatsappService.getAllSessions();
-  for (const session of sessions) {
-    try {
-      // Durante shutdown não remover arquivos de sessão — preserva credenciais para restore
-      await whatsappService.logout(session.sessionId, { removeFiles: false });
-    } catch (error) {
-      logger.error(`Erro ao fechar sessão ${session.sessionId}:`, error);
-    }
-  }
-
-  httpServer.close(() => {
-    logger.info('Servidor encerrado');
-    process.exit(0);
-  });
+httpServer.listen(PORT, () => {
+  console.log('='.repeat(60));
+  console.log('');
+  console.log('   Factoria Backend Server');
+  console.log('');
+  console.log(`   Servidor rodando em: http://localhost:${PORT}`);
+  console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log('');
+  console.log('   Status: Online');
+  console.log('');
+  console.log('='.repeat(60));
 });
 
 export default app;
