@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, CreditCard, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
 const Payment = () => {
@@ -12,6 +13,7 @@ const Payment = () => {
     const { plan, period, price } = location.state || {};
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState("stripe");
 
     if (!plan) {
         return (
@@ -38,7 +40,11 @@ const Payment = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3003'}/api/stripe/create-checkout-session`, {
+            const endpoint = paymentMethod === 'mercadopago'
+                ? '/api/mercadopago/create-preference'
+                : '/api/stripe/create-checkout-session';
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3003'}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -46,7 +52,9 @@ const Payment = () => {
                 body: JSON.stringify({
                     email,
                     plan,
-                    period
+                    period,
+                    price, // Required for Mercado Pago dynamically, ignored by Stripe controller
+                    title: `Plano ${planName} - ${periodName}` // Optional specifically for MP display
                 }),
             });
 
@@ -56,8 +64,11 @@ const Payment = () => {
                 throw new Error(data.error || 'Erro ao criar sessão de pagamento');
             }
 
-            if (data.url) {
-                window.location.href = data.url;
+            // Mercado Pago returns init_point, Stripe returns url
+            const redirectUrl = data.url || data.init_point || data.sandbox_init_point;
+
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
             } else {
                 throw new Error('URL de pagamento não retornada');
             }
@@ -128,6 +139,32 @@ const Payment = () => {
 
                         <div className="space-y-4 mb-8">
                             <div className="space-y-2">
+                                <Label className="text-slate-700">Forma de Pagamento</Label>
+                                <RadioGroup defaultValue="stripe" value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <RadioGroupItem value="stripe" id="stripe" className="peer sr-only" />
+                                        <Label
+                                            htmlFor="stripe"
+                                            className="flex flex-col items-center justify-between rounded-xl border-2 border-slate-200 bg-white p-4 hover:bg-slate-50 hover:border-[#00A947]/50 peer-data-[state=checked]:border-[#00A947] peer-data-[state=checked]:bg-[#00A947]/5 cursor-pointer transition-all"
+                                        >
+                                            <CreditCard className="mb-3 h-6 w-6 text-slate-700 peer-data-[state=checked]:text-[#00A947]" />
+                                            <span className="font-semibold text-slate-700">Stripe</span>
+                                        </Label>
+                                    </div>
+                                    <div>
+                                        <RadioGroupItem value="mercadopago" id="mercadopago" className="peer sr-only" />
+                                        <Label
+                                            htmlFor="mercadopago"
+                                            className="flex flex-col items-center justify-between rounded-xl border-2 border-slate-200 bg-white p-4 hover:bg-slate-50 hover:border-[#00BCFF]/50 peer-data-[state=checked]:border-[#00BCFF] peer-data-[state=checked]:bg-[#00BCFF]/5 cursor-pointer transition-all"
+                                        >
+                                            <Wallet className="mb-3 h-6 w-6 text-slate-700 peer-data-[state=checked]:text-[#00BCFF]" />
+                                            <span className="font-semibold text-slate-700">Mercado Pago</span>
+                                        </Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+
+                            <div className="space-y-2">
                                 <Label htmlFor="email" className="text-slate-700">Seu melhor e-mail</Label>
                                 <Input
                                     id="email"
@@ -145,7 +182,10 @@ const Payment = () => {
 
                         <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col items-center">
                             <Button
-                                className="w-full bg-[#00A947] hover:bg-[#00A947]/90 text-white font-semibold py-6 text-lg rounded-xl shadow-md hover:shadow-lg transition-all"
+                                className={`w-full text-white font-semibold py-6 text-lg rounded-xl shadow-md hover:shadow-lg transition-all ${paymentMethod === 'mercadopago'
+                                        ? 'bg-[#00BCFF] hover:bg-[#00BCFF]/90'
+                                        : 'bg-[#00A947] hover:bg-[#00A947]/90'
+                                    }`}
                                 onClick={handlePayment}
                                 disabled={isLoading}
                             >
@@ -154,14 +194,14 @@ const Payment = () => {
                                         <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processando...
                                     </div>
                                 ) : (
-                                    'Ir para Pagamento com Stripe'
+                                    `Ir para Pagamento com ${paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Stripe'}`
                                 )}
                             </Button>
 
                             <div className="flex items-center gap-2 mt-4 text-slate-400 text-sm">
                                 <span>🔒 Ambiente Seguro</span>
                                 <span>•</span>
-                                <span>Powered by Stripe</span>
+                                <span>Powered by {paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Stripe'}</span>
                             </div>
                         </div>
                     </motion.div>

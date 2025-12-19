@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import logger from './config/logger.js';
 import stripeRoutes from './routes/stripeRoutes.js';
+import mercadoPagoRoutes from './routes/mercadoPagoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
@@ -80,6 +81,9 @@ app.get('/api/status', (req, res) => {
 
 // Rotas do Stripe
 app.use('/api/stripe', stripeRoutes);
+
+// Rotas do Mercado Pago
+app.use('/api/mercadopago', mercadoPagoRoutes);
 
 // Rotas de Autenticação
 app.use('/api/auth', authRoutes);
