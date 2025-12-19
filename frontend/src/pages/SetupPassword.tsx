@@ -117,8 +117,8 @@ const SetupPassword = () => {
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
             <Card className="w-full max-w-md shadow-lg">
                 <CardHeader>
-                    <CardTitle className="text-2xl text-center">Ativar Conta</CardTitle>
-                    <CardDescription className="text-center">Defina sua senha para acessar a plataforma</CardDescription>
+                    <CardTitle className="text-2xl text-center">Definir Senha</CardTitle>
+                    <CardDescription className="text-center">Crie uma nova senha para sua conta</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">

@@ -11,4 +11,7 @@ router.post('/verify-token', authController.verifyToken);
 // Ideally protected or internal. For now, public but undocumented for dev testing.
 router.post('/register-pending', authController.createPendingUser);
 
+// Solicitar redefinição de senha
+router.post('/forgot-password', authController.requestPasswordReset);
+
 export default router;

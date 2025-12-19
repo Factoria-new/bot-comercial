@@ -713,7 +713,7 @@ export function AnimatedCharactersLogin({
                                 ← Voltar para Home
                             </a>
                             <a
-                                href="#"
+                                href="/forgot-password"
                                 className="text-sm text-[#00A947] hover:underline font-medium"
                                 onMouseEnter={() => setIsSad(true)}
                                 onMouseLeave={() => setIsSad(false)}

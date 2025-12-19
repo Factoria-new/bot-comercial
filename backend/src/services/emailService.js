@@ -45,3 +45,34 @@ export const sendActivationEmail = async (email, token) => {
         throw error;
     }
 };
+
+// Send Reset Password Email
+export const sendPasswordResetEmail = async (email, token) => {
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const resetLink = `${frontendUrl}/setup-password?token=${token}`;
+
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
+        logger.info(`[EmailService] SMTP not configured. Reset Link for ${email}: ${resetLink}`);
+        return;
+    }
+
+    try {
+        const transporter = getTransporter();
+        await transporter.sendMail({
+            from: '"Factoria Bot" <noreply@factoria.com>',
+            to: email,
+            subject: 'Redefinição de Senha - Factoria',
+            html: `
+        <h1>Redefinição de Senha</h1>
+        <p>Você solicitou a redefinição de sua senha. Clique no link abaixo para criar uma nova senha:</p>
+        <a href="${resetLink}">Redefinir Senha</a>
+        <p>Se você não solicitou isso, apenas ignore este email.</p>
+      `,
+        });
+        logger.info(`[EmailService] Reset email sent to ${email}`);
+    } catch (error) {
+        logger.error(`[EmailService] Error sending reset email to ${email}:`, error);
+        logger.info(`[EmailService] (Fallback) Reset Link for ${email}: ${resetLink}`);
+        throw error;
+    }
+};

@@ -51,6 +51,19 @@ export const createPendingUser = async (req, res) => {
     }
 }
 
+export const requestPasswordReset = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const token = await authService.requestPasswordReset(email);
+        await emailService.sendPasswordResetEmail(email, token);
+        res.json({ success: true, message: 'Password reset email sent' });
+    } catch (error) {
+        // Log error but generally return success/generic message for security in public apps
+        // For this internal/commercial tool, specific error is fine
+        res.status(400).json({ error: error.message });
+    }
+};
+
 export const verifyToken = async (req, res) => {
     try {
         const { token } = req.body;

@@ -93,6 +93,7 @@ export const handleWebhook = async (req, res) => {
 // Lógica de criação de usuário
 const handleCheckoutCompleted = async (session) => {
     const email = session.customer_email || session.metadata.user_email;
+    const name = session.customer_details?.name || session.custom_fields?.[0]?.text?.value || '';
     const plan = session.metadata.plan;
     const period = session.metadata.period;
 
@@ -101,42 +102,38 @@ const handleCheckoutCompleted = async (session) => {
         return;
     }
 
-    logger.info(`Processing new subscription for email: ${email} - Plan: ${plan}`);
+    logger.info(`Processing new subscription for email: ${email} - Name: ${name} - Plan: ${plan}`);
 
     try {
         let userId;
+        let token;
 
         // 1. Verificar se usuário já existe no Firestore
-        // O authService.createPendingUser já faz essa verificação, mas precisamos saber
-        // se é um update ou create para logar corretamente.
-
-        // Vamos tentar usar o authService diretamente
-        // Se o usuário não existir, cria e retorna token
-        // Se existir, precisamos apenas atualizar a role
-
         const usersRef = db.collection('users');
         const snapshot = await usersRef.where('email', '==', email).limit(1).get();
 
         if (snapshot.empty) {
             // New User
             logger.info(`Creating new pending user for ${email}`);
-            const token = await authService.createPendingUser(email);
+            // Pass name to createPendingUser
+            token = await authService.createPendingUser(email, name);
 
-            // Send Activation Email
-            await emailService.sendActivationEmail(email, token);
-
-            // Get the ID of the newly created user (we need to query again or Refactor createPendingUser to return ID)
-            // For simplicity, let's just query again quickly or assume authService did its job
+            // Get the ID of the newly created user to update Plan BEFORE sending email
             const newSnap = await usersRef.where('email', '==', email).limit(1).get();
             userId = newSnap.docs[0].id;
-
         } else {
             // Existing User
             userId = snapshot.docs[0].id;
             logger.info(`Updating existing user: ${userId}`);
+
+            // Update Name if missing and provided
+            if (name && !snapshot.docs[0].data().displayName) {
+                await usersRef.doc(userId).update({ displayName: name });
+            }
         }
 
-        // 2. Atualizar detalhes da assinatura no Firestore
+        // 2. Atualizar detalhes da assinatura no Firestore (Role PRO)
+        // Isso garante que quando o usuário clicar no link, o Role já esteja correto.
         const subscriptionData = {
             role: plan === 'pro' || plan === 'Pro_Mensal' || plan === 'Pro_Semestral' || plan === 'Pro_Anual' ? 'pro' : 'basic',
             plan: plan,
@@ -146,9 +143,30 @@ const handleCheckoutCompleted = async (session) => {
             updatedAt: new Date().toISOString()
         };
 
-        await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
+        if (name) {
+            subscriptionData.displayName = name;
+        }
 
-        logger.info(`User ${userId} updated successfully with plan ${plan}`);
+        await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
+        logger.info(`User ${userId} updated successfully with plan ${plan} (Role: ${subscriptionData.role})`);
+
+        // 3. Enviar Email de Ativação (APÓS garantir que o Role está salvo)
+        // Apenas enviamos se tivermos um token (novo usuário). 
+        // Se for usuário existente, talvez não precisemos enviar o link de set-password, 
+        // ou talvez devêssemos enviar um "Welcome Back" ou notificação.
+        // O fluxo atual enviava apenas para novos criações no createPendingUser?
+        // Ah, createPendingUser retorna token apenas se criou? Não, ele gera token sempre na minha implementação do passo 91?
+        // Vamos checar authService.createPendingUser
+
+        // Se createPendingUser foi chamado, temos Token.
+        if (token) {
+            await emailService.sendActivationEmail(email, token);
+            logger.info(`Activation email sent to ${email}`);
+        } else {
+            // Se usuário já existia, talvez queiramos enviar email se ele ainda estiver pendente?
+            // Mas aqui assumimos fluxo de nova compra. Se já existe, apenas atualizamos o plano.
+            logger.info(`Activation email skipped for existing user ${email}`);
+        }
 
     } catch (error) {
         logger.error(`Error handling checkout completion for ${email}:`, error);

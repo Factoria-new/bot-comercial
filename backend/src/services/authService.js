@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_dev';
 const SALT_ROUNDS = 10;
 
 // Create a new user (Pending state) called after payment
-export const createPendingUser = async (email) => {
+export const createPendingUser = async (email, name) => {
     const userRef = db.collection('users').where('email', '==', email).limit(1);
     const snapshot = await userRef.get();
 
@@ -15,11 +15,15 @@ export const createPendingUser = async (email) => {
         // User already exists, maybe update status or check if already active
         const userDoc = snapshot.docs[0];
         uid = userDoc.id;
-        // Optional: Check if already active
+        // Optional: Update name if provided and not set?
+        if (name && !userDoc.data().displayName) {
+            await userDoc.ref.update({ displayName: name });
+        }
     } else {
         // Create new user
         const newUser = {
             email,
+            displayName: name || '',
             role: 'basic', // Default payment role
             status: 'pending',
             createdAt: new Date().toISOString(),
@@ -33,10 +37,29 @@ export const createPendingUser = async (email) => {
     return token;
 };
 
-// Set Password (Activation)
+// Request Password Reset
+export const requestPasswordReset = async (email) => {
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.where('email', '==', email).limit(1).get();
+
+    if (snapshot.empty) {
+        // Silently fail for security or throw error? 
+        // Standard practice is to not reveal user existence, but for this app explicit error might be better for UX
+        // Let's return null to controller to decide or throw generic message
+        throw new Error('User not found');
+    }
+
+    const startUser = snapshot.docs[0];
+    const uid = startUser.id;
+
+    const token = jwt.sign({ uid, email, type: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
+    return token;
+};
+
+// Set Password (Activation or Reset)
 export const setPassword = async (token, password) => {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.type !== 'activation') {
+    if (!['activation', 'reset'].includes(decoded.type)) {
         throw new Error('Invalid token type');
     }
 
@@ -50,14 +73,20 @@ export const setPassword = async (token, password) => {
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+    const userData = userSnap.data();
+
     await userRef.update({
         password: hashedPassword,
         status: 'active',
         updatedAt: new Date().toISOString(),
     });
 
-    // Return new session token
-    const sessionToken = jwt.sign({ uid, email: decoded.email }, JWT_SECRET, { expiresIn: '7d' });
+    // Return new session token with role
+    const sessionToken = jwt.sign({
+        uid,
+        email: decoded.email,
+        role: userData.role || 'basic'
+    }, JWT_SECRET, { expiresIn: '7d' });
     return sessionToken;
 };
 

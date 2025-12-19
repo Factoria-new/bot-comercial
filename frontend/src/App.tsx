@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Payment from "./pages/Payment";
 import CheckEmail from "./pages/CheckEmail";
 import SetupPassword from "./pages/SetupPassword";
+import ForgotPassword from "./pages/ForgotPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/payment" element={<Payment />} />
               <Route path="/check-email" element={<CheckEmail />} />
               <Route path="/setup-password" element={<SetupPassword />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

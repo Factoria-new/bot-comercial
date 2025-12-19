@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, MessageSquare, Users, Activity, Bot, Loader, LogOut } from 'lucide-react';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/config/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import WhatsAppInstanceCard from './WhatsAppInstanceCard';
 import WhatsAppConnectionModal, { ConnectionState } from './WhatsAppConnectionModal';
@@ -35,7 +33,7 @@ const Dashboard = () => {
   const isRemovingRef = useRef(false);
   const { toast } = useToast();
   const { socket, isConnected } = useSocket();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   // Bloquear botão de voltar
@@ -63,7 +61,7 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      logout();
       toast({
         title: "Logout realizado",
         description: "Você saiu do sistema com sucesso.",
