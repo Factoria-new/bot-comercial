@@ -1,18 +1,22 @@
 import nodemailer from 'nodemailer';
 import logger from '../config/logger.js';
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
+// Lazy load transporter to ensure env vars are loaded
+const getTransporter = () => {
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+        },
+    });
+};
 
 export const sendActivationEmail = async (email, token) => {
-    const activationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/setup-password?token=${token}`;
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const activationLink = `${frontendUrl}/setup-password?token=${token}`;
 
     // If no SMTP config, log to console for dev
     if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
@@ -21,6 +25,7 @@ export const sendActivationEmail = async (email, token) => {
     }
 
     try {
+        const transporter = getTransporter();
         await transporter.sendMail({
             from: '"Factoria Bot" <noreply@factoria.com>',
             to: email,
