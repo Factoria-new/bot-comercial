@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Integration } from "@/types/onboarding";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 
 interface IntegrationCardsProps {
     integrations: Integration[];
@@ -10,6 +10,7 @@ interface IntegrationCardsProps {
     isConnecting?: boolean;
     className?: string;
     compact?: boolean;
+    lightMode?: boolean;
 }
 
 // Official brand SVG icons
@@ -47,9 +48,9 @@ export default function IntegrationCards({
     isConnecting,
     className,
     compact = false,
+    lightMode = false,
 }: IntegrationCardsProps) {
     if (compact) {
-        // Compact view for sidebar/panel
         return (
             <div className={cn("space-y-2", className)}>
                 {integrations.map((integration) => {
@@ -60,8 +61,8 @@ export default function IntegrationCards({
                             className={cn(
                                 "flex items-center gap-3 p-3 rounded-lg transition-all",
                                 integration.connected
-                                    ? "bg-emerald-900/30 border border-emerald-700/50"
-                                    : "bg-neutral-800/30 border border-neutral-700/50"
+                                    ? lightMode ? "bg-emerald-50 border border-emerald-200" : "bg-emerald-900/30 border border-emerald-700/50"
+                                    : lightMode ? "bg-gray-50 border border-gray-200" : "bg-neutral-800/30 border border-neutral-700/50"
                             )}
                         >
                             <div
@@ -71,17 +72,17 @@ export default function IntegrationCards({
                                 {Icon && <Icon className="w-4 h-4 text-white" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">
+                                <p className={cn("text-sm font-medium truncate", lightMode ? "text-gray-900" : "text-white")}>
                                     {integration.name}
                                 </p>
                                 {integration.connected && integration.username && (
-                                    <p className="text-xs text-neutral-400 truncate">
+                                    <p className={cn("text-xs truncate", lightMode ? "text-gray-500" : "text-neutral-400")}>
                                         {integration.username}
                                     </p>
                                 )}
                             </div>
                             {integration.connected && (
-                                <Check className="w-4 h-4 text-emerald-400" />
+                                <Check className="w-4 h-4 text-emerald-500" />
                             )}
                         </div>
                     );
@@ -90,7 +91,7 @@ export default function IntegrationCards({
         );
     }
 
-    // Full cards view for onboarding - SMALLER and NO glass effect
+    // Full cards view for onboarding
     return (
         <div className={cn("flex flex-wrap justify-center gap-3 p-4", className)}>
             {integrations.map((integration) => {
@@ -104,8 +105,10 @@ export default function IntegrationCards({
                             "relative flex flex-col items-center gap-2 p-3 rounded-xl transition-all",
                             "border",
                             integration.connected
-                                ? "bg-neutral-800 border-emerald-600 cursor-default"
-                                : "bg-neutral-900 border-neutral-700 hover:border-neutral-500 hover:bg-neutral-800 cursor-pointer",
+                                ? lightMode ? "bg-emerald-50 border-emerald-300 cursor-default" : "bg-neutral-800 border-emerald-600 cursor-default"
+                                : lightMode
+                                    ? "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer shadow-sm"
+                                    : "bg-neutral-900 border-neutral-700 hover:border-neutral-500 hover:bg-neutral-800 cursor-pointer",
                             isConnecting && "opacity-50 cursor-wait"
                         )}
                         style={{ minWidth: '100px' }}
@@ -118,7 +121,6 @@ export default function IntegrationCards({
                             </div>
                         )}
 
-                        {/* Icon with brand color */}
                         <div
                             className="w-10 h-10 rounded-xl flex items-center justify-center"
                             style={{ backgroundColor: integration.color }}
@@ -126,8 +128,7 @@ export default function IntegrationCards({
                             {Icon && <Icon className="w-5 h-5 text-white" />}
                         </div>
 
-                        {/* Name only */}
-                        <p className="text-xs font-medium text-white text-center">
+                        <p className={cn("text-xs font-medium text-center", lightMode ? "text-gray-900" : "text-white")}>
                             {integration.name}
                         </p>
                     </button>

@@ -14,6 +14,7 @@ import {
     Wifi,
     Link2,
     Check,
+    LogOut,
 } from "lucide-react";
 import { useSocket } from "@/contexts/SocketContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +57,7 @@ interface DashboardSidebarProps {
     connectedInstances?: number;
     totalInstances?: number;
     integrations?: Integration[];
+    onLogout?: () => void;
 }
 
 export default function DashboardSidebar({
@@ -66,6 +68,7 @@ export default function DashboardSidebar({
     connectedInstances = 0,
     totalInstances = 0,
     integrations = [],
+    onLogout,
 }: DashboardSidebarProps) {
     const { isConnected } = useSocket();
     const { user } = useAuth();
@@ -112,24 +115,24 @@ export default function DashboardSidebar({
             {/* Overlay */}
             <div
                 className={cn(
-                    "fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300",
+                    "fixed inset-0 bg-black/30 z-40 transition-opacity duration-300",
                     isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
                 onClick={onClose}
             />
 
-            {/* Sidebar */}
+            {/* Sidebar - Light Mode */}
             <div
                 className={cn(
-                    "fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-neutral-900/95 backdrop-blur-xl z-50",
-                    "border-r border-emerald-900/30 shadow-2xl shadow-black/50",
+                    "fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white z-50",
+                    "border-r border-gray-200 shadow-xl",
                     "transform transition-transform duration-300 ease-out",
                     "flex flex-col",
                     isOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 {/* Header */}
-                <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200">
                     <div className="flex items-center gap-3">
                         <img
                             src="/logo-header.png"
@@ -137,7 +140,7 @@ export default function DashboardSidebar({
                             className="h-8 w-auto"
                         />
                         <div>
-                            <h2 className="text-white font-semibold text-sm">Factoria</h2>
+                            <h2 className="text-gray-900 font-semibold text-sm">Factoria</h2>
                             <div className="flex items-center gap-1.5">
                                 <div
                                     className={cn(
@@ -145,7 +148,7 @@ export default function DashboardSidebar({
                                         isConnected ? "bg-emerald-500" : "bg-red-500"
                                     )}
                                 />
-                                <span className="text-xs text-white/50">
+                                <span className="text-xs text-gray-500">
                                     {isConnected ? "Online" : "Offline"}
                                 </span>
                             </div>
@@ -155,28 +158,28 @@ export default function DashboardSidebar({
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="text-white/60 hover:text-white hover:bg-white/10"
+                        className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                     >
                         <X className="w-5 h-5" />
                     </Button>
                 </div>
 
                 {/* User Info */}
-                <div className="flex-shrink-0 p-4 border-b border-white/10">
+                <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-50">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white font-bold">
                             {user?.email?.charAt(0).toUpperCase() || "U"}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-medium truncate">
+                            <p className="text-gray-900 text-sm font-medium truncate">
                                 {user?.email}
                             </p>
                             <span
                                 className={cn(
                                     "text-[10px] font-bold px-2 py-0.5 rounded-full",
                                     user?.role === "pro" || user?.role === "admin"
-                                        ? "text-emerald-400 bg-emerald-400/10"
-                                        : "text-neutral-400 bg-neutral-400/10"
+                                        ? "text-emerald-600 bg-emerald-100"
+                                        : "text-gray-500 bg-gray-200"
                                 )}
                             >
                                 {user?.role === "pro" || user?.role === "admin" ? "PRO" : "BÁSICO"}
@@ -197,28 +200,28 @@ export default function DashboardSidebar({
                             }}
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                                "group hover:bg-white/5",
+                                "group hover:bg-gray-100",
                                 currentPage === item.id
-                                    ? "bg-emerald-600/20 text-emerald-400"
-                                    : "text-white/70 hover:text-white"
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "text-gray-700 hover:text-gray-900"
                             )}
                         >
                             <item.icon
                                 className={cn(
                                     "w-5 h-5 transition-colors",
                                     currentPage === item.id
-                                        ? "text-emerald-400"
-                                        : "text-white/50 group-hover:text-white/80"
+                                        ? "text-emerald-600"
+                                        : "text-gray-400 group-hover:text-gray-600"
                                 )}
                             />
                             <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">{item.label}</p>
-                                <p className="text-xs text-white/40">{item.description}</p>
+                                <p className="text-xs text-gray-400">{item.description}</p>
                             </div>
                             <ChevronRight
                                 className={cn(
                                     "w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity",
-                                    currentPage === item.id ? "text-emerald-400" : "text-white/30"
+                                    currentPage === item.id ? "text-emerald-500" : "text-gray-300"
                                 )}
                             />
                         </button>
@@ -230,33 +233,33 @@ export default function DashboardSidebar({
                             onClick={() => setIntegrationsExpanded(!integrationsExpanded)}
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                                "group hover:bg-white/5",
+                                "group hover:bg-gray-100",
                                 integrationsExpanded
-                                    ? "bg-emerald-600/20 text-emerald-400"
-                                    : "text-white/70 hover:text-white"
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "text-gray-700 hover:text-gray-900"
                             )}
                         >
                             <Link2
                                 className={cn(
                                     "w-5 h-5 transition-colors",
                                     integrationsExpanded
-                                        ? "text-emerald-400"
-                                        : "text-white/50 group-hover:text-white/80"
+                                        ? "text-emerald-600"
+                                        : "text-gray-400 group-hover:text-gray-600"
                                 )}
                             />
                             <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">Integrações</p>
-                                <p className="text-xs text-white/40">{connectedIntegrations} conectada(s)</p>
+                                <p className="text-xs text-gray-400">{connectedIntegrations} conectada(s)</p>
                             </div>
                             {connectedIntegrations > 0 && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-600/30 text-emerald-400">
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">
                                     {connectedIntegrations}
                                 </span>
                             )}
                             {integrationsExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-emerald-400" />
+                                <ChevronDown className="w-4 h-4 text-emerald-500" />
                             ) : (
-                                <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-white/50" />
+                                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400" />
                             )}
                         </button>
 
@@ -275,9 +278,9 @@ export default function DashboardSidebar({
                                             key={integration.id}
                                             className={cn(
                                                 "flex items-center gap-3 px-3 py-2 rounded-lg",
-                                                "bg-white/5 border",
+                                                "bg-gray-50 border",
                                                 integration.connected
-                                                    ? "border-emerald-700/50"
+                                                    ? "border-emerald-200"
                                                     : "border-transparent"
                                             )}
                                         >
@@ -288,15 +291,15 @@ export default function DashboardSidebar({
                                                 {Icon && <Icon className="w-3.5 h-3.5 text-white" />}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-medium text-white truncate">
+                                                <p className="text-xs font-medium text-gray-900 truncate">
                                                     {integration.name}
                                                 </p>
-                                                <p className="text-[10px] text-white/40">
+                                                <p className="text-[10px] text-gray-400">
                                                     {integration.connected ? "Conectado" : "Não conectado"}
                                                 </p>
                                             </div>
                                             {integration.connected && (
-                                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                                <Check className="w-3.5 h-3.5 text-emerald-500" />
                                             )}
                                         </div>
                                     );
@@ -315,42 +318,54 @@ export default function DashboardSidebar({
                             }}
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                                "group hover:bg-white/5",
+                                "group hover:bg-gray-100",
                                 currentPage === item.id
-                                    ? "bg-emerald-600/20 text-emerald-400"
-                                    : "text-white/70 hover:text-white"
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "text-gray-700 hover:text-gray-900"
                             )}
                         >
                             <item.icon
                                 className={cn(
                                     "w-5 h-5 transition-colors",
                                     currentPage === item.id
-                                        ? "text-emerald-400"
-                                        : "text-white/50 group-hover:text-white/80"
+                                        ? "text-emerald-600"
+                                        : "text-gray-400 group-hover:text-gray-600"
                                 )}
                             />
                             <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">{item.label}</p>
-                                <p className="text-xs text-white/40">{item.description}</p>
+                                <p className="text-xs text-gray-400">{item.description}</p>
                             </div>
                             {item.badge && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-600/30 text-emerald-400">
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">
                                     {item.badge}
                                 </span>
                             )}
                             <ChevronRight
                                 className={cn(
                                     "w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity",
-                                    currentPage === item.id ? "text-emerald-400" : "text-white/30"
+                                    currentPage === item.id ? "text-emerald-500" : "text-gray-300"
                                 )}
                             />
                         </button>
                     ))}
                 </nav>
 
-                {/* Footer */}
-                <div className="flex-shrink-0 p-4 border-t border-white/10">
-                    <p className="text-xs text-white/30 text-center">
+                {/* Footer with Logout */}
+                <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 space-y-3">
+                    {onLogout && (
+                        <button
+                            onClick={() => {
+                                onLogout();
+                                onClose();
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-red-600 hover:bg-red-50 hover:text-red-700 group"
+                        >
+                            <LogOut className="w-5 h-5" />
+                            <span className="text-sm font-medium">Sair da conta</span>
+                        </button>
+                    )}
+                    <p className="text-xs text-gray-400 text-center">
                         © {new Date().getFullYear()} Factoria Assistant
                     </p>
                 </div>

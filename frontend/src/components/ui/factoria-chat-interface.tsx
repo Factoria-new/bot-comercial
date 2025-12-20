@@ -10,10 +10,8 @@ import {
     LogOut,
     Menu,
     RotateCcw,
-    Eye,
-    EyeOff,
+    GripVertical,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import ChatMessages from "@/components/chat/ChatMessages";
 import IntegrationCards from "@/components/chat/IntegrationCards";
@@ -63,7 +61,10 @@ export default function FactoriaChatInterface({
     onOpenSidebar,
 }: FactoriaChatInterfaceProps) {
     const [message, setMessage] = useState("");
-    const [showApiKey, setShowApiKey] = useState(false);
+    const [chatWidth, setChatWidth] = useState(50); // Percentage of screen for chat (on right)
+    const [isResizing, setIsResizing] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
     const { textareaRef, adjustHeight } = useAutoResizeTextarea({
         minHeight: 48,
         maxHeight: 150,
@@ -86,6 +87,44 @@ export default function FactoriaChatInterface({
         }
     }, [isInitialized, state.messages.length, startOnboarding]);
 
+    // Handle resize
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+    }, []);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing || !containerRef.current) return;
+
+            const containerRect = containerRef.current.getBoundingClientRect();
+            // Calculate from right side - chat width is the remaining percentage
+            const leftPanelWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+            const newChatWidth = 100 - leftPanelWidth;
+
+            // Clamp chat between 30% and 70%
+            setChatWidth(Math.min(70, Math.max(30, newChatWidth)));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+        };
+
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, [isResizing]);
+
     const handleSend = () => {
         if (message.trim() && !state.isTyping) {
             handleUserInput(message.trim());
@@ -101,8 +140,7 @@ export default function FactoriaChatInterface({
         }
     };
 
-    const isApiKeyStep = state.step === 'api-key' || (state.step as string) === 'change-api-key';
-    const showIntegrations = state.step === 'integrations';
+    const showIntegrations = false; // Integrations removed from flow for now
     const isInputDisabled = state.isTyping || state.step === 'generating-agent';
 
     // Get placeholder based on step
@@ -111,192 +149,189 @@ export default function FactoriaChatInterface({
             return 'Pergunte algo ou digite "ajuda" para ver comandos...';
         }
         switch (state.step) {
-            case 'api-key':
-                return 'Cole sua chave de API do Gemini aqui...';
             case 'company-name':
-                return 'Digite o nome da sua empresa...';
-            case 'company-niche':
-                return 'Ex: E-commerce, Saúde, Educação...';
+                return 'Ex: Loja da Maria, Tech Solutions...';
+            case 'company-segment':
+                return 'Ex: Moda, Tecnologia, Alimentação...';
             case 'company-products':
-                return 'Ex: Roupas femininas, Cursos online...';
+                return 'Descreva seus produtos ou serviços...';
+            case 'company-prices':
+                return 'Ex: R$ 50 a R$ 200, ou tabela de preços...';
+            case 'company-differentials':
+                return 'O que torna você especial?';
             case 'company-tone':
-                return 'Ex: Amigável, Profissional, Casual...';
+                return 'Ex: Amigável, Profissional, Descontraído...';
+            case 'company-contact':
+                return 'Ex: (11) 99999-9999, contato@empresa.com';
             default:
                 return 'Digite sua mensagem...';
         }
     };
 
-    // Layout changes after onboarding - chat goes to right
-    const chatContainerClass = isOnboardingComplete
-        ? "max-w-2xl mr-4 lg:mr-8 ml-auto" // Right aligned after onboarding
-        : "max-w-3xl mx-auto"; // Centered during onboarding
+    const leftPanelWidth = 100 - chatWidth;
 
     return (
         <div
-            className="relative w-full h-screen flex flex-col overflow-hidden"
-            style={{
-                background: `
-          radial-gradient(ellipse 80% 50% at 50% 100%, rgba(0, 169, 71, 0.4) 0%, transparent 60%),
-          radial-gradient(ellipse 60% 40% at 50% 110%, rgba(25, 177, 89, 0.6) 0%, transparent 50%),
-          linear-gradient(to bottom, #0a0a0a 0%, #111111 100%)
-        `,
-            }}
+            ref={containerRef}
+            className="relative w-full h-screen flex overflow-hidden bg-gradient-to-br from-gray-50 to-white"
         >
-            {/* Header */}
-            <div className="flex-shrink-0 flex justify-between items-center p-4 sm:p-6 z-20">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onOpenSidebar}
-                    className="text-white/70 hover:text-white hover:bg-white/10"
+            {/* Fixed Menu Button - Top Left Corner */}
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={onOpenSidebar}
+                className="fixed top-4 left-4 z-50 text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white/80 backdrop-blur-sm shadow-sm"
+            >
+                <Menu className="w-5 h-5" />
+            </Button>
+
+            {/* Left Panel - Empty for now (metrics in the future) */}
+            {isOnboardingComplete && (
+                <div
+                    className="h-full flex items-center justify-center bg-gray-50"
+                    style={{ width: `${leftPanelWidth}%` }}
                 >
-                    <Menu className="w-5 h-5" />
-                </Button>
-
-                <div className="flex items-center gap-3">
-                    <img
-                        src="/logo-header.png"
-                        alt="Factoria"
-                        className="h-8 w-auto"
-                    />
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={resetOnboarding}
-                        className="text-white/40 hover:text-white hover:bg-white/10"
-                        title="Reiniciar onboarding (teste)"
-                    >
-                        <RotateCcw className="w-4 h-4" />
-                    </Button>
-
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onLogout}
-                        className="text-white/70 hover:text-red-400 hover:bg-white/10"
-                    >
-                        <LogOut className="w-5 h-5" />
-                    </Button>
-                </div>
-            </div>
-
-            {/* Chat Messages Area - Right aligned after onboarding */}
-            <div className={cn("flex-1 overflow-hidden", isOnboardingComplete && "flex")}>
-                {/* Left side placeholder for future content (metrics) */}
-                {isOnboardingComplete && (
-                    <div className="hidden lg:flex flex-1 items-center justify-center border-r border-emerald-900/20">
-                        <div className="text-center text-white/30 p-8">
-                            <p className="text-sm">Métricas e análises em breve</p>
-                        </div>
+                    <div className="text-center text-gray-400 p-8">
+                        <p className="text-sm">Métricas e análises em breve</p>
                     </div>
-                )}
-
-                {/* Chat on the right */}
-                <div className={cn("h-full", isOnboardingComplete ? "w-full lg:w-1/2" : "w-full")}>
-                    <ChatMessages
-                        messages={state.messages}
-                        isTyping={state.isTyping}
-                        className="h-full"
-                    />
                 </div>
-            </div>
+            )}
 
-            {/* Integration Cards (when in integrations step only) */}
-            {showIntegrations && (
-                <div className="flex-shrink-0 px-4 pb-4">
-                    <div className="max-w-3xl mx-auto">
+            {/* Resize Handle */}
+            {isOnboardingComplete && (
+                <div
+                    className={cn(
+                        "w-px h-full cursor-col-resize flex items-center justify-center group bg-gray-200",
+                        "hover:bg-emerald-400 transition-colors",
+                        isResizing && "bg-emerald-500"
+                    )}
+                    onMouseDown={handleMouseDown}
+                >
+                    <div className={cn(
+                        "absolute w-4 h-12 rounded-full flex items-center justify-center",
+                        "bg-gray-200 group-hover:bg-emerald-400 transition-colors border border-gray-300",
+                        isResizing && "bg-emerald-500"
+                    )}>
+                        <GripVertical className="w-3 h-3 text-gray-500" />
+                    </div>
+                </div>
+            )}
+
+            {/* Right Panel - Chat (resizable) */}
+            <div
+                className="h-full flex flex-col"
+                style={{ width: isOnboardingComplete ? `${chatWidth}%` : '100%' }}
+            >
+                {/* Header */}
+                <div className="flex-shrink-0 flex justify-between items-center p-4 sm:p-6 z-20 border-b border-gray-200">
+                    {/* Spacer for menu button area */}
+                    <div className="w-10" />
+
+                    <div className="flex items-center gap-3">
+                        <img
+                            src="/logo-header.png"
+                            alt="Factoria"
+                            className="h-8 w-auto"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={resetOnboarding}
+                            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                            title="Reiniciar onboarding (teste)"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onLogout}
+                            className="text-gray-600 hover:text-red-500 hover:bg-gray-100"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Chat Messages */}
+                <ChatMessages
+                    messages={state.messages}
+                    isTyping={state.isTyping}
+                    className="flex-1"
+                    lightMode
+                />
+
+                {/* Integration Cards (when in integrations step only) */}
+                {showIntegrations && (
+                    <div className="flex-shrink-0 px-4 pb-4">
                         <IntegrationCards
                             integrations={state.integrations}
                             onConnect={connectIntegration}
                             isConnecting={state.isTyping}
+                            lightMode
                         />
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Input Box Section - Always show after onboarding, right aligned */}
-            {!showIntegrations && (
-                <div className={cn("flex-shrink-0 w-full px-4 pb-6", chatContainerClass)}>
-                    <div className="relative bg-black/60 backdrop-blur-md rounded-xl border border-emerald-900/50 shadow-2xl shadow-emerald-900/20">
-                        <div className="relative">
-                            <Textarea
-                                ref={textareaRef}
-                                value={message}
-                                onChange={(e) => {
-                                    setMessage(e.target.value);
-                                    adjustHeight();
-                                }}
-                                onKeyDown={handleKeyDown}
-                                placeholder={getPlaceholder()}
-                                disabled={isInputDisabled}
-                                className={cn(
-                                    "w-full px-4 py-3 resize-none border-none",
-                                    "bg-transparent text-white text-sm sm:text-base",
-                                    "focus-visible:ring-0 focus-visible:ring-offset-0",
-                                    "placeholder:text-neutral-500 min-h-[48px]",
-                                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                                    isApiKeyStep && !showApiKey && "font-mono tracking-wider"
-                                )}
-                                style={{ overflow: "hidden" }}
-                            />
+                {/* Input Box */}
+                {!showIntegrations && (
+                    <div className="flex-shrink-0 p-4">
+                        <div className="max-w-3xl mx-auto">
+                            <div className="relative bg-white rounded-xl border border-gray-200 shadow-lg">
+                                <div className="relative">
+                                    <Textarea
+                                        ref={textareaRef}
+                                        value={message}
+                                        onChange={(e) => {
+                                            setMessage(e.target.value);
+                                            adjustHeight();
+                                        }}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder={getPlaceholder()}
+                                        disabled={isInputDisabled}
+                                        className={cn(
+                                            "w-full px-4 py-3 resize-none border-none rounded-t-xl",
+                                            "bg-transparent text-gray-900 text-sm sm:text-base",
+                                            "focus-visible:ring-0 focus-visible:ring-offset-0",
+                                            "placeholder:text-gray-400 min-h-[48px]",
+                                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                                        )}
+                                        style={{ overflow: "hidden" }}
+                                    />
+                                </div>
 
-                            {/* Show/Hide API Key toggle */}
-                            {isApiKeyStep && message.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowApiKey(!showApiKey)}
-                                    className="absolute right-14 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
-                                >
-                                    {showApiKey ? (
-                                        <EyeOff className="w-4 h-4" />
-                                    ) : (
-                                        <Eye className="w-4 h-4" />
-                                    )}
-                                </button>
-                            )}
-                        </div>
+                                <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                        disabled
+                                    >
+                                        <Paperclip className="w-4 h-4" />
+                                    </Button>
 
-                        {/* Footer Buttons */}
-                        <div className="flex items-center justify-between p-3">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-white/60 hover:text-white hover:bg-white/10"
-                                disabled
-                            >
-                                <Paperclip className="w-4 h-4" />
-                            </Button>
-
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    onClick={handleSend}
-                                    disabled={!message.trim() || isInputDisabled}
-                                    className={cn(
-                                        "flex items-center gap-1 px-3 py-2 rounded-lg transition-all",
-                                        message.trim() && !isInputDisabled
-                                            ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/30"
-                                            : "bg-neutral-700 text-neutral-400 cursor-not-allowed"
-                                    )}
-                                >
-                                    <ArrowUpIcon className="w-4 h-4" />
-                                    <span className="sr-only">Enviar</span>
-                                </Button>
+                                    <Button
+                                        onClick={handleSend}
+                                        disabled={!message.trim() || isInputDisabled}
+                                        className={cn(
+                                            "flex items-center gap-1 px-3 py-2 rounded-lg transition-all",
+                                            message.trim() && !isInputDisabled
+                                                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md"
+                                                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                        )}
+                                    >
+                                        <ArrowUpIcon className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {/* Subtle glow effect at bottom */}
-            <div
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[120%] h-[30vh] pointer-events-none z-0"
-                style={{
-                    background: `radial-gradient(ellipse 50% 70% at 50% 100%, rgba(0, 169, 71, 0.15) 0%, transparent 70%)`,
-                }}
-            />
+                )}
+            </div>
         </div>
     );
 }

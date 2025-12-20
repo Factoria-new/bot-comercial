@@ -1,16 +1,50 @@
 import express from 'express';
 import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import logger from './config/logger.js';
 import stripeRoutes from './routes/stripeRoutes.js';
 import mercadoPagoRoutes from './routes/mercadoPagoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import agentRoutes from './routes/agentRoutes.js';
 
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// Socket.IO configuration
+const io = new Server(httpServer, {
+  cors: {
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://127.0.0.1:5173',
+      'https://bot-bora.vercel.app',
+      process.env.FRONTEND_URL
+    ].filter(Boolean),
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
+
+// Socket.IO connection handler
+io.on('connection', (socket) => {
+  logger.info(`✅ Cliente conectado: ${socket.id}`);
+
+  socket.on('disconnect', (reason) => {
+    logger.info(`❌ Cliente desconectado: ${socket.id} - Motivo: ${reason}`);
+  });
+
+  // Ping/Pong para manter conexão ativa
+  socket.on('ping', () => {
+    socket.emit('pong');
+  });
+});
+
+// Exportar io para uso em outros módulos
+export { io };
 
 // Função para verificar origem permitida
 const isOriginAllowed = (origin) => {
@@ -87,6 +121,9 @@ app.use('/api/mercadopago', mercadoPagoRoutes);
 
 // Rotas de Autenticação
 app.use('/api/auth', authRoutes);
+
+// Rotas do Agente (Gemini)
+app.use('/api/agent', agentRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
