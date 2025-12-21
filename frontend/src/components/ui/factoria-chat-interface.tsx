@@ -54,11 +54,13 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: AutoResizeProps) {
 interface FactoriaChatInterfaceProps {
     onLogout?: () => void;
     onOpenSidebar?: () => void;
+    initialMessage?: string;
 }
 
 export default function FactoriaChatInterface({
     onLogout,
     onOpenSidebar,
+    initialMessage,
 }: FactoriaChatInterfaceProps) {
     const [message, setMessage] = useState("");
     const [chatWidth, setChatWidth] = useState(50); // Percentage of screen for chat (on right)
@@ -78,14 +80,34 @@ export default function FactoriaChatInterface({
         handleUserInput,
         connectIntegration,
         resetOnboarding,
+        startTesting,
     } = useOnboarding();
+
+    const hasStartedRef = useRef(false);
 
     // Start onboarding when component mounts
     useEffect(() => {
-        if (isInitialized && state.messages.length === 0) {
-            startOnboarding();
+        if (!isInitialized) return;
+
+        // If we provided an initial message (from Landing Page), we want to make sure
+        // we start a FRESH conversation with that input.
+        if (initialMessage && !hasStartedRef.current) {
+            if (state.messages.length > 0) {
+                // If there's old history, clear it first.
+                // This will trigger a re-render with empty messages, allowing the 'else' block to run.
+                resetOnboarding();
+            } else {
+                // Empty state, ready to start with the user's input
+                startOnboarding(initialMessage);
+                hasStartedRef.current = true;
+            }
         }
-    }, [isInitialized, state.messages.length, startOnboarding]);
+        // If no initial message, just start normal onboarding if empty
+        else if (state.messages.length === 0 && !hasStartedRef.current) {
+            startOnboarding();
+            hasStartedRef.current = true;
+        }
+    }, [isInitialized, state.messages.length, startOnboarding, initialMessage, resetOnboarding]);
 
     // Handle resize
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -145,24 +167,19 @@ export default function FactoriaChatInterface({
 
     // Get placeholder based on step
     const getPlaceholder = () => {
+        if (state.step === 'testing') {
+            return 'O que você gostaria de perguntar ao seu agente?';
+        }
+        if (state.step === 'interview') {
+            return 'Digite sua resposta...';
+        }
         if (isOnboardingComplete) {
-            return 'Pergunte algo ou digite "ajuda" para ver comandos...';
+            return 'Digite "testar" para testar seu agente ou "ajuda"...';
         }
         switch (state.step) {
             case 'company-name':
                 return 'Ex: Loja da Maria, Tech Solutions...';
-            case 'company-segment':
-                return 'Ex: Moda, Tecnologia, Alimentação...';
-            case 'company-products':
-                return 'Descreva seus produtos ou serviços...';
-            case 'company-prices':
-                return 'Ex: R$ 50 a R$ 200, ou tabela de preços...';
-            case 'company-differentials':
-                return 'O que torna você especial?';
-            case 'company-tone':
-                return 'Ex: Amigável, Profissional, Descontraído...';
-            case 'company-contact':
-                return 'Ex: (11) 99999-9999, contato@empresa.com';
+            // Legacy steps kept for fallback
             default:
                 return 'Digite sua mensagem...';
         }
@@ -258,12 +275,26 @@ export default function FactoriaChatInterface({
                 </div>
 
                 {/* Chat Messages */}
-                <ChatMessages
-                    messages={state.messages}
-                    isTyping={state.isTyping}
-                    className="flex-1"
-                    lightMode
-                />
+                {state.step === 'testing' ? (
+                    <div className="flex-1 flex flex-col relative">
+                        <div className="bg-amber-100 text-amber-800 px-4 py-2 text-sm font-medium text-center shadow-sm z-10">
+                            🧪 Modo de Teste Ativo - Você está falando com seu Agente
+                        </div>
+                        <ChatMessages
+                            messages={state.testMessages}
+                            isTyping={state.isTyping}
+                            className="flex-1"
+                            lightMode
+                        />
+                    </div>
+                ) : (
+                    <ChatMessages
+                        messages={state.messages}
+                        isTyping={state.isTyping}
+                        className="flex-1"
+                        lightMode
+                    />
+                )}
 
                 {/* Integration Cards (when in integrations step only) */}
                 {showIntegrations && (
@@ -326,6 +357,16 @@ export default function FactoriaChatInterface({
                                     >
                                         <ArrowUpIcon className="w-4 h-4" />
                                     </Button>
+
+                                    {isOnboardingComplete && state.step !== 'testing' && (
+                                        <Button
+                                            onClick={startTesting}
+                                            variant="outline"
+                                            className="ml-2 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                        >
+                                            Testar Agente
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>

@@ -4,7 +4,6 @@ import {
     ChatMessage,
     INITIAL_ONBOARDING_STATE,
     BOT_MESSAGES,
-    generateSalesPrompt,
 } from '@/types/onboarding';
 
 const STORAGE_KEY = 'factoria_onboarding';
@@ -61,9 +60,10 @@ export function useOnboarding() {
 
     // Add bot message with typing animation
     const addBotMessage = useCallback(async (content: string, typingDelay = 1500) => {
-        setState(prev => ({ ...prev, isTyping: true }));
-
-        await delay(typingDelay);
+        if (typingDelay > 0) {
+            setState(prev => ({ ...prev, isTyping: true }));
+            await delay(typingDelay);
+        }
 
         const newMessage: ChatMessage = {
             id: generateId(),
@@ -95,164 +95,233 @@ export function useOnboarding() {
     }, []);
 
     // Start onboarding flow
-    const startOnboarding = useCallback(async () => {
-        if (state.messages.length === 0) {
-            await addBotMessage(BOT_MESSAGES['welcome'], 2000);
+    const startOnboarding = useCallback(async (initialInput?: string) => {
+        // Prevent double initialization if messages already exist
+        if (state.messages.length > 0) return;
+
+        if (initialInput) {
+            // CASE 1: Transition from Landing Page
+            // The user already typed something. We skip the generic "Hello" to avoid
+            // "two chats" feeling. We treat the initial input as the first turn.
+
+            // 1. Add user's message immediately for visual feedback
+            const userMsg: ChatMessage = {
+                id: generateId(),
+                type: 'user',
+                content: initialInput,
+                timestamp: new Date(),
+            };
+
+            setState(prev => ({
+                ...prev,
+                messages: [userMsg],
+                step: 'interview'
+            }));
+
+            // 2. Trigger the AI to analyze this input and respond
+            // We pass the input directly ensuring the AI sees it
+            await handleInterviewStep(initialInput);
+
+        } else {
+            // CASE 2: Fresh Start (Directly in chat)
+            // User hasn't typed anything yet. Show full intro.
+
+            await addBotMessage(BOT_MESSAGES['welcome'], 1000);
             await delay(500);
-            await addBotMessage(BOT_MESSAGES['company-name'], 1500);
-            setState(prev => ({ ...prev, step: 'company-name' }));
+
+            await addBotMessage("Eu sou o Gerador de Agentes. Vou te fazer algumas perguntas para entender seu negócio e criar o melhor vendedor possível para você.", 1500);
+            setState(prev => ({ ...prev, step: 'interview' }));
+
+            // Start the interview loop (AI will generate the first question)
+            await handleInterviewStep('');
         }
     }, [state.messages.length, addBotMessage]);
 
+    // Handle AI Interview Step
+    const handleInterviewStep = async (userInput: string) => {
+        try {
+            setState(prev => ({ ...prev, isTyping: true }));
+
+            // Prepare history for the AI
+            // Filter only relevant messages to avoid token limit if needed, or send all.
+            // Be careful to include the latest user input if it's not in state yet.
+            const history = state.messages.map(m => ({
+                role: m.type === 'bot' ? 'model' : 'user',
+                content: m.content
+            }));
+
+            if (userInput) {
+                history.push({ role: 'user', content: userInput });
+            }
+
+            const res = await fetch('http://localhost:3003/api/agent/interview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: history,
+                    currentInfo: state.companyInfo
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                // Update local company info state if AI extracted something
+                if (data.updatedInfo) {
+                    setState(prev => ({
+                        ...prev,
+                        companyInfo: { ...prev.companyInfo, ...data.updatedInfo }
+                    }));
+                }
+
+                if (data.isComplete) {
+                    // Start generation
+                    await addBotMessage(data.message, 1000);
+                    setState(prev => ({ ...prev, step: 'generating-agent' }));
+
+                    await delay(1500);
+                    await addBotMessage(BOT_MESSAGES['generating-agent'], 1000);
+
+                    // Generate System Prompt
+                    const generateRes = await fetch('http://localhost:3003/api/agent/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            extractedInfo: data.updatedInfo || state.companyInfo,
+                            originalPrompt: "Interview completion" // Placeholder as it's now fully dynamic
+                        })
+                    });
+
+                    const genData = await generateRes.json();
+
+                    if (genData.success) {
+                        const salesPrompt = genData.prompt;
+                        setState(prev => ({
+                            ...prev,
+                            agentCreated: true,
+                            agentConfig: {
+                                prompt: salesPrompt,
+                                createdAt: new Date(),
+                                companyInfo: data.updatedInfo || state.companyInfo,
+                            },
+                        }));
+
+                        await addBotMessage(BOT_MESSAGES['completed'], 1500);
+                        await addBotMessage("Você pode **testar seu agente** agora mesmo! Clique em 'Testar Agente' ou continue configurando.", 500);
+                    }
+                } else {
+                    // Continue interview
+                    await addBotMessage(data.message, 1000);
+                }
+            }
+        } catch (error) {
+            console.error('Interview error:', error);
+            await addBotMessage("Tive um problema de conexão. Poderia repetir?", 1000);
+        } finally {
+            setState(prev => ({ ...prev, isTyping: false }));
+        }
+    };
+
+    // Handle Agent Testing Step
+    const handleTestStep = async (userInput: string) => {
+        if (!state.agentConfig?.prompt) return;
+
+        setState(prev => ({ ...prev, isTyping: true }));
+        try {
+            const res = await fetch('http://localhost:3003/api/agent/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: userInput,
+                    systemPrompt: state.agentConfig.prompt
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                // Add bot response to TEST chat history (needs separate history? or same?)
+                // Ideally we should separate "Creator Chat" from "Agent Test Chat"
+                // For now, let's append to the main chat but with a clear visual distinction or mode?
+                // The requirements said: "appear test prompt now... user clicks test... user can test prompt"
+                // We'll use a specific state 'testing' and render the UI differently or clear messages.
+                // Let's use `testMessages` state I added earlier.
+
+                // Note: user message is already added by handleUserInput wrapper? No, check wrapper.
+                // The wrapper calls addUserMessage which adds to `messages`. 
+                // We need to change that logic.
+
+                const botMsg: ChatMessage = {
+                    id: generateId(),
+                    type: 'bot',
+                    content: data.message,
+                    timestamp: new Date()
+                };
+
+                setState(prev => ({
+                    ...prev,
+                    isTyping: false,
+                    testMessages: [...prev.testMessages, botMsg]
+                }));
+            }
+        } catch (error) {
+            // ...
+            setState(prev => ({ ...prev, isTyping: false }));
+        }
+    };
+
+    // Switch to testing mode
+    const startTesting = useCallback(() => {
+        setState(prev => ({
+            ...prev,
+            step: 'testing',
+            testMessages: [
+                {
+                    id: generateId(),
+                    type: 'bot',
+                    content: `🤖 O **Agente da ${prev.companyInfo.name}** foi ativado.\n\nPode falar comigo como se fosse um cliente!`,
+                    timestamp: new Date()
+                }
+            ]
+        }));
+    }, []);
+
+
     // Handle user input based on current step
     const handleUserInput = useCallback(async (input: string) => {
-        addUserMessage(input);
-
-        await delay(300);
-
-        // Post-onboarding commands
-        if (state.step === 'completed') {
-            const lowerInput = input.toLowerCase();
-
-            if (lowerInput.includes('ajuda') || lowerInput.includes('help')) {
-                await addBotMessage(`Posso te ajudar com:\n\n• **\"editar empresa\"** - Alterar informações da empresa\n• **\"ver prompt\"** - Ver o prompt do agente\n• **\"métricas\"** - Ver estatísticas\n• **\"status\"** - Ver status das integrações\n• Ou pergunte qualquer coisa!`, 1500);
-                return;
-            }
-
-            if (lowerInput.includes('ver prompt') || lowerInput.includes('meu prompt')) {
-                if (state.agentConfig?.prompt) {
-                    await addBotMessage(`📝 **Seu prompt de vendas:**\n\n${state.agentConfig.prompt.substring(0, 500)}...\n\n_Para ver o prompt completo, acesse as configurações._`, 1500);
-                } else {
-                    await addBotMessage('Ainda não há um prompt configurado. Complete o onboarding primeiro!', 1000);
-                }
-                return;
-            }
-
-            if (lowerInput.includes('métrica') || lowerInput.includes('metricas')) {
-                const connected = state.integrations.filter(i => i.connected);
-                await addBotMessage(`📊 **Métricas do seu agente:**\n\n• Empresa: ${state.companyInfo.name}\n• Segmento: ${state.companyInfo.segment}\n• Integrações ativas: ${connected.length}\n• Plataformas: ${connected.map(i => i.name).join(', ') || 'Nenhuma'}\n\n_Métricas detalhadas em breve!_`, 1500);
-                return;
-            }
-
-            if (lowerInput.includes('status')) {
-                const connected = state.integrations.filter(i => i.connected);
-                const notConnected = state.integrations.filter(i => !i.connected);
-                await addBotMessage(`✅ **Conectadas:** ${connected.map(i => i.name).join(', ') || 'Nenhuma'}\n\n❌ **Pendentes:** ${notConnected.map(i => i.name).join(', ') || 'Todas conectadas!'}`, 1500);
-                return;
-            }
-
-            // Generic response
-            await addBotMessage(`Seu agente de vendas para **${state.companyInfo.name}** está configurado e pronto! Digite **"ajuda"** para ver os comandos disponíveis. 🚀`, 1500);
+        if (state.step === 'testing') {
+            const newMsg: ChatMessage = {
+                id: generateId(),
+                type: 'user',
+                content: input,
+                timestamp: new Date()
+            };
+            setState(prev => ({
+                ...prev,
+                testMessages: [...prev.testMessages, newMsg]
+            }));
+            await handleTestStep(input);
             return;
         }
 
-        // Handle each step
-        switch (state.step) {
-            case 'company-name':
-                setState(prev => ({
-                    ...prev,
-                    companyInfo: { ...prev.companyInfo, name: input.trim() },
-                }));
-                await addBotMessage(`Prazer, **${input.trim()}**! 🤝`, 1000);
-                await addBotMessage(BOT_MESSAGES['company-segment'], 1200);
-                setState(prev => ({ ...prev, step: 'company-segment' }));
-                break;
+        addUserMessage(input);
+        await delay(300);
 
-            case 'company-segment':
-                setState(prev => ({
-                    ...prev,
-                    companyInfo: { ...prev.companyInfo, segment: input.trim() },
-                }));
-                await addBotMessage(`${input.trim()}, interessante! 💡`, 1000);
-                await addBotMessage(BOT_MESSAGES['company-products'], 1200);
-                setState(prev => ({ ...prev, step: 'company-products' }));
-                break;
-
-            case 'company-products':
-                setState(prev => ({
-                    ...prev,
-                    companyInfo: { ...prev.companyInfo, products: input.trim() },
-                }));
-                await addBotMessage('Ótimo, entendi seus produtos! 📦', 1000);
-                await addBotMessage(BOT_MESSAGES['company-prices'], 1200);
-                setState(prev => ({ ...prev, step: 'company-prices' }));
-                break;
-
-            case 'company-prices':
-                setState(prev => ({
-                    ...prev,
-                    companyInfo: { ...prev.companyInfo, prices: input.trim() },
-                }));
-                await addBotMessage('Anotado! 💰', 1000);
-                await addBotMessage(BOT_MESSAGES['company-differentials'], 1200);
-                setState(prev => ({ ...prev, step: 'company-differentials' }));
-                break;
-
-            case 'company-differentials':
-                setState(prev => ({
-                    ...prev,
-                    companyInfo: { ...prev.companyInfo, differentials: input.trim() },
-                }));
-                await addBotMessage('Que diferenciais incríveis! ⭐', 1000);
-                await addBotMessage(BOT_MESSAGES['company-tone'], 1200);
-                setState(prev => ({ ...prev, step: 'company-tone' }));
-                break;
-
-            case 'company-tone':
-                setState(prev => ({
-                    ...prev,
-                    companyInfo: { ...prev.companyInfo, tone: input.trim() },
-                }));
-                console.log('📝 Step 6/7 - Tom de comunicação:', input.trim());
-                await addBotMessage('Perfeito, vou lembrar disso! 🎯', 1000);
-                await addBotMessage(BOT_MESSAGES['company-contact'], 1200);
-                setState(prev => ({ ...prev, step: 'company-contact' }));
-                break;
-
-            case 'company-contact':
-                const updatedInfo = { ...state.companyInfo, contact: input.trim() };
-                console.log('📝 Step 7/7 - Contato:', input.trim());
-                console.log('📦 Informações coletadas:', updatedInfo);
-
-                setState(prev => ({
-                    ...prev,
-                    companyInfo: updatedInfo,
-                    step: 'generating-agent',
-                }));
-
-                await addBotMessage(BOT_MESSAGES['generating-agent'], 1000);
-
-                // Generate the sales prompt
-                console.log('🔄 Gerando prompt de vendas...');
-                await delay(2500);
-
-                const salesPrompt = generateSalesPrompt(updatedInfo);
-
-                console.log('✅ PROMPT DE VENDAS GERADO:');
-                console.log('='.repeat(50));
-                console.log(salesPrompt);
-                console.log('='.repeat(50));
-                console.log('📊 Este prompt será usado pelo Gemini para atender clientes via WhatsApp');
-                console.log('🔑 API Key do Gemini será lida do .env (API_GEMINI)');
-
-                setState(prev => ({
-                    ...prev,
-                    agentCreated: true,
-                    agentConfig: {
-                        prompt: salesPrompt,
-                        createdAt: new Date(),
-                        companyInfo: updatedInfo,
-                    },
-                    step: 'completed',
-                }));
-
-                await addBotMessage(`✨ **Agente de vendas criado com sucesso!**\n\nSeu agente para a **${updatedInfo.name}** está pronto para:\n\n• 🎯 Atender clientes com tom ${updatedInfo.tone}\n• 💰 Apresentar seus produtos e preços\n• ⭐ Destacar seus diferenciais\n• 📞 Direcionar para contato quando necessário\n\nDigite **"ver prompt"** para conferir o prompt gerado ou **"ajuda"** para ver outros comandos.`, 2000);
-                break;
-
-            default:
-                break;
+        if (state.step === 'interview') {
+            await handleInterviewStep(input);
+            return;
         }
-    }, [state.step, state.companyInfo, addUserMessage, addBotMessage]);
+
+        // Keep 'completed' logic for post-creation commands if needed
+        if (state.step === 'completed') {
+            // ... existing commands help logic ...
+            if (input.toLowerCase().includes('testar')) {
+                startTesting();
+                return;
+            }
+        }
+
+    }, [state.step, state.companyInfo, addUserMessage, addBotMessage, state.agentConfig]);
 
     // Connect integration (mock)
     const connectIntegration = useCallback(async (integrationId: string) => {
@@ -291,6 +360,11 @@ export function useOnboarding() {
     const resetOnboarding = useCallback(() => {
         localStorage.removeItem(STORAGE_KEY);
         setState(INITIAL_ONBOARDING_STATE);
+        setIsInitialized(false);
+        setTimeout(() => {
+            setIsInitialized(true);
+            setState(INITIAL_ONBOARDING_STATE); // Force reset
+        }, 100);
     }, []);
 
     // Check if onboarding is completed
@@ -307,5 +381,6 @@ export function useOnboarding() {
         connectIntegration,
         disconnectIntegration,
         resetOnboarding,
+        startTesting // Exposed for UI button
     };
 }

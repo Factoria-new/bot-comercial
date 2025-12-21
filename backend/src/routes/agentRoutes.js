@@ -177,4 +177,114 @@ router.get('/templates', (req, res) => {
     });
 });
 
+// Interview endpoint - The AI interviewer
+router.post('/interview', async (req, res) => {
+    try {
+        const { messages, currentInfo } = req.body;
+
+        if (!API_KEY) {
+            return res.status(500).json({ success: false, error: 'API key não configurada' });
+        }
+
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+        // System prompt for the Interviewer Persona
+        const systemPrompt = `Você é o "Gerador de Agentes" da Factoria.
+Seu objetivo é entrevistar o usuário para coletar informações e criar um agente de vendas perfeito para o negócio dele.
+
+INFORMAÇÕES JÁ COLETADAS:
+${JSON.stringify(currentInfo, null, 2)}
+
+HISTÓRICO DA CONVERSA:
+${messages.map(m => `${m.role}: ${m.content}`).join('\n')}
+
+SUAS INSTRUÇÕES:
+1. Analise o histórico e veja o que ainda falta descobrir (Nicho, Nome, Produtos, Preços, Horários, Diferenciais).
+2. Faça UMA pergunta por vez. Seja conciso e amigável.
+3. Se o usuário já informou o nicho (ex: pizzaria), faça perguntas específicas desse nicho (ex: "Quais os sabores mais vendidos?" ou "Vocês têm tamanhos P, M e G?").
+4. Se você já tem informações suficientes para criar um BOM agente (pelo menos Nome, Nicho e alguns Produtos/Serviços), você DEVE sugerir finalizar.
+   - Para finalizar, sua resposta DEVE começar EXATAMENTE com: "Ótimo! Tenho tudo que preciso."
+5. NÃO seja repetitivo. Se o usuário já falou o nome, não pergunte de novo.
+
+Responda APENAS com sua próxima fala para o usuário.`;
+
+        const result = await model.generateContent(systemPrompt);
+        const response = await result.response;
+        const text = response.text().trim();
+
+        // Check if interview is complete based on AI response
+        const isComplete = text.startsWith("Ótimo! Tenho tudo que preciso");
+
+        // Extract structured info update from the latest user message context (simulation)
+        // In a real generic app we might want a second LLM call here just to extract info data structure
+        // But to save latency, we will let the frontend extract logic or do a lightweight extraction here if needed.
+        // For now, we will trust the "extraction" endpoint to be called at the END.
+        // OR we can do a parallel extraction. Let's do a lightweight parallel extraction to keep 'currentInfo' updated.
+
+        let updatedInfo = currentInfo || {};
+        try {
+            const lastUserMessage = messages[messages.length - 1];
+            if (lastUserMessage && lastUserMessage.role === 'user') {
+                const extractionPrompt = `Extraia informações deste texto para um JSON: "${lastUserMessage.content}".
+                 Campos possíveis: business_name, business_type, products (lista), prices, tone, hours.
+                 Mantenha o que já existe: ${JSON.stringify(currentInfo)}.
+                 Retorne apenas JSON.`;
+
+                const extractionResult = await model.generateContent(extractionPrompt);
+                const extractionText = extractionResult.response.text().replace(/```json\n?|```/g, '').trim();
+                const newInfo = JSON.parse(extractionText);
+                updatedInfo = { ...currentInfo, ...newInfo };
+            }
+        } catch (e) {
+            console.error('Erro na extração leve:', e);
+            // Ignore extraction errors and keep going
+        }
+
+        res.json({
+            success: true,
+            message: text,
+            isComplete,
+            updatedInfo
+        });
+
+    } catch (error) {
+        console.error('❌ Erro na entrevista:', error);
+        res.status(500).json({ success: false, error: 'Erro no processamento da entrevista' });
+    }
+});
+
+// Test endpoint - Chat with the created agent
+router.post('/chat', async (req, res) => {
+    try {
+        const { message, systemPrompt } = req.body;
+
+        if (!API_KEY) return res.status(500).json({ error: 'API key ausente' });
+
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+        const chat = model.startChat({
+            history: [
+                { role: "user", parts: [{ text: "System Instruction: " + systemPrompt }] },
+                { role: "model", parts: [{ text: "Entendido. Seguirei essas instruções." }] }
+            ],
+            generationConfig: {
+                maxOutputTokens: 500,
+            },
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        const text = response.text();
+
+        res.json({
+            success: true,
+            message: text
+        });
+
+    } catch (error) {
+        console.error('❌ Erro no chat de teste:', error);
+        res.status(500).json({ success: false, error: 'Erro no chat' });
+    }
+});
+
 export default router;

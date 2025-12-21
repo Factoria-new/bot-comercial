@@ -7,11 +7,9 @@ import { cn } from "@/lib/utils";
 import {
     ArrowRight,
     Loader2,
-    Check,
     Sparkles,
     Store,
     Utensils,
-    ShoppingBag,
     ShoppingCart,
     Building2,
     Heart,
@@ -23,25 +21,10 @@ import {
     Scissors,
     Menu,
 } from "lucide-react";
-import API_CONFIG from "@/config/api";
-
-interface DetectedTag {
-    text: string;
-    type: 'price' | 'payment' | 'integration' | 'product';
-}
-
-interface ExtractedInfo {
-    business_type: string;
-    business_name: string | null;
-    products: { name: string; price: string }[];
-    payment_methods: string[];
-    integrations: string[];
-    tone: string;
-    detected_tags: DetectedTag[];
-}
+import { useOnboarding } from "@/hooks/useOnboarding";
+import { MorphingText } from "@/components/ui/liquid-text";
 
 interface AgentCreatorProps {
-    onAgentCreated?: (prompt: string, info: ExtractedInfo) => void;
     onOpenSidebar?: () => void;
 }
 
@@ -59,14 +42,20 @@ const BUSINESS_CATEGORIES = [
     { id: 'design', label: 'Design', icon: Palette, color: '#9333EA' },
 ];
 
-export default function AgentCreator({ onAgentCreated, onOpenSidebar }: AgentCreatorProps) {
+export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const [prompt, setPrompt] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
-    const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
-    const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
-    const [loadingMessage, setLoadingMessage] = useState("Configurando ferramentas...");
+    const [step, setStep] = useState<'input' | 'chat'>('input');
+    const [testMode, setTestMode] = useState(false); // When true, show full chat with created agent
+    const [testMessages, setTestMessages] = useState<Array<{ id: string, type: 'bot' | 'user', content: string }>>([]);
+    const [isTestTyping, setIsTestTyping] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Chat state using onboarding hook
+    const {
+        state: chatState,
+        startOnboarding,
+        handleUserInput,
+    } = useOnboarding();
 
     // Auto-resize textarea
     useEffect(() => {
@@ -94,225 +83,69 @@ export default function AgentCreator({ onAgentCreated, onOpenSidebar }: AgentCre
         textareaRef.current?.focus();
     };
 
-    const handleSubmit = async () => {
-        if (!prompt.trim() || isLoading) return;
+    const handleSend = async () => {
+        if (!prompt.trim() || chatState.isTyping) return;
 
-        setIsLoading(true);
-        setStep('processing');
-        setLoadingMessage("Analisando sua descrição...");
+        if (step === 'chat') {
+            // We're in chat mode: send message to the ongoing conversation
+            handleUserInput(prompt);
+            setPrompt('');
+            return;
+        }
+
+        // First submission: Trigger Chat Mode, hide header, show chat messages
+        setStep('chat');
+        startOnboarding(prompt); // Pass the user's initial input to the AI
+        setPrompt(''); // Clear the input for future messages
+    };
+
+    // Handle sending messages in test mode (separate from interview)
+    const handleTestSend = async () => {
+        if (!prompt.trim() || isTestTyping) return;
+
+        const userMsg = {
+            id: Math.random().toString(36).substring(2, 9),
+            type: 'user' as const,
+            content: prompt
+        };
+
+        setTestMessages(prev => [...prev, userMsg]);
+        setPrompt('');
+        setIsTestTyping(true);
 
         try {
-            console.log('📝 Enviando para extração:', prompt);
-
-            const extractRes = await fetch(`${API_CONFIG.BASE_URL}/api/agent/extract`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
-            });
-
-            if (!extractRes.ok) throw new Error('Falha na extração');
-
-            const extractData = await extractRes.json();
-            console.log('✅ Informações extraídas:', extractData);
-
-            setExtractedInfo(extractData.data);
-            setLoadingMessage("Configurando ferramentas...");
-
-            await new Promise(r => setTimeout(r, 1500));
-            setLoadingMessage("Gerando seu agente de vendas...");
-
-            const generateRes = await fetch(`${API_CONFIG.BASE_URL}/api/agent/generate`, {
+            // Call the agent chat API with the created agent's prompt
+            const res = await fetch('http://localhost:3003/api/agent/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    extractedInfo: extractData.data,
-                    originalPrompt: prompt
-                }),
+                    message: prompt,
+                    systemPrompt: chatState.agentConfig?.prompt || ''
+                })
             });
 
-            if (!generateRes.ok) throw new Error('Falha na geração');
+            const data = await res.json();
 
-            const generateData = await generateRes.json();
-            console.log('✅ Prompt gerado:', generateData.prompt);
-
-            setGeneratedPrompt(generateData.prompt);
-            setStep('done');
-
-            if (onAgentCreated) {
-                onAgentCreated(generateData.prompt, extractData.data);
+            if (data.success) {
+                const botMsg = {
+                    id: Math.random().toString(36).substring(2, 9),
+                    type: 'bot' as const,
+                    content: data.message
+                };
+                setTestMessages(prev => [...prev, botMsg]);
             }
-
         } catch (error) {
-            console.error('❌ Erro:', error);
-            setLoadingMessage("Erro ao processar. Tente novamente.");
-            await new Promise(r => setTimeout(r, 2000));
-            setStep('input');
+            console.error('Test chat error:', error);
+            const errorMsg = {
+                id: Math.random().toString(36).substring(2, 9),
+                type: 'bot' as const,
+                content: 'Desculpe, tive um problema. Tente novamente.'
+            };
+            setTestMessages(prev => [...prev, errorMsg]);
         } finally {
-            setIsLoading(false);
+            setIsTestTyping(false);
         }
     };
-
-    // Processing step UI - LIGHT MODE
-    if (step === 'processing') {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
-                {/* Menu button */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onOpenSidebar}
-                    className="fixed top-4 left-4 z-50 text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white/80 backdrop-blur-sm shadow-sm"
-                >
-                    <Menu className="w-5 h-5" />
-                </Button>
-
-                <div className="w-full max-w-2xl mx-auto p-8">
-                    {/* Steps indicator */}
-                    <div className="flex items-center justify-center gap-4 mb-12">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
-                                1
-                            </div>
-                            <span className="text-gray-900 font-medium">Criando agente</span>
-                        </div>
-                        <div className="w-12 h-px bg-gray-300" />
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 font-bold text-sm">
-                                2
-                            </div>
-                            <span className="text-gray-400">Conectar integrações</span>
-                        </div>
-                        <div className="w-12 h-px bg-gray-300" />
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 font-bold text-sm">
-                                3
-                            </div>
-                            <span className="text-gray-400">Conectar</span>
-                        </div>
-                    </div>
-
-                    {/* Loading card */}
-                    <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-                        <h2 className="text-2xl font-semibold text-emerald-600 text-center mb-6">
-                            {loadingMessage}
-                        </h2>
-                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full animate-pulse"
-                                style={{ width: '60%' }} />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Done step UI - LIGHT MODE
-    if (step === 'done' && extractedInfo) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
-                {/* Menu button */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onOpenSidebar}
-                    className="fixed top-4 left-4 z-50 text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white/80 backdrop-blur-sm shadow-sm"
-                >
-                    <Menu className="w-5 h-5" />
-                </Button>
-
-                <div className="w-full max-w-2xl mx-auto p-8">
-                    {/* Steps indicator */}
-                    <div className="flex items-center justify-center gap-4 mb-12">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
-                                <Check className="w-5 h-5 text-white" />
-                            </div>
-                            <span className="text-emerald-600 font-medium">Criando agente</span>
-                        </div>
-                        <div className="w-12 h-px bg-emerald-500" />
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
-                                2
-                            </div>
-                            <span className="text-gray-900 font-medium">Conectar integrações</span>
-                        </div>
-                        <div className="w-12 h-px bg-gray-300" />
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 font-bold text-sm">
-                                3
-                            </div>
-                            <span className="text-gray-400">Conectar</span>
-                        </div>
-                    </div>
-
-                    {/* Success card */}
-                    <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                                <Sparkles className="w-8 h-8 text-emerald-600" />
-                            </div>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                                Agente criado com sucesso!
-                            </h2>
-                            <p className="text-gray-500">
-                                Seu agente para <span className="text-emerald-600 font-medium">{extractedInfo.business_type}</span> está pronto
-                            </p>
-                        </div>
-
-                        {/* Detected info */}
-                        <div className="space-y-4 mb-6">
-                            {extractedInfo.products.length > 0 && (
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-2">Produtos detectados:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {extractedInfo.products.map((p, i) => (
-                                            <span key={i} className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm border border-orange-200">
-                                                {p.name} {p.price && `- ${p.price}`}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {extractedInfo.payment_methods.length > 0 && (
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-2">Pagamentos:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {extractedInfo.payment_methods.map((m, i) => (
-                                            <span key={i} className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm border border-purple-200">
-                                                {m}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {extractedInfo.integrations.length > 0 && (
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-2">Integrações:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {extractedInfo.integrations.map((i, idx) => (
-                                            <span key={idx} className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm border border-blue-200">
-                                                {i}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <Button
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-6"
-                            onClick={() => console.log('Próximo passo: integrações')}
-                        >
-                            Continuar para Integrações
-                            <ArrowRight className="w-5 h-5 ml-2" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // Main input UI - LIGHT MODE
     return (
@@ -328,78 +161,230 @@ export default function AgentCreator({ onAgentCreated, onOpenSidebar }: AgentCre
             </Button>
 
             <div className="w-full max-w-4xl mx-auto">
-                {/* Logo */}
-                <div className="flex justify-center mb-6">
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center">
-                            <Sparkles className="w-6 h-6 text-white" />
+                {/* Conditional: Show Header OR Chat Messages */}
+                {step !== 'chat' ? (
+                    <>
+                        {/* Logo */}
+                        <div className="flex justify-center mb-6 animate-in fade-in duration-500">
+                            <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center">
+                                    <Sparkles className="w-6 h-6 text-white" />
+                                </div>
+                                <span className="text-2xl font-bold text-gray-900">Factoria</span>
+                            </div>
                         </div>
-                        <span className="text-2xl font-bold text-gray-900">Factoria</span>
+
+                        {/* Header */}
+                        <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <h1 className="text-4xl md:text-5xl font-bold mb-3">
+                                <span className="text-gray-900">Seu </span>
+                                <span className="text-emerald-600">Vendedor Virtual</span>
+                            </h1>
+                            <p className="text-gray-500 text-lg">
+                                Descreva seu negócio e deixe a IA criar seu agente comercial
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    /* Interview Style: Show ONLY the latest agent message or thinking indicator */
+                    <div className="mb-4 flex flex-col items-center justify-center min-h-[200px] animate-in fade-in duration-500">
+                        {chatState.isTyping ? (
+                            /* Thinking Animation */
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                </div>
+                                <p className="text-gray-500 text-sm animate-pulse">Pensando...</p>
+                            </div>
+                        ) : (
+                            /* Latest Agent Message Only */
+                            (() => {
+                                const latestBotMessage = [...chatState.messages].reverse().find(m => m.type === 'bot');
+                                return latestBotMessage ? (
+                                    <div
+                                        key={latestBotMessage.id}
+                                        className="flex items-center justify-center w-full"
+                                    >
+                                        <MorphingText
+                                            texts={[latestBotMessage.content]}
+                                            className="h-auto min-h-[60px] text-[16pt] sm:text-[20pt] lg:text-[24pt] font-medium text-gray-900 text-center"
+                                        />
+                                    </div>
+                                ) : null;
+                            })()
+                        )}
                     </div>
-                </div>
+                )}
 
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-3">
-                        <span className="text-gray-900">Seu </span>
-                        <span className="text-emerald-600">Vendedor Virtual</span>
-                    </h1>
-                    <p className="text-gray-500 text-lg">
-                        Descreva seu negócio e deixe a IA criar seu agente comercial
-                    </p>
-                </div>
+                {/* Conditional: Test Button OR Input Area */}
+                {(() => {
+                    const latestBotMessage = [...chatState.messages].reverse().find(m => m.type === 'bot');
+                    const agentReady = latestBotMessage?.content.includes('testar seu agente');
 
-                {/* Input Card */}
-                <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-lg mb-6">
-                    <div className="flex gap-3">
-                        <Textarea
-                            ref={textareaRef}
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="Como você gostaria de construir seu agente?"
-                            className={cn(
-                                "flex-1 bg-transparent border-none resize-none text-gray-900 text-lg",
-                                "placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0",
-                                "min-h-[60px] max-h-[200px]"
-                            )}
-                        />
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={!prompt.trim() || isLoading}
-                            className={cn(
-                                "rounded-full w-12 h-12 p-0 self-end",
-                                prompt.trim()
-                                    ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                                    : "bg-gray-200 text-gray-400"
-                            )}
-                        >
-                            {isLoading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <ArrowRight className="w-5 h-5" />
-                            )}
-                        </Button>
-                    </div>
-                </div>
+                    if (agentReady && !testMode) {
+                        // Agent Ready - Show Test Button
+                        return (
+                            <div className="flex justify-center animate-in fade-in zoom-in-95 duration-500">
+                                <Button
+                                    onClick={() => setTestMode(true)}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-6 text-lg rounded-2xl shadow-lg shadow-emerald-500/30 gap-2"
+                                >
+                                    <Sparkles className="w-5 h-5" />
+                                    Testar meu agente
+                                </Button>
+                            </div>
+                        );
+                    }
 
-                {/* Category buttons */}
-                <div className="flex flex-wrap justify-center gap-3">
-                    {BUSINESS_CATEGORIES.map((cat) => (
-                        <button
-                            key={cat.id}
-                            onClick={() => handleCategoryClick(cat.id)}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-full",
-                                "bg-white border border-gray-200 hover:border-gray-300 shadow-sm",
-                                "text-gray-700 hover:text-gray-900 transition-all",
-                                "hover:scale-105 active:scale-95"
+                    if (testMode) {
+                        // Test Mode - Full Chat Interface (clean, separate from interview)
+                        return (
+                            <>
+                                {/* Chat Messages */}
+                                <div className="mb-4 max-h-[40vh] overflow-y-auto">
+                                    <div className="space-y-4">
+                                        {testMessages.length === 0 && !isTestTyping && (
+                                            <div className="text-center text-gray-500 py-8">
+                                                <p>Converse com seu agente criado!</p>
+                                                <p className="text-sm mt-2">Faça perguntas como se fosse um cliente.</p>
+                                            </div>
+                                        )}
+                                        {testMessages.map((msg) => (
+                                            <div
+                                                key={msg.id}
+                                                className={cn(
+                                                    "flex",
+                                                    msg.type === 'user' ? "justify-end" : "justify-start"
+                                                )}
+                                            >
+                                                <div
+                                                    className={cn(
+                                                        "max-w-[80%] px-4 py-2 rounded-2xl",
+                                                        msg.type === 'user'
+                                                            ? "bg-emerald-600 text-white"
+                                                            : "bg-gray-100 text-gray-900"
+                                                    )}
+                                                >
+                                                    {msg.content}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isTestTyping && (
+                                            <div className="flex justify-start">
+                                                <div className="bg-gray-100 px-4 py-2 rounded-2xl">
+                                                    <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Chat Input */}
+                                <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-lg">
+                                    <div className="flex gap-3">
+                                        <Textarea
+                                            ref={textareaRef}
+                                            value={prompt}
+                                            onChange={(e) => setPrompt(e.target.value)}
+                                            placeholder="Converse com seu agente..."
+                                            className={cn(
+                                                "flex-1 bg-transparent border-none resize-none text-gray-900 text-lg",
+                                                "placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0",
+                                                "min-h-[50px] max-h-[150px]"
+                                            )}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleTestSend();
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            onClick={handleTestSend}
+                                            disabled={!prompt.trim() || isTestTyping}
+                                            className={cn(
+                                                "rounded-full w-12 h-12 p-0 self-end",
+                                                prompt.trim()
+                                                    ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                                    : "bg-gray-200 text-gray-400"
+                                            )}
+                                        >
+                                            {isTestTyping ? (
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            ) : (
+                                                <ArrowRight className="w-5 h-5" />
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    }
+
+                    // Normal Input + Categories
+                    return (
+                        <>
+                            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-lg mb-6">
+                                <div className="flex gap-3">
+                                    <Textarea
+                                        ref={textareaRef}
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        placeholder={step === 'chat' ? "Digite sua resposta..." : "Como você gostaria de construir seu agente?"}
+                                        className={cn(
+                                            "flex-1 bg-transparent border-none resize-none text-gray-900 text-lg",
+                                            "placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0",
+                                            "min-h-[60px] max-h-[200px]"
+                                        )}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSend();
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        onClick={handleSend}
+                                        disabled={!prompt.trim() || chatState.isTyping}
+                                        className={cn(
+                                            "rounded-full w-12 h-12 p-0 self-end",
+                                            prompt.trim()
+                                                ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                                : "bg-gray-200 text-gray-400"
+                                        )}
+                                    >
+                                        {chatState.isTyping ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <ArrowRight className="w-5 h-5" />
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Category buttons - only when not in chat mode */}
+                            {step !== 'chat' && (
+                                <div className="flex flex-wrap justify-center gap-3">
+                                    {BUSINESS_CATEGORIES.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => handleCategoryClick(cat.id)}
+                                            className={cn(
+                                                "flex items-center gap-2 px-4 py-2 rounded-full",
+                                                "bg-white border border-gray-200 hover:border-gray-300 shadow-sm",
+                                                "text-gray-700 hover:text-gray-900 transition-all",
+                                                "hover:scale-105 active:scale-95"
+                                            )}
+                                        >
+                                            <cat.icon className="w-4 h-4" style={{ color: cat.color }} />
+                                            <span className="text-sm">{cat.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             )}
-                        >
-                            <cat.icon className="w-4 h-4" style={{ color: cat.color }} />
-                            <span className="text-sm">{cat.label}</span>
-                        </button>
-                    ))}
-                </div>
+                        </>
+                    );
+                })()}
             </div>
         </div>
     );

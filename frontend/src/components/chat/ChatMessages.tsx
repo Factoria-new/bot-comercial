@@ -72,34 +72,47 @@ export default function ChatMessages({ messages, isTyping, className, alignLeft,
                 "px-4 space-y-4",
                 alignLeft ? "max-w-2xl ml-4 lg:ml-8" : "max-w-3xl mx-auto"
             )}>
-                {messages.map((message) => (
-                    <div
-                        key={message.id}
-                        className={cn(
-                            "flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
-                            message.type === 'user' ? 'justify-end' : 'justify-start'
-                        )}
-                    >
-                        {message.type === 'bot' && (
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
-                                <Bot className="w-4 h-4 text-white" />
-                            </div>
-                        )}
+                {messages.map((message, index) => {
+                    // Check if it's the very first bot message for "Hero Mode"
+                    const isFirstMessage = index === 0 && message.type === 'bot';
 
+                    return (
                         <div
+                            key={message.id}
                             className={cn(
-                                "max-w-[80%] px-4 py-3 rounded-2xl text-sm sm:text-base",
-                                message.type === 'user'
-                                    ? "bg-emerald-600 text-white rounded-br-md"
-                                    : lightMode
-                                        ? "bg-gray-100 text-gray-900 rounded-bl-md border border-gray-200"
-                                        : "bg-neutral-800/50 text-neutral-100 rounded-bl-md"
+                                "flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                                message.type === 'user' ? 'justify-end' : 'justify-start',
+                                isFirstMessage && "flex-col items-center justify-center pt-8 pb-4" // Hero layout
                             )}
                         >
-                            {parseContent(message.content)}
+                            {message.type === 'bot' && (
+                                <div className={cn(
+                                    "flex-shrink-0 rounded-full flex items-center justify-center",
+                                    isFirstMessage
+                                        ? "w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg shadow-emerald-500/30 animate-pulse" // Hero Avatar
+                                        : "w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700"
+                                )}>
+                                    <Bot className={cn("text-white", isFirstMessage ? "w-8 h-8" : "w-4 h-4")} />
+                                </div>
+                            )}
+
+                            <div
+                                className={cn(
+                                    "px-4 py-3 rounded-2xl text-sm sm:text-base",
+                                    message.type === 'user'
+                                        ? "bg-emerald-600 text-white rounded-br-md max-w-[80%]"
+                                        : isFirstMessage
+                                            ? "bg-transparent text-center text-lg sm:text-xl font-medium text-emerald-800 max-w-lg mt-2 shadow-none border-none" // Hero Text
+                                            : lightMode
+                                                ? "bg-gray-100 text-gray-900 rounded-bl-md border border-gray-200 max-w-[80%]"
+                                                : "bg-neutral-800/50 text-neutral-100 rounded-bl-md max-w-[80%]"
+                                )}
+                            >
+                                {parseContent(message.content)}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {isTyping && (
                     <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">

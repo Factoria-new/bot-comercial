@@ -2,6 +2,8 @@
 
 export type OnboardingStep =
     | 'welcome'
+    | 'interview' // New AI-driven interview step
+    | 'testing'   // New Testing step
     | 'company-name'
     | 'company-segment'
     | 'company-products'
@@ -49,6 +51,7 @@ export interface OnboardingState {
     step: OnboardingStep;
     companyInfo: CompanyInfo;
     messages: ChatMessage[];
+    testMessages: ChatMessage[]; // Messages for the "Test Mode"
     integrations: Integration[];
     isTyping: boolean;
     agentCreated: boolean;
@@ -75,6 +78,7 @@ export const INITIAL_ONBOARDING_STATE: OnboardingState = {
         contact: '',
     },
     messages: [],
+    testMessages: [],
     integrations: DEFAULT_INTEGRATIONS,
     isTyping: false,
     agentCreated: false,
@@ -83,6 +87,8 @@ export const INITIAL_ONBOARDING_STATE: OnboardingState = {
 
 export const BOT_MESSAGES: Record<OnboardingStep, string> = {
     'welcome': 'Olá! 👋 Sou a assistente da Factoria e vou te ajudar a criar seu **agente de vendas personalizado**.',
+    'interview': 'Vamos conversar sobre o seu negócio para eu configurar tudo certinho.',
+    'testing': 'Agora você pode testar seu agente! Mande uma mensagem como se fosse um cliente.',
     'company-name': 'Para começar, me conta: qual é o **nome da sua empresa ou marca**?',
     'company-segment': 'Legal! E em qual **segmento** sua empresa atua? (ex: moda, tecnologia, alimentos, serviços...)',
     'company-products': 'Agora me conta com detalhes: quais são os **produtos ou serviços** que você vende?',
@@ -94,40 +100,4 @@ export const BOT_MESSAGES: Record<OnboardingStep, string> = {
     'completed': '🚀 Seu agente de vendas está pronto e configurado para atender seus clientes!',
 };
 
-// Generate sales-focused prompt
-export function generateSalesPrompt(companyInfo: CompanyInfo): string {
-    return `Você é o assistente de vendas da **${companyInfo.name}**.
 
-## SOBRE A EMPRESA
-- **Empresa:** ${companyInfo.name}
-- **Segmento:** ${companyInfo.segment}
-- **Produtos/Serviços:** ${companyInfo.products}
-- **Preços:** ${companyInfo.prices}
-- **Diferenciais:** ${companyInfo.differentials}
-- **Contato:** ${companyInfo.contact}
-
-## SEU PAPEL
-Você é um vendedor experiente, persuasivo e focado em resultados. Sua comunicação deve ser **${companyInfo.tone}**.
-
-## OBJETIVOS
-1. **Acolher** o cliente de forma calorosa e profissional
-2. **Entender** as necessidades e dores do cliente
-3. **Apresentar** os produtos/serviços que melhor atendem
-4. **Destacar** os diferenciais da empresa
-5. **Conduzir** a conversa para o fechamento da venda
-6. **Fornecer** informações de contato quando solicitado
-
-## DIRETRIZES DE VENDAS
-- Seja proativo: sugira produtos baseado nas necessidades do cliente
-- Responda dúvidas sobre preços de forma clara e objetiva
-- Use gatilhos de urgência e escassez quando apropriado
-- Sempre tente avançar a conversa para o próximo passo
-- Se o cliente hesitar, ofereça alternativas ou benefícios extras
-- Finalize sempre com um CTA (call-to-action) claro
-
-## REGRAS IMPORTANTES
-- NUNCA invente informações sobre produtos ou preços que não foram fornecidos
-- Se não souber responder algo, direcione para o contato: ${companyInfo.contact}
-- Mantenha as respostas concisas e diretas
-- Use emojis com moderação para criar conexão`;
-}
