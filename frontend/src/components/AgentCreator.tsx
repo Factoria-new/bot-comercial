@@ -22,7 +22,6 @@ import {
     Menu,
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { MorphingText } from "@/components/ui/liquid-text";
 
 interface AgentCreatorProps {
     onOpenSidebar?: () => void;
@@ -48,7 +47,10 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const [testMode, setTestMode] = useState(false); // When true, show full chat with created agent
     const [testMessages, setTestMessages] = useState<Array<{ id: string, type: 'bot' | 'user', content: string }>>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
+    const [introStarted, setIntroStarted] = useState(false); // Controls header fade-out
+    const [showHeader, setShowHeader] = useState(true); // Show/hide header with transition
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const hasAutoStarted = useRef(false);
 
     // Chat state using onboarding hook
     const {
@@ -56,6 +58,28 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
         startOnboarding,
         handleUserInput,
     } = useOnboarding();
+
+    // Auto-start: Agent initiates conversation after page load
+    useEffect(() => {
+        if (hasAutoStarted.current) return;
+        if (chatState.messages.length > 0) return; // Already has messages
+
+        hasAutoStarted.current = true;
+
+        // Wait a moment for user to see the header, then transition
+        const timer = setTimeout(() => {
+            setIntroStarted(true);
+
+            // After fade-out animation, hide header and start chat
+            setTimeout(() => {
+                setShowHeader(false);
+                setStep('chat');
+                startOnboarding(); // Agent starts without user input
+            }, 600); // Match the CSS transition duration
+        }, 1500); // Show header for 1.5s before transition
+
+        return () => clearTimeout(timer);
+    }, [startOnboarding, chatState.messages.length]);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -162,10 +186,13 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
 
             <div className="w-full max-w-4xl mx-auto">
                 {/* Conditional: Show Header OR Chat Messages */}
-                {step !== 'chat' ? (
-                    <>
+                {showHeader && step !== 'chat' ? (
+                    <div className={cn(
+                        "transition-all duration-600 ease-out",
+                        introStarted ? "opacity-0 scale-95 translate-y-4" : "opacity-100 scale-100 translate-y-0"
+                    )}>
                         {/* Logo */}
-                        <div className="flex justify-center mb-6 animate-in fade-in duration-500">
+                        <div className="flex justify-center mb-6">
                             <div className="flex items-center gap-2">
                                 <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center">
                                     <Sparkles className="w-6 h-6 text-white" />
@@ -175,7 +202,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                         </div>
 
                         {/* Header */}
-                        <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="text-center mb-8">
                             <h1 className="text-4xl md:text-5xl font-bold mb-3">
                                 <span className="text-gray-900">Seu </span>
                                 <span className="text-emerald-600">Vendedor Virtual</span>
@@ -184,7 +211,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                 Descreva seu negócio e deixe a IA criar seu agente comercial
                             </p>
                         </div>
-                    </>
+                    </div>
                 ) : (
                     /* Interview Style: Show ONLY the latest agent message or thinking indicator */
                     <div className="mb-4 flex flex-col items-center justify-center min-h-[200px] animate-in fade-in duration-500">
@@ -197,18 +224,17 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                 <p className="text-gray-500 text-sm animate-pulse">Pensando...</p>
                             </div>
                         ) : (
-                            /* Latest Agent Message Only */
+                            /* Latest Agent Message Only - Simple text, no animation */
                             (() => {
                                 const latestBotMessage = [...chatState.messages].reverse().find(m => m.type === 'bot');
                                 return latestBotMessage ? (
                                     <div
                                         key={latestBotMessage.id}
-                                        className="flex items-center justify-center w-full"
+                                        className="flex items-center justify-center w-full px-4 animate-in fade-in duration-300"
                                     >
-                                        <MorphingText
-                                            texts={[latestBotMessage.content]}
-                                            className="h-auto min-h-[60px] text-[16pt] sm:text-[20pt] lg:text-[24pt] font-medium text-gray-900 text-center"
-                                        />
+                                        <p className="text-[16pt] sm:text-[20pt] lg:text-[24pt] font-medium text-gray-900 text-center max-w-3xl">
+                                            {latestBotMessage.content}
+                                        </p>
                                     </div>
                                 ) : null;
                             })()

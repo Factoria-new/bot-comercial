@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     OnboardingState,
     ChatMessage,
@@ -20,6 +20,12 @@ console.log('🚀 useOnboarding hook loaded - Version:', VERSION);
 export function useOnboarding() {
     const [state, setState] = useState<OnboardingState>(INITIAL_ONBOARDING_STATE);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    // Ref to always have access to current state (avoids stale closure issues)
+    const stateRef = useRef(state);
+    useEffect(() => {
+        stateRef.current = state;
+    }, [state]);
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -123,17 +129,10 @@ export function useOnboarding() {
             await handleInterviewStep(initialInput);
 
         } else {
-            // CASE 2: Fresh Start (Directly in chat)
-            // User hasn't typed anything yet. Show full intro.
-
-            await addBotMessage(BOT_MESSAGES['welcome'], 1000);
-            await delay(500);
-
-            await addBotMessage("Eu sou o Gerador de Agentes. Vou te fazer algumas perguntas para entender seu negócio e criar o melhor vendedor possível para você.", 1500);
+            // CASE 2: Fresh Start (Agent auto-initiates)
+            // No hardcoded messages - let the API generate the first message
             setState(prev => ({ ...prev, step: 'interview' }));
-
-            // Start the interview loop (AI will generate the first question)
-            await handleInterviewStep('');
+            await handleInterviewStep(''); // Agent starts the conversation
         }
     }, [state.messages.length, addBotMessage]);
 
@@ -142,10 +141,11 @@ export function useOnboarding() {
         try {
             setState(prev => ({ ...prev, isTyping: true }));
 
+            // Use stateRef.current to get fresh state (avoids stale closure)
+            const currentMessages = stateRef.current.messages;
+
             // Prepare history for the AI
-            // Filter only relevant messages to avoid token limit if needed, or send all.
-            // Be careful to include the latest user input if it's not in state yet.
-            const history = state.messages.map(m => ({
+            const history = currentMessages.map(m => ({
                 role: m.type === 'bot' ? 'model' : 'user',
                 content: m.content
             }));
@@ -154,68 +154,48 @@ export function useOnboarding() {
                 history.push({ role: 'user', content: userInput });
             }
 
-            const res = await fetch('http://localhost:3003/api/agent/interview', {
+            // Use the new Architect Agent endpoint
+            const res = await fetch('http://localhost:3003/api/agent/architect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: history,
-                    currentInfo: state.companyInfo
+                    message: userInput,
+                    history: history,
+                    currentSystemPrompt: state.agentConfig?.prompt || '',
+                    userId: 'user' // TODO: Get real user ID
                 })
             });
 
             const data = await res.json();
 
             if (data.success) {
-                // Update local company info state if AI extracted something
-                if (data.updatedInfo) {
+                // Show the visible response from the Architect
+                await addBotMessage(data.response, 500);
+
+                // If Architect generated a HIDDEN_PROMPT, save it
+                if (data.newSystemPrompt) {
+                    console.log('🧠 [Architect] Novo prompt do agente gerado!');
                     setState(prev => ({
                         ...prev,
-                        companyInfo: { ...prev.companyInfo, ...data.updatedInfo }
+                        agentCreated: true,
+                        agentConfig: {
+                            prompt: data.newSystemPrompt,
+                            createdAt: new Date(),
+                            companyInfo: prev.companyInfo,
+                        },
                     }));
+
+                    // Agent is ready for testing
+                    await delay(500);
+                    await addBotMessage("Você pode **testar seu agente** agora mesmo! Clique em 'Testar Agente' ou continue refinando.", 500);
                 }
-
-                if (data.isComplete) {
-                    // Start generation
-                    await addBotMessage(data.message, 1000);
-                    setState(prev => ({ ...prev, step: 'generating-agent' }));
-
-                    await delay(1500);
-                    await addBotMessage(BOT_MESSAGES['generating-agent'], 1000);
-
-                    // Generate System Prompt
-                    const generateRes = await fetch('http://localhost:3003/api/agent/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            extractedInfo: data.updatedInfo || state.companyInfo,
-                            originalPrompt: "Interview completion" // Placeholder as it's now fully dynamic
-                        })
-                    });
-
-                    const genData = await generateRes.json();
-
-                    if (genData.success) {
-                        const salesPrompt = genData.prompt;
-                        setState(prev => ({
-                            ...prev,
-                            agentCreated: true,
-                            agentConfig: {
-                                prompt: salesPrompt,
-                                createdAt: new Date(),
-                                companyInfo: data.updatedInfo || state.companyInfo,
-                            },
-                        }));
-
-                        await addBotMessage(BOT_MESSAGES['completed'], 1500);
-                        await addBotMessage("Você pode **testar seu agente** agora mesmo! Clique em 'Testar Agente' ou continue configurando.", 500);
-                    }
-                } else {
-                    // Continue interview
-                    await addBotMessage(data.message, 1000);
-                }
+                // Otherwise, just continue the conversation (Architect is still gathering info)
+            } else {
+                // API error - show fallback message
+                await addBotMessage(data.response || "Tive um problema. Poderia repetir?", 1000);
             }
         } catch (error) {
-            console.error('Interview error:', error);
+            console.error('Architect error:', error);
             await addBotMessage("Tive um problema de conexão. Poderia repetir?", 1000);
         } finally {
             setState(prev => ({ ...prev, isTyping: false }));
@@ -289,7 +269,9 @@ export function useOnboarding() {
 
     // Handle user input based on current step
     const handleUserInput = useCallback(async (input: string) => {
-        if (state.step === 'testing') {
+        const currentStep = stateRef.current.step;
+
+        if (currentStep === 'testing') {
             const newMsg: ChatMessage = {
                 id: generateId(),
                 type: 'user',
@@ -307,7 +289,7 @@ export function useOnboarding() {
         addUserMessage(input);
         await delay(300);
 
-        if (state.step === 'interview') {
+        if (currentStep === 'interview') {
             await handleInterviewStep(input);
             return;
         }

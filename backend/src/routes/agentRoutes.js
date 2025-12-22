@@ -1,5 +1,6 @@
 import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { runArchitectAgent, chatWithAgent } from '../services/geminiService.js';
 
 const router = express.Router();
 
@@ -177,7 +178,55 @@ router.get('/templates', (req, res) => {
     });
 });
 
-// Interview endpoint - The AI interviewer
+// ============================================
+// NEW: Architect Agent Endpoint
+// O cérebro que constrói outros bots com scraping, áudio e HIDDEN_PROMPT
+// ============================================
+router.post('/architect', async (req, res) => {
+    try {
+        const { message, history, currentSystemPrompt, userId } = req.body;
+
+        // Allow empty message for auto-start (agent initiates conversation)
+        const userMessage = message || '[INÍCIO] O usuário acabou de abrir a página. Inicie a conversa se apresentando e perguntando sobre o negócio dele.';
+
+        console.log('🏗️ [Architect] Processando mensagem...');
+        console.log('📝 Mensagem:', userMessage);
+        console.log('📜 Histórico:', history?.length || 0, 'mensagens');
+        console.log('🧠 Prompt atual:', currentSystemPrompt ? 'presente' : 'vazio');
+
+        // TODO: Handle audio buffer if sent as multipart
+        const audioBuffer = null;
+
+        const result = await runArchitectAgent(
+            userId || 'anonymous',
+            userMessage,
+            audioBuffer,
+            history || [],
+            currentSystemPrompt || ''
+        );
+
+        console.log('✅ [Architect] Resposta gerada');
+        console.log('📤 Novo prompt gerado:', result.newSystemPrompt ? 'SIM' : 'NÃO');
+
+        res.json({
+            success: true,
+            response: result.response,
+            newSystemPrompt: result.newSystemPrompt,
+            // Flag para o frontend saber se o agente está "pronto"
+            isAgentReady: result.newSystemPrompt !== null
+        });
+
+    } catch (error) {
+        console.error('❌ Erro no Architect Agent:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro no processamento do Architect Agent',
+            response: 'Desculpe, tive um problema técnico. Pode tentar descrever novamente?'
+        });
+    }
+});
+
+// Interview endpoint - The AI interviewer (LEGACY - mantido para compatibilidade)
 router.post('/interview', async (req, res) => {
     try {
         const { messages, currentInfo } = req.body;
