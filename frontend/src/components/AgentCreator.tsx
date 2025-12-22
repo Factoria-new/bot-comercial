@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -8,38 +8,18 @@ import {
     ArrowRight,
     Loader2,
     Sparkles,
-    Store,
-    Utensils,
-    ShoppingCart,
-    Building2,
-    Heart,
-    GraduationCap,
-    Scale,
-    Coffee,
-    Dumbbell,
-    Palette,
-    Scissors,
+
     Menu,
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { VoicePoweredOrb } from "@/components/ui/voice-powered-orb";
+import { useTTS } from "@/hooks/useTTS";
 
 interface AgentCreatorProps {
     onOpenSidebar?: () => void;
 }
 
-const BUSINESS_CATEGORIES = [
-    { id: 'barbearia', label: 'Barbearia', icon: Scissors, color: '#3B82F6' },
-    { id: 'restaurante', label: 'Restaurante', icon: Utensils, color: '#EF4444' },
-    { id: 'loja', label: 'Loja', icon: Store, color: '#10B981' },
-    { id: 'ecommerce', label: 'E-commerce', icon: ShoppingCart, color: '#8B5CF6' },
-    { id: 'imobiliaria', label: 'Imobiliária', icon: Building2, color: '#F59E0B' },
-    { id: 'consultorio', label: 'Consultório', icon: Heart, color: '#EC4899' },
-    { id: 'escola', label: 'Escola', icon: GraduationCap, color: '#06B6D4' },
-    { id: 'advocacia', label: 'Advocacia', icon: Scale, color: '#6366F1' },
-    { id: 'cafeteria', label: 'Cafeteria', icon: Coffee, color: '#78350F' },
-    { id: 'academia', label: 'Academia', icon: Dumbbell, color: '#DC2626' },
-    { id: 'design', label: 'Design', icon: Palette, color: '#9333EA' },
-];
+
 
 export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const [prompt, setPrompt] = useState("");
@@ -47,10 +27,14 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const [testMode, setTestMode] = useState(false); // When true, show full chat with created agent
     const [testMessages, setTestMessages] = useState<Array<{ id: string, type: 'bot' | 'user', content: string }>>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
-    const [introStarted, setIntroStarted] = useState(false); // Controls header fade-out
-    const [showHeader, setShowHeader] = useState(true); // Show/hide header with transition
+    // introStarted and showHeader removed as we now use CSS transitions
+    const [activeChunks, setActiveChunks] = useState<string[]>([]);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const playbackQueue = useRef<string[]>([]);
+    const processingQueue = useRef(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const hasAutoStarted = useRef(false);
+    const [thinkingLevel, setThinkingLevel] = useState(0);
 
     // Chat state using onboarding hook
     const {
@@ -59,27 +43,104 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
         handleUserInput,
     } = useOnboarding();
 
+    const { speak, voiceLevel, stop: stopTTS } = useTTS();
+
+    // Process complete stream: generate single audio, display chunks progressively
+    const processCompleteStream = useCallback(async () => {
+        if (processingQueue.current || playbackQueue.current.length === 0) return;
+
+        processingQueue.current = true;
+        setIsPlaying(true);
+
+        const chunks = [...playbackQueue.current];
+        const fullText = chunks.join(' ');
+
+        // Generate single audio from complete text and get its duration
+        const audioResult = await speak(fullText, 'Zephyr');
+        const audioDuration = audioResult.duration * 1000; // Convert to ms
+
+        console.log(`Audio duration: ${audioDuration}ms for ${chunks.length} chunks`);
+
+        // Display chunks progressively based on ACTUAL audio duration
+        const delayPerChunk = audioDuration / chunks.length;
+
+        for (let i = 0; i < chunks.length; i++) {
+            setActiveChunks(prev => [...prev, chunks[i]]);
+
+            // Don't wait after the last chunk
+            if (i < chunks.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, delayPerChunk));
+            }
+        }
+
+
+        setIsPlaying(false);
+        processingQueue.current = false;
+        playbackQueue.current = [];
+    }, [speak]);
+
+    const handleChunk = useCallback((chunk: { type: 'text' | 'prompt' | 'error' | 'complete', content: string }) => {
+        if (chunk.type === 'text') {
+            playbackQueue.current.push(chunk.content);
+            // Don't trigger processing yet - wait for stream to complete
+        } else if (chunk.type === 'prompt') {
+            // Prompt received, agent is ready - stream is complete
+            processCompleteStream();
+        } else if (chunk.type === 'complete') {
+            // Stream completed without prompt - trigger audio processing
+            processCompleteStream();
+        }
+    }, [processCompleteStream]);
+
     // Auto-start: Agent initiates conversation after page load
     useEffect(() => {
         if (hasAutoStarted.current) return;
-        if (chatState.messages.length > 0) return; // Already has messages
+
+        if (chatState.messages.length > 0) {
+            hasAutoStarted.current = true;
+            setStep('chat');
+            return;
+        }
 
         hasAutoStarted.current = true;
 
-        // Wait a moment for user to see the header, then transition
         const timer = setTimeout(() => {
-            setIntroStarted(true);
-
-            // After fade-out animation, hide header and start chat
-            setTimeout(() => {
-                setShowHeader(false);
-                setStep('chat');
-                startOnboarding(); // Agent starts without user input
-            }, 600); // Match the CSS transition duration
-        }, 1500); // Show header for 1.5s before transition
+            setStep('chat');
+            startOnboarding(undefined, handleChunk); // Agent starts with stream
+        }, 800);
 
         return () => clearTimeout(timer);
-    }, [startOnboarding, chatState.messages.length]);
+    }, [startOnboarding, chatState.messages.length, handleChunk]);
+
+    // Orb thinking animation loop
+    useEffect(() => {
+        let rafId: number;
+        let startTime = Date.now();
+
+        const animate = () => {
+            if (chatState.isTyping || isPlaying) {
+                const elapsed = Date.now() - startTime;
+                const pulse = 0.1 + Math.sin(elapsed * 0.005) * 0.05;
+                setThinkingLevel(pulse);
+            } else {
+                setThinkingLevel(0);
+            }
+            rafId = requestAnimationFrame(animate);
+        };
+
+        rafId = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(rafId);
+    }, [chatState.isTyping, isPlaying]);
+
+    // Clear active chunks when user starts typing or a new message cycle starts
+    useEffect(() => {
+        if (chatState.isTyping) {
+            setActiveChunks([]);
+            playbackQueue.current = [];
+        }
+    }, [chatState.isTyping]);
+
+    // TTS Effect: Removed old version in favor of handleChunk/processQueue
 
     // Auto-resize textarea
     useEffect(() => {
@@ -89,38 +150,22 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
         }
     }, [prompt]);
 
-    const handleCategoryClick = (categoryId: string) => {
-        const templates: Record<string, string> = {
-            barbearia: 'Crie um agente para minha barbearia que agende horários, mostre serviços (corte R$35, barba R$25, combo R$50) e aceite Pix',
-            restaurante: 'Crie um agente para meu restaurante que apresente o cardápio, faça pedidos, colete endereço para delivery e aceite cartão',
-            loja: 'Crie um agente para minha loja que apresente produtos, tire dúvidas, mostre preços e aceite pagamento via Pix',
-            ecommerce: 'Crie um agente para meu e-commerce que tire dúvidas sobre produtos, informe sobre frete e direcione para compra no site',
-            imobiliaria: 'Crie um agente para minha imobiliária que apresente imóveis disponíveis, agende visitas e capture dados de leads',
-            consultorio: 'Crie um agente para meu consultório que informe sobre procedimentos, valores de consulta (R$200) e agende horários',
-            escola: 'Crie um agente para minha escola/curso que informe sobre turmas, valores mensais e faça matrículas',
-            advocacia: 'Crie um agente para meu escritório de advocacia que tire dúvidas jurídicas básicas e agende consultas',
-            cafeteria: 'Crie um agente para minha cafeteria que apresente o menu, faça pedidos e aceite Pix/cartão',
-            academia: 'Crie um agente para minha academia que informe planos (mensal R$99, semestral R$89/mês) e agende aulas experimentais',
-            design: 'Crie um agente para meu estúdio de design que apresente portfólio, faça orçamentos e agende reuniões',
-        };
-        setPrompt(templates[categoryId] || '');
-        textareaRef.current?.focus();
-    };
-
     const handleSend = async () => {
         if (!prompt.trim() || chatState.isTyping) return;
 
+        setActiveChunks([]); // Clear previous bot response
+        playbackQueue.current = []; // Clear pending chunks
+        stopTTS();
+
         if (step === 'chat') {
-            // We're in chat mode: send message to the ongoing conversation
-            handleUserInput(prompt);
+            handleUserInput(prompt, handleChunk);
             setPrompt('');
             return;
         }
 
-        // First submission: Trigger Chat Mode, hide header, show chat messages
         setStep('chat');
-        startOnboarding(prompt); // Pass the user's initial input to the AI
-        setPrompt(''); // Clear the input for future messages
+        startOnboarding(prompt, handleChunk);
+        setPrompt('');
     };
 
     // Handle sending messages in test mode (separate from interview)
@@ -173,7 +218,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
 
     // Main input UI - LIGHT MODE
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col p-4">
             {/* Menu button */}
             <Button
                 variant="ghost"
@@ -184,63 +229,42 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                 <Menu className="w-5 h-5" />
             </Button>
 
-            <div className="w-full max-w-4xl mx-auto">
-                {/* Conditional: Show Header OR Chat Messages */}
-                {showHeader && step !== 'chat' ? (
-                    <div className={cn(
-                        "transition-all duration-600 ease-out",
-                        introStarted ? "opacity-0 scale-95 translate-y-4" : "opacity-100 scale-100 translate-y-0"
-                    )}>
-                        {/* Logo */}
-                        <div className="flex justify-center mb-6">
-                            <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center">
-                                    <Sparkles className="w-6 h-6 text-white" />
-                                </div>
-                                <span className="text-2xl font-bold text-gray-900">Factoria</span>
-                            </div>
-                        </div>
+            <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col justify-end pb-10 relative">
+                {/* Unified Layout - Absolutes */}
 
-                        {/* Header */}
-                        <div className="text-center mb-8">
-                            <h1 className="text-4xl md:text-5xl font-bold mb-3">
-                                <span className="text-gray-900">Seu </span>
-                                <span className="text-emerald-600">Vendedor Virtual</span>
-                            </h1>
-                            <p className="text-gray-500 text-lg">
-                                Descreva seu negócio e deixe a IA criar seu agente comercial
+                {/* 1. Background Orb Layer - Center of Screen, Fixed, Large */}
+                <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
+                    <div className="w-[500px] h-[500px] sm:w-[600px] sm:h-[150vh] relative">
+                        <VoicePoweredOrb
+                            hue={0}
+                            maxHoverIntensity={0.2}
+                            voiceSensitivity={0}
+                            enableVoiceControl={false}
+                            audioMode="output"
+                            externalAudioLevel={voiceLevel || thinkingLevel}
+                        />
+                    </div>
+                </div>
+
+                {/* 2. Text Layer - Floating at Bottom, Independent */}
+                <div className={cn(
+                    "fixed bottom-[20%] left-0 w-full flex flex-col items-center justify-center pointer-events-none z-10 px-4 transition-opacity duration-700 ease-out",
+                    step === 'chat' ? "opacity-100" : "opacity-0"
+                )}>
+                    {chatState.isTyping && activeChunks.length === 0 ? (
+                        /* Thinking Animation */
+                        <div className="flex flex-col items-center gap-4">
+                            <p className="text-gray-400 text-sm animate-pulse">Pensando...</p>
+                        </div>
+                    ) : (
+                        /* Chunks Display */
+                        <div className="flex items-center justify-center w-full max-w-4xl animate-in fade-in duration-300">
+                            <p className="text-[18pt] sm:text-[22pt] lg:text-[26pt] font-medium text-gray-900 text-center leading-relaxed drop-shadow-sm">
+                                {activeChunks.join(' ')}
                             </p>
                         </div>
-                    </div>
-                ) : (
-                    /* Interview Style: Show ONLY the latest agent message or thinking indicator */
-                    <div className="mb-4 flex flex-col items-center justify-center min-h-[200px] animate-in fade-in duration-500">
-                        {chatState.isTyping ? (
-                            /* Thinking Animation */
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                                    <Loader2 className="w-8 h-8 text-white animate-spin" />
-                                </div>
-                                <p className="text-gray-500 text-sm animate-pulse">Pensando...</p>
-                            </div>
-                        ) : (
-                            /* Latest Agent Message Only - Simple text, no animation */
-                            (() => {
-                                const latestBotMessage = [...chatState.messages].reverse().find(m => m.type === 'bot');
-                                return latestBotMessage ? (
-                                    <div
-                                        key={latestBotMessage.id}
-                                        className="flex items-center justify-center w-full px-4 animate-in fade-in duration-300"
-                                    >
-                                        <p className="text-[16pt] sm:text-[20pt] lg:text-[24pt] font-medium text-gray-900 text-center max-w-3xl">
-                                            {latestBotMessage.content}
-                                        </p>
-                                    </div>
-                                ) : null;
-                            })()
-                        )}
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Conditional: Test Button OR Input Area */}
                 {(() => {
@@ -350,7 +374,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                     // Normal Input + Categories
                     return (
                         <>
-                            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-lg mb-6">
+                            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-lg">
                                 <div className="flex gap-3">
                                     <Textarea
                                         ref={textareaRef}
@@ -388,26 +412,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                 </div>
                             </div>
 
-                            {/* Category buttons - only when not in chat mode */}
-                            {step !== 'chat' && (
-                                <div className="flex flex-wrap justify-center gap-3">
-                                    {BUSINESS_CATEGORIES.map((cat) => (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => handleCategoryClick(cat.id)}
-                                            className={cn(
-                                                "flex items-center gap-2 px-4 py-2 rounded-full",
-                                                "bg-white border border-gray-200 hover:border-gray-300 shadow-sm",
-                                                "text-gray-700 hover:text-gray-900 transition-all",
-                                                "hover:scale-105 active:scale-95"
-                                            )}
-                                        >
-                                            <cat.icon className="w-4 h-4" style={{ color: cat.color }} />
-                                            <span className="text-sm">{cat.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+
                         </>
                     );
                 })()}

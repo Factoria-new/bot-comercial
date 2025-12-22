@@ -3,7 +3,6 @@ import {
     OnboardingState,
     ChatMessage,
     INITIAL_ONBOARDING_STATE,
-    BOT_MESSAGES,
 } from '@/types/onboarding';
 
 const STORAGE_KEY = 'factoria_onboarding';
@@ -101,7 +100,7 @@ export function useOnboarding() {
     }, []);
 
     // Start onboarding flow
-    const startOnboarding = useCallback(async (initialInput?: string) => {
+    const startOnboarding = useCallback(async (initialInput?: string, onChunk?: (chunk: any) => void) => {
         // Prevent double initialization if messages already exist
         if (state.messages.length > 0) return;
 
@@ -126,25 +125,22 @@ export function useOnboarding() {
 
             // 2. Trigger the AI to analyze this input and respond
             // We pass the input directly ensuring the AI sees it
-            await handleInterviewStep(initialInput);
+            await handleInterviewStep(initialInput, onChunk);
 
         } else {
             // CASE 2: Fresh Start (Agent auto-initiates)
             // No hardcoded messages - let the API generate the first message
             setState(prev => ({ ...prev, step: 'interview' }));
-            await handleInterviewStep(''); // Agent starts the conversation
+            await handleInterviewStep('', onChunk); // Agent starts the conversation
         }
     }, [state.messages.length, addBotMessage]);
 
     // Handle AI Interview Step
-    const handleInterviewStep = async (userInput: string) => {
+    const handleInterviewStep = async (userInput: string, onChunk?: (chunk: { type: 'text' | 'prompt' | 'error' | 'complete', content: string }) => void) => {
         try {
             setState(prev => ({ ...prev, isTyping: true }));
 
-            // Use stateRef.current to get fresh state (avoids stale closure)
             const currentMessages = stateRef.current.messages;
-
-            // Prepare history for the AI
             const history = currentMessages.map(m => ({
                 role: m.type === 'bot' ? 'model' : 'user',
                 content: m.content
@@ -154,27 +150,89 @@ export function useOnboarding() {
                 history.push({ role: 'user', content: userInput });
             }
 
-            // Use the new Architect Agent endpoint
-            const res = await fetch('http://localhost:3003/api/agent/architect', {
+            const response = await fetch('http://localhost:3003/api/agent/architect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: userInput,
                     history: history,
-                    currentSystemPrompt: state.agentConfig?.prompt || '',
-                    userId: 'user' // TODO: Get real user ID
+                    currentSystemPrompt: stateRef.current.agentConfig?.prompt || '',
+                    userId: 'user',
+                    stream: !!onChunk
                 })
             });
 
-            const data = await res.json();
+            if (onChunk && response.body) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
 
+                setState(prev => ({ ...prev, isTyping: false }));
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+
+                                if (data.type === 'text') {
+                                    fullText += data.content;
+                                    onChunk(data);
+                                } else if (data.type === 'prompt') {
+                                    console.log('🧠 [Architect] Novo prompt recebido via stream!');
+                                    onChunk(data); // Pass through so AgentCreator can handle it
+                                    setState(prev => ({
+                                        ...prev,
+                                        agentCreated: true,
+                                        agentConfig: {
+                                            prompt: data.content,
+                                            createdAt: new Date(),
+                                            companyInfo: prev.companyInfo,
+                                        },
+                                    }));
+                                } else if (data.type === 'error') {
+                                    onChunk(data);
+                                }
+                            } catch (e) {
+                                console.error("Error parsing SSE chunk:", e);
+                            }
+                        }
+                    }
+                }
+
+                // AFTER streaming is complete, add the FULL message to the official history
+                if (fullText.trim()) {
+                    const newMessage: ChatMessage = {
+                        id: generateId(),
+                        type: 'bot',
+                        content: fullText.trim(),
+                        timestamp: new Date(),
+                    };
+                    setState(prev => ({
+                        ...prev,
+                        messages: [...prev.messages, newMessage]
+                    }));
+                }
+
+                // Signal stream completion to AgentCreator
+                if (onChunk) {
+                    onChunk({ type: 'complete', content: '' });
+                }
+
+                return;
+            }
+
+            // Fallback for non-streaming
+            const data = await response.json();
             if (data.success) {
-                // Show the visible response from the Architect
                 await addBotMessage(data.response, 500);
-
-                // If Architect generated a HIDDEN_PROMPT, save it
                 if (data.newSystemPrompt) {
-                    console.log('🧠 [Architect] Novo prompt do agente gerado!');
                     setState(prev => ({
                         ...prev,
                         agentCreated: true,
@@ -184,14 +242,10 @@ export function useOnboarding() {
                             companyInfo: prev.companyInfo,
                         },
                     }));
-
-                    // Agent is ready for testing
                     await delay(500);
                     await addBotMessage("Você pode **testar seu agente** agora mesmo! Clique em 'Testar Agente' ou continue refinando.", 500);
                 }
-                // Otherwise, just continue the conversation (Architect is still gathering info)
             } else {
-                // API error - show fallback message
                 await addBotMessage(data.response || "Tive um problema. Poderia repetir?", 1000);
             }
         } catch (error) {
@@ -268,7 +322,7 @@ export function useOnboarding() {
 
 
     // Handle user input based on current step
-    const handleUserInput = useCallback(async (input: string) => {
+    const handleUserInput = useCallback(async (input: string, onChunk?: (chunk: any) => void) => {
         const currentStep = stateRef.current.step;
 
         if (currentStep === 'testing') {
@@ -290,7 +344,7 @@ export function useOnboarding() {
         await delay(300);
 
         if (currentStep === 'interview') {
-            await handleInterviewStep(input);
+            await handleInterviewStep(input, onChunk);
             return;
         }
 

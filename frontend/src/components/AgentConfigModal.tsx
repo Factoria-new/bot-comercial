@@ -49,6 +49,7 @@ const GEMINI_VOICES = [
   { value: 'Fenrir', label: 'Fenrir', gender: 'Masculino' },
   { value: 'Puck', label: 'Puck', gender: 'Não-binário' },
   { value: 'Orus', label: 'Orus', gender: 'Masculino' },
+  { value: 'Zephyr', label: 'Zephyr', gender: 'Feminino' },
 ];
 
 const DEFAULT_SYSTEM_PROMPT = `Você é um assistente virtual prestativo e profissional. Responda de forma clara, objetiva e amigável às perguntas dos usuários.`;
@@ -67,7 +68,7 @@ const AgentConfigModal = ({
   const [systemPrompt, setSystemPrompt] = useState(initialConfig?.systemPrompt || DEFAULT_SYSTEM_PROMPT);
   const [assistantId, setAssistantId] = useState(initialConfig?.assistantId || '');
   const [ttsEnabled, setTtsEnabled] = useState(initialConfig?.ttsEnabled || false);
-  const [ttsVoice, setTtsVoice] = useState(initialConfig?.ttsVoice || 'Aoede');
+  const [ttsVoice, setTtsVoice] = useState(initialConfig?.ttsVoice || 'Zephyr');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -90,7 +91,7 @@ const AgentConfigModal = ({
       setSystemPrompt(initialConfig.systemPrompt || DEFAULT_SYSTEM_PROMPT);
       setAssistantId(initialConfig.assistantId || '');
       setTtsEnabled(initialConfig.ttsEnabled || false);
-      setTtsVoice(initialConfig.ttsVoice || 'Aoede');
+      setTtsVoice(initialConfig.ttsVoice || 'Zephyr');
     }
   }, [initialConfig]);
 
@@ -329,7 +330,7 @@ const AgentConfigModal = ({
   const resetToDefault = () => {
     setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
     setTtsEnabled(false);
-    setTtsVoice('Aoede');
+    setTtsVoice('Zephyr');
     toast({
       title: "Configurações resetadas",
       description: "Todas as configurações voltaram aos valores padrão.",

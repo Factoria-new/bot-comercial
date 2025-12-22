@@ -30,7 +30,8 @@ Ruim: "Quais são os produtos principais?"
 Ruim: Fazer várias perguntas de uma vez
 
 IMPORTANTE:
-- Não use emojis
+- NUNCA use emojis em suas respostas.
+- Use frases curtas e diretas para manter a conversa ágil.
 - Reaja ao contexto antes de perguntar
 - Só gere o <HIDDEN_PROMPT> quando tiver nome + tipo de negócio + pelo menos 1 produto com preço
 
@@ -74,6 +75,117 @@ async function scrapeWebsite(url) {
     } catch (error) {
         console.error('Scraping error:', error);
         return null;
+    }
+}
+
+/**
+ * Agente Arquiteto: Versão Stream
+ * 
+ * @param {string} userId - ID do usuário
+ * @param {string} userMessage - Mensagem do usuário
+ * @param {Buffer|null} userAudioBuffer - Buffer de áudio (opcional)
+ * @param {Array} history - Histórico da conversa
+ * @param {string} currentPromptContext - Rascunho atual do prompt do bot
+ * @returns {AsyncGenerator} - Stream de chunks de texto
+ */
+export async function* runArchitectAgentStream(userId, userMessage, userAudioBuffer = null, history = [], currentPromptContext = "") {
+    try {
+        if (!API_KEY) {
+            throw new Error('GEMINI_API_KEY não configurada');
+        }
+
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash-exp",
+            generationConfig: { temperature: 0.7 }
+        });
+
+        let finalUserMessage = userMessage || "";
+        let dataContext = "";
+
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = finalUserMessage.match(urlRegex);
+
+        if (urls && urls.length > 0) {
+            const url = urls[0];
+            const siteContent = await scrapeWebsite(url);
+            if (siteContent) {
+                dataContext += `\n\n[DADOS EXTRAÍDOS DO SITE ${url}]:\n"${siteContent}"\n(Use estas informações para preencher a base de conhecimento do bot)\n`;
+                finalUserMessage += `\n(O usuário enviou um link. Analise os dados acima.)`;
+            }
+        }
+
+        let promptParts = [];
+        promptParts.push({ text: ARCHITECT_SYSTEM_INSTRUCTION });
+
+        if (history.length > 0) {
+            const historyText = history.map(h => `${h.role === 'user' ? 'Usuário' : 'Arquiteto'}: ${h.content}`).join('\n');
+            promptParts.push({ text: `\n[HISTÓRICO DA CONVERSA]:\n${historyText}\n` });
+        }
+
+        if (currentPromptContext) {
+            promptParts.push({ text: `\n[RASCUNHO ATUAL DO PROMPT]:\n${currentPromptContext}\n(Melhore este rascunho com as novas informações)\n` });
+        }
+
+        promptParts.push({ text: `\n[NOVA ENTRADA DO USUÁRIO]:\n${finalUserMessage}${dataContext}` });
+
+        if (userAudioBuffer) {
+            promptParts.push({
+                inlineData: {
+                    data: userAudioBuffer.toString("base64"),
+                    mimeType: "audio/ogg"
+                }
+            });
+            promptParts.push({ text: "\n(Analise o áudio acima com atenção aos detalhes do negócio)" });
+        }
+
+        console.log('[Architect Stream] Starting stream...');
+        const result = await model.generateContentStream(promptParts);
+
+        let fullText = "";
+        let buffer = "";
+
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            fullText += chunkText;
+            buffer += chunkText;
+
+            // Split into smaller blocks for faster audio turnaround
+            // Matches ., !, ?, or , followed by space or newline
+            const parts = buffer.split(/([.!?;,]\s+)/);
+
+            // If we have at least one complete chunk
+            if (parts.length > 2) {
+                // Send all complete sentences/chunks
+                for (let i = 0; i < parts.length - 1; i += 2) {
+                    const chunkText = parts[i] + (parts[i + 1] || "");
+                    if (chunkText.trim() && !chunkText.includes('<HIDDEN_PROMPT>')) {
+                        yield { type: 'text', content: chunkText };
+                    }
+                }
+                // Keep the remainder in buffer
+                buffer = parts[parts.length - 1];
+            }
+        }
+
+        // Send remaining buffer if it's not part of HIDDEN_PROMPT
+        if (buffer.trim() && !buffer.includes('<HIDDEN_PROMPT>')) {
+            yield { type: 'text', content: buffer };
+        } else if (buffer.includes('<HIDDEN_PROMPT>')) {
+            // If the buffer contains part of hidden prompt, we process fullText at the end
+        }
+
+        // Finally, check for HIDDEN_PROMPT in fullText
+        if (fullText.includes('<HIDDEN_PROMPT>')) {
+            const match = fullText.match(/<HIDDEN_PROMPT>([\s\S]*?)<\/HIDDEN_PROMPT>/);
+            if (match) {
+                yield { type: 'prompt', content: match[1].trim() };
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro no Architect Agent Stream:', error);
+        yield { type: 'error', content: "Desculpe, tive um probleminha aqui..." };
     }
 }
 
@@ -175,9 +287,21 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
 
     } catch (error) {
         console.error('Erro no Architect Agent:', error);
-        // Fallback amigável
+
+        // Se for a primeira interação (sem histórico), retorna uma saudação amigável padrão ("Persona Lia")
+        // Isso evita erros feios logo no início se a API falhar ou demorar
+        // Se for a primeira interação (sem histórico), retorna uma saudação amigável padrão ("Persona Lia")
+        // Isso evita erros feios logo no início se a API falhar ou demorar
+        if (!history || history.length === 0) {
+            return {
+                response: "Oiii! Tudo bem? Sou a Lia, sua parceira aqui na Factoria! Vamos criar um agente de vendas incrível pro seu negócio? Pra começar, me conta: qual é o nome da sua empresa?",
+                newSystemPrompt: null
+            };
+        }
+
+        // Fallback amigável para outros erros no meio da conversa
         return {
-            response: "Tive um pequeno problema técnico ao analisar seus dados. Poderia tentar descrever sua empresa em texto?",
+            response: "Ops, deu um pequeno problema aqui nos meus circuitos... Pode repetir, por favor?", // Mais descontraído que o anterior
             newSystemPrompt: null
         };
     }
@@ -222,5 +346,6 @@ export async function chatWithAgent(message, systemPrompt) {
 
 export default {
     runArchitectAgent,
+    runArchitectAgentStream,
     chatWithAgent
 };

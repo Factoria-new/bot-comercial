@@ -1,6 +1,6 @@
 import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { runArchitectAgent, chatWithAgent } from '../services/geminiService.js';
+import { runArchitectAgent, runArchitectAgentStream, chatWithAgent } from '../services/geminiService.js';
 
 const router = express.Router();
 
@@ -184,45 +184,63 @@ router.get('/templates', (req, res) => {
 // ============================================
 router.post('/architect', async (req, res) => {
     try {
-        const { message, history, currentSystemPrompt, userId } = req.body;
+        const { message, history, currentSystemPrompt, userId, stream = false } = req.body;
 
-        // Allow empty message for auto-start (agent initiates conversation)
         const userMessage = message || '[INÍCIO] O usuário acabou de abrir a página. Inicie a conversa se apresentando e perguntando sobre o negócio dele.';
 
-        console.log('🏗️ [Architect] Processando mensagem...');
-        console.log('📝 Mensagem:', userMessage);
-        console.log('📜 Histórico:', history?.length || 0, 'mensagens');
-        console.log('🧠 Prompt atual:', currentSystemPrompt ? 'presente' : 'vazio');
+        console.log(`🏗️ [Architect] Processando mensagem (stream=${stream})...`);
 
-        // TODO: Handle audio buffer if sent as multipart
-        const audioBuffer = null;
+        if (stream) {
+            // Set headers for SSE
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.flushHeaders();
 
+            const streamResponse = runArchitectAgentStream(
+                userId || 'anonymous',
+                userMessage,
+                null,
+                history || [],
+                currentSystemPrompt || ''
+            );
+
+            for await (const chunk of streamResponse) {
+                res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+            }
+
+            res.end();
+            return;
+        }
+
+        // Standard non-streaming response
         const result = await runArchitectAgent(
             userId || 'anonymous',
             userMessage,
-            audioBuffer,
+            null,
             history || [],
             currentSystemPrompt || ''
         );
-
-        console.log('✅ [Architect] Resposta gerada');
-        console.log('📤 Novo prompt gerado:', result.newSystemPrompt ? 'SIM' : 'NÃO');
 
         res.json({
             success: true,
             response: result.response,
             newSystemPrompt: result.newSystemPrompt,
-            // Flag para o frontend saber se o agente está "pronto"
             isAgentReady: result.newSystemPrompt !== null
         });
 
     } catch (error) {
         console.error('❌ Erro no Architect Agent:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro no processamento do Architect Agent',
-            response: 'Desculpe, tive um problema técnico. Pode tentar descrever novamente?'
-        });
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                error: 'Erro no processamento do Architect Agent',
+                response: 'Desculpe, tive um problema técnico.'
+            });
+        } else {
+            res.write(`data: ${JSON.stringify({ type: 'error', content: 'Erro no streaming' })}\n\n`);
+            res.end();
+        }
     }
 });
 
@@ -333,6 +351,104 @@ router.post('/chat', async (req, res) => {
     } catch (error) {
         console.error('❌ Erro no chat de teste:', error);
         res.status(500).json({ success: false, error: 'Erro no chat' });
+    }
+});
+
+// Text-to-Speech Endpoint
+// Helper to create WAV header for raw PCM data
+function createWavHeader(sampleRate, numChannels, bitsPerSample, dataLength) {
+    const blockAlign = (numChannels * bitsPerSample) / 8;
+    const byteRate = sampleRate * blockAlign;
+    const buffer = Buffer.alloc(44);
+
+    // RIFF chunk descriptor
+    buffer.write('RIFF', 0);
+    buffer.writeUInt32LE(36 + dataLength, 4); // ChunkSize
+    buffer.write('WAVE', 8);
+
+    // fmt sub-chunk
+    buffer.write('fmt ', 12);
+    buffer.writeUInt32LE(16, 16); // Subchunk1Size
+    buffer.writeUInt16LE(1, 20); // AudioFormat (1 = PCM)
+    buffer.writeUInt16LE(numChannels, 22);
+    buffer.writeUInt32LE(sampleRate, 24);
+    buffer.writeUInt32LE(byteRate, 28);
+    buffer.writeUInt16LE(blockAlign, 32);
+    buffer.writeUInt16LE(bitsPerSample, 34);
+
+    // data sub-chunk
+    buffer.write('data', 36);
+    buffer.writeUInt32LE(dataLength, 40);
+
+    return buffer;
+}
+
+// Text-to-Speech Endpoint using Gemini Native TTS (Free Tier Friendly)
+router.post('/speak', async (req, res) => {
+    try {
+        const { text, voice = 'Zephyr' } = req.body;
+
+        if (!API_KEY) {
+            return res.status(500).json({ error: 'API key not configured' });
+        }
+
+        console.log(`🎤 Generating TTS with Gemini for: "${text.substring(0, 30)}..."`);
+
+        // Use the specific multimodal model for TTS
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-tts' });
+
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user',
+                parts: [{ text: text }]
+            }],
+            generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: {
+                            voiceName: voice === 'Kore' ? 'Zephyr' : voice // Força Zephyr se vier Kore
+                        }
+                    }
+                }
+            }
+        });
+
+        const response = await result.response;
+
+        // Extract audio data
+        const parts = response.candidates?.[0]?.content?.parts;
+        if (!parts || parts.length === 0 || !parts[0].inlineData) {
+            throw new Error('No audio content generated by Gemini');
+        }
+
+        const audioPart = parts[0].inlineData;
+        const rawPcmBuffer = Buffer.from(audioPart.data, 'base64');
+
+        // Gemini 2.5 TTS typically returns 24kHz, 1 channel, 16-bit PCM
+        // We MUST verify this, but based on the log 'rate=24000', it's 24kHz.
+        // Assuming Mono (1 channel) and 16-bit depth (standard L16).
+        const wavHeader = createWavHeader(24000, 1, 16, rawPcmBuffer.length);
+        const wavBuffer = Buffer.concat([wavHeader, rawPcmBuffer]);
+
+        console.log(`🔊 Audio generated: ${rawPcmBuffer.length} bytes (PCM) -> ${wavBuffer.length} bytes (WAV)`);
+
+        res.set({
+            'Content-Type': 'audio/wav',
+            'Content-Length': wavBuffer.length,
+            'Access-Control-Allow-Origin': '*', // Critical for Web Audio API analysis
+            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        });
+        res.send(wavBuffer);
+
+    } catch (error) {
+        console.error('Gemini TTS Error:', error);
+        // Fallback or explicit error
+        res.status(500).json({
+            error: 'Failed to generate speech with Gemini',
+            details: error.message
+        });
     }
 });
 
