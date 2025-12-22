@@ -31,7 +31,7 @@ export function useTTS() {
         animationFrameRef.current = requestAnimationFrame(analyze);
     }, []);
 
-    const speak = useCallback(async (text: string, voice: string = 'Zephyr', options?: { onStart?: () => void }): Promise<{ duration: number }> => {
+    const speak = useCallback(async (text: string, voice: string = 'Kore', options?: { onStart?: () => void }): Promise<{ duration: number }> => {
         if (!text) return Promise.resolve({ duration: 0 });
 
         // Stop current audio if playing
@@ -47,98 +47,108 @@ export function useTTS() {
 
         return new Promise<{ duration: number }>(async (resolve, reject) => {
             try {
-                // Call backend to generate audio
-                const response = await fetch('http://localhost:3003/api/agent/speak', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        text,
-                        voice
-                    }),
-                });
+                // Backend Gemini TTS with Kore voice
+                const USE_BACKEND_TTS = true;
 
-                if (!response.ok) {
-                    throw new Error('TTS Backend Failed');
-                }
+                if (USE_BACKEND_TTS) {
+                    // Call backend to generate audio
+                    const response = await fetch('http://localhost:3003/api/agent/speak', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text,
+                            voice
+                        }),
+                    });
 
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-
-                const audio = new Audio(url);
-                audio.crossOrigin = "anonymous"; // Important for Web Audio API
-                audioRef.current = audio;
-
-                // Initialize Audio Context and Analyser if needed
-                if (!audioContextRef.current) {
-                    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                    audioContextRef.current = new AudioContextClass();
-                }
-
-                // Always try to resume context (browser policy)
-                if (audioContextRef.current.state === 'suspended') {
-                    await audioContextRef.current.resume();
-                }
-
-                if (!analyserRef.current) {
-                    analyserRef.current = audioContextRef.current.createAnalyser();
-                    analyserRef.current.fftSize = 256; // Smaller FFT for more responsive visual
-                }
-
-                // Connect Source
-                try {
-                    // Disconnect old source to prevent graph errors
-                    if (sourceRef.current) {
-                        sourceRef.current.disconnect();
+                    if (!response.ok) {
+                        throw new Error('TTS Backend Failed');
                     }
 
-                    const source = audioContextRef.current.createMediaElementSource(audio);
-                    source.connect(analyserRef.current);
-                    analyserRef.current.connect(audioContextRef.current.destination);
-                    sourceRef.current = source;
-                } catch (e) {
-                    console.warn("Audio Graph Error:", e);
-                }
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
 
-                let audioDuration = 0;
+                    const audio = new Audio(url);
+                    audio.crossOrigin = "anonymous"; // Important for Web Audio API
+                    audioRef.current = audio;
 
-                audio.onloadedmetadata = () => {
-                    audioDuration = audio.duration;
-                    console.log(`Audio duration: ${audioDuration}s`);
-                };
-
-                audio.onended = () => {
-                    setIsSpeaking(false);
-                    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-                    setVoiceLevel(0);
-                    URL.revokeObjectURL(url);
-                    resolve({ duration: audioDuration });
-                };
-
-                audio.onerror = (e) => {
-                    console.error("Audio playback error:", e);
-                    setIsSpeaking(false);
-                    setVoiceLevel(0);
-                    if (options?.onStart) options.onStart();
-                    reject(e);
-                };
-
-                audio.onplay = () => {
-                    // Ensure context is running
-                    if (audioContextRef.current?.state === 'suspended') {
-                        audioContextRef.current.resume();
+                    // Initialize Audio Context and Analyser if needed
+                    if (!audioContextRef.current) {
+                        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                        audioContextRef.current = new AudioContextClass();
                     }
 
-                    // Start analysis loop
-                    analyze();
-                    if (options?.onStart) options.onStart();
-                };
+                    // Always try to resume context (browser policy)
+                    if (audioContextRef.current.state === 'suspended') {
+                        await audioContextRef.current.resume();
+                    }
 
-                await audio.play();
+                    if (!analyserRef.current) {
+                        analyserRef.current = audioContextRef.current.createAnalyser();
+                        analyserRef.current.fftSize = 256; // Smaller FFT for more responsive visual
+                    }
 
+                    // Connect Source
+                    try {
+                        // Disconnect old source to prevent graph errors
+                        if (sourceRef.current) {
+                            sourceRef.current.disconnect();
+                        }
+
+                        const source = audioContextRef.current.createMediaElementSource(audio);
+                        source.connect(analyserRef.current);
+                        analyserRef.current.connect(audioContextRef.current.destination);
+                        sourceRef.current = source;
+                    } catch (e) {
+                        console.warn("Audio Graph Error:", e);
+                    }
+
+                    let audioDuration = 0;
+
+                    audio.onloadedmetadata = () => {
+                        audioDuration = audio.duration;
+                        console.log(`Audio duration: ${audioDuration}s`);
+                    };
+
+                    audio.onended = () => {
+                        setIsSpeaking(false);
+                        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+                        setVoiceLevel(0);
+                        URL.revokeObjectURL(url);
+                        resolve({ duration: audioDuration });
+                    };
+
+                    audio.onerror = (e) => {
+                        console.error("Audio playback error:", e);
+                        setIsSpeaking(false);
+                        setVoiceLevel(0);
+                        if (options?.onStart) options.onStart();
+                        reject(e);
+                    };
+
+                    audio.onplay = () => {
+                        // Ensure context is running
+                        if (audioContextRef.current?.state === 'suspended') {
+                            audioContextRef.current.resume();
+                        }
+
+                        // Start analysis loop
+                        analyze();
+                        if (options?.onStart) options.onStart();
+                    };
+
+                    await audio.play();
+                } else {
+                    // USE_BACKEND_TTS is false - go directly to browser fallback
+                    throw new Error('Backend TTS disabled');
+                }
             } catch (error) {
-                console.warn("Backend TTS failed, falling back to browser:", error);
+                // Only warn on unexpected errors (not intentional disable)
+                if (error instanceof Error && error.message !== 'Backend TTS disabled') {
+                    console.warn("Backend TTS failed, falling back to browser:", error);
+                }
 
                 // Fallback to browser synthesis
                 const utterance = new SpeechSynthesisUtterance(text);

@@ -59,7 +59,15 @@ export const createCheckoutSession = async (req, res) => {
         res.json({ url: session.url });
 
     } catch (error) {
-        logger.error('Error creating checkout session:', error);
+        logger.error('Error creating checkout session:', error.message || error);
+        logger.error('Stripe Error Details:', JSON.stringify({
+            type: error.type,
+            code: error.code,
+            statusCode: error.statusCode,
+            message: error.message,
+            raw: error.raw?.message || error.raw,
+            param: error.param
+        }, null, 2));
         res.status(500).json({ error: error.message });
     }
 };

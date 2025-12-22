@@ -56,7 +56,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
         const fullText = chunks.join(' ');
 
         // Generate single audio from complete text and get its duration
-        const audioResult = await speak(fullText, 'Zephyr');
+        const audioResult = await speak(fullText, 'Kore');
         const audioDuration = audioResult.duration * 1000; // Convert to ms
 
         console.log(`Audio duration: ${audioDuration}ms for ${chunks.length} chunks`);
@@ -232,38 +232,34 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
             <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col justify-end pb-10 relative">
                 {/* Unified Layout - Absolutes */}
 
-                {/* 1. Background Orb Layer - Center of Screen, Fixed, Large */}
-                <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
-                    <div className="w-[500px] h-[500px] sm:w-[600px] sm:h-[150vh] relative">
-                        <VoicePoweredOrb
-                            hue={0}
-                            maxHoverIntensity={0.2}
-                            voiceSensitivity={0}
-                            enableVoiceControl={false}
-                            audioMode="output"
-                            externalAudioLevel={voiceLevel || thinkingLevel}
-                        />
-                    </div>
-                </div>
+                {/* 1. Background Orb Layer - Smaller and positioned above center */}
+                <div className="fixed inset-0 flex items-start justify-center pointer-events-none z-0 pt-[15vh]">
+                    <div className="flex flex-col items-center gap-8">
+                        {/* Orb - Smaller */}
+                        <div className="w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] relative">
+                            <VoicePoweredOrb
+                                hue={0}
+                                maxHoverIntensity={0.2}
+                                voiceSensitivity={0}
+                                enableVoiceControl={false}
+                                audioMode="output"
+                                externalAudioLevel={voiceLevel || thinkingLevel}
+                            />
+                        </div>
 
-                {/* 2. Text Layer - Floating at Bottom, Independent */}
-                <div className={cn(
-                    "fixed bottom-[20%] left-0 w-full flex flex-col items-center justify-center pointer-events-none z-10 px-4 transition-opacity duration-700 ease-out",
-                    step === 'chat' ? "opacity-100" : "opacity-0"
-                )}>
-                    {chatState.isTyping && activeChunks.length === 0 ? (
-                        /* Thinking Animation */
-                        <div className="flex flex-col items-center gap-4">
-                            <p className="text-gray-400 text-sm animate-pulse">Pensando...</p>
-                        </div>
-                    ) : (
-                        /* Chunks Display */
-                        <div className="flex items-center justify-center w-full max-w-4xl animate-in fade-in duration-300">
-                            <p className="text-[18pt] sm:text-[22pt] lg:text-[26pt] font-medium text-gray-900 text-center leading-relaxed drop-shadow-sm">
-                                {activeChunks.join(' ')}
-                            </p>
-                        </div>
-                    )}
+                        {/* Text Below Orb */}
+                        {step === 'chat' && (
+                            <div className="max-w-2xl px-4 text-center">
+                                {chatState.isTyping && activeChunks.length === 0 ? (
+                                    <p className="text-gray-400 text-sm animate-pulse">Pensando...</p>
+                                ) : (
+                                    <p className="text-[16pt] sm:text-[18pt] lg:text-[20pt] font-medium text-gray-900 leading-relaxed">
+                                        {activeChunks.join(' ')}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Conditional: Test Button OR Input Area */}
