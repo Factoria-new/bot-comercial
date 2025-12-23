@@ -211,6 +211,7 @@ router.post('/architect', async (req, res) => {
             }
 
             res.end();
+            console.log(`[Architect] Stream connection closed for user ${userId || 'anon'}`);
             return;
         }
 
@@ -387,81 +388,113 @@ function createWavHeader(sampleRate, numChannels, bitsPerSample, dataLength) {
 // Text-to-Speech Endpoint using Gemini Native TTS (New SDK)
 router.post('/speak', async (req, res) => {
     try {
-        const { text, voice = 'Kore' } = req.body;
+        const { text, voice = 'pt-BR-Neural2-C' } = req.body;
 
         if (!API_KEY) {
             return res.status(500).json({ error: 'API key not configured' });
         }
 
-        console.log(`🎤 Generating TTS with Gemini for: "${text.substring(0, 30)}..."`);
+        console.log(`🎤 Generating TTS with Google Cloud API for: "${text.substring(0, 30)}..."`);
 
-        // Use new SDK as per documentation
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
+        // 1. Prepare SSML with Marks
+        // Split by spaces but preserve them to reconstruct later if needed, 
+        // OR better: split by words and just rejoin with spaces in frontend.
+        // We will split by words to insert marks.
+        // Regex to match "words" and "punctuation".
+        // Strategy: Match everything that looks like a word or punctuation.
 
-        // Retry logic for intermittent 500 errors
-        let response;
-        let lastError;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                response = await ai.models.generateContent({
-                    model: "gemini-2.5-flash-preview-tts",
-                    contents: [{
-                        parts: [{ text: text }]
-                    }],
-                    config: {
-                        responseModalities: ['AUDIO'],
-                        speechConfig: {
-                            voiceConfig: {
-                                prebuiltVoiceConfig: {
-                                    voiceName: voice
-                                },
-                            },
-                        },
-                    },
-                });
-                break; // Success, exit retry loop
-            } catch (err) {
-                lastError = err;
-                console.warn(`⚠️ TTS attempt ${attempt}/3 failed:`, err.message);
-                if (attempt < 3) {
-                    await new Promise(r => setTimeout(r, 500 * attempt)); // Backoff
+        // This regex splits by spaces but keeps punctuation attached or separate?
+        // Let's keep it simple: Split by whitespace.
+        const words = text.trim().split(/\s+/);
+
+        let ssml = '<speak xml:lang="pt-BR">';
+        ssml += '<prosody>';
+
+        // We will keep a separate array of "chunks" for the frontend to display.
+        // It's easier if we just send the words back.
+        let chunks = [];
+
+        // We need to escape XML special chars in text (like & < >)
+        const escapeXml = (unsafe) => {
+            return unsafe.replace(/[<>&'"]/g, function (c) {
+                switch (c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
                 }
-            }
+            });
+        };
+
+        words.forEach((word, index) => {
+            // Add mark before the word
+            ssml += `<mark name="${index}"/>${escapeXml(word)} `;
+            chunks.push(word);
+        });
+
+        ssml += '</prosody>';
+        ssml += '</speak>';
+
+        // 2. Call Google Cloud TTS REST API (v1beta1)
+        const url = `https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${API_KEY}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                input: { ssml: ssml },
+                voice: {
+                    languageCode: 'pt-BR',
+                    name: (voice === 'Kora' || voice === 'Kore' || voice === 'Zephyr') ? 'pt-BR-Chirp3-HD-Despina' : voice
+                },
+                audioConfig: {
+                    audioEncoding: 'Linear16', // WAV compatible
+                    sampleRateHertz: 24000
+                },
+                enableTimePointing: ["SSML_MARK"]
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Google TTS API Error: ${response.status} - ${errorText}`);
+            throw new Error(`Google TTS API Error: ${response.status} - ${errorText}`);
         }
 
-        if (!response) {
-            throw lastError || new Error('TTS failed after 3 attempts');
+        const data = await response.json();
+
+        if (!data.audioContent) {
+            throw new Error('No audio content generated');
         }
 
-        // Extract audio data (base64 encoded)
-        const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        // 3. Process Response
+        // data.audioContent is base64
+        // data.timepoints is array of { markName, timeSeconds }
 
-        if (!data) {
-            throw new Error('No audio content generated by Gemini');
-        }
+        const rawPcmBuffer = Buffer.from(data.audioContent, 'base64');
 
-        const rawPcmBuffer = Buffer.from(data, 'base64');
-
-        // Gemini TTS returns 24kHz, 1 channel, 16-bit PCM
+        // Add WAV Header so it plays natively in browser
         const wavHeader = createWavHeader(24000, 1, 16, rawPcmBuffer.length);
         const wavBuffer = Buffer.concat([wavHeader, rawPcmBuffer]);
+        const wavBase64 = wavBuffer.toString('base64');
 
-        console.log(`🔊 Audio generated: ${rawPcmBuffer.length} bytes (PCM) -> ${wavBuffer.length} bytes (WAV)`);
+        // Map timepoints back to sentences
+        // We need to return the sentences so frontend knows what text corresponds to "mark 0", "mark 1"
+        const alignedData = {
+            audioContent: wavBase64, // Returning base64 WAV now for easier JSON handling
+            words: chunks,
+            timepoints: data.timepoints || []
+        };
 
-        res.set({
-            'Content-Type': 'audio/wav',
-            'Content-Length': wavBuffer.length,
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        });
-        res.send(wavBuffer);
+        res.json(alignedData);
 
     } catch (error) {
-        console.error('Gemini TTS Error:', error);
-        // Fallback or explicit error
+        console.error('Google TTS Error:', error);
         res.status(500).json({
-            error: 'Failed to generate speech with Gemini',
+            error: 'Failed to generate speech',
             details: error.message
         });
     }

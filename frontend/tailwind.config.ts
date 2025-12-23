@@ -20,6 +20,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         clash: ['Clash Display', 'sans-serif'],
+        outfit: ['Outfit', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -162,6 +163,11 @@ const config: Config = {
             "offset-distance": "100%",
           },
         },
+        "aurora": {
+          "0%": { transform: "translateX(0%) hue-rotate(0deg)" },
+          "50%": { transform: "translateX(-10%) hue-rotate(10deg)" },
+          "100%": { transform: "translateX(0%) hue-rotate(0deg)" },
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -171,10 +177,14 @@ const config: Config = {
         "float": "float 6s ease-in-out infinite",
         "custom-bounce": "custom-bounce 1s ease-in-out infinite",
         "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
+        "spin-slow": "spin 3s linear infinite",
+        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "bounce-slow": "bounce 3s infinite",
+        "aurora": "aurora 20s infinite linear",
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;
 
 export default config;

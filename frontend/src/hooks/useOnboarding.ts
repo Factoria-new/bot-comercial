@@ -136,7 +136,7 @@ export function useOnboarding() {
     }, [state.messages.length, addBotMessage]);
 
     // Handle AI Interview Step
-    const handleInterviewStep = async (userInput: string, onChunk?: (chunk: { type: 'text' | 'prompt' | 'error' | 'complete', content: string }) => void) => {
+    const handleInterviewStep = async (userInput: string, onChunk?: (chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete', content: string }) => void) => {
         try {
             setState(prev => ({ ...prev, isTyping: true }));
 
@@ -171,7 +171,10 @@ export function useOnboarding() {
 
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
+                    if (done) {
+                        console.log('✅ [Frontend] Stream reader done');
+                        break;
+                    }
 
                     const chunk = decoder.decode(value);
                     const lines = chunk.split('\n');
@@ -184,6 +187,9 @@ export function useOnboarding() {
                                 if (data.type === 'text') {
                                     fullText += data.content;
                                     onChunk(data);
+                                } else if (data.type === 'display_text') {
+                                    console.log('📺 Display text received:', data.content);
+                                    onChunk(data); // Propagate usage of display text
                                 } else if (data.type === 'prompt') {
                                     console.log('🧠 [Architect] Novo prompt recebido via stream!');
                                     onChunk(data); // Pass through so AgentCreator can handle it

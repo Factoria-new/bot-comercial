@@ -8,44 +8,43 @@ import {
     ArrowRight,
     Loader2,
     Sparkles,
-
     Menu,
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { VoicePoweredOrb } from "@/components/ui/voice-powered-orb";
 import { useTTS } from "@/hooks/useTTS";
 
 interface AgentCreatorProps {
     onOpenSidebar?: () => void;
 }
 
-
-
 export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const [prompt, setPrompt] = useState("");
     const [step, setStep] = useState<'input' | 'chat'>('input');
-    const [testMode, setTestMode] = useState(false); // When true, show full chat with created agent
+    const [testMode, setTestMode] = useState(false);
     const [testMessages, setTestMessages] = useState<Array<{ id: string, type: 'bot' | 'user', content: string }>>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
-    // introStarted and showHeader removed as we now use CSS transitions
-    const [activeChunks, setActiveChunks] = useState<string[]>([]);
+    const [flyingMessages, setFlyingMessages] = useState<Array<{ id: number, text: string }>>([]);
+
+    const [displayText, setDisplayText] = useState("");
+    const [isVisible, setIsVisible] = useState(false);
+    const pendingDisplayTextRef = useRef<string>("");
+
     const [isPlaying, setIsPlaying] = useState(false);
     const playbackQueue = useRef<string[]>([]);
     const processingQueue = useRef(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const hasAutoStarted = useRef(false);
-    const [thinkingLevel, setThinkingLevel] = useState(0);
 
-    // Chat state using onboarding hook
+    // Chat state
     const {
         state: chatState,
         startOnboarding,
         handleUserInput,
     } = useOnboarding();
 
-    const { speak, voiceLevel, stop: stopTTS } = useTTS();
+    const { speak, stop: stopTTS, resumeContext, voiceLevel } = useTTS();
 
-    // Process complete stream: generate single audio, display chunks progressively
+    // Process complete stream
     const processCompleteStream = useCallback(async () => {
         if (processingQueue.current || playbackQueue.current.length === 0) return;
 
@@ -53,96 +52,75 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
         setIsPlaying(true);
 
         const chunks = [...playbackQueue.current];
-        const fullText = chunks.join(' ');
+        const fullAudioText = chunks.join(' ');
 
-        // Generate single audio from complete text and get its duration
-        const audioResult = await speak(fullText, 'Kore');
-        const audioDuration = audioResult.duration * 1000; // Convert to ms
-
-        console.log(`Audio duration: ${audioDuration}ms for ${chunks.length} chunks`);
-
-        // Display chunks progressively based on ACTUAL audio duration
-        const delayPerChunk = audioDuration / chunks.length;
-
-        for (let i = 0; i < chunks.length; i++) {
-            setActiveChunks(prev => [...prev, chunks[i]]);
-
-            // Don't wait after the last chunk
-            if (i < chunks.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, delayPerChunk));
-            }
+        try {
+            await speak(fullAudioText, 'Kora', {
+                onStart: () => {
+                    if (pendingDisplayTextRef.current) {
+                        setIsVisible(false);
+                        setDisplayText(pendingDisplayTextRef.current);
+                    }
+                },
+                onProgress: (progress) => {
+                    if (progress > 0.7 && !isVisible && pendingDisplayTextRef.current) {
+                        setIsVisible(true);
+                    }
+                },
+                onData: () => { }
+            });
+        } catch (error) {
+            console.error("Error processing stream audio:", error);
+        } finally {
+            setIsPlaying(false);
+            processingQueue.current = false;
+            playbackQueue.current = [];
+            setIsVisible(true);
+            pendingDisplayTextRef.current = "";
         }
+    }, [speak, isVisible]);
 
-
-        setIsPlaying(false);
-        processingQueue.current = false;
-        playbackQueue.current = [];
-    }, [speak]);
-
-    const handleChunk = useCallback((chunk: { type: 'text' | 'prompt' | 'error' | 'complete', content: string }) => {
-        if (chunk.type === 'text') {
+    const handleChunk = useCallback((chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete', content: string }) => {
+        if (chunk.type === 'display_text') {
+            pendingDisplayTextRef.current = chunk.content;
+            setDisplayText(chunk.content);
+            setIsVisible(false);
+        } else if (chunk.type === 'text') {
             playbackQueue.current.push(chunk.content);
-            // Don't trigger processing yet - wait for stream to complete
         } else if (chunk.type === 'prompt') {
-            // Prompt received, agent is ready - stream is complete
             processCompleteStream();
         } else if (chunk.type === 'complete') {
-            // Stream completed without prompt - trigger audio processing
             processCompleteStream();
         }
     }, [processCompleteStream]);
 
-    // Auto-start: Agent initiates conversation after page load
+    // Auto-start
     useEffect(() => {
         if (hasAutoStarted.current) return;
-
         if (chatState.messages.length > 0) {
             hasAutoStarted.current = true;
             setStep('chat');
             return;
         }
-
         hasAutoStarted.current = true;
-
         const timer = setTimeout(() => {
             setStep('chat');
-            startOnboarding(undefined, handleChunk); // Agent starts with stream
+            startOnboarding(undefined, handleChunk);
         }, 800);
-
         return () => clearTimeout(timer);
     }, [startOnboarding, chatState.messages.length, handleChunk]);
 
-    // Orb thinking animation loop
-    useEffect(() => {
-        let rafId: number;
-        let startTime = Date.now();
 
-        const animate = () => {
-            if (chatState.isTyping || isPlaying) {
-                const elapsed = Date.now() - startTime;
-                const pulse = 0.1 + Math.sin(elapsed * 0.005) * 0.05;
-                setThinkingLevel(pulse);
-            } else {
-                setThinkingLevel(0);
-            }
-            rafId = requestAnimationFrame(animate);
-        };
-
-        rafId = requestAnimationFrame(animate);
-        return () => cancelAnimationFrame(rafId);
-    }, [chatState.isTyping, isPlaying]);
-
-    // Clear active chunks when user starts typing or a new message cycle starts
+    // Clear logic
     useEffect(() => {
         if (chatState.isTyping) {
-            setActiveChunks([]);
             playbackQueue.current = [];
+            setDisplayText("");
+            setIsVisible(false);
+            pendingDisplayTextRef.current = "";
         }
     }, [chatState.isTyping]);
 
-    // TTS Effect: Removed old version in favor of handleChunk/processQueue
-
-    // Auto-resize textarea
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -153,129 +131,161 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const handleSend = async () => {
         if (!prompt.trim() || chatState.isTyping) return;
 
-        setActiveChunks([]); // Clear previous bot response
-        playbackQueue.current = []; // Clear pending chunks
+        resumeContext();
+
+        const currentPrompt = prompt;
+        const flightId = Date.now();
+        setFlyingMessages(prev => [...prev, { id: flightId, text: currentPrompt }]);
+        setTimeout(() => {
+            setFlyingMessages(prev => prev.filter(msg => msg.id !== flightId));
+        }, 1000);
+
+        setDisplayText("");
+        setIsVisible(false);
+        playbackQueue.current = [];
         stopTTS();
 
         if (step === 'chat') {
-            handleUserInput(prompt, handleChunk);
+            handleUserInput(currentPrompt, handleChunk);
             setPrompt('');
             return;
         }
 
         setStep('chat');
-        startOnboarding(prompt, handleChunk);
+        startOnboarding(currentPrompt, handleChunk);
         setPrompt('');
     };
 
-    // Handle sending messages in test mode (separate from interview)
     const handleTestSend = async () => {
         if (!prompt.trim() || isTestTyping) return;
 
-        const userMsg = {
-            id: Math.random().toString(36).substring(2, 9),
-            type: 'user' as const,
-            content: prompt
-        };
+        resumeContext();
 
+        const userMsg = { id: Math.random().toString(36).substring(2, 9), type: 'user' as const, content: prompt };
         setTestMessages(prev => [...prev, userMsg]);
         setPrompt('');
         setIsTestTyping(true);
-
         try {
-            // Call the agent chat API with the created agent's prompt
             const res = await fetch('http://localhost:3003/api/agent/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: prompt,
-                    systemPrompt: chatState.agentConfig?.prompt || ''
-                })
+                body: JSON.stringify({ message: prompt, systemPrompt: chatState.agentConfig?.prompt || '' })
             });
-
             const data = await res.json();
-
             if (data.success) {
-                const botMsg = {
-                    id: Math.random().toString(36).substring(2, 9),
-                    type: 'bot' as const,
-                    content: data.message
-                };
+                const botMsg = { id: Math.random().toString(36).substring(2, 9), type: 'bot' as const, content: data.message };
                 setTestMessages(prev => [...prev, botMsg]);
             }
         } catch (error) {
             console.error('Test chat error:', error);
-            const errorMsg = {
-                id: Math.random().toString(36).substring(2, 9),
-                type: 'bot' as const,
-                content: 'Desculpe, tive um problema. Tente novamente.'
-            };
-            setTestMessages(prev => [...prev, errorMsg]);
         } finally {
             setIsTestTyping(false);
         }
     };
 
-    // Main input UI - LIGHT MODE
+    // -- ENHANCED AURORA REACTIVITY --
+    const isTalking = voiceLevel > 0.05;
+
+    // Smooth dampening is hard without a frame loop here, assuming voiceLevel comes from one
+    // We will apply stronger logical transforms based on voiceLevel
+
+    // Scale for pulses
+    const pulseScale = 1 + voiceLevel * 0.4;
+
+    // Rotation for the "Curtain"
+    // We start at -45deg and rotate slightly based on volume to simulate "waving"
+    const curtainRotate = -45 + (voiceLevel * 15);
+
+    // Jitter for the whole container (still keep this for high frequency feel)
+    const vibrationIntensity = voiceLevel * 8;
+    const jitterX = isTalking ? (Math.random() - 0.5) * vibrationIntensity : 0;
+    const jitterY = isTalking ? (Math.random() - 0.5) * vibrationIntensity : 0;
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col p-4">
-            {/* Menu button */}
-            <Button
-                variant="ghost"
-                size="icon"
-                onClick={onOpenSidebar}
-                className="fixed top-4 left-4 z-50 text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white/80 backdrop-blur-sm shadow-sm"
+        <div className="min-h-screen relative flex flex-col p-4 overflow-hidden text-white font-outfit bg-[#020617]">
+            {/* Background Layer - Deep Aura */}
+            <div
+                className="absolute inset-0 z-0 overflow-hidden pointer-events-none transition-transform duration-75 ease-out"
+                style={{
+                    // Base container jitter
+                    transform: `translate(${jitterX}px, ${jitterY}px)`
+                }}
             >
-                <Menu className="w-5 h-5" />
-            </Button>
+                {/* 1. Deep Blue Base (Right Side) - Expands with audio */}
+                <div
+                    className="absolute -top-[10%] -right-[10%] w-[80vw] h-[80vh] bg-[radial-gradient(circle,rgba(59,130,246,0.3)_0%,rgba(0,0,0,0)_70%)] blur-[80px] mix-blend-screen transition-transform duration-100 ease-linear"
+                    style={{ transform: `scale(${pulseScale})` }}
+                />
 
-            <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col justify-end pb-10 relative">
-                {/* Unified Layout - Absolutes */}
+                {/* 2. Deep Violet Base (Left Side) - Expands with audio */}
+                <div
+                    className="absolute top-[20%] -left-[10%] w-[70vw] h-[70vh] bg-[radial-gradient(circle,rgba(124,58,237,0.3)_0%,rgba(0,0,0,0)_70%)] blur-[80px] mix-blend-screen transition-transform duration-100 ease-linear"
+                    style={{ transform: `scale(${pulseScale})` }}
+                />
 
-                {/* 1. Background Orb Layer - Smaller and positioned above center */}
-                <div className="fixed inset-0 flex items-start justify-center pointer-events-none z-0 pt-[15vh]">
-                    <div className="flex flex-col items-center gap-8">
-                        {/* Orb - Smaller */}
-                        <div className="w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] relative">
-                            <VoicePoweredOrb
-                                hue={0}
-                                maxHoverIntensity={0.2}
-                                voiceSensitivity={0}
-                                enableVoiceControl={false}
-                                audioMode="output"
-                                externalAudioLevel={voiceLevel || thinkingLevel}
-                            />
+                {/* 3. The "Curtain" / Aurora Beam (Center Diagonal) - Rotates/Waves with audio */}
+                <div
+                    className="absolute top-0 left-[-20%] w-[140%] h-[140%] opacity-50 mix-blend-screen transition-transform duration-100 ease-linear"
+                    style={{
+                        background: 'conic-gradient(from 180deg at 50% 50%, #000000 0deg, #1e1b4b 60deg, #4c1d95 120deg, #2563eb 180deg, #4c1d95 240deg, #1e1b4b 300deg, #000000 360deg)',
+                        filter: 'blur(90px)',
+                        transform: `rotate(${curtainRotate}deg) scale(${1 + voiceLevel * 0.1})`,
+                    }}
+                />
+
+                {/* 4. Bright Highlight (Interactive) - Flashes with audio */}
+                <div
+                    className="absolute top-[30%] left-[30%] w-[40vw] h-[40vw] bg-violet-400/30 blur-[100px] rounded-full transition-all duration-75"
+                    style={{
+                        opacity: 0.1 + voiceLevel * 0.6,
+                        transform: `scale(${1 + voiceLevel * 0.5})`
+                    }}
+                />
+            </div>
+
+            {/* Content Layer */}
+            <div className="relative z-10 w-full max-w-4xl mx-auto flex-1 flex flex-col justify-end pb-10">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onOpenSidebar}
+                    className="fixed top-4 left-4 z-50 text-white/70 hover:text-white hover:bg-white/10"
+                >
+                    <Menu className="w-6 h-6" />
+                </Button>
+
+                {/* Main Display Area */}
+                <div className="flex-1 flex flex-col items-center justify-center min-h-[40vh] mb-8">
+                    {step === 'chat' && (
+                        <div className="max-w-3xl text-center px-4">
+                            {chatState.isTyping && !displayText ? (
+                                <p className="text-white/40 text-lg animate-pulse font-light tracking-wide">Pensando...</p>
+                            ) : (
+                                <h1 className={cn(
+                                    "text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight drop-shadow-2xl transition-all duration-700 font-outfit",
+                                    !isVisible ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+                                )}>
+                                    {displayText}
+                                </h1>
+                            )}
                         </div>
-
-                        {/* Text Below Orb */}
-                        {step === 'chat' && (
-                            <div className="max-w-2xl px-4 text-center">
-                                {chatState.isTyping && activeChunks.length === 0 ? (
-                                    <p className="text-gray-400 text-sm animate-pulse">Pensando...</p>
-                                ) : (
-                                    <p className="text-[16pt] sm:text-[18pt] lg:text-[20pt] font-medium text-gray-900 leading-relaxed">
-                                        {activeChunks.join(' ')}
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </div>
 
-                {/* Conditional: Test Button OR Input Area */}
+
+                {/* Input / Test Area */}
                 {(() => {
                     const latestBotMessage = [...chatState.messages].reverse().find(m => m.type === 'bot');
                     const agentReady = latestBotMessage?.content.includes('testar seu agente');
 
                     if (agentReady && !testMode) {
-                        // Agent Ready - Show Test Button
                         return (
                             <div className="flex justify-center animate-in fade-in zoom-in-95 duration-500">
                                 <Button
                                     onClick={() => setTestMode(true)}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-6 text-lg rounded-2xl shadow-lg shadow-emerald-500/30 gap-2"
+                                    className="bg-white text-black hover:bg-gray-100 px-8 py-6 text-lg rounded-2xl shadow-xl shadow-white/10 gap-2 font-medium font-outfit"
                                 >
-                                    <Sparkles className="w-5 h-5" />
+                                    <Sparkles className="w-5 h-5 text-purple-600" />
                                     Testar meu agente
                                 </Button>
                             </div>
@@ -283,61 +293,43 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                     }
 
                     if (testMode) {
-                        // Test Mode - Full Chat Interface (clean, separate from interview)
                         return (
                             <>
-                                {/* Chat Messages */}
-                                <div className="mb-4 max-h-[40vh] overflow-y-auto">
+                                <div className="mb-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                                     <div className="space-y-4">
                                         {testMessages.length === 0 && !isTestTyping && (
-                                            <div className="text-center text-gray-500 py-8">
+                                            <div className="text-center text-white/50 py-8">
                                                 <p>Converse com seu agente criado!</p>
-                                                <p className="text-sm mt-2">Faça perguntas como se fosse um cliente.</p>
                                             </div>
                                         )}
                                         {testMessages.map((msg) => (
-                                            <div
-                                                key={msg.id}
-                                                className={cn(
-                                                    "flex",
-                                                    msg.type === 'user' ? "justify-end" : "justify-start"
-                                                )}
-                                            >
-                                                <div
-                                                    className={cn(
-                                                        "max-w-[80%] px-4 py-2 rounded-2xl",
-                                                        msg.type === 'user'
-                                                            ? "bg-emerald-600 text-white"
-                                                            : "bg-gray-100 text-gray-900"
-                                                    )}
-                                                >
+                                            <div key={msg.id} className={cn("flex", msg.type === 'user' ? "justify-end" : "justify-start")}>
+                                                <div className={cn(
+                                                    "max-w-[80%] px-4 py-2 rounded-2xl font-outfit",
+                                                    msg.type === 'user' ? "bg-purple-600 text-white" : "bg-white/10 text-white backdrop-blur-sm"
+                                                )}>
                                                     {msg.content}
                                                 </div>
                                             </div>
                                         ))}
                                         {isTestTyping && (
                                             <div className="flex justify-start">
-                                                <div className="bg-gray-100 px-4 py-2 rounded-2xl">
-                                                    <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                                                <div className="bg-white/10 px-4 py-2 rounded-2xl">
+                                                    <Loader2 className="w-5 h-5 animate-spin text-white/70" />
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* Chat Input */}
-                                <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-lg">
+                                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-lg">
                                     <div className="flex gap-3">
                                         <Textarea
                                             ref={textareaRef}
                                             value={prompt}
                                             onChange={(e) => setPrompt(e.target.value)}
                                             placeholder="Converse com seu agente..."
-                                            className={cn(
-                                                "flex-1 bg-transparent border-none resize-none text-gray-900 text-lg",
-                                                "placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0",
-                                                "min-h-[50px] max-h-[150px]"
-                                            )}
+                                            className="flex-1 bg-transparent border-none resize-none text-white text-lg placeholder:text-white/30 focus-visible:ring-0 min-h-[50px] max-h-[150px] font-outfit"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' && !e.shiftKey) {
                                                     e.preventDefault();
@@ -348,18 +340,9 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                         <Button
                                             onClick={handleTestSend}
                                             disabled={!prompt.trim() || isTestTyping}
-                                            className={cn(
-                                                "rounded-full w-12 h-12 p-0 self-end",
-                                                prompt.trim()
-                                                    ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                                                    : "bg-gray-200 text-gray-400"
-                                            )}
+                                            className="rounded-full w-12 h-12 p-0 self-end bg-purple-600 hover:bg-purple-500 text-white"
                                         >
-                                            {isTestTyping ? (
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                            ) : (
-                                                <ArrowRight className="w-5 h-5" />
-                                            )}
+                                            {isTestTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                                         </Button>
                                     </div>
                                 </div>
@@ -367,52 +350,48 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                         );
                     }
 
-                    // Normal Input + Categories
                     return (
-                        <>
-                            <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-lg">
-                                <div className="flex gap-3">
-                                    <Textarea
-                                        ref={textareaRef}
-                                        value={prompt}
-                                        onChange={(e) => setPrompt(e.target.value)}
-                                        placeholder={step === 'chat' ? "Digite sua resposta..." : "Como você gostaria de construir seu agente?"}
-                                        className={cn(
-                                            "flex-1 bg-transparent border-none resize-none text-gray-900 text-lg",
-                                            "placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0",
-                                            "min-h-[60px] max-h-[200px]"
-                                        )}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                handleSend();
-                                            }
-                                        }}
-                                    />
-                                    <Button
-                                        onClick={handleSend}
-                                        disabled={!prompt.trim() || chatState.isTyping}
-                                        className={cn(
-                                            "rounded-full w-12 h-12 p-0 self-end",
-                                            prompt.trim()
-                                                ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                                                : "bg-gray-200 text-gray-400"
-                                        )}
-                                    >
-                                        {chatState.isTyping ? (
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                        ) : (
-                                            <ArrowRight className="w-5 h-5" />
-                                        )}
-                                    </Button>
-                                </div>
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-2xl">
+                            <div className="flex gap-3">
+                                <Textarea
+                                    ref={textareaRef}
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    placeholder={step === 'chat' ? "Digite sua resposta..." : "Como você gostaria de construir seu agente?"}
+                                    className="flex-1 bg-transparent border-none resize-none text-white text-lg placeholder:text-white/30 focus-visible:ring-0 min-h-[60px] max-h-[200px] font-outfit"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    onClick={handleSend}
+                                    disabled={!prompt.trim() || chatState.isTyping}
+                                    className="rounded-full w-12 h-12 p-0 self-end bg-white text-black hover:bg-gray-200"
+                                >
+                                    {chatState.isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+                                </Button>
                             </div>
-
-
-                        </>
+                        </div>
                     );
                 })()}
             </div>
+
+            {/* Flying Messages */}
+            {flyingMessages.map((msg) => (
+                <div
+                    key={msg.id}
+                    className="fixed bottom-[120px] left-0 right-0 flex justify-center pointer-events-none z-50 animate-out fade-out slide-out-to-top-[40vh] duration-1000 fill-mode-forwards"
+                >
+                    <div className="w-full max-w-4xl px-8 flex justify-start">
+                        <div className="text-white text-lg leading-relaxed max-w-[80%] pl-1 drop-shadow-lg font-outfit">
+                            {msg.text}
+                        </div>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }

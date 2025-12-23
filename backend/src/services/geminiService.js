@@ -14,25 +14,21 @@ PERSONALIDADE:
 - Faça conexões ("Ah massa, eu adoro pizza!")
 - Pergunte de forma natural, não interrogatório
 
-O QUE VOCÊ PRECISA DESCOBRIR (um de cada vez):
-- Nome do negócio
-- O que vende
-- Produtos principais e preços
-- Horário e formas de pagamento
+IMPORTANTE - ROTEIRO VISUAL (<DISPLAY>):
+Você deve SEMPRE separar o que aparece na tela (texto curto) do que você fala (conversa completa).
+Siga ESTRITAMENTE este roteiro para o texto visual:
 
-COMO FALAR:
-Bom: "E aí, qual o nome do seu negócio?"
-Bom: "Show! Pizza sempre é bom. Quais sabores vocês mais vendem?"
-Bom: "Hmm, e qual o preço? Tipo, uma grande sai quanto?"
+1. Pergunta inicial (Nome) -> <DISPLAY>Qual o nome do seu negócio?</DISPLAY>
+2. Pergunta sobre o ramo -> <DISPLAY>O seu negócio é sobre o que?</DISPLAY>
+3. Pergunta sobre produtos -> <DISPLAY>Quais são os produtos?</DISPLAY>
+4. Pergunta sobre preços -> <DISPLAY>Qual o valor?</DISPLAY>
+5. Pergunta sobre pagamento/horário -> <DISPLAY>Mais alguma informação?</DISPLAY>
 
-Ruim: "Qual o nome da sua empresa?"
-Ruim: "Quais são os produtos principais?"
-Ruim: Fazer várias perguntas de uma vez
-
-IMPORTANTE:
-- NUNCA use emojis em suas respostas.
-- Use frases curtas e diretas para manter a conversa ágil.
-- Reaja ao contexto antes de perguntar
+REGRAS:
+- Comece cada resposta com a tag <DISPLAY> correspondente à fase da conversa.
+- O texto dentro de <DISPLAY> deve ser EXATAMENTE um dos exemplos acima, ou muito similar (curto, direto).
+- O resto do texto é o que você vai FALAR (o áudio), então pode ser mais longo, descontraído e cheio de personalidade.
+- NUNCA use emojis.
 - Só gere o <HIDDEN_PROMPT> quando tiver nome + tipo de negócio + pelo menos 1 produto com preço
 
 HIDDEN_PROMPT (gere quando tiver info suficiente):
@@ -143,36 +139,76 @@ export async function* runArchitectAgentStream(userId, userMessage, userAudioBuf
         const result = await model.generateContentStream(promptParts);
 
         let fullText = "";
-        let buffer = "";
+        let buffer = ""; // Buffer to catch <DISPLAY> tags at the start
+        let displayFound = false;
+        let displayComplete = false;
 
+        console.log('[Architect Stream] Stream object received');
         for await (const chunk of result.stream) {
             const chunkText = chunk.text();
             fullText += chunkText;
-            buffer += chunkText;
 
-            // Split into smaller blocks for faster audio turnaround
-            // Matches ., !, ?, or , followed by space or newline
-            const parts = buffer.split(/([.!?;,]\s+)/);
+            // If we haven't finished processing the DISPLAY tag yet
+            if (!displayComplete) {
+                buffer += chunkText;
 
-            // If we have at least one complete chunk
-            if (parts.length > 2) {
-                // Send all complete sentences/chunks
-                for (let i = 0; i < parts.length - 1; i += 2) {
-                    const chunkText = parts[i] + (parts[i + 1] || "");
-                    if (chunkText.trim() && !chunkText.includes('<HIDDEN_PROMPT>')) {
-                        yield { type: 'text', content: chunkText };
+                // Check case: <DISPLAY> might already be in buffer, possibly not at start
+                if (!displayFound && buffer.includes('<DISPLAY>')) {
+                    displayFound = true;
+                }
+
+                if (displayFound) {
+                    // Check if closing tag is here
+                    if (buffer.includes('</DISPLAY>')) {
+                        const match = buffer.match(/([\s\S]*?)<DISPLAY>([\s\S]*?)<\/DISPLAY>/);
+                        if (match) {
+                            // group 1: pre-tag text (could be noise or legit text)
+                            // group 2: tag content
+                            const preTagText = match[1].trim();
+                            const displayContent = match[2].trim();
+
+                            // If there is significant text before the tag, send it as audio
+                            if (preTagText.length > 0) {
+                                // Only send if it's not likely formatting junk like "```html" or quotes
+                                if (!preTagText.includes('```')) {
+                                    yield { type: 'text', content: preTagText + " " };
+                                }
+                            }
+
+                            yield { type: 'display_text', content: displayContent };
+
+                            // The remaining buffer after the tag is audio text
+                            const remaining = buffer.split('</DISPLAY>')[1];
+                            if (remaining) {
+                                yield { type: 'text', content: remaining };
+                            }
+
+                            displayComplete = true; // Done with strict display parsing
+                            buffer = "";
+                        }
+                    }
+                } else {
+                    // Not found yet. Safety net for buffer size.
+                    // If buffer gets too large (>200) and no tag, simply dump it as text and stop looking
+                    // This handles cases where the model refuses to use the tag.
+                    if (buffer.length > 200) {
+                        yield { type: 'text', content: buffer };
+                        buffer = "";
+                        displayComplete = true;
                     }
                 }
-                // Keep the remainder in buffer
-                buffer = parts[parts.length - 1];
+
+            } else {
+                // Display part is done, just emit everything as text (audio)
+                if (chunkText) {
+                    yield { type: 'text', content: chunkText };
+                }
             }
         }
 
-        // Send remaining buffer if it's not part of HIDDEN_PROMPT
-        if (buffer.trim() && !buffer.includes('<HIDDEN_PROMPT>')) {
+        // Flush any remaining buffer if we never found the closing tag (fallback)
+        if (!displayComplete && buffer) {
             yield { type: 'text', content: buffer };
-        } else if (buffer.includes('<HIDDEN_PROMPT>')) {
-            // If the buffer contains part of hidden prompt, we process fullText at the end
         }
 
         // Finally, check for HIDDEN_PROMPT in fullText
@@ -182,9 +218,11 @@ export async function* runArchitectAgentStream(userId, userMessage, userAudioBuf
                 yield { type: 'prompt', content: match[1].trim() };
             }
         }
+        console.log('[Architect Stream] Generator function finished');
 
     } catch (error) {
         console.error('Erro no Architect Agent Stream:', error);
+        console.error('Stack:', error.stack);
         yield { type: 'error', content: "Desculpe, tive um probleminha aqui..." };
     }
 }
@@ -280,6 +318,11 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
             }
         }
 
+        // Also clean up <DISPLAY> tags from non-stream response
+        if (visibleResponse.includes('<DISPLAY>')) {
+            visibleResponse = visibleResponse.replace(/<DISPLAY>[\s\S]*?<\/DISPLAY>/, '').trim();
+        }
+
         return {
             response: visibleResponse, // Texto para o chat ("Li seu site, achei ótimo...")
             newSystemPrompt: generatedPrompt // Prompt técnico para salvar no estado/banco
@@ -289,9 +332,6 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
         console.error('Erro no Architect Agent:', error);
 
         // Se for a primeira interação (sem histórico), retorna uma saudação amigável padrão ("Persona Lia")
-        // Isso evita erros feios logo no início se a API falhar ou demorar
-        // Se for a primeira interação (sem histórico), retorna uma saudação amigável padrão ("Persona Lia")
-        // Isso evita erros feios logo no início se a API falhar ou demorar
         if (!history || history.length === 0) {
             return {
                 response: "Oiii! Tudo bem? Sou a Lia, sua parceira aqui na Factoria! Vamos criar um agente de vendas incrível pro seu negócio? Pra começar, me conta: qual é o nome da sua empresa?",
