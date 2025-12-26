@@ -80,14 +80,16 @@ app.use(cors({
 }));
 
 // Configuração para Webhook do Stripe (precisa do raw body)
+// Limite aumentado para 50mb para suportar áudios maiores
 app.use(express.json({
+  limit: '50mb',
   verify: (req, res, buf) => {
     if (req.originalUrl.startsWith('/api/stripe/webhook')) {
       req.rawBody = buf.toString();
     }
   }
 }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Logging de requisições
 app.use((req, res, next) => {

@@ -136,14 +136,16 @@ export function useTTS() {
                     }
 
                     console.log("Decoding audio content...");
-                    // Convert base64 WAV to Blob
+                    // Convert base64 audio to Blob
                     const binaryString = window.atob(data.audioContent);
                     const len = binaryString.length;
                     const bytes = new Uint8Array(len);
                     for (let i = 0; i < len; i++) {
                         bytes[i] = binaryString.charCodeAt(i);
                     }
-                    const blob = new Blob([bytes], { type: 'audio/wav' });
+                    // Use mimeType from response, fallback to audio/wav
+                    const mimeType = data.mimeType || 'audio/wav';
+                    const blob = new Blob([bytes], { type: mimeType });
                     const url = URL.createObjectURL(blob);
                     console.log("Audio Blob created:", url);
 
