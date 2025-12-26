@@ -3,13 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import AgentCreator from '@/components/AgentCreator';
+import WelcomeScreen from '@/components/WelcomeScreen';
 import FactoriaChatInterface from '@/components/ui/factoria-chat-interface';
 import DashboardSidebar from '@/components/DashboardSidebar';
+import { AnimatePresence } from 'framer-motion';
 
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [agentCreated, setAgentCreated] = useState(false); // Kept for legacy compatibility if needed
+  const [showWelcome, setShowWelcome] = useState(true); // Default to true for new flow
   const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
   const { toast } = useToast();
   const { logout } = useAuth();
@@ -74,28 +77,33 @@ const Dashboard = () => {
     <>
       {/* Agent Creator or Chat Interface based on state */}
       {/* Agent Creator or Chat Interface based on state */}
-      {!showChat ? (
-        <AgentCreator
-          isExiting={agentCreated} // Use this state to trigger animation
-          onOpenSidebar={() => setIsSidebarOpen(true)}
-          onStartChat={(prompt) => {
-            setAgentCreated(true); // Trigger exit animation
-            setAgentPrompt(prompt);
-            // Delay actual unmount to allow animation to play
-            setTimeout(() => {
-              setShowChat(true);
-            }, 500);
-          }}
-        />
-      ) : (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 h-screen">
-          <FactoriaChatInterface
-            onLogout={handleLogout}
+      <AnimatePresence mode="wait">
+        {showWelcome && !agentCreated && !showChat ? (
+          <WelcomeScreen key="welcome" onStart={() => setShowWelcome(false)} />
+        ) : !showChat ? (
+          <AgentCreator
+            key="creator"
+            isExiting={agentCreated} // Use this state to trigger animation
             onOpenSidebar={() => setIsSidebarOpen(true)}
-            initialMessage={agentPrompt || undefined}
+            onStartChat={(prompt) => {
+              setAgentCreated(true); // Trigger exit animation
+              setAgentPrompt(prompt);
+              // Delay actual unmount to allow animation to play
+              setTimeout(() => {
+                setShowChat(true);
+              }, 500);
+            }}
           />
-        </div>
-      )}
+        ) : (
+          <div key="chat" className="animate-in fade-in slide-in-from-bottom-4 duration-700 h-screen">
+            <FactoriaChatInterface
+              onLogout={handleLogout}
+              onOpenSidebar={() => setIsSidebarOpen(true)}
+              initialMessage={agentPrompt || undefined}
+            />
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar - Light mode */}
       <DashboardSidebar

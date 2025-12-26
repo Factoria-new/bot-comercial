@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -20,9 +21,11 @@ import { getSchemaForNiche, NicheSchema } from "@/lib/nicheSchemas";
 
 interface AgentCreatorProps {
     onOpenSidebar?: () => void;
+    isExiting?: boolean;
+    onStartChat?: (prompt: string) => void;
 }
 
-export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
+export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: AgentCreatorProps) {
     const liveMode = false; // Toggle for Gemini Live API vs Legacy TTS
     const [prompt, setPrompt] = useState("");
     const [step, setStep] = useState<'input' | 'chat'>('input');
@@ -587,7 +590,12 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                 {/* Main Display Area */}
                 <div className="flex-1 flex flex-col items-center justify-center min-h-[40vh] mb-8">
                     {step === 'chat' && (
-                        <div className="max-w-3xl text-center px-4">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 1, delay: 0.3 }}
+                            className="max-w-3xl text-center px-4"
+                        >
                             {chatState.isTyping && !displayText ? (
                                 <p className="text-white/40 text-lg animate-pulse font-light tracking-wide">Pensando...</p>
                             ) : (
@@ -598,7 +606,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                     {displayText}
                                 </h1>
                             )}
-                        </div>
+                        </motion.div>
                     )}
                 </div>
 
@@ -752,10 +760,14 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
 
                     // Normal Text Input Mode
                     return (
-                        <div className={cn(
-                            "bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-2xl transition-all duration-500",
-                            "animate-in slide-in-from-bottom-4 fade-in"
-                        )}>
+                        <motion.div
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
+                            className={cn(
+                                "bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-2xl transition-all duration-500",
+                            )}
+                        >
                             <div className="flex gap-3">
                                 {/* Voice Mode Button */}
                                 <Button
@@ -802,8 +814,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                     {(chatState.isTyping || isProcessing) ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                                 </Button>
                             </div>
-
-                        </div>
+                        </motion.div>
                     );
                 })()}
             </div>
