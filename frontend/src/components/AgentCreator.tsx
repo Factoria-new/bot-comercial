@@ -15,6 +15,8 @@ import {
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTTS } from "@/hooks/useTTS";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
+import { DynamicNicheModal } from "./DynamicNicheModal";
+import { getSchemaForNiche, NicheSchema } from "@/lib/nicheSchemas";
 
 interface AgentCreatorProps {
     onOpenSidebar?: () => void;
@@ -29,6 +31,10 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const [isTestTyping, setIsTestTyping] = useState(false);
     const [flyingMessages, setFlyingMessages] = useState<Array<{ id: number, text: string }>>([]);
     const [voiceMode, setVoiceMode] = useState(false); // Voice recording mode
+
+    // Dynamic Modal State
+    const [modalOpen, setModalOpen] = useState(false);
+    const [currentSchema, setCurrentSchema] = useState<NicheSchema | null>(null);
 
     const [displayText, setDisplayText] = useState("");
     const [isVisible, setIsVisible] = useState(false);
@@ -97,10 +103,36 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
 
     const handleChunk = useCallback((chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete', content: string }) => {
         if (chunk.type === 'display_text') {
+            // Check for Modal Trigger in any text chunk
+            if (chunk.content.includes('<OPEN_MODAL')) {
+                const match = chunk.content.match(/<OPEN_MODAL\s+type="([^"]+)"/);
+                if (match && match[1]) {
+                    console.log("🚀 Modal Trigger Detected:", match[1]);
+                    const schema = getSchemaForNiche(match[1]);
+                    setCurrentSchema(schema);
+                    setModalOpen(true);
+
+                    // Remove the tag from display
+                    chunk.content = chunk.content.replace(/<OPEN_MODAL[^>]*\/>/g, '').trim();
+                }
+            }
+
             pendingDisplayTextRef.current = chunk.content;
             setDisplayText(chunk.content);
             setIsVisible(false);
         } else if (chunk.type === 'text') {
+            // Check for Modal Trigger in spoken text too (just in case)
+            // Ideally we shouldn't speak the tag, but we need to detect it
+            if (chunk.content.includes('<OPEN_MODAL')) {
+                const match = chunk.content.match(/<OPEN_MODAL\s+type="([^"]+)"/);
+                if (match && match[1]) {
+                    const schema = getSchemaForNiche(match[1]);
+                    setCurrentSchema(schema);
+                    setModalOpen(true);
+                }
+                // Strip tag from audio text
+                chunk.content = chunk.content.replace(/<OPEN_MODAL[^>]*\/>/g, '').trim();
+            }
             playbackQueue.current.push(chunk.content);
         } else if (chunk.type === 'prompt') {
             processCompleteStream();
@@ -187,6 +219,28 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
         }
     }, [prompt]);
 
+    // Helper to extract questions for display
+    const extractQuestionsForDisplay = (text: string) => {
+        // Split into sentences (split by punctuation or newline)
+        // We include ':' to handle "me diga:" intros, and '\n' for paragraphs.
+        const sentences = text.match(/[^.!?:\n]+[.!?:\n]+/g) || [text];
+
+        // Filter sentences that look like questions (end with ?)
+        const questions = sentences.filter(s => s.trim().endsWith('?'));
+
+        // If we found questions, join them
+        if (questions.length > 0) {
+            return questions.join(' ').trim();
+        }
+
+        // Fallback: If no questions, take the last sentence
+        return sentences[sentences.length - 1].trim();
+    };
+
+    const capitalizeFirstLetter = (string: string) => {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    };
+
     const handleSend = async () => {
         if (!prompt.trim() || chatState.isTyping || isProcessing) return;
 
@@ -207,7 +261,30 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
 
             // Callback para texto recebido (se o modelo mandar texto junto)
             const handleTextResponse = (text: string) => {
-                setDisplayText(prev => prev + text);
+                let cleanText = text;
+                if (text.includes('<OPEN_MODAL')) {
+                    const match = text.match(/<OPEN_MODAL\s+type="([^"]+)"/);
+                    if (match && match[1]) {
+                        console.log("🚀 Live Modal Trigger:", match[1]);
+                        const schema = getSchemaForNiche(match[1]);
+                        setCurrentSchema(schema);
+                        setModalOpen(true);
+                    }
+                    cleanText = text.replace(/<OPEN_MODAL[^>]*\/>/g, '').trim();
+                }
+
+                // Apply question filter for display too
+                // const displayText = extractQuestionsForDisplay(cleanText); // Unused for now in streaming
+                setDisplayText(prev => {
+                    // Since live mode streams chunks, this might be tricky if we filter partial text.
+                    // For now, let's assume we get decent chunks or accumulate.
+                    // Actually, filtering stream text is hard. 
+                    // If liveMode sends final text at end, fine. But it sends chunks.
+                    // The user is likely using 'Legacy Mode' (TTS) given the code flow analysis.
+                    // I will apply filter to appended text or just show what comes for LiveMode for now to avoid breaking stream.
+                    // But the user request specifically mentioned the TTS flow behavior ("Agente falando").
+                    return prev + cleanText;
+                });
                 setIsVisible(true);
             };
 
@@ -235,16 +312,41 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                 console.log("📥 handleResponse received chunk:", chunk);
                 if (chunk.type === 'text') {
                     // It's the full text
-                    const fullText = chunk.content;
-                    console.log("🗣️ Triggering speak with text length:", fullText.length);
+                    let fullText = chunk.content;
+
+                    // Check for nested modal
+                    let detectedSchema: any = null;
+                    if (fullText.includes('<OPEN_MODAL')) {
+                        const match = fullText.match(/<OPEN_MODAL\s+type="([^"]+)"/);
+                        if (match && match[1]) {
+                            console.log("🚀 Modal Trigger Detected (Legacy):", match[1]);
+                            const schema = getSchemaForNiche(match[1]);
+                            detectedSchema = schema;
+                            setCurrentSchema(schema);
+                            // setModalOpen(true); // Moved to sync with audio start
+                        }
+                        fullText = fullText.replace(/<OPEN_MODAL[^>]*\/>/g, '').trim();
+                    }
+
+                    // Extract only questions (or last sentence) for display
+                    const displayContent = capitalizeFirstLetter(extractQuestionsForDisplay(fullText));
+
+                    console.log("🗣️ Triggering speak. Audio: Full, Display: Filtered", { fullText, displayContent });
+
+                    // Set text but keep hidden until audio starts
+                    setDisplayText(displayContent);
+                    setIsVisible(false);
+                    // Visibility will be triggered by onStart in speak function
 
                     speak(fullText, 'Kore', {
                         onStart: () => {
                             console.log("▶️ TTS Started");
+                            setIsVisible(true);
+                            if (detectedSchema) {
+                                setModalOpen(true);
+                            }
                         },
-                        onProgress: () => {
-                            // Optional visualizations
-                        }
+                        // No switching logic needed anymore
                     }).catch(err => console.error("❌ Speak failed:", err));
                 }
             };
@@ -283,6 +385,72 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
             console.error('Test chat error:', error);
         } finally {
             setIsTestTyping(false);
+        }
+    };
+
+    const handleModalSubmit = async (data: Record<string, any>) => {
+        // Send the collected data as a system-injected user message
+        console.log("Submitting Modal Data:", data);
+
+        // Format readable string for the chat context
+        const formattedData = Object.entries(data)
+            .filter(([key]) => !key.startsWith('_'))
+            .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+            .join('\n');
+
+        const hiddenDataInjection = `[SYSTEM_DATA_INJECTION]\nDados coletados do formulário (${data._niche_title}):\n${formattedData}`;
+
+        // Direct Send Logic for Modal
+        const currentPrompt = hiddenDataInjection;
+
+        setDisplayText("Processando suas informações...");
+        setIsVisible(true);
+
+        if (liveMode) {
+            // Live Mode Logic (Simplified)
+            // In a real scenario we would call sendLiveMessage directly
+            console.log("Would send to Live Mode:", currentPrompt);
+            // TODO: Call sendLiveMessage here
+        } else {
+            resumeContext();
+            playbackQueue.current = [];
+            stopTTS();
+
+            // Reuse handleResponse logic for the modal response
+            const handleResponse = (chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete', content: string }) => {
+                if (chunk.type === 'text') {
+                    // It's the full text
+                    const fullText = chunk.content;
+                    // Check for nested modal (unlikely but safe)
+                    if (fullText.includes('<OPEN_MODAL')) {
+                        const match = fullText.match(/<OPEN_MODAL\s+type="([^"]+)"/);
+                        if (match && match[1]) {
+                            const schema = getSchemaForNiche(match[1]);
+                            setCurrentSchema(schema);
+                            setModalOpen(true);
+                        }
+                    }
+                    const cleanText = fullText.replace(/<OPEN_MODAL[^>]*\/>/g, '').trim();
+
+                    // Extract only questions (or last sentence) for display
+                    const displayContent = capitalizeFirstLetter(extractQuestionsForDisplay(cleanText));
+
+                    // Initial display: Filtered content
+                    setDisplayText(displayContent);
+                    setIsVisible(false);
+                    // Visibility will be triggered by onStart in speak function
+
+                    speak(cleanText, 'Kore', {
+                        onStart: () => setIsVisible(true),
+                    }).catch(err => console.error("❌ Speak failed:", err));
+                }
+            };
+
+            if (step === 'chat') {
+                await handleUserInput(currentPrompt, handleResponse);
+            } else {
+                await startOnboarding(currentPrompt, handleResponse);
+            }
         }
     };
 
@@ -655,6 +823,16 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                     </div>
                 ))
             }
+
+            {/* Dynamic Modal */}
+            {currentSchema && (
+                <DynamicNicheModal
+                    open={modalOpen}
+                    onOpenChange={setModalOpen}
+                    schema={currentSchema}
+                    onSubmit={handleModalSubmit}
+                />
+            )}
         </div>
     );
 }
