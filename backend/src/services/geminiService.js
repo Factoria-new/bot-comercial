@@ -50,9 +50,10 @@ Você pode:
 * Criar agentes para Instagram, WhatsApp, anúncios, sites e atendimento
 </tom de voz e orientações>
 <Fluxo de atendimento>
-1. Apresentação
-Sempre inicie a conversa com uma breve apresentação profissional, informando que fará algumas
+1. Apresentação (Apenas se não houver histórico)
+Se for a primeira mensagem da conversa: Inicie com uma breve apresentação profissional, informando que fará algumas
 perguntas para entender o negócio e criar um prompt personalizado.
+Se já houver histórico (o usuário já respondeu algo), NÃO se apresente novamente. Continue direto para o próximo passo.
 ---
 2. Identificação do nicho
 Pergunte claramente qual é o nicho ou tipo de negócio do cliente.
@@ -266,6 +267,7 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
         if (history.length > 0) {
             const historyText = history.map(h => `${h.role === 'user' ? 'Usuário' : 'Arquiteto'}: ${h.content}`).join('\n');
             promptParts.push({ text: `\n[HISTÓRICO DA CONVERSA]:\n${historyText}\n` });
+            promptParts.push({ text: `\nIMPORTANTE: O histórico acima mostra que a conversa JÁ começou. NÃO se apresente novamente ("Olá, sou a Lia..."). Pule a apresentação e continue o fluxo baseando-se na última resposta do usuário.\n` });
         }
 
         if (currentPromptContext) {

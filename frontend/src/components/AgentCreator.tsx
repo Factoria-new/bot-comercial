@@ -121,7 +121,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
 
         let hasSwitched = false; // Local flag for this closure
 
-        // Start after 2 seconds
+        // Start after 1.2 seconds
         const timer = setTimeout(async () => {
             setStep('chat');
             const result = await startOnboarding(undefined, handleChunk);
@@ -165,7 +165,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                 }).catch(err => console.error("❌ Instant speak failed:", err));
             }
 
-        }, 1200); // 2 seconds delay
+        }, 1200); // 1.2 seconds delay
         return () => clearTimeout(timer);
     }, [startOnboarding, chatState.messages.length, handleChunk, speak]);
 
