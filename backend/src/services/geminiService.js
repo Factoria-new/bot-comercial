@@ -176,10 +176,8 @@ A: O prompt pode ser ajustado depois?
 B: Sim. A Lia sempre trabalha de forma iterativa.
 </FAQ>
 
-IMPORTANTE - ROTEIRO VISUAL (<DISPLAY>):
-Você deve SEMPRE separar o que aparece na tela (texto curto) do que você fala (conversa completa).
-- Comece cada resposta com a tag <DISPLAY> com um texto curto e direto para exibição visual.
-- O resto do texto é o que você vai FALAR (o áudio), então pode ser mais longo e cheio de personalidade.
+IMPORTANTE: 
+- Você NÃO deve usar tags como <DISPLAY>. Responda apenas com o texto da conversa.
 - NUNCA use emojis.
 - Só gere o <HIDDEN_PROMPT> quando tiver informações suficientes para criar um agente completo.
 
@@ -226,16 +224,16 @@ async function scrapeWebsite(url) {
 }
 
 /**
- * Agente Arquiteto: Versão Stream
+ * Agente Arquiteto: Versão Non-Streaming (Texto Estático)
  * 
  * @param {string} userId - ID do usuário
  * @param {string} userMessage - Mensagem do usuário
  * @param {Buffer|null} userAudioBuffer - Buffer de áudio (opcional)
  * @param {Array} history - Histórico da conversa
  * @param {string} currentPromptContext - Rascunho atual do prompt do bot
- * @returns {AsyncGenerator} - Stream de chunks de texto
+ * @returns {Object} - { success: boolean, message: string, systemPrompt?: string }
  */
-export async function* runArchitectAgentStream(userId, userMessage, userAudioBuffer = null, history = [], currentPromptContext = "") {
+export async function runArchitectAgent(userId, userMessage, userAudioBuffer = null, history = [], currentPromptContext = "") {
     try {
         if (!API_KEY) {
             throw new Error('GEMINI_API_KEY não configurada');
@@ -286,95 +284,37 @@ export async function* runArchitectAgentStream(userId, userMessage, userAudioBuf
             promptParts.push({ text: "\n(Analise o áudio acima com atenção aos detalhes do negócio)" });
         }
 
-        console.log('[Architect Stream] Starting stream...');
-        const result = await model.generateContentStream(promptParts);
+        console.log('[Architect] Generating content...');
+        const result = await model.generateContent(promptParts);
+        const responseText = result.response.text();
 
-        let fullText = "";
-        let buffer = ""; // Buffer to catch <DISPLAY> tags at the start
-        let displayFound = false;
-        let displayComplete = false;
+        console.log('[Architect] Response received. Length:', responseText.length);
 
-        console.log('[Architect Stream] Stream object received');
-        for await (const chunk of result.stream) {
-            const chunkText = chunk.text();
-            fullText += chunkText;
+        let finalResponse = responseText;
+        let foundSystemPrompt = null;
 
-            // If we haven't finished processing the DISPLAY tag yet
-            if (!displayComplete) {
-                buffer += chunkText;
-
-                // Check case: <DISPLAY> might already be in buffer, possibly not at start
-                if (!displayFound && buffer.includes('<DISPLAY>')) {
-                    displayFound = true;
-                }
-
-                if (displayFound) {
-                    // Check if closing tag is here
-                    if (buffer.includes('</DISPLAY>')) {
-                        const match = buffer.match(/([\s\S]*?)<DISPLAY>([\s\S]*?)<\/DISPLAY>/);
-                        if (match) {
-                            // group 1: pre-tag text (could be noise or legit text)
-                            // group 2: tag content
-                            const preTagText = match[1].trim();
-                            const displayContent = match[2].trim();
-
-                            // If there is significant text before the tag, send it as audio
-                            if (preTagText.length > 0) {
-                                // Only send if it's not likely formatting junk like "```html" or quotes
-                                if (!preTagText.includes('```')) {
-                                    yield { type: 'text', content: preTagText + " " };
-                                }
-                            }
-
-                            yield { type: 'display_text', content: displayContent };
-
-                            // The remaining buffer after the tag is audio text
-                            const remaining = buffer.split('</DISPLAY>')[1];
-                            if (remaining) {
-                                yield { type: 'text', content: remaining };
-                            }
-
-                            displayComplete = true; // Done with strict display parsing
-                            buffer = "";
-                        }
-                    }
-                } else {
-                    // Not found yet. Safety net for buffer size.
-                    // If buffer gets too large (>200) and no tag, simply dump it as text and stop looking
-                    // This handles cases where the model refuses to use the tag.
-                    if (buffer.length > 200) {
-                        yield { type: 'text', content: buffer };
-                        buffer = "";
-                        displayComplete = true;
-                    }
-                }
-
-            } else {
-                // Display part is done, just emit everything as text (audio)
-                if (chunkText) {
-                    yield { type: 'text', content: chunkText };
-                }
-            }
-        }
-
-        // Flush any remaining buffer if we never found the closing tag (fallback)
-        if (!displayComplete && buffer) {
-            yield { type: 'text', content: buffer };
-        }
-
-        // Finally, check for HIDDEN_PROMPT in fullText
-        if (fullText.includes('<HIDDEN_PROMPT>')) {
-            const match = fullText.match(/<HIDDEN_PROMPT>([\s\S]*?)<\/HIDDEN_PROMPT>/);
+        if (responseText.includes('<HIDDEN_PROMPT>')) {
+            console.log('[Architect] Found HIDDEN_PROMPT');
+            const match = responseText.match(/<HIDDEN_PROMPT>([\s\S]*?)<\/HIDDEN_PROMPT>/);
             if (match) {
-                yield { type: 'prompt', content: match[1].trim() };
+                foundSystemPrompt = match[1].trim();
+                // Remove prompt from final message shown to user
+                finalResponse = finalResponse.replace(/<HIDDEN_PROMPT>[\s\S]*?<\/HIDDEN_PROMPT>/, '').trim();
             }
         }
-        console.log('[Architect Stream] Generator function finished');
+
+        return {
+            success: true,
+            message: finalResponse,
+            systemPrompt: foundSystemPrompt
+        };
 
     } catch (error) {
-        console.error('Erro no Architect Agent Stream:', error);
-        console.error('Stack:', error.stack);
-        yield { type: 'error', content: "Desculpe, tive um probleminha aqui..." };
+        console.error('Erro no Architect Agent:', error);
+        return {
+            success: false,
+            message: "Desculpe, tive um probleminha aqui...",
+        };
     }
 }
 
@@ -593,7 +533,7 @@ INSTRUÇÕES ESPECÍFICAS PARA ÁUDIO:
 }
 
 export default {
-    runArchitectAgentStream,
+    runArchitectAgent,
     runGeminiLiveAudioStream,
     chatWithAgent
 };

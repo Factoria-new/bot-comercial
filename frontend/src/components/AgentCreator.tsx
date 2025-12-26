@@ -21,13 +21,13 @@ interface AgentCreatorProps {
 }
 
 export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
+    const liveMode = false; // Toggle for Gemini Live API vs Legacy TTS
     const [prompt, setPrompt] = useState("");
     const [step, setStep] = useState<'input' | 'chat'>('input');
     const [testMode, setTestMode] = useState(false);
     const [testMessages, setTestMessages] = useState<Array<{ id: string, type: 'bot' | 'user', content: string }>>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
     const [flyingMessages, setFlyingMessages] = useState<Array<{ id: number, text: string }>>([]);
-    const [liveMode] = useState(true); // Default to Live mode
     const [voiceMode, setVoiceMode] = useState(false); // Voice recording mode
 
     const [displayText, setDisplayText] = useState("");
@@ -118,12 +118,56 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
             return;
         }
         hasAutoStarted.current = true;
-        const timer = setTimeout(() => {
+
+        let hasSwitched = false; // Local flag for this closure
+
+        // Start after 2 seconds
+        const timer = setTimeout(async () => {
             setStep('chat');
-            startOnboarding(undefined, handleChunk);
-        }, 800);
+            const result = await startOnboarding(undefined, handleChunk);
+
+            // If we got a static greeting result immediately, play it!
+            if (result && result.audioUrl) {
+                console.log("🚀 Fast start with static greeting:", result);
+
+                // Show INTRO first, hidden initially for fade
+                setDisplayText(result.intro || result.text);
+                setIsVisible(false); // Start hidden for transition
+
+                // Trigger Fade In slightly before audio or synced
+                requestAnimationFrame(() => setIsVisible(true));
+
+                // Play audio instantly from URL
+                speak(result.text, 'Kore', {
+                    audioUrl: result.audioUrl,
+                    onStart: () => {
+                        // Ensure visible when audio starts
+                        setIsVisible(true);
+                    },
+                    onProgress: (progress) => {
+                        // Switch text at 70% progress with Fade Out -> Switch -> Fade In
+                        if (result.question && progress > 0.7 && !hasSwitched) {
+                            hasSwitched = true;
+
+                            // 1. Fade Out
+                            setIsVisible(false);
+
+                            // 2. Wait for transition (700ms matches CSS)
+                            setTimeout(() => {
+                                // 3. Switch Text
+                                setDisplayText(result.question);
+
+                                // 4. Fade In
+                                requestAnimationFrame(() => setIsVisible(true));
+                            }, 700);
+                        }
+                    }
+                }).catch(err => console.error("❌ Instant speak failed:", err));
+            }
+
+        }, 1200); // 2 seconds delay
         return () => clearTimeout(timer);
-    }, [startOnboarding, chatState.messages.length, handleChunk]);
+    }, [startOnboarding, chatState.messages.length, handleChunk, speak]);
 
 
     // Clear logic
@@ -186,13 +230,32 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
             playbackQueue.current = [];
             stopTTS();
 
+            // Callback to handle the response when it comes back from the hook
+            const handleResponse = (chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete', content: string }) => {
+                console.log("📥 handleResponse received chunk:", chunk);
+                if (chunk.type === 'text') {
+                    // It's the full text
+                    const fullText = chunk.content;
+                    console.log("🗣️ Triggering speak with text length:", fullText.length);
+
+                    speak(fullText, 'Kore', {
+                        onStart: () => {
+                            console.log("▶️ TTS Started");
+                        },
+                        onProgress: () => {
+                            // Optional visualizations
+                        }
+                    }).catch(err => console.error("❌ Speak failed:", err));
+                }
+            };
+
             if (step === 'chat') {
-                handleUserInput(currentPrompt, handleChunk);
+                await handleUserInput(currentPrompt, handleResponse);
                 return;
             }
 
             setStep('chat');
-            startOnboarding(currentPrompt, handleChunk);
+            await startOnboarding(currentPrompt, handleResponse);
         }
     };
 
@@ -230,63 +293,43 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
     const isListening = voiceMode && isRecording && !isSpeaking && !isAIResponding; // Esperando usuário falar
 
     // isTalking é true quando qualquer interação de voz está acontecendo
-    const isTalking = isUserSpeaking || isAIResponding || (voiceLevel > 0.05);
+
 
     return (
         <div className="min-h-screen relative flex flex-col p-4 overflow-hidden text-white font-outfit bg-[#020617]">
             {/* CSS Animations - Organic cloud-like morphing (Gemini style) */}
             <style>{`
-                @keyframes morphBlob1 {
-                    0%, 100% { 
-                        transform: translate(-50%, -50%) scale(1) translate(0, 0);
+                @keyframes floatOrganic1 {
+                    0%, 100% {
+                        transform: translate(-50%, -50%) translate(0, 0) scale(1);
                         border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
                     }
-                    25% { 
-                        transform: translate(-50%, -50%) scale(1.05) translate(5%, -8%);
-                        border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+                    33% {
+                        transform: translate(-50%, -50%) translate(3%, -5%) scale(1.1);
+                        border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
                     }
-                    50% { 
-                        transform: translate(-50%, -50%) scale(0.95) translate(-5%, 5%);
-                        border-radius: 50% 60% 30% 60% / 30% 40% 70% 50%;
-                    }
-                    75% { 
-                        transform: translate(-50%, -50%) scale(1.02) translate(3%, -3%);
-                        border-radius: 40% 30% 60% 50% / 60% 50% 40% 30%;
-                    }
-                }
-                @keyframes morphBlob2 {
-                    0%, 100% { 
-                        transform: translate(-50%, -50%) scale(1) translate(0, 0);
-                        border-radius: 40% 60% 60% 40% / 70% 30% 50% 50%;
-                    }
-                    33% { 
-                        transform: translate(-50%, -50%) scale(1.08) translate(-6%, 4%);
-                        border-radius: 60% 40% 30% 70% / 40% 50% 60% 50%;
-                    }
-                    66% { 
-                        transform: translate(-50%, -50%) scale(0.92) translate(4%, -6%);
-                        border-radius: 50% 30% 50% 70% / 60% 70% 30% 40%;
-                    }
-                }
-                @keyframes morphBlob3 {
-                    0%, 100% { 
-                        transform: translate(-50%, -50%) scale(1) translate(0, 0);
+                    66% {
+                        transform: translate(-50%, -50%) translate(-3%, 4%) scale(0.95);
                         border-radius: 70% 30% 50% 50% / 30% 60% 40% 70%;
                     }
-                    50% { 
-                        transform: translate(-50%, -50%) scale(1.1) translate(-4%, -5%);
-                        border-radius: 30% 70% 70% 30% / 50% 40% 60% 50%;
+                }
+                @keyframes floatOrganic2 {
+                    0%, 100% {
+                        transform: translate(-50%, -50%) translate(0, 0) scale(1);
+                        border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+                    }
+                    33% {
+                        transform: translate(-50%, -50%) translate(-4%, -2%) scale(1.05);
+                        border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%;
+                    }
+                    66% {
+                        transform: translate(-50%, -50%) translate(2%, 5%) scale(0.9);
+                        border-radius: 70% 30% 50% 50% / 50% 40% 60% 50%;
                     }
                 }
-                @keyframes drift {
-                    0%, 100% { transform: translate(-50%, -50%) translate(0, 0); }
-                    25% { transform: translate(-50%, -50%) translate(3%, -2%); }
-                    50% { transform: translate(-50%, -50%) translate(-2%, 3%); }
-                    75% { transform: translate(-50%, -50%) translate(-3%, -1%); }
-                }
-                @keyframes breathe {
-                    0%, 100% { transform: translate(-50%, -50%) scale(1); filter: blur(60px); }
-                    50% { transform: translate(-50%, -50%) scale(1.15); filter: blur(70px); }
+                @keyframes pulseGlow {
+                    0% { opacity: 0.3; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+                    100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
                 }
             `}</style>
 
@@ -312,107 +355,54 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                     }}
                 />
 
-                {/* Blob 1 - Green (Visible when AI is responding) */}
+                {/* Dynamic Gradient Background Layer - Organic Motion */}
+                {/* Center - Purple */}
                 <div
-                    className="absolute top-[48%] left-[52%] w-[55vw] h-[55vh] mix-blend-screen transition-all duration-300 ease-out"
+                    className="absolute top-[50%] left-[50%] w-[60vw] h-[60vh] mix-blend-screen opacity-80"
                     style={{
-                        background: 'radial-gradient(ellipse at center, rgba(34,197,94,1) 0%, rgba(34,197,94,0.7) 30%, rgba(34,197,94,0.3) 50%, transparent 70%)',
-                        filter: `blur(${25 + voiceLevel * 15}px)`,
-                        animation: 'morphBlob1 8s ease-in-out infinite',
-                        transform: `scale(${1 + voiceLevel * 0.6})`,
-                        opacity: isAIResponding ? 1 : isUserSpeaking ? 0.2 : isListening ? 0.3 : 0.75,
+                        background: 'radial-gradient(circle at center, rgba(168,85,247,0.8) 0%, rgba(139,92,246,0.4) 40%, transparent 70%)',
+                        filter: `blur(${40 + voiceLevel * 20}px)`,
+                        transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 0.5})`,
+                        transition: 'transform 0.1s ease-out, filter 0.2s ease-out',
                     }}
                 />
 
-                {/* Blob 2 - Purple/Violet - DOMINANT when user is speaking or listening */}
+                {/* Top Right - Green */}
                 <div
-                    className="absolute top-[52%] left-[48%] w-[50vw] h-[50vh] mix-blend-screen transition-all duration-300 ease-out"
+                    className="absolute top-[48%] left-[52%] w-[50vw] h-[50vh] mix-blend-screen opacity-70"
                     style={{
-                        background: 'radial-gradient(ellipse at center, rgba(168,85,247,1) 0%, rgba(139,92,246,0.7) 30%, rgba(168,85,247,0.3) 50%, transparent 70%)',
-                        filter: `blur(${30 + voiceLevel * 12}px)`,
-                        animation: 'morphBlob2 10s ease-in-out infinite',
-                        animationDelay: '-3s',
-                        transform: `scale(${1 + voiceLevel * (isUserSpeaking || isListening ? 0.8 : 0.55)})`,
-                        opacity: isUserSpeaking ? 1 : isListening ? 0.9 : isAIResponding ? 0.8 : 0.7,
+                        background: 'radial-gradient(circle at center, rgba(34,197,94,0.9) 0%, rgba(74,222,128,0.4) 40%, transparent 70%)',
+                        filter: `blur(${50 + voiceLevel * 15}px)`,
+                        transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 0.4}) rotate(${Date.now() / 100}deg)`,
+                        animation: 'floatOrganic1 14s infinite ease-in-out',
+                        transition: 'transform 0.1s ease-out',
                     }}
                 />
 
-                {/* Blob 3 - Cyan - Visible when AI is responding */}
+                {/* Bottom Left - Cyan */}
                 <div
-                    className="absolute top-[50%] left-[50%] w-[45vw] h-[45vh] mix-blend-screen transition-all duration-300 ease-out"
+                    className="absolute top-[52%] left-[48%] w-[50vw] h-[50vh] mix-blend-screen opacity-70"
                     style={{
-                        background: 'radial-gradient(ellipse at center, rgba(34,211,238,1) 0%, rgba(6,182,212,0.7) 30%, rgba(34,211,238,0.3) 50%, transparent 70%)',
-                        filter: `blur(${20 + voiceLevel * 20}px)`,
-                        animation: 'morphBlob3 12s ease-in-out infinite',
-                        animationDelay: '-6s',
-                        transform: `scale(${1 + voiceLevel * 0.5})`,
-                        opacity: isAIResponding ? 1 : isUserSpeaking ? 0.15 : isListening ? 0.2 : 0.65,
+                        background: 'radial-gradient(circle at center, rgba(6,182,212,0.9) 0%, rgba(34,211,238,0.4) 40%, transparent 70%)',
+                        filter: `blur(${45 + voiceLevel * 15}px)`,
+                        transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 0.6})`,
+                        animation: 'floatOrganic2 18s infinite ease-in-out',
+                        transition: 'transform 0.1s ease-out',
                     }}
                 />
 
-                {/* Blob 4 - Secondary Green (offset) - AI responding */}
+                {/* Orbiting Subtle Accents to add life */}
                 <div
-                    className="absolute top-[42%] left-[58%] w-[40vw] h-[40vh] mix-blend-screen transition-all duration-300 ease-out"
+                    className="absolute top-[50%] left-[50%] w-[40vw] h-[40vh] mix-blend-screen opacity-40"
                     style={{
-                        background: 'radial-gradient(ellipse at center, rgba(74,222,128,1) 0%, rgba(34,197,94,0.6) 40%, transparent 70%)',
-                        filter: `blur(${35 + voiceLevel * 10}px)`,
-                        animation: 'morphBlob2 14s ease-in-out infinite reverse',
-                        transform: `scale(${1 + voiceLevel * 0.4})`,
-                        opacity: isAIResponding ? 0.9 : isUserSpeaking ? 0.1 : isListening ? 0.15 : 0.55,
+                        background: 'radial-gradient(circle at center, rgba(192,132,252,0.8) 0%, transparent 60%)',
+                        filter: `blur(60px)`,
+                        transform: `translate(-50%, -50%) rotate(${voiceLevel * 20}deg)`,
+                        animation: 'pulseGlow 8s infinite alternate',
                     }}
                 />
 
-                {/* Blob 5 - Secondary Purple (offset) - User speaking/listening DOMINANT */}
-                <div
-                    className="absolute top-[58%] left-[42%] w-[42vw] h-[42vh] mix-blend-screen transition-all duration-300 ease-out"
-                    style={{
-                        background: 'radial-gradient(ellipse at center, rgba(192,132,252,1) 0%, rgba(168,85,247,0.6) 40%, transparent 70%)',
-                        filter: `blur(${40 + voiceLevel * 10}px)`,
-                        animation: 'morphBlob1 16s ease-in-out infinite reverse',
-                        animationDelay: '-8s',
-                        transform: `scale(${1 + voiceLevel * (isUserSpeaking || isListening ? 0.6 : 0.35)})`,
-                        opacity: isUserSpeaking ? 1 : isListening ? 0.85 : isAIResponding ? 0.6 : 0.5,
-                    }}
-                />
 
-                {/* Blob 6 - Extra Cyan accent - AI responding */}
-                <div
-                    className="absolute top-[40%] left-[45%] w-[35vw] h-[35vh] mix-blend-screen transition-all duration-300 ease-out"
-                    style={{
-                        background: 'radial-gradient(ellipse at center, rgba(103,232,249,1) 0%, rgba(34,211,238,0.5) 40%, transparent 70%)',
-                        filter: `blur(${30 + voiceLevel * 15}px)`,
-                        animation: 'morphBlob3 11s ease-in-out infinite',
-                        animationDelay: '-4s',
-                        transform: `scale(${1 + voiceLevel * 0.45})`,
-                        opacity: isAIResponding ? 0.8 : isUserSpeaking ? 0.1 : isListening ? 0.15 : 0.45,
-                    }}
-                />
-
-                {/* Blob 7 - Extra Purple for user speaking - NEW */}
-                <div
-                    className="absolute top-[45%] left-[55%] w-[50vw] h-[50vh] mix-blend-screen transition-all duration-300 ease-out"
-                    style={{
-                        background: 'radial-gradient(ellipse at center, rgba(147,51,234,1) 0%, rgba(126,34,206,0.7) 30%, rgba(147,51,234,0.3) 50%, transparent 70%)',
-                        filter: `blur(${35 + voiceLevel * 20}px)`,
-                        animation: 'morphBlob1 9s ease-in-out infinite',
-                        animationDelay: '-2s',
-                        transform: `scale(${1 + voiceLevel * 0.7})`,
-                        opacity: isUserSpeaking ? 1 : isListening ? 0.7 : 0,
-                    }}
-                />
-
-                {/* Core glow - Changes color based on state */}
-                <div
-                    className="absolute top-[50%] left-[50%] w-[35vw] h-[35vh] rounded-full mix-blend-screen transition-all duration-200 ease-out"
-                    style={{
-                        background: isUserSpeaking || isListening
-                            ? 'radial-gradient(circle at center, rgba(200,150,255,0.9) 0%, rgba(147,51,234,0.5) 25%, transparent 50%)'
-                            : 'radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(220,200,255,0.5) 25%, transparent 50%)',
-                        filter: `blur(${20 + voiceLevel * 15}px)`,
-                        transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 0.8})`,
-                        opacity: isTalking ? 1 : isListening ? 0.6 : 0.3,
-                    }}
-                />
             </div>
 
             {/* Content Layer */}
@@ -616,9 +606,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                     variant="ghost"
                                     className={cn(
                                         "rounded-full w-12 h-12 p-0 self-end transition-all",
-                                        liveMode
-                                            ? "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
-                                            : "bg-white/5 text-white/40 hover:bg-white/10"
+                                        "bg-white/5 text-white/40 hover:bg-white/10"
                                     )}
                                     title="Clique para modo de voz contínuo"
                                 >
@@ -629,7 +617,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                     ref={textareaRef}
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
-                                    placeholder={liveMode ? "Digite e receba áudio ao vivo..." : (step === 'chat' ? "Digite sua resposta..." : "Como você gostaria de construir seu agente?")}
+                                    placeholder={step === 'chat' ? "Digite sua resposta..." : "Como você gostaria de construir seu agente?"}
                                     className="flex-1 bg-transparent border-none resize-none text-white text-lg placeholder:text-white/30 focus-visible:ring-0 min-h-[60px] max-h-[200px] font-outfit"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -646,13 +634,7 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
                                     {(chatState.isTyping || isProcessing) ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                                 </Button>
                             </div>
-                            {/* Live Mode Indicator */}
-                            {liveMode && (
-                                <div className="mt-2 text-xs text-green-400/70 text-center flex items-center justify-center gap-1">
-                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                                    Live Audio Mode - Resposta em áudio streaming
-                                </div>
-                            )}
+
                         </div>
                     );
                 })()}
@@ -676,3 +658,4 @@ export default function AgentCreator({ onOpenSidebar }: AgentCreatorProps) {
         </div>
     );
 }
+

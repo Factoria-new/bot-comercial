@@ -99,10 +99,32 @@ export function useOnboarding() {
         }));
     }, []);
 
+    // Static Greetings for instant load
+    const GREETINGS = [
+        {
+            intro: "Olá! Eu sou a Lia.",
+            question: "Qual é o seu nicho de atuação?",
+            fullText: "Olá! Eu sou a Lia, sua especialista em criação de agentes. Estou aqui para entender o seu negócio e criar o melhor time de IA para você. Me conta, qual é o seu nicho de atuação?",
+            audioUrl: "/greetings/greeting_1.wav"
+        },
+        {
+            intro: "Oi, tudo bem? Aqui é a Lia.",
+            question: "Me fala um pouco mais sobre o que você vende ou qual serviço oferece.",
+            fullText: "Oi, tudo bem? Aqui é a Lia. Vamos criar algo incrível para sua empresa hoje. Pra começar, me fala um pouco mais sobre o que você vende ou qual serviço oferece.",
+            audioUrl: "/greetings/greeting_2.wav"
+        },
+        {
+            intro: "Bem-vindo! Eu sou a Lia.",
+            question: "Qual é o ramo da sua empresa?",
+            fullText: "Bem-vindo! Eu sou a Lia. Minha missão é transformar suas necessidades em agentes de IA eficientes. Para eu ser bem assertiva, me diz: qual é o ramo da sua empresa?",
+            audioUrl: "/greetings/greeting_3.wav"
+        }
+    ];
+
     // Start onboarding flow
     const startOnboarding = useCallback(async (initialInput?: string, onChunk?: (chunk: any) => void) => {
         // Prevent double initialization if messages already exist
-        if (state.messages.length > 0) return;
+        if (state.messages.length > 0) return null;
 
         if (initialInput) {
             // CASE 1: Transition from Landing Page
@@ -126,12 +148,36 @@ export function useOnboarding() {
             // 2. Trigger the AI to analyze this input and respond
             // We pass the input directly ensuring the AI sees it
             await handleInterviewStep(initialInput, onChunk);
+            return null;
 
         } else {
             // CASE 2: Fresh Start (Agent auto-initiates)
-            // No hardcoded messages - let the API generate the first message
+            // Use STATIC GREETING for instant load
+            const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+
             setState(prev => ({ ...prev, step: 'interview' }));
-            await handleInterviewStep('', onChunk); // Agent starts the conversation
+
+            // Add full text to message history (for context) but UI might display animation manually first
+            const newMessage: ChatMessage = {
+                id: generateId(),
+                type: 'bot',
+                content: randomGreeting.fullText,
+                timestamp: new Date(),
+            };
+
+            setState(prev => ({
+                ...prev,
+                messages: [...prev.messages, newMessage],
+                isTyping: false
+            }));
+
+            // Return the full object for UI animation control
+            return {
+                audioUrl: randomGreeting.audioUrl,
+                text: randomGreeting.fullText,
+                intro: randomGreeting.intro,
+                question: randomGreeting.question
+            };
         }
     }, [state.messages.length, addBotMessage]);
 
@@ -157,87 +203,19 @@ export function useOnboarding() {
                     message: userInput,
                     history: history,
                     currentSystemPrompt: stateRef.current.agentConfig?.prompt || '',
-                    userId: 'user',
-                    stream: !!onChunk
+                    userId: 'user'
                 })
             });
 
-            if (onChunk && response.body) {
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let fullText = "";
-
-                setState(prev => ({ ...prev, isTyping: false }));
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        console.log('✅ [Frontend] Stream reader done');
-                        break;
-                    }
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.substring(6));
-
-                                if (data.type === 'text') {
-                                    fullText += data.content;
-                                    onChunk(data);
-                                } else if (data.type === 'display_text') {
-                                    console.log('📺 Display text received:', data.content);
-                                    onChunk(data); // Propagate usage of display text
-                                } else if (data.type === 'prompt') {
-                                    console.log('🧠 [Architect] Novo prompt recebido via stream!');
-                                    onChunk(data); // Pass through so AgentCreator can handle it
-                                    setState(prev => ({
-                                        ...prev,
-                                        agentCreated: true,
-                                        agentConfig: {
-                                            prompt: data.content,
-                                            createdAt: new Date(),
-                                            companyInfo: prev.companyInfo,
-                                        },
-                                    }));
-                                } else if (data.type === 'error') {
-                                    onChunk(data);
-                                }
-                            } catch (e) {
-                                console.error("Error parsing SSE chunk:", e);
-                            }
-                        }
-                    }
-                }
-
-                // AFTER streaming is complete, add the FULL message to the official history
-                if (fullText.trim()) {
-                    const newMessage: ChatMessage = {
-                        id: generateId(),
-                        type: 'bot',
-                        content: fullText.trim(),
-                        timestamp: new Date(),
-                    };
-                    setState(prev => ({
-                        ...prev,
-                        messages: [...prev.messages, newMessage]
-                    }));
-                }
-
-                // Signal stream completion to AgentCreator
-                if (onChunk) {
-                    onChunk({ type: 'complete', content: '' });
-                }
-
-                return;
-            }
-
-            // Fallback for non-streaming
             const data = await response.json();
+
+            setState(prev => ({ ...prev, isTyping: false }));
+
             if (data.success) {
-                await addBotMessage(data.response, 500);
+                // If onChunk is provided (even though we don't stream), we can use it to pass the full result back
+                // This maintains some compatibility if needed, or we just rely on state updates.
+                // The prompt generation for audio will happen in AgentCreator based on the full text.
+
                 if (data.newSystemPrompt) {
                     setState(prev => ({
                         ...prev,
@@ -248,12 +226,33 @@ export function useOnboarding() {
                             companyInfo: prev.companyInfo,
                         },
                     }));
-                    await delay(500);
-                    await addBotMessage("Você pode **testar seu agente** agora mesmo! Clique em 'Testar Agente' ou continue refinando.", 500);
                 }
+
+                if (onChunk) {
+                    // Pass the full content as a 'complete' type or just 'text' key?
+                    // We'll mimic the old structure slightly to keep AgentCreator happy for a moment,
+                    // but really AgentCreator should just take the returned text.
+                    onChunk({ type: 'text', content: data.response });
+                    onChunk({ type: 'complete', content: '' });
+                }
+
+                const newMessage: ChatMessage = {
+                    id: generateId(),
+                    type: 'bot',
+                    content: data.response,
+                    timestamp: new Date(),
+                };
+
+                setState(prev => ({
+                    ...prev,
+                    messages: [...prev.messages, newMessage],
+                    isTyping: false
+                }));
+
             } else {
                 await addBotMessage(data.response || "Tive um problema. Poderia repetir?", 1000);
             }
+
         } catch (error) {
             console.error('Architect error:', error);
             await addBotMessage("Tive um problema de conexão. Poderia repetir?", 1000);

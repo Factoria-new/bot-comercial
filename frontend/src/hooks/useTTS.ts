@@ -70,10 +70,11 @@ export function useTTS() {
         onEnd?: () => void;
         onProgress?: (progress: number) => void;
         onData?: (data: any) => void;
+        audioUrl?: string; // New option for static files
     }
 
     const speak = useCallback(async (text: string, voice: string = 'Kore', options?: SpeakOptions): Promise<{ duration: number; alignment?: AlignmentData }> => {
-        console.log("🗣️ useTTS.speak called with:", { text: text.substring(0, 50) + "...", voice });
+        console.log("🗣️ useTTS.speak called with:", { text: text.substring(0, 50) + "...", voice, audioUrl: options?.audioUrl });
 
         if (!text) {
             console.warn("🗣️ Empty text provided to speak");
@@ -90,12 +91,90 @@ export function useTTS() {
         }
 
         // Also cancel browser synthesis if active
-        window.speechSynthesis.cancel();
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
 
         setIsSpeaking(true);
 
         return new Promise<{ duration: number; alignment?: AlignmentData }>(async (resolve, reject) => {
             try {
+                // Check if static audio URL is provided
+                if (options?.audioUrl) {
+                    console.log("💿 Playing static audio from URL:", options.audioUrl);
+
+                    // Create audio element directly from URL
+                    const audio = new Audio(options.audioUrl);
+                    audio.crossOrigin = "anonymous";
+                    audioRef.current = audio;
+
+                    // Mock simple alignment since we don't have it for static files yet
+                    // Or just split text by space
+                    const words = text.split(' ');
+
+                    if (options?.onData) {
+                        options.onData({
+                            alignment: {
+                                words: words,
+                                sentences: [text],
+                                timepoints: []
+                            },
+                            duration: 0
+                        });
+                    }
+
+                    // Common setup (Analysers etc) - reusing logic below
+                    // We can structure this better, but for now I'll duplicate the setup block or jump to it
+                    // Let's copy the setup block here to be safe and simple
+
+                    initAudioContext();
+
+                    if (audioContextRef.current?.state === 'suspended') {
+                        await audioContextRef.current.resume();
+                    }
+
+                    if (audioContextRef.current && !analyserRef.current) {
+                        analyserRef.current = audioContextRef.current.createAnalyser();
+                        analyserRef.current.fftSize = 256;
+                    }
+
+                    try {
+                        if (audioContextRef.current && analyserRef.current) {
+                            if (sourceRef.current) sourceRef.current.disconnect();
+                            const source = audioContextRef.current.createMediaElementSource(audio);
+                            source.connect(analyserRef.current);
+                            analyserRef.current.connect(audioContextRef.current.destination);
+                            sourceRef.current = source;
+                        }
+                    } catch (e) {
+                        console.warn("Audio Graph Error:", e);
+                    }
+
+                    let audioDuration = 0;
+                    audio.onloadedmetadata = () => {
+                        audioDuration = audio.duration;
+                        console.log(`Audio duration loaded: ${audioDuration}s`);
+                    };
+
+                    audio.onended = () => {
+                        setIsSpeaking(false);
+                        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+                        setVoiceLevel(0);
+                        onProgressRef.current = undefined;
+                        resolve({ duration: audioDuration });
+                    };
+
+                    audio.onplay = () => {
+                        if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume();
+                        analyze();
+                        if (options?.onStart) options.onStart();
+                    };
+
+                    await audio.play();
+                    return; // Exit here, job done
+                }
+
+
                 // Backend Gemini TTS with Kore voice
                 const USE_BACKEND_TTS = true;
 
@@ -248,6 +327,14 @@ export function useTTS() {
                 }
 
                 console.warn("⚠️ Using Browser Fallback TTS");
+
+                if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                    console.error("Browser TTS not supported");
+                    setIsSpeaking(false);
+                    reject(new Error("TTS not supported"));
+                    return;
+                }
+
                 // Fallback to browser synthesis
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'pt-BR';
@@ -299,7 +386,9 @@ export function useTTS() {
             audioRef.current = null;
         }
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        window.speechSynthesis.cancel();
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         setIsSpeaking(false);
         setVoiceLevel(0);
         onProgressRef.current = undefined;

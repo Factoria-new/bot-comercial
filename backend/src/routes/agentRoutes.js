@@ -1,7 +1,7 @@
 import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleGenAI } from '@google/genai';
-import { runArchitectAgentStream, runGeminiLiveAudioStream, chatWithAgent } from '../services/geminiService.js';
+import { runArchitectAgent, runGeminiLiveAudioStream, chatWithAgent } from '../services/geminiService.js';
 
 const router = express.Router();
 
@@ -20,45 +20,20 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 // Architect Agent Endpoint
 // O cérebro que constrói outros bots - usa o prompt da Lia
 // ============================================
+// ============================================
+// Architect Agent Endpoint
+// O cérebro que constrói outros bots - usa o prompt da Lia
+// ============================================
 router.post('/architect', async (req, res) => {
     try {
-        const { message, history, currentSystemPrompt, userId, stream = false } = req.body;
+        const { message, history, currentSystemPrompt, userId } = req.body;
 
         const userMessage = message || '[INÍCIO] O usuário acabou de abrir a página. Inicie a conversa se apresentando e perguntando sobre o negócio dele.';
 
-        console.log(`🏗️ [Architect] Processando mensagem (stream=${stream})...`);
+        console.log(`🏗️ [Architect] Processando mensagem...`);
 
-        if (stream) {
-            // Set headers for SSE
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            res.flushHeaders();
-
-            const streamResponse = runArchitectAgentStream(
-                userId || 'anonymous',
-                userMessage,
-                null,
-                history || [],
-                currentSystemPrompt || ''
-            );
-
-            for await (const chunk of streamResponse) {
-                res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-            }
-
-            res.end();
-            console.log(`[Architect] Stream connection closed for user ${userId || 'anon'}`);
-            return;
-        }
-
-        // Standard non-streaming response - redirect to stream for simplicity
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.flushHeaders();
-
-        const streamResponse = runArchitectAgentStream(
+        // Get non-streaming response
+        const { success, message: responseMessage, systemPrompt } = await runArchitectAgent(
             userId || 'anonymous',
             userMessage,
             null,
@@ -66,24 +41,19 @@ router.post('/architect', async (req, res) => {
             currentSystemPrompt || ''
         );
 
-        for await (const chunk of streamResponse) {
-            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-        }
-
-        res.end();
+        res.json({
+            success,
+            response: responseMessage,
+            newSystemPrompt: systemPrompt
+        });
 
     } catch (error) {
         console.error('❌ Erro no Architect Agent:', error);
-        if (!res.headersSent) {
-            res.status(500).json({
-                success: false,
-                error: 'Erro no processamento do Architect Agent',
-                response: 'Desculpe, tive um problema técnico.'
-            });
-        } else {
-            res.write(`data: ${JSON.stringify({ type: 'error', content: 'Erro no streaming' })}\n\n`);
-            res.end();
-        }
+        res.status(500).json({
+            success: false,
+            error: 'Erro no processamento do Architect Agent',
+            response: 'Desculpe, tive um problema técnico.'
+        });
     }
 });
 
