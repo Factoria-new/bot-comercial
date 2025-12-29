@@ -2,6 +2,9 @@ import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleGenAI } from '@google/genai';
 import { runArchitectAgent, runGeminiLiveAudioStream, chatWithAgent } from '../services/geminiService.js';
+import multer from 'multer';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
+import mammoth from 'mammoth';
 
 const router = express.Router();
 
@@ -293,6 +296,52 @@ router.post('/live-audio', async (req, res) => {
             res.write(`data: ${JSON.stringify({ type: 'error', content: error.message })}\n\n`);
             res.end();
         }
+    }
+});
+
+
+// ============================================
+// Upload Prompt Endpoint
+// Extracts text from PDF, DOCX, TXT
+// ============================================
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post('/upload-prompt', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'No file uploaded' });
+        }
+
+        const buffer = req.file.buffer;
+        const mimeType = req.file.mimetype;
+        let text = '';
+
+        console.log(`📂 Processing file upload: ${req.file.originalname} (${mimeType})`);
+
+        if (mimeType === 'application/pdf') {
+            const data = await pdf(buffer);
+            text = data.text;
+        } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || req.file.originalname.endsWith('.docx')) {
+            const result = await mammoth.extractRawText({ buffer: buffer });
+            text = result.value;
+        } else if (mimeType === 'text/plain' || req.file.originalname.endsWith('.txt')) {
+            text = buffer.toString('utf-8');
+        } else {
+            // Try to read as text if unknown but not binary-like (simplified check)
+            text = buffer.toString('utf-8');
+        }
+
+        if (!text || !text.trim()) {
+            return res.status(400).json({ success: false, error: 'Could not extract text from file.' });
+        }
+
+        console.log(`✅ Text extracted, length: ${text.length}`);
+
+        res.json({ success: true, text: text.trim() });
+
+    } catch (error) {
+        console.error('❌ File upload error:', error);
+        res.status(500).json({ success: false, error: 'Failed to process file. Make sure it is a valid PDF, DOCX or TXT file.' });
     }
 });
 

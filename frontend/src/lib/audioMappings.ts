@@ -1,0 +1,75 @@
+/**
+ * @file audioMappings.ts
+ * @description Maps UI triggers to Audio Files (3 variations for randomization).
+ * Assuming audio files are located in /public/audio/lia/
+ */
+
+export type AudioTriggerType =
+    | 'intro_modal'
+    | 'step_identity'
+    | 'step_operations'
+    | 'step_catalog'
+    | 'focus_description'
+    | 'focus_assistant_name'
+    | 'complete';
+
+interface AudioVariation {
+    id: string;
+    path: string;
+    text: string; // Transcript for accessibility/fallback
+}
+
+// Helper to generate variations
+const defineVariations = (baseName: string, count: number, texts: string[]): AudioVariation[] => {
+    return Array.from({ length: count }).map((_, i) => ({
+        id: `${baseName}_${i + 1}`,
+        path: `/audio/lia/${baseName}_v${i + 1}.mp3`,
+        text: texts[i] || texts[0]
+    }));
+};
+
+export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
+    'intro_modal': defineVariations('intro_wizard', 3, [
+        "Olá! Sou a Lia. Vamos configurar seu agente juntos.",
+        "Oi! Que bom te ver. Vamos criar um assistente incrível para você.",
+        "Bem-vindo! Eu sou a Lia. Vou te guiar nesse processo rápido."
+    ]),
+    'step_identity': defineVariations('step_identity', 3, [
+        "Primeiro, me conte um pouco sobre sua empresa e quem será o assistente.",
+        "Vamos começar pelo básico: Qual o nome do seu negócio?",
+        "Para começar, preciso saber o nome da empresa e como vamos chamar seu agente."
+    ]),
+    'step_operations': defineVariations('step_operations', 3, [
+        "Agora, como você quer que ele trabalhe? Venda direta ou apenas atendimento?",
+        "Certo! Vamos configurar como o assistente vai vender e seus horários.",
+        "Entendi. Agora me diga: qual o seu modelo de venda e horário de funcionamento?"
+    ]),
+    'step_catalog': defineVariations('step_catalog', 3, [
+        "Quase lá! Agora vamos adicionar seus produtos ou serviços principais.",
+        "Agora a parte importante: O que você vende? Vamos cadastrar alguns itens.",
+        "Perfeito. Agora preciso saber o que você oferece aos clientes."
+    ]),
+    'focus_description': defineVariations('help_description', 3, [
+        "Aqui você pode falar resumidamente o que sua empresa faz. Isso ajuda a IA a entender o contexto.",
+        "Nesse campo, descreva seu negócio em poucas palavras. Exemplo: 'Pizzaria tradicional com forno a lenha'.",
+        "Uma dica: Seja breve mas específico. Fale o que você tem de melhor!"
+    ]),
+    'focus_assistant_name': defineVariations('help_assistant_name', 3, [
+        "Dê um nome para seu agente. Pode ser algo humanizado como 'Bia' ou 'João'.",
+        "Escolha um nome amigável para seu assistente virtual.",
+        "Como você quer que o assistente se apresente? Escolha um nome legal."
+    ]),
+    'complete': defineVariations('wizard_complete', 3, [
+        "Tudo pronto! Seu agente foi criado. Vamos testar?",
+        "Parabéns! Finalizamos. Você já pode conversar com seu novo agente.",
+        "Excelente! Configurei tudo. Clique em testar para ver como ficou."
+    ])
+};
+
+export const getRandomAudio = (trigger: AudioTriggerType): AudioVariation => {
+    const variations = AUDIO_MAPPINGS[trigger];
+    if (!variations || variations.length === 0) return { id: 'default', path: '', text: '' };
+
+    const randomIndex = Math.floor(Math.random() * variations.length);
+    return variations[randomIndex];
+};
