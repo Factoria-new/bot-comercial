@@ -14,7 +14,8 @@ import {
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTTS } from "@/hooks/useTTS";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
-import { WizardModal } from "./WizardModal"; // NEW COMPONENT
+import { WizardModal } from "./WizardModal";
+import ChatMessages from "./chat/ChatMessages"; // NEW: For Lia's chat in split mode // NEW COMPONENT
 import { getSchemaForNiche, NicheSchema } from "@/lib/nicheSchemas";
 
 interface AgentCreatorProps {
@@ -52,6 +53,8 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         state: chatState,
         startOnboarding,
         handleUserInput,
+        setAgentPrompt,
+        startTesting
     } = useOnboarding();
 
     const { speak, stop: stopTTS, resumeContext, voiceLevel: ttsVoiceLevel } = useTTS();
@@ -67,6 +70,13 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
     } = useGeminiLive();
 
     const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel);
+
+    // Sync test mode from onboarding state
+    useEffect(() => {
+        if (chatState.step === 'testing') {
+            setTestMode(true);
+        }
+    }, [chatState.step]);
 
     // --- WIZARD HANDLERS ---
 
@@ -219,12 +229,22 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             if (data.success && data.text) {
                 console.log("📄 Prompt uploaded:", data.text.substring(0, 100) + "...");
 
-                // Skip wizard, notify AI
                 const promptText = data.text;
                 const systemMsg = `[SYSTEM] O usuário fez upload de um arquivo contendo o prompt do agente. Use este conteúdo como a base o agente:\n\n${promptText}\n\nAnalise o prompt e pergunte ao usuário se ele gostaria de testar o agente ou se precisa de algum ajuste específico.`;
 
+                // Set prompt and auto-enable test mode check (or wait for user to say yes)
+                setAgentPrompt(promptText);
+
                 handleManualInput(systemMsg);
                 setDisplayText("Arquivo lido com sucesso! Analisando...");
+
+                // Optional: Auto-start testing if preferred, or waiting for Lia to suggest it. 
+                // For now, let's auto-switch to test mode to show the new UI as requested: "should be sent to test area"
+                setTimeout(() => {
+                    startTesting();
+                    setTestMode(true);
+                }, 1500);
+
             } else {
                 setDisplayText("Erro ao ler arquivo. Tente novamente.");
                 console.error("Upload error:", data.error);
@@ -275,6 +295,13 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 }
             `}</style>
 
+            {/* Absolute Menu Button */}
+            <div className="absolute top-4 left-4 z-50">
+                <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="text-white/70 hover:bg-white/10">
+                    <Menu className="w-6 h-6" />
+                </Button>
+            </div>
+
             {/* Background Layer */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[50%] left-[50%] w-[100vw] h-[100vh] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-black translate-x-[-50%] translate-y-[-50%]" />
@@ -291,14 +318,9 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             </div>
 
             {/* Content Layer */}
-            <div className="relative z-10 w-full max-w-6xl mx-auto flex-1 flex flex-col">
+            <div className="relative z-10 w-full max-w-6xl mx-auto flex-1 flex flex-col" >
 
-                {/* Header / Menu */}
-                <div className="flex justify-between items-center mb-4">
-                    <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="text-white/70 hover:bg-white/10">
-                        <Menu className="w-6 h-6" />
-                    </Button>
-                </div>
+                {/* Header / Menu - Cleaned up from here */}
 
                 {/* --- MAIN MAIN AREA --- */}
                 <div className="flex-1 flex flex-col items-center justify-center relative min-h-[60vh]">
@@ -362,10 +384,58 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                         voiceActive={voiceMode} // Still pass it even if voice controls hidden, in case used inside
                     />
 
-                    {/* 3. TEST MODE INTERFACE */}
+                    {/* 3. SPLIT SCREEN TEST MODE */}
                     {testMode && (
-                        <div className="w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 h-[60vh] flex flex-col">
-                            <AgentTestChat messages={testMessages} onSend={handleTestSend} isTyping={isTestTyping} />
+                        <div className="w-full h-[85vh] flex flex-col md:flex-row gap-4 animate-in fade-in zoom-in-95 duration-500 pb-4">
+
+                            {/* LEFT: Agent Test Chat */}
+                            <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl overflow-hidden relative group">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-50" />
+                                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
+                                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">A</div>
+                                    <div>
+                                        <h3 className="font-semibold text-white">Seu Agente</h3>
+                                        <p className="text-xs text-white/40">Ambiente de Teste</p>
+                                    </div>
+                                    <div className="ml-auto px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">Online</div>
+                                </div>
+
+                                <AgentTestChat messages={testMessages} onSend={handleTestSend} isTyping={isTestTyping} />
+                            </div>
+
+                            {/* RIGHT: Lia Chat (Creator) */}
+                            <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 flex flex-col shadow-xl overflow-hidden">
+                                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">L</div>
+                                    <div>
+                                        <h3 className="font-semibold text-white">Lia</h3>
+                                        <p className="text-xs text-white/40">Assistente de Criação</p>
+                                    </div>
+                                </div>
+
+                                <ChatMessages
+                                    messages={chatState.messages.filter(m => !m.content.startsWith('[SYSTEM]'))}
+                                    isTyping={chatState.isTyping}
+                                    className="flex-1 custom-scrollbar"
+                                    alignLeft={true}
+                                />
+
+                                {/* Mini Input for Lia */}
+                                <div className="mt-4 flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Fale com a Lia..."
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:bg-white/10 transition-all"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleManualInput(e.currentTarget.value);
+                                                e.currentTarget.value = '';
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
                         </div>
                     )}
                 </div>

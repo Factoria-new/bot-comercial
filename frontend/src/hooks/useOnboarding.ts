@@ -412,6 +412,20 @@ export function useOnboarding() {
     const isOnboardingComplete = state.step === 'completed' && state.agentCreated;
     const hasConnectedIntegrations = state.integrations.some(i => i.connected);
 
+    // Manually set agent prompt (e.g. from file upload)
+    const setAgentPrompt = useCallback((prompt: string) => {
+        setState(prev => ({
+            ...prev,
+            agentCreated: true,
+            agentConfig: {
+                ...prev.agentConfig,
+                prompt: prompt,
+                createdAt: new Date(),
+                companyInfo: prev.companyInfo || { name: 'Uploaded Agent', niche: 'custom' }
+            }
+        }));
+    }, []);
+
     return {
         state,
         isInitialized,
@@ -422,6 +436,7 @@ export function useOnboarding() {
         connectIntegration,
         disconnectIntegration,
         resetOnboarding,
-        startTesting // Exposed for UI button
+        startTesting,
+        setAgentPrompt // New export
     };
 }
