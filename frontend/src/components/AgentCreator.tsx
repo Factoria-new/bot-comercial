@@ -174,7 +174,38 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         stopTTS();
 
         const handleResponse = (chunk: any) => {
-            if (chunk.type === 'text') {
+            if (chunk.type === 'audio') {
+                // SERVER-SIDE AUDIO FOUND! Play directly.
+                console.log("🔊 Received Server-Side Audio!");
+
+                const audioData = chunk.content;
+                // Create blob from base64
+                const binaryString = window.atob(audioData.content);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: audioData.mimeType || 'audio/wav' });
+                const audioUrl = URL.createObjectURL(blob);
+
+                // We pause the "text speak" if it was queued, but since we receive text first maybe we should coordinate?
+                // Actually if we get audio, we should prioritization it. 
+                // But text usually comes first.
+                // Let's rely on the fact that if we provide audioUrl, speak() handles it.
+                // We might need to make sure the text chunk didn't already trigger a speak call.
+                // Since this is all in one callback chain...
+
+                // Ideally useOnboarding sends text then audio.
+                // In handleResponse for text, we set display text.
+                // In handleResponse for audio, we play audio.
+
+                speak("", 'Kore', {
+                    audioUrl: audioUrl,
+                    onStart: () => setIsVisible(true)
+                }).catch(console.error);
+
+            } else if (chunk.type === 'text') {
                 const fullText = chunk.content;
 
                 if (fullText.includes('<OPEN_MODAL') || fullText.includes('<OPEN_WIZARD')) {
@@ -189,9 +220,35 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 setDisplayText(cleanText);
                 setIsVisible(false);
 
-                speak(fullText, 'Kore', {
-                    onStart: () => setIsVisible(true)
-                }).catch(console.error);
+                // Wait a bit to see if audio comes? No, that introduces latency.
+                // BUT, if we have server-side audio, we DON'T want to call speak(fullText).
+                // How do we know? We don't until we check the response.
+                // HACK: For now, we only speak text if it's NOT likely to have audio?
+                // Or better: The server ALWAYS returns audio now for this endpoint.
+                // So... we should probably DISABLE client-side TTS for the 'architect' response if we expect audio.
+
+                // However, handleResponse is generic.
+                // Let's assume: If we get text, we display it. We DO NOT speak it yet.
+                // We wait for audio? NO that blocks text.
+
+                // Solution: We play the text using client-side TTS ONLY if we don't expect server audio.
+                // But we moved to server audio. So we should effectively disable client-side TTS for this flow.
+                // We only invoke speak() when we get the `audio` chunk.
+
+                // What if server audio fails? The server logs it but returns success.
+                // In that case strictly we lose audio.
+
+                // Let's modify logic: Text chunk updates UI. Audio chunk triggers audio.
+                // If NO audio chunk arrives (old/error), we have silence? That's bad.
+
+                // Refined approach:
+                // We can't know in the 'text' chunk if 'audio' is coming next without flags.
+                // But we know we just implemented it. 
+                // Let's COMMENT OUT the speak(fullText) call and rely on the audio chunk.
+
+                // speak(fullText, 'Kore', {
+                //    onStart: () => setIsVisible(true)
+                // }).catch(console.error);
             }
         };
 

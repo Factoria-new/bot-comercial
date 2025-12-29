@@ -76,10 +76,13 @@ export function useTTS() {
     const speak = useCallback(async (text: string, voice: string = 'Kore', options?: SpeakOptions): Promise<{ duration: number; alignment?: AlignmentData }> => {
         console.log("🗣️ useTTS.speak called with:", { text: text.substring(0, 50) + "...", voice, audioUrl: options?.audioUrl });
 
-        if (!text) {
+        if (!text && !options?.audioUrl) {
             console.warn("🗣️ Empty text provided to speak");
             return Promise.resolve({ duration: 0 });
         }
+
+        // If text is empty but we have audioUrl, use a placeholder for split logic later if needed
+        const safeText = text || "Audio Message";
 
         // Update ref for the loop to access
         onProgressRef.current = options?.onProgress;

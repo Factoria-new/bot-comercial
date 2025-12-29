@@ -229,10 +229,14 @@ export function useOnboarding() {
                 }
 
                 if (onChunk) {
-                    // Pass the full content as a 'complete' type or just 'text' key?
-                    // We'll mimic the old structure slightly to keep AgentCreator happy for a moment,
-                    // but really AgentCreator should just take the returned text.
+                    // Pass the full content as a 'text' type
                     onChunk({ type: 'text', content: data.response });
+
+                    // NEW: Pass audio if available
+                    if (data.audio) {
+                        onChunk({ type: 'audio', content: data.audio });
+                    }
+
                     onChunk({ type: 'complete', content: '' });
                 }
 
