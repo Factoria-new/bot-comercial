@@ -54,7 +54,7 @@ const Dashboard = () => {
   };
 
   const handleAgentCreated = (prompt: string, info: any) => {
-    console.log('🎉 Agente criado!');
+    console.log('🎉 Assistente criado!');
     console.log('📝 Prompt:', prompt);
     console.log('📦 Info:', info);
     setAgentPrompt(prompt);
@@ -68,8 +68,8 @@ const Dashboard = () => {
     }));
 
     toast({
-      title: "Agente criado!",
-      description: `Seu agente para ${info.business_type} está pronto.`,
+      title: "Assistente criado!",
+      description: `Seu assistente para ${info.business_type} está pronto.`,
     });
   };
 

@@ -1,80 +1,71 @@
 
-import dotenv from 'dotenv';
-import path from 'path';
 import fs from 'fs';
-import { generateAudio } from '../src/services/ttsService.js';
+import path from 'path';
 import { fileURLToPath } from 'url';
+import { generateAudio } from '../src/services/ttsService.js';
 
-// Setup __dirname for ES modules
+// Load paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '../../'); // Go up to root
 
-// Load env vars
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Env is expected to be loaded via node --env-file=.env
+const API_KEY = process.env.API_GEMINI || process.env.GEMINI_API_KEY;
 
-const apiKey = process.env.GEMINI_API_KEY;
-
-if (!apiKey) {
-    console.error("❌ GEMINI_API_KEY not found in .env");
+if (!API_KEY) {
+    console.error('❌ Error: GEMINI_API_KEY or API_GEMINI not found in environment');
     process.exit(1);
 }
 
+const OUTPUT_DIR = path.resolve(rootDir, 'frontend/public/audio/lia');
+
+// Ensure directory exists
+if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+}
+
 const variations = [
-    {
-        filename: "upload_success_v1.mp3",
-        text: "Recebi o prompt do seu agente e está tudo pronto. Se quiser ver como ele responde, é só clicar no botão 'Testar Agente' logo abaixo."
-    },
-    {
-        filename: "upload_success_v2.mp3",
-        text: "Prompt recebido e processado com sucesso! Agora você pode verificar as respostas dele clicando em 'Testar Agente'."
-    },
-    {
-        filename: "upload_success_v3.mp3",
-        text: "Tudo certo com o prompt do seu agente! O ambiente de teste está liberado. Clique no botão 'Testar Agente' para começar."
-    },
-    // New Integration Success Variations
-    {
-        filename: "integrations_success_v1.mp3",
-        text: "Parabéns! Seu agente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. Escolha uma plataforma abaixo para começar."
-    },
-    {
-        filename: "integrations_success_v2.mp3",
-        text: "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes."
-    },
-    {
-        filename: "integrations_success_v3.mp3",
-        text: "Tudo certo! Agora só falta conectar seu agente. Selecione uma plataforma para ativar o atendimento automático."
-    }
+    // Upload Success
+    { id: 'upload_success_v1', text: "Recebi o arquivo! Vou analisar e criar seu assistente agora mesmo." },
+    { id: 'upload_success_v2', text: "Arquivo recebido com sucesso. Aguarde um instante enquanto configuro seu assistente." },
+    { id: 'upload_success_v3', text: "Tudo certo com o upload. Já estou processando as informações do seu assistente." },
+
+    // Integrations
+    { id: 'integrations_success_v1', text: "Integração realizada! Seu assistente já está conectado e pronto." },
+    { id: 'integrations_success_v2', text: "Conectado com sucesso! Agora seu assistente tem superpoderes." },
+    { id: 'integrations_success_v3', text: "Pronto! Integração concluída. Vamos ver o assistente em ação?" }
 ];
 
-const outputDir = path.resolve(__dirname, '../../frontend/public/audio/lia');
+async function generateAudioItem(item) {
+    const filePath = path.join(OUTPUT_DIR, `${item.id}.mp3`);
 
-if (!fs.existsSync(outputDir)) {
-    console.error(`❌ Output directory does not exist: ${outputDir}`);
-    // Create it?
-    // fs.mkdirSync(outputDir, { recursive: true });
-}
-
-async function generateAll() {
-    console.log(`Starting generation for ${variations.length} files...`);
-
-    for (const v of variations) {
-        try {
-            console.log(`🎤 Generating: ${v.filename}...`);
-            const result = await generateAudio(v.text, 'Kore', apiKey);
-
-            const filePath = path.join(outputDir, v.filename);
-            fs.writeFileSync(filePath, Buffer.from(result.audioContent, 'base64'));
-            console.log(`✅ Saved to ${filePath}`);
-
-            // Sleep to avoid rate limits?
-            await new Promise(r => setTimeout(r, 1000));
-
-        } catch (error) {
-            console.error(`❌ Error generating ${v.filename}:`, error);
-        }
+    if (fs.existsSync(filePath)) {
+        console.log(`⏭️  Skipping existing: ${item.id}.mp3`);
+        return;
     }
-    console.log("Done!");
+
+    console.log(`�️  Generating: ${item.id} -> "${item.text}"`);
+
+    try {
+        const result = await generateAudio(item.text, 'Kore', API_KEY);
+        fs.writeFileSync(filePath, Buffer.from(result.audioContent, 'base64'));
+        console.log(`✅ Saved: ${item.id}.mp3`);
+
+    } catch (error) {
+        console.error(`❌ Failed to generate ${item.id}:`, error.message);
+    }
 }
 
-generateAll();
+async function run() {
+    console.log(`🚀 Starting Upload/Integration Audio Generation (Voice: Kore)...`);
+    console.log(`📂 Output: ${OUTPUT_DIR}`);
+
+    for (const item of variations) {
+        await generateAudioItem(item);
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    console.log(`✨ All Done!`);
+}
+
+run();

@@ -53,10 +53,11 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
     const [isSwitchingToTest, setIsSwitchingToTest] = useState(false);
 
 
-    // NEW: Integrations step and Dashboard
     const [currentStep, setCurrentStep] = useState<'chat' | 'integrations' | 'dashboard'>('chat');
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
 
+    // NEW: Local state for integration audio level
+    const [integrationVoiceLevel, setIntegrationVoiceLevel] = useState(0);
 
     const [displayText, setDisplayText] = useState("");
     const [isVisible, setIsVisible] = useState(false);
@@ -110,7 +111,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         { id: 'tiktok', name: 'TikTok', color: '#010101', connected: false },
     ];
 
-    const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel);
+    const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel, integrationVoiceLevel);
 
     // Sync test mode from onboarding state
     useEffect(() => {
@@ -141,8 +142,13 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         }
     }, [chatState.agentCreated, chatState.agentConfig, startTesting, chatState.testMessages.length, isSwitchingToTest]);
 
-    // Play audio when entering integrations screen - with cleanup
+    // Play audio when entering integrations screen - with cleanup and Animation
     useEffect(() => {
+        let animationFrameId: number;
+        let audioContext: AudioContext | null = null;
+        let analyser: AnalyserNode | null = null;
+        let source: MediaElementAudioSourceNode | null = null;
+
         if (currentStep === 'integrations') {
             const audioVariation = getRandomAudio('integrations_success');
 
@@ -157,7 +163,39 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
                     const audio = new Audio(audioVariation.path);
                     integrationAudioRef.current = audio;
-                    audio.play().catch(console.error);
+
+                    // Setup Audio Context for Animation
+                    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+
+                    // Connect audio element to context
+                    // We need to wait for metadata or user interaction usually, but let's try
+                    source = audioContext.createMediaElementSource(audio);
+                    source.connect(analyser);
+                    analyser.connect(audioContext.destination);
+
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                    const updateVolume = () => {
+                        if (analyser) {
+                            analyser.getByteFrequencyData(dataArray);
+                            const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
+                            // Normalize to 0-1 range roughly
+                            const normalizedVolume = Math.min(avg / 128, 1);
+                            setIntegrationVoiceLevel(normalizedVolume); // Update the local state
+                            animationFrameId = requestAnimationFrame(updateVolume);
+                        }
+                    };
+
+                    audio.play().then(() => {
+                        updateVolume();
+                    }).catch(e => {
+                        console.error("Audio play/context error:", e);
+                        // Fallback just play if context fails (e.g. strict policies)
+                        audio.play().catch(console.error);
+                    });
+
                 } catch (e) {
                     console.error("Audio error:", e);
                 }
@@ -170,6 +208,13 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 integrationAudioRef.current.pause();
                 integrationAudioRef.current.currentTime = 0;
             }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (audioContext) {
+                audioContext.close().catch(console.error);
+            }
+            setIntegrationVoiceLevel(0); // Reset visual
         };
     }, [currentStep]);
 
@@ -475,7 +520,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             }
         } catch (error) {
             console.error('Test chat error:', error);
-            const botMsg = { id: Math.random().toString(36).substring(2, 9), type: 'bot' as const, content: "Erro ao conectar com o agente de teste." };
+            const botMsg = { id: Math.random().toString(36).substring(2, 9), type: 'bot' as const, content: "Erro ao conectar com o assistente de teste." };
             setTestMessages(prev => [...prev, botMsg]);
         } finally {
             setIsTestTyping(false);
@@ -552,7 +597,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                     "text-4xl md:text-6xl font-bold tracking-tighter mb-6 transition-all duration-500",
                                     !isVisible ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
                                 )}>
-                                    {displayText || "Olá! Vamos criar seu agente."}
+                                    {displayText || "Olá! Vamos criar seu assistente."}
                                 </h1>
 
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -622,7 +667,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                                 onClick={() => setChatMode('agent')}
                                                 className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-all"
                                             >
-                                                Testar Agente
+                                                Testar Assistente
                                             </button>
                                         </div>
 
@@ -633,13 +678,24 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold text-white">Lia</h3>
-                                                <p className="text-xs text-white/40">Arquiteta de Agentes</p>
+                                                <p className="text-xs text-white/40">Arquiteta de Assistentes</p>
                                             </div>
                                         </div>
 
                                         {/* Chat Messages */}
                                         <ChatMessages
-                                            messages={chatState.messages.filter(m => !m.content.startsWith('[SYSTEM]'))}
+                                            messages={chatState.messages.filter(m => {
+                                                if (m.content.startsWith('[SYSTEM]')) return false;
+                                                // Filter out "Assistente criado..." if there are user messages (ignoring HIDDEN prompts info)
+                                                // Actually, simpler: if the user has sent ANY message, hide the "Assistente criado" welcome.
+                                                // Identify user interaction:
+                                                const hasUserInteraction = chatState.messages.some(msg => msg.type === 'user');
+
+                                                if (hasUserInteraction && m.content.includes("Assistente criado! Iniciando modo de teste")) {
+                                                    return false;
+                                                }
+                                                return true;
+                                            })}
                                             isTyping={chatState.isTyping}
                                             alignLeft={true}
                                             className="px-0"
@@ -648,7 +704,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                         {/* Input Area */}
                                         <div className="mt-4 flex gap-2">
                                             <textarea
-                                                placeholder="Peça ajustes ao seu agente (ex: 'Mude o tom para mais formal', 'Adicione informação sobre preços')..."
+                                                placeholder="Peça ajustes ao seu assistente (ex: 'Mude o tom para mais formal', 'Adicione informação sobre preços')..."
                                                 className="flex-1 bg-black/20 border border-white/10 resize-none min-h-[50px] rounded-xl p-3 text-white focus:outline-none focus:border-white/30 transition-all"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -704,7 +760,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                             <button
                                                 className="px-4 py-1.5 rounded-lg text-sm font-medium bg-purple-600 text-white shadow-lg"
                                             >
-                                                Testar Agente
+                                                Testar Assistente
                                             </button>
                                         </div>
 
@@ -714,7 +770,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                                 A
                                             </div>
                                             <div>
-                                                <h3 className="font-semibold text-white">Seu Agente</h3>
+                                                <h3 className="font-semibold text-white">Seu Assistente</h3>
                                                 <p className="text-xs text-white/40">Ambiente de Teste</p>
                                             </div>
                                             <div className="ml-auto px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">
@@ -727,7 +783,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                             {testMessages.length === 0 && (
                                                 <div className="text-center text-white/40 py-8">
                                                     <FlaskConical className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                                    <p>Envie uma mensagem para testar seu agente</p>
+                                                    <p>Envie uma mensagem para testar seu assistente</p>
                                                 </div>
                                             )}
                                             {testMessages.map((msg) => (
@@ -747,7 +803,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                         <div className="space-y-2">
                                             <div className="flex gap-2">
                                                 <textarea
-                                                    placeholder="Teste seu agente..."
+                                                    placeholder="Teste seu assistente..."
                                                     className="flex-1 bg-black/20 border border-white/10 resize-none min-h-[50px] rounded-xl p-3 text-white focus:outline-none focus:border-white/30 transition-all"
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' && !e.shiftKey) {

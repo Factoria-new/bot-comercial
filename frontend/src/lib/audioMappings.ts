@@ -32,14 +32,14 @@ const defineVariations = (baseName: string, count: number, texts: string[]): Aud
 
 export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
     'intro_modal': defineVariations('intro_wizard', 3, [
-        "Olá! Sou a Lia. Vamos configurar seu agente juntos.",
+        "Olá! Sou a Lia. Vamos configurar seu assistente juntos.",
         "Oi! Que bom te ver. Vamos criar um assistente incrível para você.",
         "Bem-vindo! Eu sou a Lia. Vou te guiar nesse processo rápido."
     ]),
     'step_identity': defineVariations('step_identity', 3, [
         "Primeiro, me conte um pouco sobre sua empresa e quem será o assistente.",
         "Vamos começar pelo básico: Qual o nome do seu negócio?",
-        "Para começar, preciso saber o nome da empresa e como vamos chamar seu agente."
+        "Para começar, preciso saber o nome da empresa e como vamos chamar seu assistente."
     ]),
     'step_catalog': defineVariations('step_catalog', 3, [
         "Quase lá! Agora vamos adicionar seus produtos ou serviços principais.",
@@ -52,29 +52,29 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Uma dica: Seja breve mas específico. Fale o que você tem de melhor!"
     ]),
     'focus_assistant_name': defineVariations('help_assistant_name', 3, [
-        "Dê um nome para seu agente. Pode ser algo humanizado como 'Bia' ou 'João'.",
+        "Dê um nome para seu assistente. Pode ser algo humanizado como 'Bia' ou 'João'.",
         "Escolha um nome amigável para seu assistente virtual.",
         "Como você quer que o assistente se apresente? Escolha um nome legal."
     ]),
     'complete': defineVariations('wizard_complete', 3, [
-        "Tudo pronto! Seu agente foi criado. Vamos testar?",
-        "Parabéns! Finalizamos. Você já pode conversar com seu novo agente.",
+        "Tudo pronto! Seu assistente foi criado. Vamos testar?",
+        "Parabéns! Finalizamos. Você já pode conversar com seu novo assistente.",
         "Excelente! Configurei tudo. Clique em testar para ver como ficou."
     ]),
     'integrations': defineVariations('integrations', 3, [
-        "Parabéns! Seu agente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu agente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar.",
+        "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar.",
         "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes.",
-        "Tudo certo! Agora só falta conectar seu agente. Selecione uma plataforma para ativar o atendimento automático."
+        "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático."
     ]),
     'upload_success': defineVariations('upload_success', 3, [
-        "Recebi o prompt do seu agente e está tudo pronto. Se quiser ver como ele responde, é só clicar no botão 'Testar Agente'.",
-        "Prompt recebido e processado com sucesso! Agora você pode verificar as respostas dele clicando em 'Testar Agente'.",
-        "Tudo certo com o prompt do seu agente! O ambiente de teste está liberado. Clique no botão 'Testar Agente' para começar."
+        "Recebi o prompt do seu assistente e está tudo pronto. Se quiser ver como ele responde, é só clicar no botão 'Testar Assistente'.",
+        "Prompt recebido e processado com sucesso! Agora você pode verificar as respostas dele clicando em 'Testar Assistente'.",
+        "Tudo certo com o prompt do seu assistente! O ambiente de teste está liberado. Clique no botão 'Testar Assistente' para começar."
     ]),
     'integrations_success': defineVariations('integrations_success', 3, [
-        "Parabéns! Seu agente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. Escolha uma plataforma abaixo para começar.",
+        "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. Escolha uma plataforma abaixo para começar.",
         "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes.",
-        "Tudo certo! Agora só falta conectar seu agente. Selecione uma plataforma para ativar o atendimento automático."
+        "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático."
     ])
 };
 

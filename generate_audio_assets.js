@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { generateAudio } from './backend/src/services/ttsService.js';
 
 // Load paths
 const __filename = fileURLToPath(import.meta.url);
@@ -27,14 +28,14 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 // Using the exact text from frontend/src/lib/audioMappings.ts
 const AUDIO_DATA = [
     // INTRO
-    { id: 'intro_wizard_v1', text: "Olá! Sou a Lia. Vamos configurar seu agente juntos." },
+    { id: 'intro_wizard_v1', text: "Olá! Sou a Lia. Vamos configurar seu assistente juntos." },
     { id: 'intro_wizard_v2', text: "Oi! Que bom te ver. Vamos criar um assistente incrível para você." },
     { id: 'intro_wizard_v3', text: "Bem-vindo! Eu sou a Lia. Vou te guiar nesse processo rápido." },
 
     // STEP IDENTITY
     { id: 'step_identity_v1', text: "Primeiro, me conte um pouco sobre sua empresa e quem será o assistente." },
     { id: 'step_identity_v2', text: "Vamos começar pelo básico: Qual o nome do seu negócio?" },
-    { id: 'step_identity_v3', text: "Para começar, preciso saber o nome da empresa e como vamos chamar seu agente." },
+    { id: 'step_identity_v3', text: "Para começar, preciso saber o nome da empresa e como vamos chamar seu assistente." },
 
     // STEP OPERATIONS
     { id: 'step_operations_v1', text: "Agora, como você quer que ele trabalhe? Venda direta ou apenas atendimento?" },
@@ -52,18 +53,24 @@ const AUDIO_DATA = [
     { id: 'help_description_v3', text: "Uma dica: Seja breve mas específico. Fale o que você tem de melhor!" },
 
     // FOCUS ASSISTANT NAME
-    { id: 'help_assistant_name_v1', text: "Dê um nome para seu agente. Pode ser algo humanizado como 'Bia' ou 'João'." },
+    { id: 'help_assistant_name_v1', text: "Dê um nome para seu assistente. Pode ser algo humanizado como 'Bia' ou 'João'." },
     { id: 'help_assistant_name_v2', text: "Escolha um nome amigável para seu assistente virtual." },
     { id: 'help_assistant_name_v3', text: "Como você quer que o assistente se apresente? Escolha um nome legal." },
 
     // COMPLETE
-    { id: 'wizard_complete_v1', text: "Tudo pronto! Seu agente foi criado. Vamos testar?" },
-    { id: 'wizard_complete_v2', text: "Parabéns! Finalizamos. Você já pode conversar com seu novo agente." },
+    { id: 'wizard_complete_v1', text: "Tudo pronto! Seu assistente foi criado. Vamos testar?" },
+    { id: 'wizard_complete_v2', text: "Parabéns! Finalizamos. Você já pode conversar com seu novo assistente." },
     { id: 'wizard_complete_v3', text: "Excelente! Configurei tudo. Clique em testar para ver como ficou." }
 ];
 
-async function generateAudio(item) {
+async function generateAudioItem(item) {
     const filePath = path.join(OUTPUT_DIR, `${item.id}.mp3`);
+
+    // Check if exists - we SKIP if exists, but user asked to regenerate. 
+    // I will act conservatively and NOT delete blindly here, because verify step will delete.
+    // However, the user said "Refaça", implying regeneration.
+    // I will remove the check for existing file OR I will rely on my verification step to delete them first.
+    // Let's KEEP the check but I will delete files before running this script in the next steps.
     if (fs.existsSync(filePath)) {
         console.log(`⏭️  Skipping existing: ${item.id}.mp3`);
         return;
@@ -71,31 +78,11 @@ async function generateAudio(item) {
 
     console.log(`🎙️  Generating: ${item.id} -> "${item.text}"`);
 
-    // Using Google Cloud TTS directly via REST API
-    const url = `https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${API_KEY}`;
-
-    const requestBody = {
-        input: { text: item.text },
-        voice: { languageCode: 'pt-BR', name: 'pt-BR-Chirp3-HD-Despina' }, // High quality voice requested
-        audioConfig: { audioEncoding: 'MP3' } // Direct MP3 for frontend
-    };
-
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
-        });
+        // Use ttsService with Kore voice
+        const result = await generateAudio(item.text, 'Kore', API_KEY);
 
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`API Error: ${response.status} - ${err}`);
-        }
-
-        const data = await response.json();
-        if (!data.audioContent) throw new Error('No audio content received');
-
-        fs.writeFileSync(filePath, Buffer.from(data.audioContent, 'base64'));
+        fs.writeFileSync(filePath, Buffer.from(result.audioContent, 'base64'));
         console.log(`✅ Saved: ${item.id}.mp3`);
 
     } catch (error) {
@@ -104,13 +91,13 @@ async function generateAudio(item) {
 }
 
 async function run() {
-    console.log(`🚀 Starting Audio Asset Generation...`);
+    console.log(`🚀 Starting Audio Asset Generation (Voice: Kore)...`);
     console.log(`📂 Output: ${OUTPUT_DIR}`);
 
     for (const item of AUDIO_DATA) {
-        await generateAudio(item);
+        await generateAudioItem(item);
         // Small delay to avoid rate limits
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 500));
     }
 
     console.log(`✨ All Done!`);
