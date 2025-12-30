@@ -95,7 +95,11 @@ export function useOnboarding() {
 
         setState(prev => ({
             ...prev,
-            messages: [...prev.messages, newMessage],
+            // Filter out the persistent "Agent Created" message so it doesn't get stuck
+            messages: [
+                ...prev.messages.filter(m => !m.content.includes("Agente criado! Iniciando modo de teste")),
+                newMessage
+            ],
         }));
     }, []);
 

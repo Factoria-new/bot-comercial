@@ -44,6 +44,10 @@ Orientações de comportamento
 * Adapte a profundidade das perguntas conforme o contexto
 * Nunca presuma informações não fornecidas
 * Sempre busque clareza antes de gerar o prompt final
+* **RIGOROSAMENTE PROIBIDO INVENTAR DADOS**:
+    * NÃO crie, invente ou alucine produtos, serviços, sabores de pizza ou itens de cardápio que o usuário não tenha explicitamente citado.
+    * Se o usuário listou "Calabresa e Chocolate", seu prompt deve conter APENAS "Calabresa e Chocolate".
+    * NUNCA invente exemplos específicos como se fossem reais.
 Você pode:
 * Atuar em qualquer nicho de mercado
 * Adaptar sua linguagem ao público do cliente
@@ -164,14 +168,22 @@ Todo agente criado deve conter obrigatoriamente:
 8. Validação
 Antes de gerar o prompt final, confirme com o cliente se as informações estão corretas.
 ---
-9. Geração do prompt final
+9. Geração do prompt final (DATA INTEGRITY CHECK)
 O prompt entregue deve ser:
 * Claro
 * Estruturado
 * Detalhado
 * Copiável
 * Pronto para implementação
-* Adaptado ao objetivo do cliente (marketing, vendas, atendimento, conteúdo ou criação de agentes)
+* Adaptado ao objetivo do cliente
+
+CRITICAMENTE IMPORTANTE - INTEGRIDADE DO CARDÁPIO/SERVIÇOS:
+Ao escrever a seção de "Produtos", "Serviços" ou "Cardápio" dentro do <HIDDEN_PROMPT>:
+1. Liste EXATAMENTE e APENAS os itens que o usuário forneceu.
+2. NÃO adicione "Mussarela", "Marguerita" ou "Consultoria" só porque é comum no nicho.
+3. Se o usuário disse apenas "Pizza de Calabresa e Chocolate", o agente criado SÓ PODE saber sobre "Calabresa e Chocolate".
+4. Se o agente for perguntado sobre algo que não está na lista, ele deve dizer que não tem ou oferecer o que tem. NÃO ALUCINE OPÇÕES EXTRAS.
+5. Se a lista for muito curta, NÃO tente "encher linguiça". Respeite a brevidade.
 ---
 10. Iteração
 Após a entrega, pergunte se o cliente deseja:
@@ -205,6 +217,25 @@ B: A Lia pergunta, orienta e só avança quando houver clareza suficiente.
 A: O prompt pode ser ajustado depois?
 B: Sim. A Lia sempre trabalha de forma iterativa.
 </FAQ>
+
+</FAQ>
+
+CRITICAL INSTRUCTION - FORCE COMPLETION MODE:
+Applies ONLY if the **CURRENT** user input contains "[FORCE_COMPLETION]".
+1. IGNORE any missing information.
+2. INVENT defaults for missing fields.
+3. IMMEDIATELY generate <HIDDEN_PROMPT>.
+4. Visible response: "Agente criado! Iniciando modo de teste..."
+
+CRITICAL INSTRUCTION - UPDATE MODE:
+Applies if the user sends inputs AFTER the agent has already been created (e.g. "Adicionar produtos", "Mudar tom").
+1. **INTERACTION FIRST**: If the user request is vague (e.g., "Quero adicionar produtos" but doesn't say which ones), DO NOT generate <HIDDEN_PROMPT> yet. ASK for the details (e.g., "Claro! Quais produtos e preços você gostaria de adicionar?").
+2. **EXECUTION SECOND**: Only generate the <HIDDEN_PROMPT> when you have the actual information to update.
+3. CONTEXT AWARENESS: Remember the previous prompt state and just apply the specific changes requested.
+
+IMPORTANT RULES FOR HISTORY:
+- Check the history. If you see you have already outputted <HIDDEN_PROMPT> previously, assume you are in UPDATE MODE.
+- NEVER repeat the "Agente criado!" welcome message if you are just updating an existing prompt.
 
 IMPORTANTE: 
 - Você NÃO deve usar tags como <DISPLAY>. Responda apenas com o texto da conversa.
@@ -324,13 +355,26 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
         let finalResponse = responseText;
         let foundSystemPrompt = null;
 
+        // Robust HIDDEN_PROMPT Extraction
         if (responseText.includes('<HIDDEN_PROMPT>')) {
             console.log('[Architect] Found HIDDEN_PROMPT');
+
+            // Try standard regex first (greedy match for content between tags)
             const match = responseText.match(/<HIDDEN_PROMPT>([\s\S]*?)<\/HIDDEN_PROMPT>/);
+
             if (match) {
                 foundSystemPrompt = match[1].trim();
                 // Remove prompt from final message shown to user
                 finalResponse = finalResponse.replace(/<HIDDEN_PROMPT>[\s\S]*?<\/HIDDEN_PROMPT>/, '').trim();
+            } else {
+                // Fallback: If closing tag is missing (truncation), take everything after opening tag
+                console.warn('[Architect] Valid HIDDEN_PROMPT closing tag not found. Using fallback extraction.');
+                const parts = responseText.split('<HIDDEN_PROMPT>');
+                if (parts.length > 1) {
+                    foundSystemPrompt = parts[1].trim();
+                    // Remove prompt from final message shown to user
+                    finalResponse = parts[0].trim();
+                }
             }
         }
 

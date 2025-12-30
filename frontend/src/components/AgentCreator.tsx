@@ -20,7 +20,7 @@ import { useTTS } from "@/hooks/useTTS";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
 import { WizardModal } from "./WizardModal";
 import ChatMessages from "./chat/ChatMessages"; // NEW: For Lia's chat in split mode // NEW COMPONENT
-import { getSchemaForNiche, NicheSchema } from "@/lib/nicheSchemas";
+import { getSchemaForNiche, NicheSchema, NICHE_SCHEMAS } from "@/lib/nicheSchemas";
 import { getRandomAudio, AudioTriggerType } from "@/lib/audioMappings";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 
@@ -49,6 +49,9 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
     const [chatMode, setChatMode] = useState<'lia' | 'agent'>('lia');
     const [showTestButton, setShowTestButton] = useState(false);
 
+    // NEW: Loading state for transition
+    const [isSwitchingToTest, setIsSwitchingToTest] = useState(false);
+
 
     // NEW: Integrations step and Dashboard
     const [currentStep, setCurrentStep] = useState<'chat' | 'integrations' | 'dashboard'>('chat');
@@ -63,6 +66,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
     const processingQueue = useRef(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const integrationAudioRef = useRef<HTMLAudioElement | null>(null);
 
     // Chat state is still needed for backend logic but UI is hidden
     const {
@@ -115,7 +119,29 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         }
     }, [chatState.step]);
 
-    // Play audio when entering integrations screen
+    // NEW: Auto-switch to Test Chat when agent is created (Hubost check)
+    useEffect(() => {
+        if (chatState.agentCreated && chatState.agentConfig?.prompt) {
+            console.log("🚀 Agent created detected! Switching to Test Mode.");
+
+            // Artificial delay for loading screen if it was triggered by wizard
+            if (isSwitchingToTest) {
+                setTimeout(() => {
+                    setChatMode('agent');
+                    setIsSwitchingToTest(false);
+                }, 2000); // 2 seconds loading screen
+            } else {
+                setChatMode('agent');
+            }
+
+            // Ensure we initialize the test conversation if empty
+            if (chatState.testMessages.length === 0) {
+                startTesting();
+            }
+        }
+    }, [chatState.agentCreated, chatState.agentConfig, startTesting, chatState.testMessages.length, isSwitchingToTest]);
+
+    // Play audio when entering integrations screen - with cleanup
     useEffect(() => {
         if (currentStep === 'integrations') {
             const audioVariation = getRandomAudio('integrations_success');
@@ -123,25 +149,40 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             // Play directly
             if (audioVariation.path) {
                 try {
+                    // Stop any previous audio
+                    if (integrationAudioRef.current) {
+                        integrationAudioRef.current.pause();
+                        integrationAudioRef.current.currentTime = 0;
+                    }
+
                     const audio = new Audio(audioVariation.path);
+                    integrationAudioRef.current = audio;
                     audio.play().catch(console.error);
                 } catch (e) {
                     console.error("Audio error:", e);
                 }
             }
         }
+
+        // Cleanup function to stop audio when leaving this step/effect
+        return () => {
+            if (integrationAudioRef.current) {
+                integrationAudioRef.current.pause();
+                integrationAudioRef.current.currentTime = 0;
+            }
+        };
     }, [currentStep]);
 
     // --- WIZARD HANDLERS ---
 
-    const handleNicheSelect = (nicheId: string) => {
-        const schema = getSchemaForNiche(nicheId);
-        setCurrentSchema(schema);
-        setWizardStep(1); // Move to first form step
-
-        // Optional: Trigger AI to say something specific to the niche
-        handleManualInput(`[SYSTEM] Usuário selecionou o nicho: ${schema.title}. Inicie o cadastro.`);
-    };
+    // const handleNicheSelect = (nicheId: string) => {
+    //     const schema = getSchemaForNiche(nicheId);
+    //     setCurrentSchema(schema);
+    //     setWizardStep(1); // Move to first form step
+    //
+    //     // Optional: Trigger AI to say something specific to the niche
+    //     handleManualInput(`[SYSTEM] Usuário selecionou o nicho: ${schema.title}. Inicie o cadastro.`);
+    // };
 
     const handleWizardComplete = () => {
         setIsWizardOpen(false);
@@ -153,12 +194,15 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         };
         console.log("🎉 Wizard Complete! Payload:", finalPayload);
 
-        // Notify AI
+        // Notify AI with explicit instruction to finish immediately
         const summary = Object.entries(finalPayload)
             .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
             .join('\n');
 
-        handleManualInput(`[SYSTEM] Cadastro finalizado com sucesso! Dados:\n${summary}\n\nAsk if user wants to test.`);
+        // Trigger loading screen immediately
+        setIsSwitchingToTest(true);
+
+        handleManualInput(`[SYSTEM] Cadastro finalizado com sucesso! Dados:\n${summary}\n\n[FORCE_COMPLETION]`);
     };
 
     // --- AI & PROCESSING LOGIC ---
@@ -373,10 +417,16 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
                     // Show test button and enable test mode after audio starts
                     setTimeout(() => {
-                        startTesting();
-                        setTestMode(true);
-                        setShowTestButton(true);
-                        setChatMode('lia'); // Start in Lia mode, user clicks button to switch
+                        if (chatState.agentConfig?.prompt) {
+                            console.log("✅ Automatic prompt detection from hook!");
+                            // Auto-switch to test mode primarily
+                            setChatMode('agent');
+
+                            // If we haven't started testing yet (no welcome message), start it
+                            if (chatState.testMessages.length === 0) {
+                                startTesting();
+                            }
+                        }
                     }, 1500);
                 }, 1200);
 
@@ -473,9 +523,25 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 {/* --- MAIN MAIN AREA --- */}
                 <div className="flex-1 flex flex-col items-center justify-center relative min-h-[60vh]">
 
-                    {/* 1. LIA'S PRESENCE (When Wizard is CLOSED or secondary) */}
+                    {/* LOADING OVERLAY - Minimal Version */}
                     <AnimatePresence>
-                        {(!isWizardOpen && !testMode) && (
+                        {isSwitchingToTest && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+                            >
+                                <div className="bg-[#020617]/80 backdrop-blur-md p-4 rounded-full border border-white/10 shadow-2xl">
+                                    <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* 1. LIA'S PRESENCE (When Wizard is CLOSED or secondary or NOT switching) */}
+                    <AnimatePresence>
+                        {(!isWizardOpen && !testMode && !isSwitchingToTest) && (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -491,7 +557,11 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                                     <Button
-                                        onClick={() => setIsWizardOpen(true)}
+                                        onClick={() => {
+                                            setCurrentSchema(NICHE_SCHEMAS.general);
+                                            setWizardStep(1);
+                                            setIsWizardOpen(true);
+                                        }}
                                         className="bg-white text-black hover:bg-gray-200 text-lg px-8 py-6 rounded-full font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105"
                                     >
                                         <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
@@ -527,7 +597,6 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                         data={wizardData}
                         onDataUpdate={setWizardData}
                         onStepChange={setWizardStep}
-                        onSchemaSelect={handleNicheSelect}
                         onComplete={handleWizardComplete}
                         voiceActive={voiceMode} // Still pass it even if voice controls hidden, in case used inside
                     />
@@ -542,6 +611,21 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                     <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl overflow-hidden relative">
                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-50" />
 
+                                        {/* Toggles Header */}
+                                        <div className="flex justify-center mb-4 bg-black/20 p-1 rounded-xl w-fit mx-auto">
+                                            <button
+                                                className="px-4 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 text-white shadow-lg"
+                                            >
+                                                Falar com Lia
+                                            </button>
+                                            <button
+                                                onClick={() => setChatMode('agent')}
+                                                className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-all"
+                                            >
+                                                Testar Agente
+                                            </button>
+                                        </div>
+
                                         {/* Header */}
                                         <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
                                             <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xl">
@@ -551,17 +635,6 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                                 <h3 className="font-semibold text-white">Lia</h3>
                                                 <p className="text-xs text-white/40">Arquiteta de Agentes</p>
                                             </div>
-
-                                            {showTestButton && (
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => setChatMode('agent')}
-                                                    className="ml-auto bg-purple-600 hover:bg-purple-500 text-white border border-purple-400/20 shadow-lg shadow-purple-900/20"
-                                                >
-                                                    <FlaskConical className="w-4 h-4 mr-2" />
-                                                    Testar Agente
-                                                </Button>
-                                            )}
                                         </div>
 
                                         {/* Chat Messages */}
@@ -603,6 +676,15 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                                 <ArrowRight className="w-5 h-5" />
                                             </Button>
                                         </div>
+
+                                        {/* Finalizar Teste Button (Requirement #2) */}
+                                        <Button
+                                            onClick={() => setCurrentStep('integrations')}
+                                            className="w-full bg-white/5 hover:bg-white/10 text-emerald-400 border border-emerald-500/30 rounded-xl py-3 mt-3 text-sm"
+                                        >
+                                            <Check className="w-4 h-4 mr-2" />
+                                            Finalizar e Integrar
+                                        </Button>
                                     </div>
                                 </div>
                             ) : (
@@ -610,6 +692,21 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                 <div className="w-full h-[85vh] flex flex-col">
                                     <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl overflow-hidden relative">
                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-50" />
+
+                                        {/* Toggles Header */}
+                                        <div className="flex justify-center mb-4 bg-black/20 p-1 rounded-xl w-fit mx-auto">
+                                            <button
+                                                onClick={() => setChatMode('lia')}
+                                                className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-all"
+                                            >
+                                                Falar com Lia
+                                            </button>
+                                            <button
+                                                className="px-4 py-1.5 rounded-lg text-sm font-medium bg-purple-600 text-white shadow-lg"
+                                            >
+                                                Testar Agente
+                                            </button>
+                                        </div>
 
                                         {/* Header */}
                                         <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
@@ -671,17 +768,23 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                                 </Button>
                                             </div>
 
-                                            {/* Back to Lia Button */}
-                                            <Button
+                                            {/* Back to Lia Button - REMOVED since we have toggles now */}
+                                            {/* <Button
                                                 variant="ghost"
                                                 onClick={() => setChatMode('lia')}
-                                                className="w-full text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-2"
+                                                className="w-full text-white/50 hover:text-white hover:bg-white/10 rounded-xl py-2"
                                             >
                                                 <MessageCircle className="w-4 h-4 mr-2" />
-                                                Falar com Lia
-                                            </Button>
+                                                Voltar para Lia
+                                            </Button> */}
 
-                                            {/* Finalizar Teste Button */}
+                                            {/* Finalizar Teste Button - REMOVED from Test Chat, moved to Lia's sidebar as requested */}
+                                            {/* But user asked: "No chat da Lia o botão de testar agente deve ficar em baixo do chat, embaixo dele deve ficar o botão de finalizar teste." */}
+                                            {/* So I removed it from here to avoid duplication if it's in Lia's chat. */}
+                                            {/* However, standard UX might suggest keeping it here too. But let's follow the request strictly for Lia's chat first. */}
+                                            {/* Actually, having it in Test chat is also useful. I will Keep it but maybe style it differently or leave it. */}
+                                            {/* Re-reading request: "The first chat to be open should be the test chat... In Lia's chat the test button should be at bottom..." */}
+                                            {/* So I will leave this one here too as it makes sense for the "Test" flow. */}
                                             <Button
                                                 onClick={() => setCurrentStep('integrations')}
                                                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-2 mt-2"

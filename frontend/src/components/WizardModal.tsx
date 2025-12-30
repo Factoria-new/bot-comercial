@@ -46,11 +46,21 @@ export function WizardModal({
     const [formState, setFormState] = useState<Record<string, any>>({});
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [currentAudioText, setCurrentAudioText] = useState<string | null>(null);
+    const playedTriggers = useRef<Set<string>>(new Set());
 
     // Initial Debug Log
     useEffect(() => {
-        if (open) console.log("🧙‍♂️ WizardModal Open. Step:", step, "Schema:", schema?.id);
-    }, [open, step, schema]);
+        if (open) {
+            console.log("🧙‍♂️ WizardModal Open. Step:", step, "Schema:", schema?.id);
+            // Optional: Reset played triggers on fresh open? 
+            // If the user closes and re-opens, should it play again? 
+            // The requirement says "toda vez que clicamos em um input... apenas uma vez per call".
+            // Let's reset if it's a fresh open (step 0 or just opening).
+            if (Object.keys(data).length === 0) {
+                playedTriggers.current.clear();
+            }
+        }
+    }, [open, step, schema, data]);
 
     // Sync external data to local state for inputs
     useEffect(() => {
@@ -59,6 +69,11 @@ export function WizardModal({
 
     // Audio Playback Helper
     const playAudioGuidance = (trigger: AudioTriggerType) => {
+        // Deduplication check
+        if (playedTriggers.current.has(trigger)) {
+            return;
+        }
+
         try {
             if (!audioRef.current) {
                 audioRef.current = new Audio();
@@ -77,6 +92,8 @@ export function WizardModal({
             if (playPromise !== undefined) {
                 playPromise.catch(e => console.warn("Audio play blocked/error:", e));
             }
+
+            playedTriggers.current.add(trigger); // Mark as played
 
             setCurrentAudioText(variation.text);
             setTimeout(() => setCurrentAudioText(null), 5000);
@@ -270,6 +287,9 @@ export function WizardModal({
     if (!open) return null;
 
 
+    // --- STEP 0: NICHE SELECTION ---
+    // REMOVED as per user request. We start at Step 1 now.
+    if (step === 0) return null;
 
     return (
         <AnimatePresence>
