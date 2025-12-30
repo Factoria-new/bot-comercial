@@ -71,7 +71,9 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         handleUserInput,
         setAgentPrompt,
         startTesting,
-        addBotMessage
+        addBotMessage,
+        sendMessageToLia,
+        addUserMessage
     } = useOnboarding();
 
     const { speak, stop: stopTTS, resumeContext, voiceLevel: ttsVoiceLevel } = useTTS();
@@ -301,7 +303,14 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             }
         };
 
-        if (chatState.messages.length > 0) {
+        // NEW: Check if we are in 'Lia' mode explicitly to bypass step logic
+        // If chatState.step is 'testing', handleUserInput would route to Agent Chat.
+        // But if we are in chatMode='lia', we WANT to talk to the Architect.
+        if (chatMode === 'lia' && chatState.step === 'testing') {
+            // Explicitly use the Architect endpoint
+            addUserMessage(text); // Add user message to UI immediately
+            await sendMessageToLia(text, handleResponse);
+        } else if (chatState.messages.length > 0) {
             await handleUserInput(text, handleResponse);
         } else {
             await startOnboarding(text, handleResponse);
@@ -528,47 +537,49 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                         <div className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500 pb-4">
 
                             {chatMode === 'lia' ? (
-                                /* LIA MODE - Centered text, no chat box */
-                                <div className="text-center max-w-2xl px-4">
-                                    {/* Lia's message as centered text */}
-                                    {chatState.messages.filter(m => !m.content.startsWith('[SYSTEM]') && m.type === 'bot').slice(-1).map((msg) => (
-                                        <motion.div
-                                            key={msg.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="mb-8"
-                                        >
-                                            <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-white leading-relaxed whitespace-pre-line">
-                                                {msg.content}
-                                            </h1>
-                                        </motion.div>
-                                    ))}
-                                    {chatState.isTyping && (
-                                        <div className="flex justify-center">
-                                            <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                                /* LIA MODE - Chat Interface for Adjustments */
+                                <div className="w-full h-[85vh] flex flex-col">
+                                    <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl overflow-hidden relative">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-50" />
+
+                                        {/* Header */}
+                                        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
+                                            <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xl">
+                                                L
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold text-white">Lia</h3>
+                                                <p className="text-xs text-white/40">Arquiteta de Agentes</p>
+                                            </div>
+
+                                            {showTestButton && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => setChatMode('agent')}
+                                                    className="ml-auto bg-purple-600 hover:bg-purple-500 text-white border border-purple-400/20 shadow-lg shadow-purple-900/20"
+                                                >
+                                                    <FlaskConical className="w-4 h-4 mr-2" />
+                                                    Testar Agente
+                                                </Button>
+                                            )}
                                         </div>
-                                    )}
 
-                                    {/* Buttons */}
-                                    <div className="flex flex-col gap-3 mt-8">
-                                        {showTestButton && (
-                                            <Button
-                                                onClick={() => setChatMode('agent')}
-                                                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-8 py-4 rounded-full font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105 text-lg"
-                                            >
-                                                <FlaskConical className="w-5 h-5 mr-2" />
-                                                Testar Agente
-                                            </Button>
-                                        )}
+                                        {/* Chat Messages */}
+                                        <ChatMessages
+                                            messages={chatState.messages.filter(m => !m.content.startsWith('[SYSTEM]'))}
+                                            isTyping={chatState.isTyping}
+                                            alignLeft={true}
+                                            className="px-0"
+                                        />
 
-                                        {/* Input for talking to Lia */}
-                                        <div className="flex gap-2 mt-4">
-                                            <input
-                                                type="text"
-                                                placeholder="Peça ajustes no prompt..."
-                                                className="flex-1 bg-white/5 border border-white/10 rounded-full px-6 py-3 text-white focus:outline-none focus:bg-white/10 transition-all"
+                                        {/* Input Area */}
+                                        <div className="mt-4 flex gap-2">
+                                            <textarea
+                                                placeholder="Peça ajustes ao seu agente (ex: 'Mude o tom para mais formal', 'Adicione informação sobre preços')..."
+                                                className="flex-1 bg-black/20 border border-white/10 resize-none min-h-[50px] rounded-xl p-3 text-white focus:outline-none focus:border-white/30 transition-all"
                                                 onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                        e.preventDefault();
                                                         const value = e.currentTarget.value.trim();
                                                         if (value) {
                                                             handleManualInput(value);
@@ -579,7 +590,15 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                             />
                                             <Button
                                                 size="icon"
-                                                className="h-[48px] w-[48px] rounded-full bg-emerald-600 hover:bg-emerald-500"
+                                                className="h-[50px] w-[50px] rounded-xl bg-emerald-600 hover:bg-emerald-500"
+                                                onClick={(e) => {
+                                                    // Helper to find textarea sibling and submit
+                                                    const textarea = e.currentTarget.previousElementSibling as HTMLTextAreaElement;
+                                                    if (textarea && textarea.value.trim()) {
+                                                        handleManualInput(textarea.value.trim());
+                                                        textarea.value = '';
+                                                    }
+                                                }}
                                             >
                                                 <ArrowRight className="w-5 h-5" />
                                             </Button>

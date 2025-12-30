@@ -442,6 +442,8 @@ export function useOnboarding() {
         resetOnboarding,
         startTesting,
         setAgentPrompt, // New export
-        addBotMessage   // Exported for manual message injection
+        addBotMessage,   // Exported for manual message injection
+        addUserMessage,  // Exported for manual message injection
+        sendMessageToLia: handleInterviewStep // Exported to force Architect communication (e.g. for adjustments)
     };
 }

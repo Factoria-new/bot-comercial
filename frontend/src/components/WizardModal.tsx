@@ -15,16 +15,10 @@ import {
     ArrowLeft,
     ArrowRight,
     Check,
-    ChevronRight,
-    Store,
     Sparkles,
-    Home, // Replacing Building2 
-    Utensils,
-    Scissors,
-    Wrench,
-    Volume2 // Standard enough, but will fallback if issue persists
+    Volume2
 } from "lucide-react";
-import { NicheSchema, FormField, NICHE_SCHEMAS } from "@/lib/nicheSchemas";
+import { NicheSchema, FormField } from "@/lib/nicheSchemas";
 import { getRandomAudio, AudioTriggerType } from "@/lib/audioMappings";
 
 interface WizardModalProps {
@@ -34,62 +28,10 @@ interface WizardModalProps {
     data: Record<string, any>;
     onDataUpdate: (newData: Record<string, any>) => void;
     onStepChange: (newStep: number) => void;
-    onSchemaSelect: (schemaId: string) => void;
     onComplete: () => void;
     voiceActive?: boolean;
 }
 
-const NicheCard = ({
-    icon: Icon,
-    title,
-    description,
-    onClick,
-    selected
-}: {
-    icon: any,
-    title: string,
-    description: string,
-    onClick: () => void,
-    selected: boolean
-}) => (
-    <motion.div
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={onClick}
-        className={cn(
-            "cursor-pointer rounded-2xl p-4 border transition-all duration-300 relative overflow-hidden group",
-            selected
-                ? "bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-900/20"
-                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
-        )}
-    >
-        <div className={cn(
-            "absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 transition-opacity duration-500",
-            selected ? "opacity-100" : "group-hover:opacity-100"
-        )} />
-
-        <div className="relative z-10 flex flex-col items-center text-center gap-3">
-            <div className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center transition-colors duration-300",
-                selected ? "bg-purple-500 text-white" : "bg-white/10 text-white/70 group-hover:bg-white/20 group-hover:text-white"
-            )}>
-                {Icon ? <Icon className="w-6 h-6" /> : <Store className="w-6 h-6" />}
-            </div>
-            <div>
-                <h3 className="font-medium text-white mb-1">{title}</h3>
-                <p className="text-xs text-white/50 leading-relaxed">{description}</p>
-            </div>
-        </div>
-
-        {/* Selection Indicator */}
-        <div className={cn(
-            "absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-            selected ? "border-purple-400 bg-purple-500" : "border-white/20"
-        )}>
-            {selected && <Check className="w-3 h-3 text-white" />}
-        </div>
-    </motion.div>
-);
 
 export function WizardModal({
     open,
@@ -98,9 +40,7 @@ export function WizardModal({
     data,
     onDataUpdate,
     onStepChange,
-    onSchemaSelect,
     onComplete,
-    voiceActive
 }: WizardModalProps) {
 
     const [formState, setFormState] = useState<Record<string, any>>({});
@@ -157,7 +97,6 @@ export function WizardModal({
                 // Determine which logical step this is based on schema
                 // 1 -> Identity, 2 -> Operations, 3 -> Catalog
                 if (step === 1) playAudioGuidance('step_identity');
-                else if (step === 2) playAudioGuidance('step_operations');
                 else if (step === 3) playAudioGuidance('step_catalog');
             }
         } catch (e) {
@@ -171,8 +110,11 @@ export function WizardModal({
         onDataUpdate(newData);
     };
 
-    const handleFieldFocus = (name: string) => {
-        if (name === 'description') playAudioGuidance('focus_description');
+    const handleFieldFocus = (name: string, parentName?: string) => {
+        // Only play description audio for the top-level description field
+        if (name === 'description' && !parentName) {
+            playAudioGuidance('focus_description');
+        }
         if (name === 'assistantName') playAudioGuidance('focus_assistant_name');
     };
 
@@ -199,6 +141,9 @@ export function WizardModal({
             onChange = (val) => handleInputChange(field.name, val);
         }
 
+        // Common onFocus to trigger audio guide for focus
+        const onFocus = () => handleFieldFocus(field.name, parentName);
+
         switch (field.type) {
             case 'textarea':
                 return (
@@ -208,13 +153,13 @@ export function WizardModal({
                         value={value || ''}
                         onChange={(e) => onChange(e.target.value)}
                         className="bg-black/20 border-white/10 text-white focus:bg-black/40 min-h-[80px] rounded-xl"
-                        onFocus={() => handleFieldFocus(field.name)}
+                        onFocus={onFocus}
                     />
                 );
             case 'select':
                 return (
                     <Select value={value || ''} onValueChange={onChange}>
-                        <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl h-12">
+                        <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl h-12" onFocus={onFocus}>
                             <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-900 border-slate-800 text-white">
@@ -238,6 +183,7 @@ export function WizardModal({
                                         else onChange(currentSelection.filter(o => o !== opt));
                                     }}
                                     className="border-white/20 data-[state=checked]:bg-purple-600"
+                                    onFocus={onFocus}
                                 />
                                 <Label htmlFor={`${fieldId}-${opt}`} className="text-white/80 cursor-pointer text-sm">{opt}</Label>
                             </div>
@@ -246,7 +192,7 @@ export function WizardModal({
                 );
             case 'radio-group':
                 return (
-                    <RadioGroup value={value || ''} onValueChange={onChange} className="grid sm:grid-cols-2 gap-3">
+                    <RadioGroup value={value || ''} onValueChange={onChange} className="grid sm:grid-cols-2 gap-3" onFocus={onFocus}>
                         {field.options?.map(opt => (
                             <div key={opt}>
                                 <RadioGroupItem value={opt} id={`${fieldId}-${opt}`} className="peer sr-only" />
@@ -265,7 +211,7 @@ export function WizardModal({
                 const items = (value as any[]) || [];
                 return (
                     <div className="space-y-4">
-                        {items.map((item, idx) => (
+                        {items.map((_item, idx) => (
                             <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
@@ -314,7 +260,7 @@ export function WizardModal({
                         value={value || ''}
                         onChange={(e) => onChange(e.target.value)}
                         className="bg-black/20 border-white/10 text-white focus:bg-black/40 h-12 rounded-xl transition-all"
-                        onFocus={() => handleFieldFocus(field.name)}
+                        onFocus={onFocus}
                     />
                 );
         }
@@ -323,7 +269,7 @@ export function WizardModal({
 
     if (!open) return null;
 
-    const isNicheSelection = step === 0;
+
 
     return (
         <AnimatePresence>
@@ -343,15 +289,10 @@ export function WizardModal({
                     <div>
                         <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
                             <Sparkles className="w-6 h-6 text-purple-400" />
-                            {isNicheSelection ? "Vamos criar seu Agente" : schema?.title}
+                            {schema?.title}
                         </h2>
                         <div className="flex items-center gap-2 mt-1">
-                            <p className="text-white/50 text-sm">
-                                {isNicheSelection
-                                    ? "Para começar, qual o ramo do seu negócio?"
-                                    : `Passo ${step} de ${schema ? schema.steps.length : '?'}: ${schema?.steps?.[step - 1]?.title || ''}`
-                                }
-                            </p>
+                            {`Passo ${step} de ${schema ? schema.steps.length : '?'}: ${schema?.steps?.[step - 1]?.title || ''}`}
                             {/* Audio Indicator */}
                             {currentAudioText && (
                                 <motion.div
@@ -366,7 +307,7 @@ export function WizardModal({
                         </div>
                     </div>
                     {/* Step Indicator */}
-                    {!isNicheSelection && schema && (
+                    {schema && (
                         <div className="flex gap-1.5 bg-black/20 p-1.5 rounded-full">
                             {schema.steps.map((_, idx) => (
                                 <div
@@ -384,39 +325,8 @@ export function WizardModal({
                 {/* --- BODY --- */}
                 <div className="flex-1 p-8 overflow-y-auto max-h-[60vh] custom-scrollbar">
 
-                    {isNicheSelection ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <NicheCard
-                                icon={Utensils}
-                                title="Restaurante & Delivery"
-                                description="Pizzarias, lanchonetes e bares."
-                                selected={false}
-                                onClick={() => onSchemaSelect('restaurant')}
-                            />
-                            <NicheCard
-                                icon={Scissors}
-                                title="Beleza & Estética"
-                                description="Salões, barbearias e clínicas."
-                                selected={false}
-                                onClick={() => onSchemaSelect('beauty')}
-                            />
-                            <NicheCard
-                                icon={Wrench}
-                                title="Serviços"
-                                description="Técnicos, manutenção e autônomos."
-                                selected={false}
-                                onClick={() => onSchemaSelect('services')}
-                            />
-                            <NicheCard
-                                icon={Home} // Safer icon
-                                title="Imobiliária"
-                                description="Corretores, vendas e aluguéis."
-                                selected={false}
-                                onClick={() => onSchemaSelect('real_estate')}
-                            />
-                        </div>
-                    ) : (
-                        // FORM STEPS
+                    {/* FORM STEPS */}
+                    <div className="space-y-6">
                         <div className="space-y-6">
                             {schema?.steps?.[step - 1] && (
                                 <motion.div
@@ -448,41 +358,40 @@ export function WizardModal({
                                 </motion.div>
                             )}
                         </div>
-                    )}
+                    </div>
 
                 </div>
 
                 {/* --- FOOTER --- */}
-                {!isNicheSelection && (
-                    <div className="p-6 border-t border-white/5 bg-black/20 flex justify-between items-center">
+                <div className="p-6 border-t border-white/5 bg-black/20 flex justify-between items-center">
+                    {step > 1 ? (
                         <Button
                             variant="ghost"
                             onClick={() => onStepChange(step - 1)}
                             className="text-white/50 hover:text-white hover:bg-white/5 rounded-xl h-12 px-6"
                         >
                             <ArrowLeft className="w-4 h-4 mr-2" />
-                            {step === 1 ? 'Voltar ao Início' : 'Voltar'}
+                            Voltar
                         </Button>
+                    ) : <div />}
 
-                        <Button
-                            onClick={() => {
-                                if (schema && step >= schema.steps.length) {
-                                    playAudioGuidance('complete');
-                                    onComplete();
-                                } else {
-                                    onStepChange(step + 1);
-                                }
-                            }}
-                            className="bg-purple-600 hover:bg-purple-500 text-white rounded-xl h-12 px-8 shadow-lg shadow-purple-900/40 transition-all hover:scale-105"
-                        >
-                            {schema && step >= schema.steps.length ? (
-                                <span className="flex items-center gap-2">Finalizar <Check className="w-5 h-5" /></span>
-                            ) : (
-                                <span className="flex items-center gap-2">Próximo <ArrowRight className="w-5 h-5" /></span>
-                            )}
-                        </Button>
-                    </div>
-                )}
+                    <Button
+                        onClick={() => {
+                            if (schema && step >= schema.steps.length) {
+                                onComplete();
+                            } else {
+                                onStepChange(step + 1);
+                            }
+                        }}
+                        className="bg-purple-600 hover:bg-purple-500 text-white rounded-xl h-12 px-8 shadow-lg shadow-purple-900/40 transition-all hover:scale-105"
+                    >
+                        {schema && step >= schema.steps.length ? (
+                            <span className="flex items-center gap-2">Finalizar <Check className="w-5 h-5" /></span>
+                        ) : (
+                            <span className="flex items-center gap-2">Próximo <ArrowRight className="w-5 h-5" /></span>
+                        )}
+                    </Button>
+                </div>
             </motion.div>
         </AnimatePresence>
     );

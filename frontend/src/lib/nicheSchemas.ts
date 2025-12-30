@@ -207,6 +207,42 @@ export const NICHE_SCHEMAS: Record<string, NicheSchema> = {
                 ]
             }
         ]
+    },
+    general: {
+        id: 'general',
+        title: 'Configuração Geral',
+        description: 'Configure seu assistente para qualquer tipo de negócio.',
+        steps: [
+            {
+                id: 'identity',
+                title: 'Identidade',
+                description: 'Informações do seu negócio.',
+                fields: [...IDENTITY_FIELDS]
+            },
+            {
+                id: 'operations',
+                title: 'Operação',
+                description: 'Horários e Links.',
+                fields: [...OPERATIONS_FIELDS]
+            },
+            {
+                id: 'details',
+                title: 'Detalhes',
+                description: 'Produtos, serviços ou informações importantes.',
+                fields: [
+                    {
+                        name: 'products',
+                        label: 'Produtos & Serviços',
+                        type: 'repeater',
+                        addButtonText: 'Adicionar Item',
+                        subFields: [
+                            { name: 'name', label: 'Nome do Item', type: 'text', placeholder: 'Ex: Pizza Calabresa / Consultoria' },
+                            { name: 'description', label: 'Detalhes ou Preço', type: 'text', placeholder: 'Ex: R$ 45,00 - Molho especial' }
+                        ]
+                    }
+                ]
+            }
+        ]
     }
 };
 
@@ -216,5 +252,6 @@ export function getSchemaForNiche(nicheTag: string): NicheSchema {
     if (key.includes('beauty') || key.includes('salao') || key.includes('estetica')) return NICHE_SCHEMAS.beauty;
     if (key.includes('real') || key.includes('imob') || key.includes('casa')) return NICHE_SCHEMAS.real_estate;
     // Default to services if ambiguous or explicit
-    return NICHE_SCHEMAS.services;
+    // Default to general schema
+    return NICHE_SCHEMAS.general;
 }

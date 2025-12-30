@@ -7,7 +7,6 @@
 export type AudioTriggerType =
     | 'intro_modal'
     | 'step_identity'
-    | 'step_operations'
     | 'step_catalog'
     | 'focus_description'
     | 'focus_assistant_name'
@@ -42,11 +41,6 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Vamos começar pelo básico: Qual o nome do seu negócio?",
         "Para começar, preciso saber o nome da empresa e como vamos chamar seu agente."
     ]),
-    'step_operations': defineVariations('step_operations', 3, [
-        "Agora, como você quer que ele trabalhe? Venda direta ou apenas atendimento?",
-        "Certo! Vamos configurar como o assistente vai vender e seus horários.",
-        "Entendi. Agora me diga: qual o seu modelo de venda e horário de funcionamento?"
-    ]),
     'step_catalog': defineVariations('step_catalog', 3, [
         "Quase lá! Agora vamos adicionar seus produtos ou serviços principais.",
         "Agora a parte importante: O que você vende? Vamos cadastrar alguns itens.",
@@ -73,7 +67,7 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Tudo certo! Agora só falta conectar seu agente. Selecione uma plataforma para ativar o atendimento automático."
     ]),
     'upload_success': defineVariations('upload_success', 3, [
-        "Recebi o prompt do seu agente e está tudo pronto. Se quiser ver como ele responde, é só clicar no botão 'Testar Agente' logo abaixo.",
+        "Recebi o prompt do seu agente e está tudo pronto. Se quiser ver como ele responde, é só clicar no botão 'Testar Agente'.",
         "Prompt recebido e processado com sucesso! Agora você pode verificar as respostas dele clicando em 'Testar Agente'.",
         "Tudo certo com o prompt do seu agente! O ambiente de teste está liberado. Clique no botão 'Testar Agente' para começar."
     ]),
