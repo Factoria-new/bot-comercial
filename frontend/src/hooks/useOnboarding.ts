@@ -182,7 +182,7 @@ export function useOnboarding() {
     }, [state.messages.length, addBotMessage]);
 
     // Handle AI Interview Step
-    const handleInterviewStep = async (userInput: string, onChunk?: (chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete', content: string }) => void) => {
+    const handleInterviewStep = async (userInput: string, onChunk?: (chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete' | 'audio', content: string }) => void) => {
         try {
             setState(prev => ({ ...prev, isTyping: true }));
 
@@ -441,6 +441,7 @@ export function useOnboarding() {
         disconnectIntegration,
         resetOnboarding,
         startTesting,
-        setAgentPrompt // New export
+        setAgentPrompt, // New export
+        addBotMessage   // Exported for manual message injection
     };
 }

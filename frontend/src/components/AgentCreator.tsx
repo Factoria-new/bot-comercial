@@ -21,6 +21,7 @@ import { useGeminiLive } from "@/hooks/useGeminiLive";
 import { WizardModal } from "./WizardModal";
 import ChatMessages from "./chat/ChatMessages"; // NEW: For Lia's chat in split mode // NEW COMPONENT
 import { getSchemaForNiche, NicheSchema } from "@/lib/nicheSchemas";
+import { getRandomAudio, AudioTriggerType } from "@/lib/audioMappings";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 
 interface AgentCreatorProps {
@@ -69,7 +70,8 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         startOnboarding,
         handleUserInput,
         setAgentPrompt,
-        startTesting
+        startTesting,
+        addBotMessage
     } = useOnboarding();
 
     const { speak, stop: stopTTS, resumeContext, voiceLevel: ttsVoiceLevel } = useTTS();
@@ -114,11 +116,19 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
     // Play audio when entering integrations screen
     useEffect(() => {
         if (currentStep === 'integrations') {
-            // Use TTS directly (faster - no delay from failed audio load)
-            const integrationsMessage = "Parabéns! Seu agente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. Escolha uma plataforma abaixo para começar.";
-            speak(integrationsMessage, 'Kore');
+            const audioVariation = getRandomAudio('integrations_success');
+
+            // Play directly
+            if (audioVariation.path) {
+                try {
+                    const audio = new Audio(audioVariation.path);
+                    audio.play().catch(console.error);
+                } catch (e) {
+                    console.error("Audio error:", e);
+                }
+            }
         }
-    }, [currentStep, speak]);
+    }, [currentStep]);
 
     // --- WIZARD HANDLERS ---
 
@@ -183,7 +193,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         }
     }, [speak, isVisible]);
 
-    const handleChunk = useCallback((chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete', content: string }) => {
+    const handleChunk = useCallback((chunk: { type: 'text' | 'display_text' | 'prompt' | 'error' | 'complete' | 'audio', content: string }) => {
         if (chunk.type === 'display_text') {
             // Check for Commands (e.g. <OPEN_WIZARD>)
             if (chunk.content.includes('<OPEN_MODAL') || chunk.content.includes('<OPEN_WIZARD')) {
@@ -280,9 +290,6 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 // What if server audio fails? The server logs it but returns success.
                 // In that case strictly we lose audio.
 
-                // Let's modify logic: Text chunk updates UI. Audio chunk triggers audio.
-                // If NO audio chunk arrives (old/error), we have silence? That's bad.
-
                 // Refined approach:
                 // We can't know in the 'text' chunk if 'audio' is coming next without flags.
                 // But we know we just implemented it. 
@@ -329,26 +336,40 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 console.log("📄 Prompt uploaded:", data.text.substring(0, 100) + "...");
 
                 const promptText = data.text;
-                const systemMsg = `[SYSTEM] O usuário fez upload de um arquivo contendo o prompt do agente. Use este conteúdo como a base do agente:\n\n${promptText}\n\nRESPONDA EXATAMENTE ASSIM (adapte apenas o nome do agente se estiver no prompt):
-"Olá! Eu sou a Lia, assistente da Factoria. Fui pensada com carinho para te auxiliar nessa nova jornada.
 
-Acabei de receber o prompt do seu agente [nome do agente se encontrar no prompt]. Está tudo certo por aqui!
+                // Get random audio for upload success
+                const audioVariation = getRandomAudio('upload_success');
 
-Se quiser testar como ele responde, é só clicar no botão 'Testar Agente' logo abaixo. E se precisar de algum ajuste no prompt, estou aqui para ajudar!"`;
-
-                // Set prompt and auto-enable test mode check (or wait for user to say yes)
+                // Set prompt
                 setAgentPrompt(promptText);
 
-                handleManualInput(systemMsg);
-                setDisplayText("Arquivo lido com sucesso! Analisando...");
+                // Add delay before speaking (1.2s)
+                setTimeout(async () => {
+                    // Add text to chat history directly
+                    await addBotMessage(audioVariation.text);
 
-                // Show test button and enable test mode after Lia responds
-                setTimeout(() => {
-                    startTesting();
-                    setTestMode(true);
-                    setShowTestButton(true);
-                    setChatMode('lia'); // Start in Lia mode, user clicks button to switch
-                }, 1500);
+                    // Manually play the audio file
+                    if (audioVariation.path) {
+                        try {
+                            const audio = new Audio(audioVariation.path);
+                            audio.play().catch(e => console.error("Audio play error:", e));
+                        } catch (e) {
+                            console.error("Audio error:", e);
+                        }
+                    }
+
+                    // Update display text for big letters
+                    setDisplayText(audioVariation.text);
+                    setIsVisible(true);
+
+                    // Show test button and enable test mode after audio starts
+                    setTimeout(() => {
+                        startTesting();
+                        setTestMode(true);
+                        setShowTestButton(true);
+                        setChatMode('lia'); // Start in Lia mode, user clicks button to switch
+                    }, 1500);
+                }, 1200);
 
             } else {
                 setDisplayText("Erro ao ler arquivo. Tente novamente.");
