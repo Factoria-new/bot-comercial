@@ -90,19 +90,25 @@ router.post('/architect', async (req, res) => {
 // Test endpoint - Chat with the created agent
 router.post('/chat', async (req, res) => {
     try {
-        const { message, systemPrompt } = req.body;
+        const { message, systemPrompt, history = [] } = req.body;
 
         if (!API_KEY) return res.status(500).json({ error: 'API key ausente' });
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.0-flash-exp',
+            systemInstruction: systemPrompt
+        });
+
+        // Convert history to Gemini format
+        const geminiHistory = history.map(h => ({
+            role: h.role === 'user' ? 'user' : 'model',
+            parts: [{ text: h.content }]
+        }));
 
         const chat = model.startChat({
-            history: [
-                { role: "user", parts: [{ text: "System Instruction: " + systemPrompt }] },
-                { role: "model", parts: [{ text: "Entendido. Seguirei essas instruções." }] }
-            ],
+            history: geminiHistory,
             generationConfig: {
-                maxOutputTokens: 500,
+                maxOutputTokens: 2048,
             },
         });
 

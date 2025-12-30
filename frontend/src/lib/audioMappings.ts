@@ -11,7 +11,8 @@ export type AudioTriggerType =
     | 'step_catalog'
     | 'focus_description'
     | 'focus_assistant_name'
-    | 'complete';
+    | 'complete'
+    | 'integrations';
 
 interface AudioVariation {
     id: string;
@@ -63,6 +64,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Tudo pronto! Seu agente foi criado. Vamos testar?",
         "Parabéns! Finalizamos. Você já pode conversar com seu novo agente.",
         "Excelente! Configurei tudo. Clique em testar para ver como ficou."
+    ]),
+    'integrations': defineVariations('integrations', 3, [
+        "Parabéns! Seu agente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu agente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar.",
+        "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes.",
+        "Tudo certo! Agora só falta conectar seu agente. Selecione uma plataforma para ativar o atendimento automático."
     ])
 };
 

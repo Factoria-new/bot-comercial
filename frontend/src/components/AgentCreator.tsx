@@ -9,7 +9,11 @@ import {
     Sparkles,
     Loader2,
     ArrowRight,
-    Upload
+    Upload,
+    MessageCircle,
+    FlaskConical,
+    Check,
+    X
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTTS } from "@/hooks/useTTS";
@@ -38,6 +42,23 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
     const [testMode, setTestMode] = useState(false);
     const [testMessages, setTestMessages] = useState<Array<{ id: string, type: 'bot' | 'user', content: string }>>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
+
+    // NEW: Unified chat mode - 'lia' to talk to Lia, 'agent' to test the agent
+    const [chatMode, setChatMode] = useState<'lia' | 'agent'>('lia');
+    const [showTestButton, setShowTestButton] = useState(false);
+
+    // NEW: Integrations step
+    const [currentStep, setCurrentStep] = useState<'chat' | 'integrations'>('chat');
+    const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+
+    // Platform integrations data
+    const integrations = [
+        { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', connected: false },
+        { id: 'instagram', name: 'Instagram', color: '#E4405F', connected: false },
+        { id: 'facebook', name: 'Facebook', color: '#1877F2', connected: false },
+        { id: 'twitter', name: 'Twitter / X', color: '#000000', connected: false },
+        { id: 'tiktok', name: 'TikTok', color: '#010101', connected: false },
+    ];
 
     const [displayText, setDisplayText] = useState("");
     const [isVisible, setIsVisible] = useState(false);
@@ -77,6 +98,15 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             setTestMode(true);
         }
     }, [chatState.step]);
+
+    // Play audio when entering integrations screen
+    useEffect(() => {
+        if (currentStep === 'integrations') {
+            // Use TTS directly (faster - no delay from failed audio load)
+            const integrationsMessage = "Parabéns! Seu agente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. Escolha uma plataforma abaixo para começar.";
+            speak(integrationsMessage, 'Kore');
+        }
+    }, [currentStep, speak]);
 
     // --- WIZARD HANDLERS ---
 
@@ -287,7 +317,12 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 console.log("📄 Prompt uploaded:", data.text.substring(0, 100) + "...");
 
                 const promptText = data.text;
-                const systemMsg = `[SYSTEM] O usuário fez upload de um arquivo contendo o prompt do agente. Use este conteúdo como a base o agente:\n\n${promptText}\n\nAnalise o prompt e pergunte ao usuário se ele gostaria de testar o agente ou se precisa de algum ajuste específico.`;
+                const systemMsg = `[SYSTEM] O usuário fez upload de um arquivo contendo o prompt do agente. Use este conteúdo como a base do agente:\n\n${promptText}\n\nRESPONDA EXATAMENTE ASSIM (adapte apenas o nome do agente se estiver no prompt):
+"Olá! Eu sou a Lia, assistente da Factoria. Fui pensada com carinho para te auxiliar nessa nova jornada.
+
+Acabei de receber o prompt do seu agente [nome do agente se encontrar no prompt]. Está tudo certo por aqui!
+
+Se quiser testar como ele responde, é só clicar no botão 'Testar Agente' logo abaixo. E se precisar de algum ajuste no prompt, estou aqui para ajudar!"`;
 
                 // Set prompt and auto-enable test mode check (or wait for user to say yes)
                 setAgentPrompt(promptText);
@@ -295,11 +330,12 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 handleManualInput(systemMsg);
                 setDisplayText("Arquivo lido com sucesso! Analisando...");
 
-                // Optional: Auto-start testing if preferred, or waiting for Lia to suggest it. 
-                // For now, let's auto-switch to test mode to show the new UI as requested: "should be sent to test area"
+                // Show test button and enable test mode after Lia responds
                 setTimeout(() => {
                     startTesting();
                     setTestMode(true);
+                    setShowTestButton(true);
+                    setChatMode('lia'); // Start in Lia mode, user clicks button to switch
                 }, 1500);
 
             } else {
@@ -318,14 +354,27 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         if (!message.trim() || isTestTyping) return;
         resumeContext();
         const userMsg = { id: Math.random().toString(36).substring(2, 9), type: 'user' as const, content: message };
-        setTestMessages(prev => [...prev, userMsg]);
+
+        // Append user message to history immediately
+        const updatedMessages = [...testMessages, userMsg];
+        setTestMessages(updatedMessages);
         setIsTestTyping(true);
+
         try {
-            // Mock API call or real one - ensure agentConfig is available, if not use partial
+            // Convert testMessages to history format for the API
+            const history = updatedMessages.map(msg => ({
+                role: msg.type === 'user' ? 'user' : 'model',
+                content: msg.content
+            }));
+
             const res = await fetch('http://localhost:3003/api/agent/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message, systemPrompt: chatState.agentConfig?.prompt || '' })
+                body: JSON.stringify({
+                    message: message,
+                    systemPrompt: chatState.agentConfig?.prompt || '',
+                    history: history // Include conversation history
+                })
             });
             const data = await res.json();
             if (data.success) {
@@ -441,60 +490,305 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                         voiceActive={voiceMode} // Still pass it even if voice controls hidden, in case used inside
                     />
 
-                    {/* 3. SPLIT SCREEN TEST MODE */}
-                    {testMode && (
-                        <div className="w-full h-[85vh] flex flex-col md:flex-row gap-4 animate-in fade-in zoom-in-95 duration-500 pb-4">
+                    {/* 3. UNIFIED CHAT MODE */}
+                    {testMode && currentStep === 'chat' && (
+                        <div className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500 pb-4">
 
-                            {/* LEFT: Agent Test Chat */}
-                            <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl overflow-hidden relative group">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-50" />
-                                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
-                                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">A</div>
-                                    <div>
-                                        <h3 className="font-semibold text-white">Seu Agente</h3>
-                                        <p className="text-xs text-white/40">Ambiente de Teste</p>
+                            {chatMode === 'lia' ? (
+                                /* LIA MODE - Centered text, no chat box */
+                                <div className="text-center max-w-2xl px-4">
+                                    {/* Lia's message as centered text */}
+                                    {chatState.messages.filter(m => !m.content.startsWith('[SYSTEM]') && m.type === 'bot').slice(-1).map((msg) => (
+                                        <motion.div
+                                            key={msg.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mb-8"
+                                        >
+                                            <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-white leading-relaxed whitespace-pre-line">
+                                                {msg.content}
+                                            </h1>
+                                        </motion.div>
+                                    ))}
+                                    {chatState.isTyping && (
+                                        <div className="flex justify-center">
+                                            <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                                        </div>
+                                    )}
+
+                                    {/* Buttons */}
+                                    <div className="flex flex-col gap-3 mt-8">
+                                        {showTestButton && (
+                                            <Button
+                                                onClick={() => setChatMode('agent')}
+                                                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-8 py-4 rounded-full font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105 text-lg"
+                                            >
+                                                <FlaskConical className="w-5 h-5 mr-2" />
+                                                Testar Agente
+                                            </Button>
+                                        )}
+
+                                        {/* Input for talking to Lia */}
+                                        <div className="flex gap-2 mt-4">
+                                            <input
+                                                type="text"
+                                                placeholder="Peça ajustes no prompt..."
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-full px-6 py-3 text-white focus:outline-none focus:bg-white/10 transition-all"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const value = e.currentTarget.value.trim();
+                                                        if (value) {
+                                                            handleManualInput(value);
+                                                            e.currentTarget.value = '';
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                size="icon"
+                                                className="h-[48px] w-[48px] rounded-full bg-emerald-600 hover:bg-emerald-500"
+                                            >
+                                                <ArrowRight className="w-5 h-5" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="ml-auto px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">Online</div>
                                 </div>
+                            ) : (
+                                /* AGENT TEST MODE - Chat box for testing */
+                                <div className="w-full h-[85vh] flex flex-col">
+                                    <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl overflow-hidden relative">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-50" />
 
-                                <AgentTestChat messages={testMessages} onSend={handleTestSend} isTyping={isTestTyping} />
-                            </div>
+                                        {/* Header */}
+                                        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
+                                            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                                                A
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold text-white">Seu Agente</h3>
+                                                <p className="text-xs text-white/40">Ambiente de Teste</p>
+                                            </div>
+                                            <div className="ml-auto px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">
+                                                Teste
+                                            </div>
+                                        </div>
 
-                            {/* RIGHT: Lia Chat (Creator) */}
-                            <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 flex flex-col shadow-xl overflow-hidden">
-                                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
-                                    <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">L</div>
-                                    <div>
-                                        <h3 className="font-semibold text-white">Lia</h3>
-                                        <p className="text-xs text-white/40">Assistente de Criação</p>
+                                        {/* Messages Area */}
+                                        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar">
+                                            {testMessages.length === 0 && (
+                                                <div className="text-center text-white/40 py-8">
+                                                    <FlaskConical className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                    <p>Envie uma mensagem para testar seu agente</p>
+                                                </div>
+                                            )}
+                                            {testMessages.map((msg) => (
+                                                <div key={msg.id} className={cn("flex", msg.type === 'user' ? "justify-end" : "justify-start")}>
+                                                    <div className={cn(
+                                                        "max-w-[85%] px-4 py-2.5 rounded-2xl text-sm",
+                                                        msg.type === 'user' ? "bg-purple-600 text-white" : "bg-white/10 text-white"
+                                                    )}>
+                                                        {msg.content}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {isTestTyping && <Loader2 className="w-4 h-4 animate-spin text-white/50" />}
+                                        </div>
+
+                                        {/* Input Area */}
+                                        <div className="space-y-2">
+                                            <div className="flex gap-2">
+                                                <textarea
+                                                    placeholder="Teste seu agente..."
+                                                    className="flex-1 bg-black/20 border border-white/10 resize-none min-h-[50px] rounded-xl p-3 text-white focus:outline-none focus:border-white/30 transition-all"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault();
+                                                            const value = e.currentTarget.value.trim();
+                                                            if (value) {
+                                                                handleTestSend(value);
+                                                                e.currentTarget.value = '';
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                                <Button
+                                                    size="icon"
+                                                    className="h-[50px] w-[50px] rounded-xl bg-purple-600 hover:bg-purple-500"
+                                                >
+                                                    <ArrowRight className="w-5 h-5" />
+                                                </Button>
+                                            </div>
+
+                                            {/* Back to Lia Button */}
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => setChatMode('lia')}
+                                                className="w-full text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-2"
+                                            >
+                                                <MessageCircle className="w-4 h-4 mr-2" />
+                                                Falar com Lia
+                                            </Button>
+
+                                            {/* Finalizar Teste Button */}
+                                            <Button
+                                                onClick={() => setCurrentStep('integrations')}
+                                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-2 mt-2"
+                                            >
+                                                <Check className="w-4 h-4 mr-2" />
+                                                Finalizar Teste
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <ChatMessages
-                                    messages={chatState.messages.filter(m => !m.content.startsWith('[SYSTEM]'))}
-                                    isTyping={chatState.isTyping}
-                                    className="flex-1 custom-scrollbar"
-                                    alignLeft={true}
-                                />
-
-                                {/* Mini Input for Lia */}
-                                <div className="mt-4 flex gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Fale com a Lia..."
-                                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:bg-white/10 transition-all"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                handleManualInput(e.currentTarget.value);
-                                                e.currentTarget.value = '';
-                                            }
-                                        }}
-                                    />
-                                </div>
-                            </div>
-
+                            )}
                         </div>
                     )}
+
+                    {/* 4. INTEGRATIONS STEP */}
+                    <AnimatePresence mode="wait">
+                        {currentStep === 'integrations' && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 100 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -100 }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                                className="w-full max-w-4xl mx-auto pb-4"
+                            >
+                                {/* Lia's Explanation */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="text-center mb-12 max-w-2xl mx-auto"
+                                >
+                                    <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6">
+                                        L
+                                    </div>
+                                    <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-white leading-relaxed mb-6">
+                                        Parabéns! Seu agente está pronto! 🎉
+                                    </h1>
+                                    <p className="text-white/70 text-lg leading-relaxed">
+                                        Agora é hora de conectar ele às suas plataformas de atendimento.
+                                        As <span className="text-emerald-400 font-medium">integrações</span> permitem que seu agente
+                                        responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes.
+                                    </p>
+                                    <p className="text-white/50 text-base mt-4">
+                                        Escolha uma plataforma abaixo para começar:
+                                    </p>
+                                </motion.div>
+
+                                {/* Integration Cards Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    {integrations.map((integration) => (
+                                        <motion.div
+                                            key={integration.id}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => setSelectedIntegration(integration.id)}
+                                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer hover:bg-white/10 transition-all flex flex-col items-center gap-3 group"
+                                        >
+                                            {/* Platform Icon */}
+                                            <div
+                                                className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
+                                                style={{ backgroundColor: integration.color + '20' }}
+                                            >
+                                                {integration.id === 'whatsapp' && (
+                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill={integration.color}>
+                                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                                                    </svg>
+                                                )}
+                                                {integration.id === 'instagram' && (
+                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill={integration.color}>
+                                                        <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.757-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z" />
+                                                    </svg>
+                                                )}
+                                                {integration.id === 'facebook' && (
+                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill={integration.color}>
+                                                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                                    </svg>
+                                                )}
+                                                {integration.id === 'twitter' && (
+                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="white">
+                                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                                    </svg>
+                                                )}
+                                                {integration.id === 'tiktok' && (
+                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="white">
+                                                        <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <span className="text-white font-medium text-sm">{integration.name}</span>
+                                            {integration.connected && (
+                                                <span className="text-emerald-400 text-xs flex items-center gap-1">
+                                                    <Check className="w-3 h-3" /> Conectado
+                                                </span>
+                                            )}
+                                        </motion.div>
+                                    ))}
+                                </div>
+
+                                {/* Back Button */}
+                                <div className="flex justify-center mt-8">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => setCurrentStep('chat')}
+                                        className="text-white/60 hover:text-white"
+                                    >
+                                        Voltar ao Chat
+                                    </Button>
+                                </div>
+
+                                {/* Integration Connection Modal */}
+                                <AnimatePresence>
+                                    {selectedIntegration && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                            onClick={() => setSelectedIntegration(null)}
+                                        >
+                                            <motion.div
+                                                initial={{ scale: 0.9, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                exit={{ scale: 0.9, opacity: 0 }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full"
+                                            >
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <h2 className="text-2xl font-bold text-white">
+                                                        Conectar {integrations.find(i => i.id === selectedIntegration)?.name}
+                                                    </h2>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setSelectedIntegration(null)}
+                                                        className="text-white/60 hover:text-white"
+                                                    >
+                                                        <X className="w-5 h-5" />
+                                                    </Button>
+                                                </div>
+
+                                                <p className="text-white/60 mb-8">
+                                                    Conecte sua conta do {integrations.find(i => i.id === selectedIntegration)?.name} para que seu agente possa atender seus clientes automaticamente.
+                                                </p>
+
+                                                <Button
+                                                    className="w-full py-4 text-lg rounded-xl"
+                                                    style={{
+                                                        backgroundColor: integrations.find(i => i.id === selectedIntegration)?.color,
+                                                    }}
+                                                >
+                                                    Conectar {integrations.find(i => i.id === selectedIntegration)?.name}
+                                                </Button>
+                                            </motion.div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>
