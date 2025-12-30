@@ -21,6 +21,7 @@ import { useGeminiLive } from "@/hooks/useGeminiLive";
 import { WizardModal } from "./WizardModal";
 import ChatMessages from "./chat/ChatMessages"; // NEW: For Lia's chat in split mode // NEW COMPONENT
 import { getSchemaForNiche, NicheSchema } from "@/lib/nicheSchemas";
+import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 
 interface AgentCreatorProps {
     onOpenSidebar?: () => void;
@@ -47,18 +48,11 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
     const [chatMode, setChatMode] = useState<'lia' | 'agent'>('lia');
     const [showTestButton, setShowTestButton] = useState(false);
 
-    // NEW: Integrations step
-    const [currentStep, setCurrentStep] = useState<'chat' | 'integrations'>('chat');
+
+    // NEW: Integrations step and Dashboard
+    const [currentStep, setCurrentStep] = useState<'chat' | 'integrations' | 'dashboard'>('chat');
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
 
-    // Platform integrations data
-    const integrations = [
-        { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', connected: false },
-        { id: 'instagram', name: 'Instagram', color: '#E4405F', connected: false },
-        { id: 'facebook', name: 'Facebook', color: '#1877F2', connected: false },
-        { id: 'twitter', name: 'Twitter / X', color: '#000000', connected: false },
-        { id: 'tiktok', name: 'TikTok', color: '#010101', connected: false },
-    ];
 
     const [displayText, setDisplayText] = useState("");
     const [isVisible, setIsVisible] = useState(false);
@@ -89,6 +83,24 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         startContinuousRecording,
         stopContinuousRecording
     } = useGeminiLive();
+
+    // WhatsApp connection hook for Baileys integration
+    const {
+        instances: whatsappInstances,
+        handleGenerateQR,
+        modalState: whatsappModalState,
+        closeModal: closeWhatsappModal
+    } = useWhatsAppInstances();
+
+    // Platform integrations data - WhatsApp status is dynamic from Baileys connection
+    const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
+    const integrations = [
+        { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', connected: isWhatsAppConnected },
+        { id: 'instagram', name: 'Instagram', color: '#E4405F', connected: false },
+        { id: 'facebook', name: 'Facebook', color: '#1877F2', connected: false },
+        { id: 'twitter', name: 'Twitter / X', color: '#000000', connected: false },
+        { id: 'tiktok', name: 'TikTok', color: '#010101', connected: false },
+    ];
 
     const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel);
 
@@ -728,20 +740,62 @@ Se quiser testar como ele responde, é só clicar no botão 'Testar Agente' logo
                                     ))}
                                 </div>
 
-                                {/* Back Button */}
+                                {/* Action Button - Save & Finish when connected, Back to Chat otherwise */}
                                 <div className="flex justify-center mt-8">
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => setCurrentStep('chat')}
-                                        className="text-white/60 hover:text-white"
-                                    >
-                                        Voltar ao Chat
-                                    </Button>
+                                    {integrations.some(i => i.connected) ? (
+                                        <Button
+                                            onClick={async () => {
+                                                console.log('Saving integrations... Configuring agent prompts');
+
+                                                // Get the agent prompt
+                                                const agentPrompt = chatState.agentConfig?.prompt;
+
+                                                if (!agentPrompt) {
+                                                    console.warn('No agent prompt configured');
+                                                    setCurrentStep('dashboard');
+                                                    return;
+                                                }
+
+                                                // Configure agent for WhatsApp (instance_1)
+                                                if (isWhatsAppConnected) {
+                                                    try {
+                                                        const response = await fetch('http://localhost:3003/api/whatsapp/configure-agent', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                                sessionId: 'instance_1',
+                                                                prompt: agentPrompt
+                                                            })
+                                                        });
+
+                                                        const result = await response.json();
+                                                        console.log('WhatsApp agent configured:', result);
+                                                    } catch (error) {
+                                                        console.error('Error configuring WhatsApp agent:', error);
+                                                    }
+                                                }
+
+                                                setCurrentStep('dashboard');
+                                            }}
+                                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 text-lg rounded-xl"
+                                        >
+                                            <Check className="w-5 h-5 mr-2" />
+                                            Salvar e Finalizar
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => setCurrentStep('chat')}
+                                            className="text-white/60 hover:text-white"
+                                        >
+                                            Voltar ao Chat
+                                        </Button>
+                                    )}
                                 </div>
 
-                                {/* Integration Connection Modal */}
+                                {/* Integration Connection Modal - Generic for non-WhatsApp */}
                                 <AnimatePresence>
-                                    {selectedIntegration && (
+                                    {selectedIntegration && selectedIntegration !== 'whatsapp' && (
                                         <motion.div
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
@@ -786,6 +840,353 @@ Se quiser testar como ele responde, é só clicar no botão 'Testar Agente' logo
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
+
+                                {/* WhatsApp Connection Modal - Dark Theme */}
+                                <AnimatePresence>
+                                    {selectedIntegration === 'whatsapp' && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                            onClick={() => setSelectedIntegration(null)}
+                                        >
+                                            <motion.div
+                                                initial={{ scale: 0.9, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                exit={{ scale: 0.9, opacity: 0 }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full"
+                                            >
+                                                {/* Header */}
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#25D36620' }}>
+                                                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#25D366">
+                                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                                                            </svg>
+                                                        </div>
+                                                        <div>
+                                                            <h2 className="text-xl font-bold text-white">Conectar WhatsApp</h2>
+                                                            <p className="text-white/50 text-sm">
+                                                                {whatsappModalState.connectionState === 'connected' ? 'Conectado!' :
+                                                                    whatsappModalState.connectionState === 'ready' ? 'Escaneie o QR Code' :
+                                                                        whatsappModalState.connectionState === 'generating' ? 'Gerando QR Code...' :
+                                                                            'Escolha como conectar'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setSelectedIntegration(null)}
+                                                        className="text-white/60 hover:text-white"
+                                                    >
+                                                        <X className="w-5 h-5" />
+                                                    </Button>
+                                                </div>
+
+                                                {/* Content based on state */}
+                                                {!whatsappModalState.isOpen && (
+                                                    /* Selection State */
+                                                    <div className="space-y-4">
+                                                        <p className="text-white/60 text-sm mb-6">
+                                                            Conecte seu WhatsApp para que seu agente possa atender seus clientes automaticamente.
+                                                        </p>
+
+                                                        <Button
+                                                            onClick={() => handleGenerateQR(1)}
+                                                            className="w-full py-6 text-lg rounded-xl bg-[#25D366] hover:bg-[#20BD5A] text-white flex items-center justify-center gap-3"
+                                                        >
+                                                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                                                <path d="M3 3h7v7H3V3zm1 1v5h5V4H4zm-1 9h7v7H3v-7zm1 1v5h5v-5H4zm9-10h7v7h-7V3zm1 1v5h5V4h-5zm-1 9h2v2h-2v-2zm2 2h2v2h-2v-2zm2 2h2v2h-2v-2zm-4 0h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2z" />
+                                                            </svg>
+                                                            Conectar com QR Code
+                                                        </Button>
+                                                    </div>
+                                                )}
+
+                                                {whatsappModalState.isOpen && whatsappModalState.connectionState === 'generating' && (
+                                                    /* Generating State */
+                                                    <div className="flex flex-col items-center justify-center py-12">
+                                                        <div className="relative">
+                                                            <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center">
+                                                                <Loader2 className="w-10 h-10 text-[#25D366] animate-spin" />
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-white/70 mt-6 text-center">
+                                                            Gerando QR Code...<br />
+                                                            <span className="text-white/50 text-sm">Aguarde um momento</span>
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {whatsappModalState.isOpen && whatsappModalState.connectionState === 'ready' && whatsappInstances[0]?.qrCode && (
+                                                    /* QR Code Ready State */
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="bg-white p-4 rounded-2xl mb-6">
+                                                            <img
+                                                                src={whatsappInstances[0].qrCode}
+                                                                alt="QR Code WhatsApp"
+                                                                className="w-56 h-56 object-contain"
+                                                            />
+                                                        </div>
+                                                        <div className="text-center space-y-2 mb-6">
+                                                            <p className="text-white/70 text-sm">
+                                                                1. Abra o WhatsApp no seu celular
+                                                            </p>
+                                                            <p className="text-white/70 text-sm">
+                                                                2. Vá em <span className="text-white">Configurações → Aparelhos conectados</span>
+                                                            </p>
+                                                            <p className="text-white/70 text-sm">
+                                                                3. Toque em <span className="text-white">Conectar um aparelho</span>
+                                                            </p>
+                                                            <p className="text-white/70 text-sm">
+                                                                4. Escaneie este QR Code
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {whatsappModalState.isOpen && whatsappModalState.connectionState === 'connecting' && (
+                                                    /* Connecting State */
+                                                    <div className="flex flex-col items-center justify-center py-12">
+                                                        <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center">
+                                                            <Loader2 className="w-10 h-10 text-[#25D366] animate-spin" />
+                                                        </div>
+                                                        <p className="text-white/70 mt-6 text-center">
+                                                            Conectando ao WhatsApp...<br />
+                                                            <span className="text-white/50 text-sm">Estabelecendo conexão segura</span>
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {whatsappModalState.isOpen && whatsappModalState.connectionState === 'connected' && (
+                                                    /* Connected State */
+                                                    <div className="flex flex-col items-center justify-center py-8">
+                                                        <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6">
+                                                            <Check className="w-10 h-10 text-emerald-400" />
+                                                        </div>
+                                                        <h3 className="text-xl font-bold text-white mb-2">Conectado com Sucesso!</h3>
+                                                        <p className="text-white/60 text-center mb-6">
+                                                            Seu WhatsApp está pronto para receber mensagens.
+                                                        </p>
+                                                        <Button
+                                                            onClick={() => setSelectedIntegration(null)}
+                                                            className="w-full py-4 text-lg rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white"
+                                                        >
+                                                            Continuar
+                                                        </Button>
+                                                    </div>
+                                                )}
+
+                                                {whatsappModalState.isOpen && whatsappModalState.connectionState === 'error' && (
+                                                    /* Error State */
+                                                    <div className="flex flex-col items-center justify-center py-8">
+                                                        <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
+                                                            <X className="w-10 h-10 text-red-400" />
+                                                        </div>
+                                                        <h3 className="text-xl font-bold text-white mb-2">Erro na Conexão</h3>
+                                                        <p className="text-white/60 text-center mb-6">
+                                                            {whatsappModalState.errorMessage || 'Não foi possível conectar. Tente novamente.'}
+                                                        </p>
+                                                        <Button
+                                                            onClick={() => handleGenerateQR(1)}
+                                                            className="w-full py-4 text-lg rounded-xl bg-white/10 hover:bg-white/20 text-white"
+                                                        >
+                                                            Tentar Novamente
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        )}
+
+                        {/* Dashboard Step - Metrics + Lia Chat */}
+                        {currentStep === 'dashboard' && (
+                            <motion.div
+                                key="dashboard"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                className="w-full max-w-7xl mx-auto p-4 md:p-8 h-full"
+                            >
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                                    {/* Left Side - Metrics Panel */}
+                                    <div className="lg:col-span-2 space-y-6">
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.1 }}
+                                        >
+                                            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                                                Dashboard
+                                            </h1>
+                                            <p className="text-white/60">
+                                                Acompanhe as métricas do seu agente em tempo real
+                                            </p>
+                                        </motion.div>
+
+                                        {/* Metrics Grid */}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {/* Mensagens Recebidas */}
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: 0.2 }}
+                                                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+                                            >
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                                                        <MessageCircle className="w-5 h-5 text-blue-400" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-2xl md:text-3xl font-bold text-white">0</p>
+                                                <p className="text-white/50 text-sm">Mensagens Recebidas</p>
+                                            </motion.div>
+
+                                            {/* Novos Clientes */}
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: 0.25 }}
+                                                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+                                            >
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                                        <Sparkles className="w-5 h-5 text-emerald-400" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-2xl md:text-3xl font-bold text-white">0</p>
+                                                <p className="text-white/50 text-sm">Novos Clientes</p>
+                                            </motion.div>
+
+                                            {/* Atendimentos */}
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: 0.3 }}
+                                                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+                                            >
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                                                        <FlaskConical className="w-5 h-5 text-purple-400" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-2xl md:text-3xl font-bold text-white">0</p>
+                                                <p className="text-white/50 text-sm">Atendimentos</p>
+                                            </motion.div>
+
+                                            {/* Taxa de Resposta */}
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: 0.35 }}
+                                                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+                                            >
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                                                        <ArrowRight className="w-5 h-5 text-orange-400" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-2xl md:text-3xl font-bold text-white">0%</p>
+                                                <p className="text-white/50 text-sm">Taxa de Resposta</p>
+                                            </motion.div>
+                                        </div>
+
+                                        {/* Integrations Status */}
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.4 }}
+                                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+                                        >
+                                            <h3 className="text-lg font-semibold text-white mb-4">Integrações Ativas</h3>
+                                            <div className="flex flex-wrap gap-3">
+                                                {integrations.filter(i => i.connected).map((integration) => (
+                                                    <div
+                                                        key={integration.id}
+                                                        className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2"
+                                                    >
+                                                        <div
+                                                            className="w-3 h-3 rounded-full"
+                                                            style={{ backgroundColor: integration.color }}
+                                                        />
+                                                        <span className="text-white text-sm">{integration.name}</span>
+                                                        <Check className="w-4 h-4 text-emerald-400" />
+                                                    </div>
+                                                ))}
+                                                {integrations.filter(i => i.connected).length === 0 && (
+                                                    <p className="text-white/40 text-sm">Nenhuma integração ativa</p>
+                                                )}
+                                            </div>
+                                        </motion.div>
+
+                                        {/* Back to Integrations */}
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => setCurrentStep('integrations')}
+                                            className="text-white/60 hover:text-white"
+                                        >
+                                            ← Gerenciar Integrações
+                                        </Button>
+                                    </div>
+
+                                    {/* Right Side - Chat with Lia */}
+                                    <motion.div
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.3 }}
+                                        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex flex-col h-[600px]"
+                                    >
+                                        {/* Chat Header */}
+                                        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
+                                            <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">
+                                                L
+                                            </div>
+                                            <div>
+                                                <h3 className="text-white font-semibold">Lia</h3>
+                                                <p className="text-white/50 text-xs">Sua assistente de métricas</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Chat Messages */}
+                                        <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+                                            <div className="flex gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs shrink-0">
+                                                    L
+                                                </div>
+                                                <div className="bg-white/10 rounded-2xl rounded-tl-none p-4 max-w-[85%]">
+                                                    <p className="text-white text-sm">
+                                                        Olá! Estou aqui para te ajudar a entender suas métricas.
+                                                        Você pode me perguntar sobre:
+                                                    </p>
+                                                    <ul className="text-white/70 text-sm mt-2 space-y-1">
+                                                        <li>• Quantas mensagens recebemos hoje?</li>
+                                                        <li>• Quantos novos clientes temos?</li>
+                                                        <li>• Qual a taxa de resposta?</li>
+                                                        <li>• Como está o desempenho do agente?</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Chat Input */}
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Pergunte sobre suas métricas..."
+                                                className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:border-emerald-500/50"
+                                            />
+                                            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 rounded-xl">
+                                                <ArrowRight className="w-5 h-5" />
+                                            </Button>
+                                        </div>
+                                    </motion.div>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>

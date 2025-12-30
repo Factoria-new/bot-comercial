@@ -8,6 +8,7 @@ import stripeRoutes from './routes/stripeRoutes.js';
 import mercadoPagoRoutes from './routes/mercadoPagoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
+import { initWhatsAppService, getSessionStatus, setAgentPrompt } from './services/whatsappService.js';
 
 dotenv.config();
 
@@ -45,6 +46,9 @@ io.on('connection', (socket) => {
 
 // Exportar io para uso em outros módulos
 export { io };
+
+// Initialize WhatsApp service with Socket.IO
+initWhatsAppService(io);
 
 // Função para verificar origem permitida
 const isOriginAllowed = (origin) => {
@@ -126,6 +130,32 @@ app.use('/api/auth', authRoutes);
 
 // Rotas do Agente (Gemini)
 app.use('/api/agent', agentRoutes);
+
+// Rotas de Status do WhatsApp
+app.get('/api/whatsapp/status/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const status = getSessionStatus(sessionId);
+  res.json(status);
+});
+
+// Rota para configurar o prompt do agente para uma sessão WhatsApp
+app.post('/api/whatsapp/configure-agent', (req, res) => {
+  const { sessionId, prompt } = req.body;
+
+  if (!sessionId || !prompt) {
+    return res.status(400).json({
+      success: false,
+      error: 'sessionId e prompt são obrigatórios'
+    });
+  }
+
+  const success = setAgentPrompt(sessionId, prompt);
+
+  res.json({
+    success,
+    message: success ? 'Prompt configurado com sucesso' : 'Erro ao configurar prompt'
+  });
+});
 
 // Error handling
 app.use((err, req, res, next) => {

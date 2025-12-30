@@ -354,9 +354,10 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
  * 
  * @param {string} message - Mensagem do usuário
  * @param {string} systemPrompt - System prompt do agente criado
+ * @param {Array} history - Histórico de conversa (opcional)
  * @returns {Object} { success, message }
  */
-export async function chatWithAgent(message, systemPrompt) {
+export async function chatWithAgent(message, systemPrompt, history = []) {
     try {
         if (!API_KEY) {
             throw new Error('GEMINI_API_KEY não configurada');
@@ -369,7 +370,19 @@ export async function chatWithAgent(message, systemPrompt) {
             generationConfig: { temperature: 0.7 }
         });
 
-        const result = await model.generateContent(message);
+        // Build conversation history for context
+        const chatHistory = history.map(h => ({
+            role: h.role === 'user' ? 'user' : 'model',
+            parts: [{ text: h.content }]
+        }));
+
+        // Start chat with history
+        const chat = model.startChat({
+            history: chatHistory
+        });
+
+        // Send new message
+        const result = await chat.sendMessage(message);
         const responseText = result.response.text();
 
         return {
