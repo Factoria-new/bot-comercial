@@ -876,11 +876,11 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                         L
                                     </div>
                                     <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-white leading-relaxed mb-6">
-                                        Parabéns! Seu agente está pronto! 🎉
+                                        Parabéns! Seu assistente está pronto! 🎉
                                     </h1>
                                     <p className="text-white/70 text-lg leading-relaxed">
                                         Agora é hora de conectar ele às suas plataformas de atendimento.
-                                        As <span className="text-emerald-400 font-medium">integrações</span> permitem que seu agente
+                                        As <span className="text-emerald-400 font-medium">integrações</span> permitem que seu assistente
                                         responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes.
                                     </p>
                                     <p className="text-white/50 text-base mt-4">

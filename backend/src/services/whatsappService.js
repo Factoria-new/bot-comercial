@@ -1,6 +1,7 @@
 import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from '@whiskeysockets/baileys';
 import { baileysLogger } from '../config/logger.js';
 import { chatWithAgent } from './geminiService.js';
+import axios from 'axios';
 import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
@@ -259,6 +260,24 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                         history.splice(0, history.length - 20);
                     }
 
+                    // Forward to Python AI Engine
+                    try {
+                        const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+                        console.log(`🤖 Forwarding message to AI Engine: ${aiServiceUrl}`);
+
+                        await axios.post(`${aiServiceUrl}/webhook/whatsapp`, {
+                            userId: sessionId, // Using sessionId as userId
+                            remoteJid: remoteJid,
+                            message: messageText,
+                            history: history.map(h => ({ role: h.role, content: h.content })) // Optional history
+                        });
+
+                        console.log(`✅ Message forwarded to AI Engine for ${remoteJid}`);
+                    } catch (webhookError) {
+                        console.error(`❌ Failed to forward message to AI Engine:`, webhookError.message);
+                    }
+
+                    /* Legacy Gemini Logic - Commented out for hybrid architecture
                     // Generate AI response with history for context
                     console.log(`🤖 Generating AI response for ${remoteJid} (history: ${history.length} msgs)...`);
                     const aiResponse = await chatWithAgent(messageText, agentPrompt, history);
@@ -282,6 +301,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     } else {
                         console.error(`❌ AI response failed for ${remoteJid}:`, aiResponse.message);
                     }
+                    */
 
                 } catch (aiError) {
                     console.error(`❌ Error processing message from ${remoteJid}:`, aiError);
@@ -379,10 +399,46 @@ export const getAgentPrompt = (sessionId) => {
     return agentPrompts.get(sessionId) || null;
 };
 
+// Send message to user (for external tools)
+export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
+    const session = sessions.get(sessionId);
+
+    if (!session) {
+        throw new Error('Session not found or not connected');
+    }
+
+    // Ensure connection is open
+    // Note: ws.isOpen might not be enough check in some baileys versions, but checking session existence is key
+
+    // Format JID if it's just a number
+    let remoteJid = phoneNumber;
+    if (!remoteJid.includes('@s.whatsapp.net') && !remoteJid.includes('@g.us')) {
+        remoteJid = `${phoneNumber}@s.whatsapp.net`;
+    }
+
+    try {
+        await session.sendMessage(remoteJid, { text: message });
+
+        // Add to history if possible
+        const contactId = `${sessionId}:${remoteJid}`;
+        if (!conversationHistory.has(contactId)) {
+            conversationHistory.set(contactId, []);
+        }
+        const history = conversationHistory.get(contactId);
+        history.push({ role: 'assistant', content: message });
+
+        return true;
+    } catch (error) {
+        console.error(`Error sending message to ${remoteJid}:`, error);
+        throw error;
+    }
+};
+
 export default {
     initWhatsAppService,
     getSessionStatus,
     getActiveSessions,
     setAgentPrompt,
-    getAgentPrompt
+    getAgentPrompt,
+    sendMessageToUser
 };

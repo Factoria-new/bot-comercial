@@ -8,6 +8,7 @@ import stripeRoutes from './routes/stripeRoutes.js';
 import mercadoPagoRoutes from './routes/mercadoPagoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
+import internalToolsRoutes from './routes/internalToolsRoutes.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt } from './services/whatsappService.js';
 
 dotenv.config();
@@ -130,6 +131,9 @@ app.use('/api/auth', authRoutes);
 
 // Rotas do Agente (Gemini)
 app.use('/api/agent', agentRoutes);
+
+// Rotas Internas (Ferramentas para AI Engine)
+app.use('/api/internal', internalToolsRoutes);
 
 // Rotas de Status do WhatsApp
 app.get('/api/whatsapp/status/:sessionId', (req, res) => {
