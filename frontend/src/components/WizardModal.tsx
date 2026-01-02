@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -16,7 +17,9 @@ import {
     ArrowRight,
     Check,
     Sparkles,
-    Volume2
+    Volume2,
+    TrendingUp,
+    ArrowRightCircle,
 } from "lucide-react";
 import { NicheSchema, FormField } from "@/lib/nicheSchemas";
 import { getRandomAudio, AudioTriggerType } from "@/lib/audioMappings";
@@ -112,9 +115,15 @@ export function WizardModal({
                 playAudioGuidance('intro_modal');
             } else if (step > 0 && schema) {
                 // Determine which logical step this is based on schema
-                // 1 -> Identity, 2 -> Operations, 3 -> Catalog
-                if (step === 1) playAudioGuidance('step_identity');
-                else if (step === 3) playAudioGuidance('step_catalog');
+                // 1 -> Identity, 2 -> Location, 3 -> Strategy, 4 -> Operations, 5 -> Catalog
+                // We map by ID to be safer than index if we add more steps
+                const currentStepObj = schema.steps[step - 1];
+                if (currentStepObj) {
+                    if (currentStepObj.id === 'identity') playAudioGuidance('step_identity');
+                    else if (currentStepObj.id === 'location') playAudioGuidance('step_location');
+                    else if (currentStepObj.id === 'strategy') playAudioGuidance('step_strategy');
+                    else if (currentStepObj.id === 'catalog') playAudioGuidance('step_catalog');
+                }
             }
         } catch (e) {
             console.error("Error triggering audio:", e);
@@ -196,8 +205,12 @@ export function WizardModal({
                                     id={`${fieldId}-${opt}`}
                                     checked={currentSelection.includes(opt)}
                                     onCheckedChange={(checked) => {
-                                        if (checked) onChange([...currentSelection, opt]);
-                                        else onChange(currentSelection.filter(o => o !== opt));
+                                        if (checked) {
+                                            // Ensure unique values, though Set implicitly handles this logic if refactored
+                                            if (!currentSelection.includes(opt)) onChange([...currentSelection, opt]);
+                                        } else {
+                                            onChange(currentSelection.filter(o => o !== opt));
+                                        }
                                     }}
                                     className="border-white/20 data-[state=checked]:bg-purple-600"
                                     onFocus={onFocus}
@@ -224,6 +237,37 @@ export function WizardModal({
                         ))}
                     </RadioGroup>
                 );
+            case 'card-group':
+                return (
+                    <RadioGroup value={value || ''} onValueChange={onChange} className="grid sm:grid-cols-2 gap-4" onFocus={onFocus}>
+                        {field.cardOptions?.map((opt) => {
+                            const Icon = opt.icon === 'TrendingUp' ? TrendingUp : opt.icon === 'ArrowRightCircle' ? ArrowRightCircle : Sparkles;
+                            const isSelected = value === opt.value;
+                            return (
+                                <div key={opt.value}>
+                                    <RadioGroupItem value={opt.value} id={`${fieldId}-${opt.value}`} className="peer sr-only" />
+                                    <Label
+                                        htmlFor={`${fieldId}-${opt.value}`}
+                                        className={cn(
+                                            "flex flex-col p-5 rounded-2xl border bg-black/20 hover:bg-white/5 cursor-pointer transition-all h-full relative overflow-hidden",
+                                            isSelected ? "border-purple-500 bg-purple-500/10" : "border-white/10"
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className={cn("p-2 rounded-lg", isSelected ? "bg-purple-500 text-white" : "bg-white/10 text-white/70")}>
+                                                <Icon className="w-5 h-5" />
+                                            </div>
+                                            {isSelected && <Check className="w-5 h-5 text-purple-400" />}
+                                        </div>
+                                        <h4 className={cn("text-base font-semibold mb-1", isSelected ? "text-purple-100" : "text-white/90")}>{opt.label}</h4>
+                                        <p className="text-sm text-white/50 leading-relaxed">{opt.description}</p>
+                                    </Label>
+                                </div>
+                            )
+                        })}
+                    </RadioGroup>
+                );
+
             case 'repeater':
                 const items = (value as any[]) || [];
                 return (
@@ -360,20 +404,40 @@ export function WizardModal({
                                     </h3>
 
                                     <div className="grid gap-6">
-                                        {schema?.steps[step - 1]?.fields.map((field) => (
-                                            <div key={field.name} className="space-y-2 group">
-                                                <Label
-                                                    htmlFor={field.name}
-                                                    className="text-white/80 font-medium ml-1 transition-colors group-focus-within:text-purple-400"
-                                                >
-                                                    {field.label} {field.required && <span className="text-purple-500">*</span>}
-                                                </Label>
-                                                {renderField(field)}
-                                                {field.helperText && (
-                                                    <p className="text-xs text-white/40 ml-1">{field.helperText}</p>
-                                                )}
-                                            </div>
-                                        ))}
+                                        {schema?.steps[step - 1]?.fields.map((field) => {
+                                            // Check Conditional Visibility
+                                            if (field.showIf) {
+                                                const dependencyValue = formState[field.showIf.field];
+                                                // Handle Array dependency (checkbox-group)
+                                                if (Array.isArray(dependencyValue)) {
+                                                    const conditionMet = field.showIf.operator === 'neq'
+                                                        ? !dependencyValue.includes(field.showIf.value)
+                                                        : dependencyValue.includes(field.showIf.value);
+                                                    if (!conditionMet) return null;
+                                                } else {
+                                                    // Safe loose comparison or strict? Strict is better for strings.
+                                                    const conditionMet = field.showIf.operator === 'neq'
+                                                        ? dependencyValue !== field.showIf.value
+                                                        : dependencyValue === field.showIf.value;
+                                                    if (!conditionMet) return null;
+                                                }
+                                            }
+
+                                            return (
+                                                <div key={field.name} className="space-y-2 group">
+                                                    <Label
+                                                        htmlFor={field.name}
+                                                        className="text-white/80 font-medium ml-1 transition-colors group-focus-within:text-purple-400"
+                                                    >
+                                                        {field.label} {field.required && <span className="text-purple-500">*</span>}
+                                                    </Label>
+                                                    {renderField(field)}
+                                                    {field.helperText && (
+                                                        <p className="text-xs text-white/40 ml-1">{field.helperText}</p>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 </motion.div>
                             )}

@@ -269,7 +269,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                             userId: sessionId, // Using sessionId as userId
                             remoteJid: remoteJid,
                             message: messageText,
-                            history: history.map(h => ({ role: h.role, content: h.content })) // Optional history
+                            history: history.map(h => ({ role: h.role, content: h.content })),
+                            agentPrompt: agentPrompt // Passing the custom prompt from Dashboard
                         });
 
                         console.log(`✅ Message forwarded to AI Engine for ${remoteJid}`);

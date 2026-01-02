@@ -7,6 +7,8 @@
 export type AudioTriggerType =
     | 'intro_modal'
     | 'step_identity'
+    | 'step_location' // NEW
+    | 'step_strategy' // NEW
     | 'step_catalog'
     | 'focus_description'
     | 'focus_assistant_name'
@@ -40,6 +42,16 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Primeiro, me conte um pouco sobre sua empresa e quem será o assistente.",
         "Vamos começar pelo básico: Qual o nome do seu negócio?",
         "Para começar, preciso saber o nome da empresa e como vamos chamar seu assistente."
+    ]),
+    'step_location': defineVariations('step_location', 3, [
+        "Agora, me diga onde você trabalha. Se for atendimento apenas online, é só marcar a opção.",
+        "Precisamos saber sua localização. Caso sua empresa seja 100% digital, selecione 'Atendimento Online'.",
+        "Onde fica o seu negócio? Se você não tiver endereço físico, marque a opção de atendimento online."
+    ]),
+    'step_strategy': defineVariations('step_strategy', 3, [
+        "Como você quer que o assistente atue? Ele pode tentar vender ativamente ou apenas tirar dúvidas e redirecionar.",
+        "Agora escolha a personalidade: Vendedor focado em conversão ou um Facilitador que apenas tira dúvidas?",
+        "Qual será o objetivo principal? Você pode escolher entre um vendedor agressivo ou um assistente que redireciona."
     ]),
     'step_catalog': defineVariations('step_catalog', 3, [
         "Quase lá! Agora vamos adicionar seus produtos ou serviços principais.",

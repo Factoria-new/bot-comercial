@@ -9,10 +9,14 @@ class MessageInput(BaseModel):
     userId: str
     remoteJid: str
     message: str
+    agentPrompt: str | None = None
 
 @app.post("/webhook/whatsapp")
 async def handle_whatsapp_message(data: MessageInput):
-    comercial, social, trafego = get_agents(data.userId)
+    # Se vier um prompt do Node.js, usamos ele. Se não, usa o default.
+    custom_prompt = data.agentPrompt
+    
+    comercial, social, trafego = get_agents(data.userId, custom_prompt)
 
     # Definir a Tarefa Dinâmica
     task_atendimento = Task(

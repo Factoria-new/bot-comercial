@@ -1,5 +1,5 @@
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'tags' | 'time' | 'file' | 'checkbox-group' | 'radio-group' | 'repeater';
+export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'tags' | 'time' | 'file' | 'checkbox-group' | 'radio-group' | 'repeater' | 'card-group';
 
 export interface FormField {
     name: string;
@@ -7,11 +7,14 @@ export interface FormField {
     type: FieldType;
     placeholder?: string;
     options?: string[]; // For select, radio, checkbox-group
+    cardOptions?: { value: string; label: string; description: string; icon?: string }[]; // For card-group
     required?: boolean;
     helperText?: string;
     // For repeater fields
     subFields?: FormField[]; // Fields for each item in the repeater
     addButtonText?: string; // Text for the "Add Item" button
+    // Conditional visibility
+    showIf?: { field: string; value: any; operator?: 'eq' | 'neq' };
 }
 
 export interface FormStep {
@@ -34,6 +37,46 @@ const IDENTITY_FIELDS: FormField[] = [
     { name: 'assistantName', label: 'Nome do Assistente', type: 'text', placeholder: 'Ex: Lia, atendente virtual', required: true },
     { name: 'description', label: 'Descrição do Negócio', type: 'textarea', placeholder: 'Breve descrição do que sua empresa faz...', helperText: 'Ajuda a IA a entender o contexto.' }
 ];
+
+const LOCATION_FIELDS: FormField[] = [
+    {
+        name: 'onlineOnly',
+        label: 'Tipo de Atendimento',
+        type: 'checkbox-group',
+        options: ['Atendimento 100% Online (Sem endereço físico)']
+    },
+    {
+        name: 'address',
+        label: 'Endereço do Local',
+        type: 'text',
+        placeholder: 'Rua, Número, Bairro, Cidade...',
+        showIf: { field: 'onlineOnly', value: 'Atendimento 100% Online (Sem endereço físico)', operator: 'neq' }
+    }
+];
+
+const STRATEGY_FIELDS: FormField[] = [
+    {
+        name: 'agentGoal',
+        label: 'Objetivo do Assistente',
+        type: 'card-group',
+        required: true,
+        cardOptions: [
+            {
+                value: 'sales',
+                label: 'Vendedor Ativo',
+                description: 'Tenta fechar a venda, oferecer produtos e persuadir o cliente a comprar agora.',
+                icon: 'TrendingUp'
+            },
+            {
+                value: 'redirect',
+                label: 'Redirecionador',
+                description: 'Tira dúvidas básicas e direciona o cliente para falar com um humano no WhatsApp.',
+                icon: 'ArrowRightCircle'
+            }
+        ]
+    }
+];
+
 
 // Unified Operations Fields - Now focused on Redirection Link
 const OPERATIONS_FIELDS: FormField[] = [
@@ -65,6 +108,18 @@ export const NICHE_SCHEMAS: Record<string, NicheSchema> = {
                 title: 'Identidade',
                 description: 'Informações essenciais do seu negócio.',
                 fields: [...IDENTITY_FIELDS]
+            },
+            {
+                id: 'location',
+                title: 'Localização',
+                description: 'Onde sua empresa está situada.',
+                fields: [...LOCATION_FIELDS]
+            },
+            {
+                id: 'strategy',
+                title: 'Estratégia',
+                description: 'Como o assistente deve agir.',
+                fields: [...STRATEGY_FIELDS]
             },
             {
                 id: 'operations',
@@ -112,6 +167,18 @@ export const NICHE_SCHEMAS: Record<string, NicheSchema> = {
                 fields: [...IDENTITY_FIELDS]
             },
             {
+                id: 'location',
+                title: 'Localização',
+                description: 'Onde sua empresa está situada.',
+                fields: [...LOCATION_FIELDS]
+            },
+            {
+                id: 'strategy',
+                title: 'Estratégia',
+                description: 'Como o assistente deve agir.',
+                fields: [...STRATEGY_FIELDS]
+            },
+            {
                 id: 'operations',
                 title: 'Agendamento',
                 description: 'Horários e Link de Agenda.',
@@ -147,6 +214,18 @@ export const NICHE_SCHEMAS: Record<string, NicheSchema> = {
                 title: 'Identidade',
                 description: 'Informações do profissional ou empresa.',
                 fields: [...IDENTITY_FIELDS]
+            },
+            {
+                id: 'location',
+                title: 'Localização',
+                description: 'Onde sua empresa está situada.',
+                fields: [...LOCATION_FIELDS]
+            },
+            {
+                id: 'strategy',
+                title: 'Estratégia',
+                description: 'Como o assistente deve agir.',
+                fields: [...STRATEGY_FIELDS]
             },
             {
                 id: 'operations',
@@ -188,6 +267,18 @@ export const NICHE_SCHEMAS: Record<string, NicheSchema> = {
                 ]
             },
             {
+                id: 'location',
+                title: 'Localização',
+                description: 'Onde sua empresa está situada.',
+                fields: [...LOCATION_FIELDS]
+            },
+            {
+                id: 'strategy',
+                title: 'Estratégia',
+                description: 'Como o assistente deve agir.',
+                fields: [...STRATEGY_FIELDS]
+            },
+            {
                 id: 'operations',
                 title: 'Processo',
                 description: 'Horários e Link de Contato.',
@@ -220,9 +311,21 @@ export const NICHE_SCHEMAS: Record<string, NicheSchema> = {
                 fields: [...IDENTITY_FIELDS]
             },
             {
+                id: 'location',
+                title: 'Localização',
+                description: 'Onde sua empresa está situada.',
+                fields: [...LOCATION_FIELDS]
+            },
+            {
+                id: 'strategy',
+                title: 'Estratégia',
+                description: 'Como o assistente deve agir.',
+                fields: [...STRATEGY_FIELDS]
+            },
+            {
                 id: 'operations',
                 title: 'Operação',
-                description: 'Horários e Links.',
+                description: 'Horários e Link de Pedido.',
                 fields: [...OPERATIONS_FIELDS]
             },
             {

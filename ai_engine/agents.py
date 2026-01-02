@@ -5,7 +5,7 @@ from tools import WhatsAppSendTool
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 
-def get_agents(user_id):
+def get_agents(user_id, custom_prompt=None):
     # Configurar LLM Gemini
     llm = ChatGoogleGenerativeAI(
         model="gemini-1.5-pro",
@@ -28,11 +28,19 @@ def get_agents(user_id):
     # 2. Instanciar nossa Tool Customizada (WhatsApp)
     whats_tool = WhatsAppSendTool()
 
+    # Definir Backstory dinâmica baseada no prompt do usuário
+    comercial_backstory = 'Vendedor experiente, empático e focado em fechamento.'
+    comercial_goal = 'Converter leads do WhatsApp em vendas.'
+    
+    if custom_prompt:
+        comercial_backstory = f"Você é um agente comercial operando no WhatsApp. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo."
+        comercial_goal = f"Atender o cliente seguindo estritamente as instruções: {custom_prompt[:100]}..."
+
     # Agente Comercial (Usa WhatsApp)
     comercial = Agent(
-        role='Gerente Comercial',
-        goal='Converter leads do WhatsApp em vendas.',
-        backstory='Vendedor experiente, empático e focado em fechamento.',
+        role='Gerente Comercial / Atendente',
+        goal=comercial_goal,
+        backstory=comercial_backstory,
         tools=[whats_tool],
         llm=llm,
         verbose=True
