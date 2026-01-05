@@ -181,6 +181,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         let audioContext: AudioContext | null = null;
         let analyser: AnalyserNode | null = null;
         let source: MediaElementAudioSourceNode | null = null;
+        let timerId: NodeJS.Timeout | null = null;
 
         let trigger: AudioTriggerType | null = null;
         if (currentStep === 'integrations') trigger = 'integrations';
@@ -192,56 +193,63 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
             // Play directly
             if (audioVariation.path) {
-                try {
-                    // Stop any previous audio
-                    if (integrationAudioRef.current) {
-                        integrationAudioRef.current.pause();
-                        integrationAudioRef.current.currentTime = 0;
-                    }
+                // Add delay for 'integrations' (Congratulations) screen to allow load
+                const delay = trigger === 'integrations' ? 2000 : 0;
 
-                    const audio = new Audio(audioVariation.path);
-                    integrationAudioRef.current = audio;
-
-                    // Setup Audio Context for Animation
-                    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-                    analyser = audioContext.createAnalyser();
-                    analyser.fftSize = 256;
-
-                    // Connect audio element to context
-                    // We need to wait for metadata or user interaction usually, but let's try
-                    source = audioContext.createMediaElementSource(audio);
-                    source.connect(analyser);
-                    analyser.connect(audioContext.destination);
-
-                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-                    const updateVolume = () => {
-                        if (analyser) {
-                            analyser.getByteFrequencyData(dataArray);
-                            const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
-                            // Normalize to 0-1 range roughly
-                            const normalizedVolume = Math.min(avg / 128, 1);
-                            setIntegrationVoiceLevel(normalizedVolume); // Update the local state
-                            animationFrameId = requestAnimationFrame(updateVolume);
+                timerId = setTimeout(() => {
+                    try {
+                        // Stop any previous audio
+                        if (integrationAudioRef.current) {
+                            integrationAudioRef.current.pause();
+                            integrationAudioRef.current.currentTime = 0;
                         }
-                    };
 
-                    audio.play().then(() => {
-                        updateVolume();
-                    }).catch(e => {
-                        console.error("Audio play/context error:", e);
-                        // Fallback just play if context fails (e.g. strict policies)
-                        audio.play().catch(console.error);
-                    });
+                        const audio = new Audio(audioVariation.path);
+                        integrationAudioRef.current = audio;
 
-                } catch (e) {
-                    console.error("Audio error:", e);
-                }
+                        // Setup Audio Context for Animation
+                        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        analyser = audioContext.createAnalyser();
+                        analyser.fftSize = 256;
+
+                        // Connect audio element to context
+                        source = audioContext.createMediaElementSource(audio);
+                        source.connect(analyser);
+                        analyser.connect(audioContext.destination);
+
+                        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                        const updateVolume = () => {
+                            if (analyser) {
+                                analyser.getByteFrequencyData(dataArray);
+                                const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
+                                // Normalize to 0-1 range roughly
+                                const normalizedVolume = Math.min(avg / 128, 1);
+                                setIntegrationVoiceLevel(normalizedVolume);
+                                animationFrameId = requestAnimationFrame(updateVolume);
+                            }
+                        };
+
+                        audio.play().then(() => {
+                            updateVolume();
+                        }).catch(e => {
+                            console.error("Audio play/context error:", e);
+                            // Fallback just play if context fails (e.g. strict policies)
+                            audio.play().catch(console.error);
+                        });
+
+                    } catch (e) {
+                        console.error("Audio error:", e);
+                    }
+                }, delay);
             }
         }
 
         // Cleanup function to stop audio when leaving this step/effect
         return () => {
+            if (timerId) {
+                clearTimeout(timerId);
+            }
             if (integrationAudioRef.current) {
                 integrationAudioRef.current.pause();
                 integrationAudioRef.current.currentTime = 0;
@@ -255,6 +263,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             setIntegrationVoiceLevel(0); // Reset visual
         };
     }, [currentStep]);
+
 
     // NEW: Play success audio when WhatsApp connects (synced with UI)
     useEffect(() => {

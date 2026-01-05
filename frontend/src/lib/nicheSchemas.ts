@@ -1,5 +1,5 @@
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'tags' | 'time' | 'file' | 'checkbox-group' | 'radio-group' | 'repeater' | 'card-group';
+export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'tags' | 'time' | 'file' | 'checkbox-group' | 'radio-group' | 'repeater' | 'card-group' | 'schedule';
 
 export interface FormField {
     name: string;
@@ -83,8 +83,7 @@ const OPERATIONS_FIELDS: FormField[] = [
     {
         name: 'openingHours',
         label: 'Horário de Atendimento',
-        type: 'text',
-        placeholder: 'Ex: Seg a Sex das 9h às 18h',
+        type: 'schedule',
         required: true
     },
     {

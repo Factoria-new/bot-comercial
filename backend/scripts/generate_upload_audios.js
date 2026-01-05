@@ -30,7 +30,12 @@ const variations = [
     { id: 'upload_success_v2', text: "Arquivo recebido com sucesso. Aguarde um instante enquanto configuro seu assistente." },
     { id: 'upload_success_v3', text: "Tudo certo com o upload. Já estou processando as informações do seu assistente." },
 
-    // Integrations
+    // Integrations (Intro Screen)
+    { id: 'integrations_v1', text: "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar." },
+    { id: 'integrations_v2', text: "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes." },
+    { id: 'integrations_v3', text: "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático." },
+
+    // Integrations Success (After connecting)
     { id: 'integrations_success_v1', text: "Integração realizada! Seu assistente já está conectado e pronto." },
     { id: 'integrations_success_v2', text: "Conectado com sucesso! Agora seu assistente tem superpoderes." },
     { id: 'integrations_success_v3', text: "Pronto! Integração concluída. Vamos ver o assistente em ação?" },
