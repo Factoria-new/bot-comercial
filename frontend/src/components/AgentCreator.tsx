@@ -52,6 +52,16 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
     // NEW: Loading state for transition
     const [isSwitchingToTest, setIsSwitchingToTest] = useState(false);
+    const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+    const loadingMessages = [
+        "Criando Assistente...",
+        "Analisando perfil do negócio...",
+        "Definindo tom de voz ideal...",
+        "Gerando estratégias de conversão...",
+        "Configurando diretrizes de segurança...",
+        "Finalizando configurações..."
+    ];
 
 
     const [currentStep, setCurrentStep] = useState<'chat' | 'integrations' | 'dashboard'>('chat');
@@ -122,17 +132,36 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         }
     }, [chatState.step]);
 
+    // NEW: Cycle messages continuously while switching to test (waiting for backend)
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isSwitchingToTest) {
+            // Cycle every 3.5 seconds to cover approx 20s with 6 messages
+            interval = setInterval(() => {
+                setLoadingMessageIndex(prev => {
+                    const next = prev + 1;
+                    // Stop at the last message until done
+                    return next < loadingMessages.length ? next : prev;
+                });
+            }, 3500);
+        } else {
+            setLoadingMessageIndex(0);
+        }
+        return () => clearInterval(interval);
+    }, [isSwitchingToTest]);
+
     // NEW: Auto-switch to Test Chat when agent is created (Hubost check)
     useEffect(() => {
         if (chatState.agentCreated && chatState.agentConfig?.prompt) {
             console.log("🚀 Agent created detected! Switching to Test Mode.");
 
-            // Artificial delay for loading screen if it was triggered by wizard
             if (isSwitchingToTest) {
+                // Agent is ready. Give a small buffer to read the current message or show "Ready"?
+                // Let's just switch immediately or after a short delay to feel natural
                 setTimeout(() => {
                     setChatMode('agent');
                     setIsSwitchingToTest(false);
-                }, 2000); // 2 seconds loading screen
+                }, 1000);
             } else {
                 setChatMode('agent');
             }
@@ -571,16 +600,39 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 <div className="flex-1 flex flex-col items-center justify-center relative min-h-[60vh]">
 
                     {/* LOADING OVERLAY - Minimal Version */}
+                    {/* LOADING OVERLAY - Enhanced Version */}
                     <AnimatePresence>
                         {isSwitchingToTest && (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+                                className="absolute inset-0 z-[60] flex flex-col items-center justify-center p-0 m-0"
+                                style={{ background: 'transparent', backgroundColor: 'transparent', boxShadow: 'none' }}
                             >
-                                <div className="bg-[#020617]/80 backdrop-blur-md p-4 rounded-full border border-white/10 shadow-2xl">
-                                    <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                                <div className="flex flex-col items-center justify-center">
+                                    <div className="w-16 h-16 mb-6 relative">
+                                        <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-purple-500 animate-spin" />
+                                        <div className="absolute inset-2 rounded-full border-t-2 border-l-2 border-blue-500 animate-spin reverse duration-2000" />
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <Sparkles className="w-6 h-6 text-purple-400 animate-pulse" />
+                                        </div>
+                                    </div>
+
+                                    <AnimatePresence mode="wait">
+                                        <motion.p
+                                            key={loadingMessageIndex}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="text-lg font-medium text-white text-center min-h-[30px]"
+                                            style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}
+                                        >
+                                            {loadingMessages[loadingMessageIndex]}
+                                        </motion.p>
+                                    </AnimatePresence>
+
+                                    <p className="text-xs text-white/40 mt-2">Isso pode levar alguns segundos</p>
                                 </div>
                             </motion.div>
                         )}
