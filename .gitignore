@@ -47,5 +47,5 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
-ai_engine/venv/
+
 .pytest_cache/
