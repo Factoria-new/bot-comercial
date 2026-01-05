@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,18 @@ import {
   DialogPortal,
   DialogOverlay,
 } from '@/components/ui/dialog';
-import { Loader, CheckCircle2, XCircle, QrCode, Smartphone, LogOut } from 'lucide-react';
+import {
+  Loader,
+  CheckCircle2,
+  XCircle,
+  QrCode,
+  Smartphone,
+  LogOut,
+  Lock,
+  MessageSquare,
+  Users,
+  ShieldCheck
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 import { Input } from '@/components/ui/input';
@@ -41,6 +53,29 @@ const WhatsAppConnectionModal = ({
   onDisconnect
 }: WhatsAppConnectionModalProps) => {
   const [phoneNumber, setPhoneNumber] = useState('');
+
+  // NEW: Loading animation state
+  const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+
+  const connectingSteps = [
+    { text: "Estabelecendo conexão segura...", icon: Lock },
+    { text: "Sincronizando conversas...", icon: MessageSquare },
+    { text: "Importando contatos...", icon: Users },
+    { text: "Finalizando configuração...", icon: ShieldCheck }
+  ];
+
+  // Cycle through connecting steps
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (connectionState === 'connecting' || connectionState === 'scanning') {
+      interval = setInterval(() => {
+        setLoadingStepIndex((prev) => (prev + 1) % connectingSteps.length);
+      }, 2000);
+    } else {
+      setLoadingStepIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [connectionState]);
 
   const handleConnectSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,27 +253,48 @@ const WhatsAppConnectionModal = ({
         );
 
       case 'scanning':
-        return (
-          <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6 py-6 sm:py-8 px-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-yellow-100 rounded-full flex items-center justify-center">
-              <Loader size={24} className="sm:w-8 sm:h-8 text-yellow-600 animate-spin" />
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-base sm:text-lg font-semibold text-yellow-600">Verificando Código</h3>
-              <p className="text-xs sm:text-sm text-gray-600">Detectamos que você inseriu o código...</p>
-            </div>
-          </div>
-        );
-
       case 'connecting':
+        const CurrentIcon = connectingSteps[loadingStepIndex].icon;
         return (
-          <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6 py-6 sm:py-8 px-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#19B159]/10 rounded-full flex items-center justify-center">
-              <Loader size={24} className="sm:w-8 sm:h-8 text-[#19B159] animate-spin" />
+          <div className="flex flex-col items-center justify-center space-y-6 py-8 px-4 h-[300px]"> {/* Fixed height to prevent layout shifts */}
+            <div className="relative">
+              {/* Outer ring */}
+              <div className="w-24 h-24 border-4 border-[#19B159]/20 rounded-full"></div>
+              {/* Spinning ring */}
+              <div className="absolute inset-0 border-4 border-t-[#19B159] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+
+              {/* Centered Icon with Transition */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={loadingStepIndex}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-[#19B159]"
+                  >
+                    <CurrentIcon size={32} />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Conectando ao WhatsApp</h3>
-              <p className="text-xs sm:text-sm text-gray-600">Estabelecendo conexão segura...</p>
+
+            <div className="text-center space-y-2 h-[60px] flex flex-col items-center justify-center">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {connectionState === 'scanning' ? 'Verificando Código' : 'Conectando ao WhatsApp'}
+              </h3>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={loadingStepIndex}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-sm text-gray-600"
+                >
+                  {connectingSteps[loadingStepIndex].text}
+                </motion.p>
+              </AnimatePresence>
             </div>
           </div>
         );

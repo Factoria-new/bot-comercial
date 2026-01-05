@@ -121,9 +121,15 @@ export const useWhatsAppInstances = () => {
         } : instance
       ));
 
-      // Atualizar modal para mostrar sucesso
+      // Atualizar modal
       if (modalState.isOpen && modalState.instanceId === instanceId) {
-        setModalState(prev => ({ ...prev, connectionState: 'connected' }));
+        // FORCE 'connecting' state first to show animation
+        setModalState(prev => ({ ...prev, connectionState: 'connecting' }));
+
+        // Wait 4 seconds for the cycle to complete
+        setTimeout(() => {
+          setModalState(prev => ({ ...prev, connectionState: 'connected' }));
+        }, 4000);
       }
 
       setIsGeneratingQR(null);

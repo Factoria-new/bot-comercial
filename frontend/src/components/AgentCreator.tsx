@@ -21,7 +21,7 @@ import { useTTS } from "@/hooks/useTTS";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
 import { WizardModal } from "./WizardModal";
 import ChatMessages from "./chat/ChatMessages"; // NEW: For Lia's chat in split mode // NEW COMPONENT
-import { getSchemaForNiche, NicheSchema, NICHE_SCHEMAS } from "@/lib/nicheSchemas";
+import { NicheSchema, NICHE_SCHEMAS } from "@/lib/nicheSchemas";
 import { getRandomAudio, AudioTriggerType } from "@/lib/audioMappings";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 
@@ -123,6 +123,8 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         { id: 'tiktok', name: 'TikTok', color: '#010101', connected: false },
     ];
 
+
+
     const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel, integrationVoiceLevel);
 
     // Sync test mode from onboarding state
@@ -173,15 +175,20 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         }
     }, [chatState.agentCreated, chatState.agentConfig, startTesting, chatState.testMessages.length, isSwitchingToTest]);
 
-    // Play audio when entering integrations screen - with cleanup and Animation
+    // Play audio when entering specific screens - with cleanup and Animation
     useEffect(() => {
         let animationFrameId: number;
         let audioContext: AudioContext | null = null;
         let analyser: AnalyserNode | null = null;
         let source: MediaElementAudioSourceNode | null = null;
 
-        if (currentStep === 'integrations') {
-            const audioVariation = getRandomAudio('integrations_success');
+        let trigger: AudioTriggerType | null = null;
+        if (currentStep === 'integrations') trigger = 'integrations';
+        else if (currentStep === 'dashboard') trigger = 'dashboard_suggestion';
+
+        if (trigger) {
+            // FIX: Use 'integrations' (intro) instead of 'integrations_success' (completion)
+            const audioVariation = getRandomAudio(trigger);
 
             // Play directly
             if (audioVariation.path) {
@@ -248,6 +255,39 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
             setIntegrationVoiceLevel(0); // Reset visual
         };
     }, [currentStep]);
+
+    // NEW: Play success audio when WhatsApp connects (synced with UI)
+    useEffect(() => {
+        // Only trigger if Modal is open and state is Connected
+        // We use a ref to prevent double-playing if re-renders happen
+        if (whatsappModalState.isOpen && whatsappModalState.connectionState === 'connected') {
+
+            // Allow a longer delay for the UI transition (fade-in) to complete before playing
+            // User reported it plays too early, so increasing to 3s (very safe buffer)
+            const timer = setTimeout(() => {
+                console.log("🎉 WhatsApp Connected Screen! Playing success audio...");
+                const audioVariation = getRandomAudio('integrations_success');
+
+                if (audioVariation.path) {
+                    try {
+                        // Stop previous audio (intro) if still playing
+                        if (integrationAudioRef.current) {
+                            integrationAudioRef.current.pause();
+                            integrationAudioRef.current.currentTime = 0;
+                        }
+
+                        const audio = new Audio(audioVariation.path);
+                        integrationAudioRef.current = audio;
+                        audio.play().catch(e => console.error("Success audio play error:", e));
+                    } catch (e) {
+                        console.error("Success audio error:", e);
+                    }
+                }
+            }, 3000); // 3s delay for absolute certainty
+
+            return () => clearTimeout(timer);
+        }
+    }, [whatsappModalState.connectionState, whatsappModalState.isOpen]);
 
     // --- WIZARD HANDLERS ---
 

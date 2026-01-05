@@ -18,7 +18,8 @@ export type AudioTriggerType =
     | 'integrations'
     | 'upload_success'
     | 'integrations_success'
-    | 'step_operations'; // NEW
+    | 'step_operations' // NEW
+    | 'dashboard_suggestion'; // NEW
 
 interface AudioVariation {
     id: string;
@@ -92,14 +93,19 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Tudo certo com o prompt do seu assistente! O ambiente de teste está liberado. Clique no botão 'Testar Assistente' para começar."
     ]),
     'integrations_success': defineVariations('integrations_success', 3, [
-        "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. Escolha uma plataforma abaixo para começar.",
-        "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes.",
-        "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático."
+        "Integração realizada com sucesso! Seu assistente já está conectado e pronto para atender.",
+        "Prontinho! A conexão foi feita e seu assistente já está ativo na plataforma.",
+        "Tudo certo! Integração finalizada. Seu assistente já começou a trabalhar."
     ]),
     'step_operations': defineVariations('step_operations', 3, [
         "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu WhatsApp ou agendamento.",
         "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento.",
         "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar."
+    ]),
+    'dashboard_suggestion': defineVariations('dashboard_suggestion', 3, [
+        "Seu painel está ativo! Dica rápida: que tal conectar também o Instagram ou Facebook para centralizar todo o seu atendimento aqui?",
+        "Tudo pronto por aqui. Se quiser ampliar o alcance do seu assistente, sugiro conectar outras redes sociais clicando em 'Gerenciar Integrações'.",
+        "Bem-vindo ao seu Dashboard. Aproveite para explorar outras integrações e deixar seu assistente ainda mais completo em todos os canais."
     ])
 };
 

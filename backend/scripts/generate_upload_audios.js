@@ -33,7 +33,12 @@ const variations = [
     // Integrations
     { id: 'integrations_success_v1', text: "Integração realizada! Seu assistente já está conectado e pronto." },
     { id: 'integrations_success_v2', text: "Conectado com sucesso! Agora seu assistente tem superpoderes." },
-    { id: 'integrations_success_v3', text: "Pronto! Integração concluída. Vamos ver o assistente em ação?" }
+    { id: 'integrations_success_v3', text: "Pronto! Integração concluída. Vamos ver o assistente em ação?" },
+
+    // Dashboard Suggestion
+    { id: 'dashboard_suggestion_v1', text: "Seu painel está ativo! Dica rápida: que tal conectar também o Instagram ou Facebook para centralizar todo o seu atendimento aqui?" },
+    { id: 'dashboard_suggestion_v2', text: "Tudo pronto por aqui. Se quiser ampliar o alcance do seu assistente, sugiro conectar outras redes sociais clicando em 'Gerenciar Integrações'." },
+    { id: 'dashboard_suggestion_v3', text: "Bem-vindo ao seu Dashboard. Aproveite para explorar outras integrações e deixar seu assistente ainda mais completo em todos os canais." }
 ];
 
 async function generateAudioItem(item) {
