@@ -1,6 +1,5 @@
-import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from '@whiskeysockets/baileys';
+import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from 'baileys';
 import { baileysLogger } from '../config/logger.js';
-import { chatWithAgent } from './geminiService.js';
 import axios from 'axios';
 import QRCode from 'qrcode';
 import path from 'path';
@@ -15,9 +14,12 @@ const agentPrompts = new Map();
 // Store conversation history per contact
 const conversationHistory = new Map();
 
+// Store LID to phone number mappings (for Baileys v7 LID workaround)
+const lidMapping = new Map();
+
 // Initialize WhatsApp service with Socket.IO
 export const initWhatsAppService = (io) => {
-    console.log('📱 WhatsApp Service initialized');
+    console.log('📱 WhatsApp Service initialized (Baileys v7)');
 
     // Listen for socket connections
     io.on('connection', (socket) => {
@@ -84,9 +86,9 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
         // Get latest Baileys version
         const { version } = await fetchLatestBaileysVersion();
 
-        console.log(`🔧 Creating WhatsApp socket for ${sessionId} with version ${version.join('.')}`);
+        console.log(`🔧 Creating WhatsApp socket for ${sessionId} with Baileys v7 (version ${version.join('.')})`);
 
-        // Create WhatsApp socket with robust configuration
+        // Create WhatsApp socket with configuration per Baileys v7 docs
         const sock = makeWASocket({
             version,
             logger: baileysLogger,
@@ -101,37 +103,30 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
             defaultQueryTimeoutMs: 60000,
             keepAliveIntervalMs: 25000,
             syncFullHistory: false,
-            markOnlineOnConnect: false,
-            generateHighQualityLinkPreview: false
+            markOnlineOnConnect: false
         });
 
         // Store session
         sessions.set(sessionId, sock);
 
-        // Connection update handler
+        // Connection update handler - SIMPLIFIED per Baileys docs
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
 
             console.log(`📡 Connection update for ${sessionId}:`, { connection, hasQR: !!qr });
 
-            // QR Code received
+            // QR Code received - send to frontend
             if (qr) {
                 try {
-                    // Generate QR code as base64 image
                     const qrImage = await QRCode.toDataURL(qr, {
                         width: 256,
                         margin: 2,
-                        color: {
-                            dark: '#000000',
-                            light: '#ffffff'
-                        }
+                        color: { dark: '#000000', light: '#ffffff' }
                     });
 
                     console.log(`📷 QR Code generated for ${sessionId}`);
-
-                    // Emit to socket
                     socket.emit('qr', { qr: qrImage, sessionId });
-                    io.emit('qr', { qr: qrImage, sessionId }); // Broadcast to all
+                    io.emit('qr', { qr: qrImage, sessionId });
                 } catch (qrError) {
                     console.error(`❌ Error generating QR image:`, qrError);
                     socket.emit('qr-error', { sessionId, error: 'Erro ao gerar QR Code' });
@@ -166,48 +161,50 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                 io.emit('connected', { sessionId, message: 'WhatsApp conectado!' });
             }
 
+            // Connection closed - handle reconnection per Baileys docs
+            // IMPORTANT: After QR scan, WhatsApp forcibly disconnects - this is NORMAL!
+            // We must recreate the socket in this case
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
-                console.log(`❌ Connection closed for ${sessionId}. Status: ${statusCode}`);
+                console.log(`❌ Connection closed for ${sessionId}. Status: ${statusCode}, Reconnect: ${shouldReconnect}`);
 
-                // Always clean up session and auth folder on disconnect
-                // This ensures a fresh QR code is generated next time
+                // Clean up current session
                 sessions.delete(sessionId);
 
-                // Clean auth folder to force new QR code generation
-                try {
-                    if (fs.existsSync(authFolder)) {
-                        fs.rmSync(authFolder, { recursive: true, force: true });
-                        console.log(`🧹 Auth folder cleaned for ${sessionId}`);
+                if (shouldReconnect) {
+                    // This is normal behavior per Baileys docs - just recreate the socket
+                    console.log(`🔄 Reconnecting ${sessionId}...`);
+                    socket.emit('connection-status', {
+                        sessionId,
+                        message: 'Reconectando...',
+                        retrying: true
+                    });
+
+                    // Recreate session after short delay
+                    setTimeout(() => {
+                        createSession(sessionId, socket, io, phoneNumber);
+                    }, 2000);
+                } else {
+                    // User logged out - clean everything
+                    console.log(`🚪 User logged out for ${sessionId}`);
+
+                    try {
+                        if (fs.existsSync(authFolder)) {
+                            fs.rmSync(authFolder, { recursive: true, force: true });
+                        }
+                    } catch (e) {
+                        console.error('Error cleaning auth folder:', e);
                     }
-                } catch (e) {
-                    console.error('Error cleaning auth folder:', e);
-                }
 
-                // Clear conversation history for this session
-                for (const key of conversationHistory.keys()) {
-                    if (key.startsWith(`${sessionId}:`)) {
-                        conversationHistory.delete(key);
-                    }
-                }
+                    socket.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
+                    io.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
 
-                // Clear agent prompt for this session
-                agentPrompts.delete(sessionId);
+                    clearSessionData(sessionId);
 
-                if (statusCode === DisconnectReason.loggedOut) {
                     socket.emit('logged-out', { sessionId });
                     io.emit('logged-out', { sessionId });
-                } else {
-                    socket.emit('disconnected', {
-                        sessionId,
-                        reason: 'connection_closed',
-                        willReconnect: false
-                    });
-                    socket.emit('connection-error', {
-                        sessionId,
-                        error: 'Conexão perdida. Reconecte escaneando um novo QR code.'
-                    });
                 }
             }
         });
@@ -215,9 +212,9 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
         // Save credentials when updated
         sock.ev.on('creds.update', saveCreds);
 
-        // Handle incoming messages - Auto-respond with AI
+        // Handle incoming messages
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
-            // Only process new messages
+            // Only process new messages (notify type)
             if (type !== 'notify') return;
 
             for (const msg of messages) {
@@ -234,6 +231,14 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
 
                 const remoteJid = msg.key.remoteJid;
                 const contactId = `${sessionId}:${remoteJid}`;
+
+                // Baileys v7 LID workaround: store LID to phone mapping
+                // Check if we have an alternate JID (phone number) available
+                const remoteJidAlt = msg.key.remoteJidAlt;
+                if (remoteJid?.includes('@lid') && remoteJidAlt) {
+                    lidMapping.set(remoteJid, remoteJidAlt);
+                    console.log(`📱 LID mapping stored: ${remoteJid} -> ${remoteJidAlt}`);
+                }
 
                 console.log(`📩 WhatsApp [${sessionId}] Message from ${remoteJid}: ${messageText.substring(0, 50)}...`);
 
@@ -261,78 +266,53 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     }
 
                     // Forward to Python AI Engine
-                    try {
-                        const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-                        console.log(`🤖 Forwarding message to AI Engine: ${aiServiceUrl}`);
+                    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+                    console.log(`🤖 Forwarding message to AI Engine: ${aiServiceUrl}`);
 
-                        await axios.post(`${aiServiceUrl}/webhook/whatsapp`, {
-                            userId: sessionId, // Using sessionId as userId
-                            remoteJid: remoteJid,
-                            message: messageText,
-                            history: history.map(h => ({ role: h.role, content: h.content })),
-                            agentPrompt: agentPrompt // Passing the custom prompt from Dashboard
-                        });
+                    await axios.post(`${aiServiceUrl}/webhook/whatsapp`, {
+                        userId: sessionId,
+                        remoteJid: remoteJid,
+                        message: messageText,
+                        history: history.map(h => ({ role: h.role, content: h.content })),
+                        agentPrompt: agentPrompt
+                    });
 
-                        console.log(`✅ Message forwarded to AI Engine for ${remoteJid}`);
-                    } catch (webhookError) {
-                        console.error(`❌ Failed to forward message to AI Engine:`, webhookError.message);
-                    }
-
-                    /* Legacy Gemini Logic - Commented out for hybrid architecture
-                    // Generate AI response with history for context
-                    console.log(`🤖 Generating AI response for ${remoteJid} (history: ${history.length} msgs)...`);
-                    const aiResponse = await chatWithAgent(messageText, agentPrompt, history);
-
-                    if (aiResponse.success && aiResponse.message) {
-                        // Add AI response to history
-                        history.push({ role: 'assistant', content: aiResponse.message });
-
-                        // Send response via WhatsApp
-                        await sock.sendMessage(remoteJid, { text: aiResponse.message });
-                        console.log(`✅ AI response sent to ${remoteJid}`);
-
-                        // Emit event for dashboard metrics
-                        io.emit('whatsapp-message-handled', {
-                            sessionId,
-                            remoteJid,
-                            userMessage: messageText,
-                            aiResponse: aiResponse.message,
-                            timestamp: new Date().toISOString()
-                        });
-                    } else {
-                        console.error(`❌ AI response failed for ${remoteJid}:`, aiResponse.message);
-                    }
-                    */
-
-                } catch (aiError) {
-                    console.error(`❌ Error processing message from ${remoteJid}:`, aiError);
+                    console.log(`✅ Message forwarded to AI Engine for ${remoteJid}`);
+                } catch (error) {
+                    console.error(`❌ Error handling message from ${remoteJid}:`, error.message);
                 }
             }
         });
 
     } catch (error) {
-        console.error(`❌ Failed to create session ${sessionId}:`, error);
+        console.error(`❌ Error in createSession for ${sessionId}:`, error);
         socket.emit('qr-error', {
             sessionId,
-            error: error.message || 'Erro ao iniciar sessão WhatsApp'
+            error: error.message || 'Erro ao criar sessão'
         });
-        throw error;
     }
 };
 
-// Logout and clean up session
+// Helper function to clear session data
+const clearSessionData = (sessionId) => {
+    for (const key of conversationHistory.keys()) {
+        if (key.startsWith(`${sessionId}:`)) {
+            conversationHistory.delete(key);
+        }
+    }
+    agentPrompts.delete(sessionId);
+};
+
+// Logout session
 const logoutSession = async (sessionId, socket) => {
     const session = sessions.get(sessionId);
 
     if (session) {
         try {
-            // Close socket connection
-            await session.logout?.();
-            session.end?.();
+            await session.logout();
         } catch (e) {
-            console.log(`Note: Error during logout for ${sessionId}:`, e.message);
+            console.log(`Note: logout() threw:`, e.message);
         }
-
         sessions.delete(sessionId);
     }
 
@@ -346,11 +326,12 @@ const logoutSession = async (sessionId, socket) => {
         console.error('Error cleaning auth folder:', e);
     }
 
+    clearSessionData(sessionId);
+
     socket.emit('logged-out', { sessionId });
-    console.log(`🚪 Session ${sessionId} logged out and cleaned up`);
 };
 
-// Get session status
+// Get session status for REST endpoint
 export const getSessionStatus = (sessionId) => {
     const session = sessions.get(sessionId);
 
@@ -358,29 +339,14 @@ export const getSessionStatus = (sessionId) => {
         return { connected: false, user: null };
     }
 
+    const user = session.user;
     return {
-        connected: session.ws?.isOpen || false,
-        user: session.user ? {
-            id: session.user.id,
-            phoneNumber: session.user.id?.split(':')[0],
-            name: session.user.name || session.user.verifiedName
+        connected: !!session.ws?.isOpen,
+        user: user ? {
+            number: user.id?.split(':')[0] || user.id,
+            name: user.name || user.verifiedName || 'WhatsApp User'
         } : null
     };
-};
-
-// Get all active sessions
-export const getActiveSessions = () => {
-    const activeSessions = [];
-
-    sessions.forEach((session, sessionId) => {
-        activeSessions.push({
-            sessionId,
-            connected: session.ws?.isOpen || false,
-            user: session.user
-        });
-    });
-
-    return activeSessions;
 };
 
 // Set agent prompt for a session
@@ -408,19 +374,49 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
         throw new Error('Session not found or not connected');
     }
 
-    // Ensure connection is open
-    // Note: ws.isOpen might not be enough check in some baileys versions, but checking session existence is key
+    // Check if socket is still open
+    if (!session.ws?.isOpen) {
+        throw new Error('WhatsApp connection is not open');
+    }
 
-    // Format JID if it's just a number
+    // Format JID properly
     let remoteJid = phoneNumber;
-    if (!remoteJid.includes('@s.whatsapp.net') && !remoteJid.includes('@g.us')) {
+
+    // If it's a LID, try to convert to phone number using our mapping
+    if (remoteJid.includes('@lid')) {
+        const mappedPhone = lidMapping.get(remoteJid);
+        if (mappedPhone) {
+            console.log(`📱 Converting LID ${remoteJid} to phone ${mappedPhone}`);
+            remoteJid = mappedPhone;
+        } else {
+            // Try to get from Baileys signalRepository if available
+            try {
+                const phoneNum = await session.signalRepository?.lidMapping?.getPNForLID?.(remoteJid);
+                if (phoneNum) {
+                    console.log(`📱 Got phone from signalRepository: ${phoneNum}`);
+                    remoteJid = phoneNum;
+                } else {
+                    console.warn(`⚠️ No phone mapping found for LID: ${remoteJid}. Trying to send directly.`);
+                }
+            } catch (e) {
+                console.warn(`⚠️ Could not get phone for LID: ${e.message}`);
+            }
+        }
+    }
+
+    // Add suffix if it's just a number
+    if (!remoteJid.includes('@s.whatsapp.net') &&
+        !remoteJid.includes('@g.us') &&
+        !remoteJid.includes('@lid')) {
         remoteJid = `${phoneNumber}@s.whatsapp.net`;
     }
+
+    console.log(`📤 Sending message to ${remoteJid} (session: ${sessionId})`);
 
     try {
         await session.sendMessage(remoteJid, { text: message });
 
-        // Add to history if possible
+        // Add to conversation history so AI remembers context
         const contactId = `${sessionId}:${remoteJid}`;
         if (!conversationHistory.has(contactId)) {
             conversationHistory.set(contactId, []);
@@ -428,18 +424,34 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
         const history = conversationHistory.get(contactId);
         history.push({ role: 'assistant', content: message });
 
-        return true;
+        // Limit history size
+        if (history.length > 20) {
+            history.splice(0, history.length - 20);
+        }
+
+        console.log(`✅ Message sent to ${remoteJid} and added to history`);
+        return { success: true, remoteJid };
     } catch (error) {
-        console.error(`Error sending message to ${remoteJid}:`, error);
+        console.error(`❌ Error sending message:`, error);
         throw error;
     }
 };
 
-export default {
-    initWhatsAppService,
-    getSessionStatus,
-    getActiveSessions,
-    setAgentPrompt,
-    getAgentPrompt,
-    sendMessageToUser
+// Get all active sessions
+export const getActiveSessions = () => {
+    const activeSessions = [];
+
+    sessions.forEach((session, sessionId) => {
+        if (session?.ws?.isOpen) {
+            activeSessions.push({
+                sessionId,
+                user: session.user ? {
+                    number: session.user.id?.split(':')[0] || session.user.id,
+                    name: session.user.name || session.user.verifiedName || 'WhatsApp User'
+                } : null
+            });
+        }
+    });
+
+    return activeSessions;
 };

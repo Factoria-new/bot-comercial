@@ -13,7 +13,8 @@ import {
     MessageCircle,
     FlaskConical,
     Check,
-    X
+    X,
+    LogOut
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTTS } from "@/hooks/useTTS";
@@ -98,7 +99,8 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         instances: whatsappInstances,
         handleGenerateQR,
         modalState: whatsappModalState,
-        closeModal: closeWhatsappModal
+        closeModal: closeWhatsappModal,
+        handleDisconnect
     } = useWhatsAppInstances();
 
     // Platform integrations data - WhatsApp status is dynamic from Baileys connection
@@ -1170,12 +1172,25 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                                         <p className="text-white/60 text-center mb-6">
                                                             Seu WhatsApp está pronto para receber mensagens.
                                                         </p>
-                                                        <Button
-                                                            onClick={() => setSelectedIntegration(null)}
-                                                            className="w-full py-4 text-lg rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white"
-                                                        >
-                                                            Continuar
-                                                        </Button>
+                                                        <div className="flex flex-col gap-3 w-full">
+                                                            <Button
+                                                                onClick={() => setSelectedIntegration(null)}
+                                                                className="w-full py-4 text-lg rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white"
+                                                            >
+                                                                Continuar
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                onClick={() => {
+                                                                    handleDisconnect && handleDisconnect(1); // Assuming instance 1
+                                                                    setSelectedIntegration(null);
+                                                                }}
+                                                                className="w-full py-4 text-base rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center gap-2"
+                                                            >
+                                                                <LogOut className="w-4 h-4" />
+                                                                Desconectar
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 )}
 

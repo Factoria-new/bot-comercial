@@ -7,7 +7,7 @@ import {
   DialogPortal,
   DialogOverlay,
 } from '@/components/ui/dialog';
-import { Loader, CheckCircle2, XCircle, QrCode, Smartphone } from 'lucide-react';
+import { Loader, CheckCircle2, XCircle, QrCode, Smartphone, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ interface WhatsAppConnectionModalProps {
   onConnect: (phoneNumber: string) => void;
   onMethodSelected: (method: 'qr' | 'code') => void;
   pairingCode?: string;
+  onDisconnect?: () => void;
 }
 
 const WhatsAppConnectionModal = ({
@@ -36,7 +37,8 @@ const WhatsAppConnectionModal = ({
   instanceName,
   onConnect,
   onMethodSelected,
-  pairingCode
+  pairingCode,
+  onDisconnect
 }: WhatsAppConnectionModalProps) => {
   const [phoneNumber, setPhoneNumber] = useState('');
 
@@ -249,14 +251,29 @@ const WhatsAppConnectionModal = ({
             </div>
             <div className="text-center space-y-2">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Conectado com Sucesso!</h3>
-              <p className="text-xs sm:text-sm text-gray-600">{instanceName} está pronto para uso</p>
+              <p className="text-xs sm:text-sm text-gray-600">Seu WhatsApp está pronto para receber mensagens.</p>
             </div>
-            <Button
-              onClick={onClose}
-              className="bg-[#19B159] text-white hover:bg-[#19B159]/90 transition-all duration-300 w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-base font-semibold"
-            >
-              Fechar
-            </Button>
+            <div className="flex flex-col gap-2 w-full">
+              <Button
+                onClick={onClose}
+                className="bg-[#19B159] text-white hover:bg-[#19B159]/90 transition-all duration-300 w-full h-10 sm:h-11 text-sm sm:text-base font-semibold"
+              >
+                Continuar
+              </Button>
+              {onDisconnect && (
+                <Button
+                  onClick={() => {
+                    onDisconnect();
+                    onClose();
+                  }}
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 h-10 sm:h-11 text-sm sm:text-base"
+                >
+                  <LogOut size={16} />
+                  Desconectar
+                </Button>
+              )}
+            </div>
           </div>
         );
 
