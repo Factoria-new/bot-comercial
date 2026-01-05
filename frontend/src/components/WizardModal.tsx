@@ -129,6 +129,7 @@ export function WizardModal({
                     else if (currentStepObj.id === 'strategy') playAudioGuidance('step_strategy');
                     else if (currentStepObj.id === 'operations') playAudioGuidance('step_operations');
                     else if (currentStepObj.id === 'catalog') playAudioGuidance('step_catalog');
+                    else if (currentStepObj.id === 'details') playAudioGuidance('step_details');
                 }
             }
         } catch (e) {

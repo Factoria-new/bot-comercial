@@ -19,7 +19,8 @@ export type AudioTriggerType =
     | 'upload_success'
     | 'integrations_success'
     | 'step_operations' // NEW
-    | 'dashboard_suggestion'; // NEW
+    | 'dashboard_suggestion' // NEW
+    | 'step_details'; // NEW
 
 interface AudioVariation {
     id: string;
@@ -106,6 +107,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Seu painel está ativo! Dica rápida: que tal conectar também o Instagram ou Facebook para centralizar todo o seu atendimento aqui?",
         "Tudo pronto por aqui. Se quiser ampliar o alcance do seu assistente, sugiro conectar outras redes sociais clicando em 'Gerenciar Integrações'.",
         "Bem-vindo ao seu Dashboard. Aproveite para explorar outras integrações e deixar seu assistente ainda mais completo em todos os canais."
+    ]),
+    'step_details': defineVariations('step_details', 3, [
+        "Agora, me diga quais são seus principais produtos ou serviços. Preciso saber o nome e o preço ou uma breve descrição.",
+        "Vamos cadastrar o que você vende. Adicione os itens principais para que eu possa oferecê-los aos seus clientes.",
+        "Chegou a hora de adicionar seu catálogo. Liste seus produtos ou serviços com detalhes e valores."
     ])
 };
 
