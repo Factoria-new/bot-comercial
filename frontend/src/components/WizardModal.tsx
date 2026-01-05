@@ -99,7 +99,12 @@ export function WizardModal({
             playedTriggers.current.add(trigger); // Mark as played
 
             setCurrentAudioText(variation.text);
-            setTimeout(() => setCurrentAudioText(null), 5000);
+
+            // Clear text when audio finishes naturally
+            audioRef.current.onended = () => setCurrentAudioText(null);
+
+            // Safety timeout (20s) in case audio stalls or doesn't fire ended
+            setTimeout(() => setCurrentAudioText(null), 20000);
         } catch (err) {
             console.error("Audio error:", err);
         }
@@ -122,6 +127,7 @@ export function WizardModal({
                     if (currentStepObj.id === 'identity') playAudioGuidance('step_identity');
                     else if (currentStepObj.id === 'location') playAudioGuidance('step_location');
                     else if (currentStepObj.id === 'strategy') playAudioGuidance('step_strategy');
+                    else if (currentStepObj.id === 'operations') playAudioGuidance('step_operations');
                     else if (currentStepObj.id === 'catalog') playAudioGuidance('step_catalog');
                 }
             }
@@ -142,6 +148,7 @@ export function WizardModal({
             playAudioGuidance('focus_description');
         }
         if (name === 'assistantName') playAudioGuidance('focus_assistant_name');
+        if (name === 'usefulLinks' || parentName === 'usefulLinks') playAudioGuidance('focus_links');
     };
 
     // --- RENDER HELPERS ---
@@ -394,7 +401,7 @@ export function WizardModal({
                         <div className="space-y-6">
                             {schema?.steps?.[step - 1] && (
                                 <motion.div
-                                    key={step}
+                                    key={step} // Re-animate when step changes
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.3 }}
@@ -403,7 +410,20 @@ export function WizardModal({
                                         {schema?.steps[step - 1]?.description || ''}
                                     </h3>
 
-                                    <div className="grid gap-6">
+                                    <motion.div
+                                        className="grid gap-6"
+                                        variants={{
+                                            hidden: { opacity: 0 },
+                                            visible: {
+                                                opacity: 1,
+                                                transition: {
+                                                    staggerChildren: 0.1
+                                                }
+                                            }
+                                        }}
+                                        initial="hidden"
+                                        animate="visible"
+                                    >
                                         {schema?.steps[step - 1]?.fields.map((field) => {
                                             // Check Conditional Visibility
                                             if (field.showIf) {
@@ -424,7 +444,22 @@ export function WizardModal({
                                             }
 
                                             return (
-                                                <div key={field.name} className="space-y-2 group">
+                                                <motion.div
+                                                    key={field.name}
+                                                    className="space-y-2 group"
+                                                    variants={{
+                                                        hidden: { opacity: 0, y: 20 },
+                                                        visible: {
+                                                            opacity: 1,
+                                                            y: 0,
+                                                            transition: {
+                                                                type: "spring",
+                                                                damping: 20,
+                                                                stiffness: 100
+                                                            }
+                                                        }
+                                                    }}
+                                                >
                                                     <Label
                                                         htmlFor={field.name}
                                                         className="text-white/80 font-medium ml-1 transition-colors group-focus-within:text-purple-400"
@@ -435,10 +470,10 @@ export function WizardModal({
                                                     {field.helperText && (
                                                         <p className="text-xs text-white/40 ml-1">{field.helperText}</p>
                                                     )}
-                                                </div>
+                                                </motion.div>
                                             )
                                         })}
-                                    </div>
+                                    </motion.div>
                                 </motion.div>
                             )}
                         </div>

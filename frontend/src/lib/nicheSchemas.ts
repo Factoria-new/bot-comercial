@@ -88,12 +88,15 @@ const OPERATIONS_FIELDS: FormField[] = [
         required: true
     },
     {
-        name: 'ctaLink',
-        label: 'Link de Destino / Agendamento',
-        type: 'text',
-        placeholder: 'Ex: https://wa.me/..., https://agendar.com/...',
-        required: true,
-        helperText: 'Para onde o cliente será enviado ao finalizar o atendimento.'
+        name: 'usefulLinks',
+        label: 'Links Úteis',
+        type: 'repeater',
+        addButtonText: 'Adicionar Link',
+        helperText: 'Adicione links importantes (WhatsApp, Instagram, Site, Agendamento) e descreva para que servem.',
+        subFields: [
+            { name: 'url', label: 'URL do Link', type: 'text', placeholder: 'https://...' },
+            { name: 'description', label: 'Descrição / Contexto', type: 'text', placeholder: 'Ex: Link para Ofertas' }
+        ]
     }
 ];
 

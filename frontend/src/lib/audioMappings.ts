@@ -11,11 +11,14 @@ export type AudioTriggerType =
     | 'step_strategy' // NEW
     | 'step_catalog'
     | 'focus_description'
+    | 'focus_description'
     | 'focus_assistant_name'
+    | 'focus_links' // NEW
     | 'complete'
     | 'integrations'
     | 'upload_success'
-    | 'integrations_success';
+    | 'integrations_success'
+    | 'step_operations'; // NEW
 
 interface AudioVariation {
     id: string;
@@ -68,6 +71,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Escolha um nome amigável para seu assistente virtual.",
         "Como você quer que o assistente se apresente? Escolha um nome legal."
     ]),
+    'focus_links': defineVariations('help_links', 3, [
+        "Aqui você pode adicionar quantos links quiser. Não esqueça de colocar uma breve descrição para o Assistente saber quando usar cada um.",
+        "Adicione seus links importantes aqui, como site, redes sociais ou agendamento. A descrição ajuda o Assistente a escolher o link certo.",
+        "Use esse espaço para listar links úteis. Diga para o que serve cada um, assim o Assistente envia a informação correta para o cliente."
+    ]),
     'complete': defineVariations('wizard_complete', 3, [
         "Tudo pronto! Seu assistente foi criado. Vamos testar?",
         "Parabéns! Finalizamos. Você já pode conversar com seu novo assistente.",
@@ -87,6 +95,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. Escolha uma plataforma abaixo para começar.",
         "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes.",
         "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático."
+    ]),
+    'step_operations': defineVariations('step_operations', 3, [
+        "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu WhatsApp ou agendamento.",
+        "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento.",
+        "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar."
     ])
 };
 
