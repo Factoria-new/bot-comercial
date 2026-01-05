@@ -1,15 +1,16 @@
 
+import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateAudio } from './backend/src/services/ttsService.js';
+import { generateAudio } from '../src/services/ttsService.js';
 
 // Load paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '.');
+const rootDir = path.resolve(__dirname, '../../');
+const OUTPUT_DIR = path.resolve(rootDir, 'frontend/public/audio/lia');
 
-// Env is expected to be loaded via node --env-file=.env
 const API_KEY = process.env.API_GEMINI || process.env.GEMINI_API_KEY;
 
 if (!API_KEY) {
@@ -17,15 +18,11 @@ if (!API_KEY) {
     process.exit(1);
 }
 
-const OUTPUT_DIR = path.resolve(rootDir, 'frontend/public/audio/lia');
-
 // Ensure directory exists
 if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-// Define mappings manually to avoid TS compilation issues in this script
-// Using the exact text from frontend/src/lib/audioMappings.ts
 const AUDIO_DATA = [
     // INTRO
     { id: 'intro_wizard_v1', text: "Olá! Sou a Lia. Vamos configurar seu assistente juntos." },
@@ -66,11 +63,6 @@ const AUDIO_DATA = [
 async function generateAudioItem(item) {
     const filePath = path.join(OUTPUT_DIR, `${item.id}.mp3`);
 
-    // Check if exists - we SKIP if exists, but user asked to regenerate. 
-    // I will act conservatively and NOT delete blindly here, because verify step will delete.
-    // However, the user said "Refaça", implying regeneration.
-    // I will remove the check for existing file OR I will rely on my verification step to delete them first.
-    // Let's KEEP the check but I will delete files before running this script in the next steps.
     if (fs.existsSync(filePath)) {
         console.log(`⏭️  Skipping existing: ${item.id}.mp3`);
         return;
@@ -79,9 +71,7 @@ async function generateAudioItem(item) {
     console.log(`🎙️  Generating: ${item.id} -> "${item.text}"`);
 
     try {
-        // Use ttsService with Kore voice
         const result = await generateAudio(item.text, 'Kore', API_KEY);
-
         fs.writeFileSync(filePath, Buffer.from(result.audioContent, 'base64'));
         console.log(`✅ Saved: ${item.id}.mp3`);
 
@@ -91,13 +81,13 @@ async function generateAudioItem(item) {
 }
 
 async function run() {
-    console.log(`🚀 Starting Audio Asset Generation (Voice: Kore)...`);
+    console.log(`🚀 Starting Wizard Audio Generation (Voice: Kore)...`);
     console.log(`📂 Output: ${OUTPUT_DIR}`);
 
     for (const item of AUDIO_DATA) {
         await generateAudioItem(item);
-        // Small delay to avoid rate limits
-        await new Promise(r => setTimeout(r, 500));
+        // Delay to avoid rate limits (approx 2 RPM)
+        await new Promise(r => setTimeout(r, 35000));
     }
 
     console.log(`✨ All Done!`);
