@@ -48,7 +48,12 @@ const variations = [
     // Step Details (Configuração Geral -> Produtos/Serviços)
     { id: 'step_details_v1', text: "Agora, me diga quais são seus principais produtos ou serviços. Preciso saber o nome e o preço ou uma breve descrição." },
     { id: 'step_details_v2', text: "Vamos cadastrar o que você vende. Adicione os itens principais para que eu possa oferecê-los aos seus clientes." },
-    { id: 'step_details_v3', text: "Chegou a hora de adicionar seu catálogo. Liste seus produtos ou serviços com detalhes e valores." }
+    { id: 'step_details_v3', text: "Chegou a hora de adicionar seu catálogo. Liste seus produtos ou serviços com detalhes e valores." },
+
+    // Wizard Complete (After manual creation)
+    { id: 'wizard_complete_v1', text: "Pronto! Seu agente foi criado. Aqui nesta tela você pode testá-lo e, se precisar de ajustes, é só me pedir no chat ao lado." },
+    { id: 'wizard_complete_v2', text: "Terminamos! Agora você está no ambiente de teste. Converse com seu agente para ver como ele responde, e me chame se quiser mudar alguma coisa." },
+    { id: 'wizard_complete_v3', text: "Agente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho." }
 ];
 
 async function generateAudioItem(item) {

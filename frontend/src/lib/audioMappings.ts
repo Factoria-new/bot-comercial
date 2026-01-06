@@ -79,9 +79,9 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Use esse espaço para listar links úteis. Diga para o que serve cada um, assim o Assistente envia a informação correta para o cliente."
     ]),
     'complete': defineVariations('wizard_complete', 3, [
-        "Tudo pronto! Seu assistente foi criado. Vamos testar?",
-        "Parabéns! Finalizamos. Você já pode conversar com seu novo assistente.",
-        "Excelente! Configurei tudo. Clique em testar para ver como ficou."
+        "Pronto! Seu agente foi criado. Aqui nesta tela você pode testá-lo e, se precisar de ajustes, é só me pedir no chat ao lado.",
+        "Terminamos! Agora você está no ambiente de teste. Converse com seu agente para ver como ele responde, e me chame se quiser mudar alguma coisa.",
+        "Agente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho."
     ]),
     'integrations': defineVariations('integrations', 3, [
         "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar.",

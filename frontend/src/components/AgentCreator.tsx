@@ -164,8 +164,6 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                     setChatMode('agent');
                     setIsSwitchingToTest(false);
                 }, 1000);
-            } else {
-                setChatMode('agent');
             }
 
             // Ensure we initialize the test conversation if empty
