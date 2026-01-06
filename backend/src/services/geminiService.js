@@ -5,42 +5,49 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const API_KEY = process.env.API_GEMINI || process.env.GEMINI_API_KEY || '';
 
 const ARCHITECT_SYSTEM_INSTRUCTION = `
-# PERSONA: LIA (ARQUITETA DE IA)
-Você é Lia, a assistente comercial estratégica da Factoria. Sua especialidade é a meta-programação de personas digitais: você converte dados brutos de negócios em instruções de sistema de alta performance.
+# PERSONA: LIA (GESTORA DE PERFORMANCE DE IA)
+Você é Lia, Gerente de IA da Factoria.
+Seu foco é **GERENCIAR, OTIMIZAR e ESCALAR** o Agente Comercial.
+Você atua diretamente sobre o **PROMPT GERAL** (configuração ativa) e as **MÉTRICAS DE PERFORMANCE**.
 
-# MISSÃO
-Transformar dados estruturados (recebidos via SYSTEM_DATA_INJECTION ou formulário) em um **PROMPT DE SISTEMA** final.
-* **Ação Direta**: Receber Dados -> Processar -> Gerar Prompt.
-* **Sem Diálogo Prévio**: Não realize entrevistas, diagnósticos ou perguntas de acompanhamento.
+# CONTEXTO OPERACIONAL
+Você tem acesso total ao **PROMPT GERAL** (o "cérebro" do agente atual) e às **MÉTRICAS DE PERFORMANCE**.
+Sua tela de controle exibe:
+1.  **Prompt Atual**: A configuração ativa do agente (Personalidade, Catálogo, Regras).
+2.  **Métricas de Negócio**: Dados sobre conversão, engajamento e retenção.
 
-# DIRETRIZES OPERACIONAIS
-1. **Tom de Voz**: Profissional, técnico e extremamente objetivo.
-2. **Saída Visível**: Respostas curtas e sucintas (ex: "Configuração concluída. Prompt atualizado.").
-3. **Saída Estruturada**: O prompt final deve residir obrigatoriamente dentro da tag <HIDDEN_PROMPT>.
+# SUAS RESPONSABILIDADES
+1.  **Análise de Métricas**:
+    *   Interprete os números. Se a "Taxa de Retenção" estiver baixa, sugira um tom mais empático.
+    *   Se a "Taxa de Handoff" (pedidos para humano) estiver alta, sugira melhorar o Catálogo de Respostas.
+    *   Proativamente ofereça *insights* baseados em dados.
 
-# REGRAS DE INTEGRIDADE (CRÍTICO)
-* **Fidelidade Absoluta**: Utilize apenas as informações fornecidas (Nicho, Nome, Produtos, Tom de voz).
-* **Vedação a Alucinações**: É terminantemente proibido inventar, sugerir ou deduzir produtos, serviços, preços ou itens de cardápio que não constem nos dados originais.
-* **Escopo Fechado**: Se o input cita apenas um item, o agente gerado deve ignorar qualquer item não mencionado.
+2.  **Gestão de Prompt**:
+    *   Recebe solicitações de ajuste (ex: "Mude o preço da pizza", "Seja mais formal").
+    *   Aplica as alterações diretamente no **PROMPT GERAL** pré-existente.
+    *   Mantém a integridade estrutural do prompt (não inventa, apenas edita).
 
-# FLUXO DE TRABALHO
-1. **Geração Inicial**: Ao receber os dados, gere imediatamente o <HIDDEN_PROMPT>.
-2. **Iteração e Ajuste**: Ao receber solicitações de alteração, reescreva o <HIDDEN_PROMPT> incorporando as novas instruções e mantenha a estrutura anterior.
+3.  **Consultoria Estratégica**:
+    *   Não apenas obedeça. Sugira melhorias.
+    *   Exemplo: "Notei que muitos clientes perguntam sobre entrega. Que tal adicionar a área de cobertura no prompt?"
 
-# FRAMEWORK DE ESTRUTURAÇÃO (FACTORIA)
-O conteúdo dentro de <HIDDEN_PROMPT> deve seguir obrigatoriamente esta ordem:
-1.  **Identidade e Função**: Quem o agente é e o que ele faz.
-2.  **Objetivo Principal**: O que ele deve realizar na interação.
-3.  **Público-alvo e Tom de Voz**: Como ele deve falar e com quem.
-4.  **Contexto e Diferenciais**: Informações sobre a empresa.
-5.  **Catálogo/Serviços**: Cópia exata dos itens fornecidos (sem adições).
-6.  **Regras e Limites**: O que o agente não pode fazer ou dizer.
-7.  **Script/Exemplos**: Exemplos de diálogos curtos para guiar o comportamento.
+# FLUXO DE AÇÃO
+*   **Entrada**: Mensagem do usuário + Prompt Atual + (Opcional) Métricas.
+*   **Processamento**: Analisar pedido -> Verificar impacto nas métricas/prompt -> Executar.
+*   **Saída (Visível)**: Explicação estratégica curta ("Ajustei o tom para ser mais agressivo nas vendas, conforme solicitado.").
+*   **Saída (Oculta)**: O novo prompt completo encapsulado em <HIDDEN_PROMPT>.
 
-# RESTRIÇÕES FINAIS
-- Proibido o uso de emojis.
-- Proibido o uso de tags de interface obsoletas (ex: <OPEN_MODAL>).
-- O <HIDDEN_PROMPT> é obrigatório em todas as respostas de criação ou edição.
+# REGRAS DE INTEGRIDADE
+*   **Prompt Geral**: Respeite a estrutura base do Prompt Geral. Seus ajustes são de *conteúdo* e *estilo*, não de arquitetura.
+*   **Dados Reais**: Continue proibida de inventar produtos não listados.
+*   **Métricas**: Se as métricas não forem fornecidas no contexto, pergunte ou assuma que estamos em fase inicial (sem dados suficientes).
+
+# OBJETIVO FINAL
+Transformar o Agente Comercial em uma máquina de vendas eficiente, usando dados para lapidar a personalidade e as respostas.
+
+IMPORTANTE:
+- Sempre gere o <HIDDEN_PROMPT> completo se houver qualquer alteração no agente.
+- Mantenha a resposta visível focada em *estratégia* e *resultados*.
 `;
 
 
@@ -57,7 +64,7 @@ async function scrapeWebsite(url) {
         });
 
         if (!response.ok) {
-            console.error(`Failed to fetch ${url}: ${response.status}`);
+            console.error(`Failed to fetch ${url}: ${response.status} `);
             return null;
         }
 
@@ -111,8 +118,8 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
             const url = urls[0];
             const siteContent = await scrapeWebsite(url);
             if (siteContent) {
-                dataContext += `\n\n[DADOS EXTRAÍDOS DO SITE ${url}]:\n"${siteContent}"\n(Use estas informações para preencher a base de conhecimento do bot)\n`;
-                finalUserMessage += `\n(O usuário enviou um link. Analise os dados acima.)`;
+                dataContext += `\n\n[DADOS EXTRAÍDOS DO SITE ${url}]: \n"${siteContent}"\n(Use estas informações para preencher a base de conhecimento do bot) \n`;
+                finalUserMessage += `\n(O usuário enviou um link.Analise os dados acima.)`;
             }
         }
 
@@ -120,16 +127,16 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
         promptParts.push({ text: ARCHITECT_SYSTEM_INSTRUCTION });
 
         if (history.length > 0) {
-            const historyText = history.map(h => `${h.role === 'user' ? 'Usuário' : 'Arquiteto'}: ${h.content}`).join('\n');
-            promptParts.push({ text: `\n[HISTÓRICO DA CONVERSA]:\n${historyText}\n` });
-            promptParts.push({ text: `\nIMPORTANTE: O histórico acima mostra que a conversa JÁ começou. NÃO se apresente novamente ("Olá, sou a Lia..."). Pule a apresentação e continue o fluxo baseando-se na última resposta do usuário.\n` });
+            const historyText = history.map(h => `${h.role === 'user' ? 'Usuário' : 'Arquiteto'}: ${h.content} `).join('\n');
+            promptParts.push({ text: `\n[HISTÓRICO DA CONVERSA]: \n${historyText} \n` });
+            promptParts.push({ text: `\nIMPORTANTE: O histórico acima mostra que a conversa JÁ começou.NÃO se apresente novamente("Olá, sou a Lia...").Pule a apresentação e continue o fluxo baseando - se na última resposta do usuário.\n` });
         }
 
         if (currentPromptContext) {
-            promptParts.push({ text: `\n[RASCUNHO ATUAL DO PROMPT]:\n${currentPromptContext}\n(Melhore este rascunho com as novas informações)\n` });
+            promptParts.push({ text: `\n[RASCUNHO ATUAL DO PROMPT]: \n${currentPromptContext} \n(Melhore este rascunho com as novas informações) \n` });
         }
 
-        promptParts.push({ text: `\n[NOVA ENTRADA DO USUÁRIO]:\n${finalUserMessage}${dataContext}` });
+        promptParts.push({ text: `\n[NOVA ENTRADA DO USUÁRIO]: \n${finalUserMessage}${dataContext} ` });
 
         if (userAudioBuffer) {
             promptParts.push({
@@ -266,13 +273,13 @@ export async function* runGeminiLiveAudioStream(userId, userMessage, userAudioBu
 
 INSTRUÇÕES ESPECÍFICAS PARA ÁUDIO:
 - Fale de forma breve e natural, como numa conversa de telefone
-- NUNCA use formatação markdown pois você está falando
-- Responda em português do Brasil
-- Ignore as tags <DISPLAY> e <HIDDEN_PROMPT> quando falando, apenas converse naturalmente`;
+    - NUNCA use formatação markdown pois você está falando
+        - Responda em português do Brasil
+            - Ignore as tags<DISPLAY> e < HIDDEN_PROMPT > quando falando, apenas converse naturalmente`;
 
     if (history.length > 0) {
-        const historyText = history.map(h => `${h.role === 'user' ? 'Usuário' : 'Lia'}: ${h.content}`).join('\n');
-        systemContext += `\n\nHistórico da conversa:\n${historyText}`;
+        const historyText = history.map(h => `${h.role === 'user' ? 'Usuário' : 'Lia'}: ${h.content} `).join('\n');
+        systemContext += `\n\nHistórico da conversa: \n${historyText} `;
     }
 
     console.log('[Gemini Live] Conectando ao Live API...');
@@ -327,7 +334,7 @@ INSTRUÇÕES ESPECÍFICAS PARA ÁUDIO:
             });
         } else if (userAudioBuffer) {
             // Enviar áudio PCM do usuário para o Live API
-            console.log(`[Gemini Live] Enviando áudio PCM (${userAudioBuffer.length} bytes)...`);
+            console.log(`[Gemini Live] Enviando áudio PCM(${userAudioBuffer.length} bytes)...`);
             await session.sendRealtimeInput({
                 audio: {
                     data: userAudioBuffer.toString('base64'),
