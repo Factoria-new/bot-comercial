@@ -91,7 +91,7 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
     'upload_success': defineVariations('upload_success', 3, [
         "Seu arquivo foi analisado com sucesso! Essa é a área de teste, onde você pode conversar com seu assistente para verificar como ele ficou.",
         "Análise concluída! Já configurei seu assistente com base no arquivo. Aproveite este ambiente para testar as respostas dele.",
-        "Recebi e processei seu arquivo. Seu assistente está pronto para ser testado aqui nesta tela. Fique à vontade para fazer ajustes se precisar."
+        "Arquivo processado com sucesso! Seu assistente está pronto para testes. Ajuste o que for necessário."
     ]),
     'integrations_success': defineVariations('integrations_success', 3, [
         "Integração realizada com sucesso! Seu assistente já está conectado e pronto para atender.",

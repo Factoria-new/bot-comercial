@@ -14,7 +14,8 @@ import {
     FlaskConical,
     Check,
     X,
-    LogOut
+    LogOut,
+    Link2
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTTS } from "@/hooks/useTTS";
@@ -27,11 +28,12 @@ import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 
 interface AgentCreatorProps {
     onOpenSidebar?: () => void;
+    onOpenIntegrations?: () => void;
     isExiting?: boolean;
     onStartChat?: (prompt: string) => void;
 }
 
-export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: AgentCreatorProps) {
+export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat }: AgentCreatorProps) {
 
     // --- WIZARD STATE ---
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -87,7 +89,6 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         handleUserInput,
         setAgentPrompt,
         startTesting,
-        addBotMessage,
         sendMessageToLia,
         addUserMessage
     } = useOnboarding();
@@ -119,8 +120,6 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', connected: isWhatsAppConnected },
         { id: 'instagram', name: 'Instagram', color: '#E4405F', connected: false },
         { id: 'facebook', name: 'Facebook', color: '#1877F2', connected: false },
-        { id: 'twitter', name: 'Twitter / X', color: '#000000', connected: false },
-        { id: 'tiktok', name: 'TikTok', color: '#010101', connected: false },
     ];
 
 
@@ -526,8 +525,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
                 // Add delay before speaking (1.2s)
                 setTimeout(async () => {
-                    // Add text to chat history directly
-                    await addBotMessage(audioVariation.text);
+                    // REMOVED: addBotMessage(audioVariation.text); - User requested to remove this specific message from chat
 
                     // Manually play the audio file
                     if (audioVariation.path) {
@@ -836,7 +834,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
                                         {/* Finalizar Teste Button (Requirement #2) */}
                                         <Button
-                                            onClick={() => setCurrentStep('integrations')}
+                                            onClick={() => setCurrentStep('dashboard')}
                                             className="w-full bg-white/5 hover:bg-white/10 text-emerald-400 border border-emerald-500/30 rounded-xl py-3 mt-3 text-sm"
                                         >
                                             <Check className="w-4 h-4 mr-2" />
@@ -943,7 +941,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                             {/* Re-reading request: "The first chat to be open should be the test chat... In Lia's chat the test button should be at bottom..." */}
                                             {/* So I will leave this one here too as it makes sense for the "Test" flow. */}
                                             <Button
-                                                onClick={() => setCurrentStep('integrations')}
+                                                onClick={() => setCurrentStep('dashboard')}
                                                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-2 mt-2"
                                             >
                                                 <Check className="w-4 h-4 mr-2" />
@@ -990,14 +988,14 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                 </motion.div>
 
                                 {/* Integration Cards Grid */}
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                <div className="flex flex-col md:flex-row justify-between gap-6 w-full">
                                     {integrations.map((integration) => (
                                         <motion.div
                                             key={integration.id}
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.98 }}
                                             onClick={() => setSelectedIntegration(integration.id)}
-                                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer hover:bg-white/10 transition-all flex flex-col items-center gap-3 group"
+                                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer hover:bg-white/10 transition-all flex flex-col items-center gap-3 group w-full md:w-[25%]"
                                         >
                                             {/* Platform Icon */}
                                             <div
@@ -1017,16 +1015,6 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                                 {integration.id === 'facebook' && (
                                                     <svg className="w-8 h-8" viewBox="0 0 24 24" fill={integration.color}>
                                                         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                                                    </svg>
-                                                )}
-                                                {integration.id === 'twitter' && (
-                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="white">
-                                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                                    </svg>
-                                                )}
-                                                {integration.id === 'tiktok' && (
-                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="white">
-                                                        <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
                                                     </svg>
                                                 )}
                                             </div>
@@ -1343,6 +1331,33 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                             </p>
                                         </motion.div>
 
+                                        {/* CTA for Integrations - Coercive Element */}
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.3 }}
+                                            className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-2xl p-6 md:p-8 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 backdrop-blur-sm"
+                                        >
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
+                                                    <Link2 className="w-6 h-6 text-purple-400" />
+                                                </div>
+                                                <div>
+                                                    <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Conecte seus Canais</h2>
+                                                    <p className="text-white/70 max-w-xl text-sm md:text-base">
+                                                        Seu assistente está pronto, mas precisa de acesso às redes.
+                                                        Use o menu de integrações para conectar WhatsApp, Instagram e outras plataformas.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                onClick={() => onOpenIntegrations?.()}
+                                                className="w-full md:w-auto bg-white text-purple-950 hover:bg-gray-100 font-bold px-6 py-4 text-base rounded-xl shadow-lg transition-all hover:scale-105"
+                                            >
+                                                Gerenciar Integrações
+                                            </Button>
+                                        </motion.div>
+
                                         {/* Metrics Grid */}
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             {/* Mensagens Recebidas */}
@@ -1438,14 +1453,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                                             </div>
                                         </motion.div>
 
-                                        {/* Back to Integrations */}
-                                        <Button
-                                            variant="ghost"
-                                            onClick={() => setCurrentStep('integrations')}
-                                            className="text-white/60 hover:text-white"
-                                        >
-                                            ← Gerenciar Integrações
-                                        </Button>
+
                                     </div>
 
                                     {/* Right Side - Chat with Lia */}
@@ -1505,40 +1513,8 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                     </AnimatePresence>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 
-// Sub-component for Test Chat to clean up main file
-function AgentTestChat({ messages, onSend, isTyping }: any) {
-    const [input, setInput] = useState("");
-    return (
-        <>
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar">
-                {messages.map((msg: any) => (
-                    <div key={msg.id} className={cn("flex", msg.type === 'user' ? "justify-end" : "justify-start")}>
-                        <div className={cn(
-                            "max-w-[85%] px-4 py-2.5 rounded-2xl text-sm",
-                            msg.type === 'user' ? "bg-purple-600 text-white" : "bg-white/10"
-                        )}>
-                            {msg.content}
-                        </div>
-                    </div>
-                ))}
-                {isTyping && <Loader2 className="w-4 h-4 animate-spin text-white/50" />}
-            </div>
-            <div className="flex gap-2">
-                <textarea
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), onSend(input), setInput(''))}
-                    placeholder="Teste seu agente..."
-                    className="flex-1 bg-black/20 border border-white/10 resize-none min-h-[50px] rounded-xl p-3 text-white focus:outline-none focus:border-white/30"
-                />
-                <Button size="icon" onClick={() => { onSend(input); setInput(''); }} disabled={!input.trim()} className="h-[50px] w-[50px] rounded-xl bg-purple-600 hover:bg-purple-500">
-                    <ArrowRight className="w-5 h-5" />
-                </Button>
-            </div>
-        </>
-    )
-}
+

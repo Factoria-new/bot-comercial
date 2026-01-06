@@ -111,25 +111,7 @@ export const ChatOverlay = () => {
             className="absolute inset-0 flex flex-col items-start justify-center p-6 md:pl-20 pointer-events-none z-30"
         >
             <div className="w-full max-w-sm bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-4 shadow-2xl">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10"
-                >
-                    <div className="bg-[#027831] p-2 rounded-full shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                            <line x1="12" x2="12" y1="19" y2="22" />
-                        </svg>
-                    </div>
-                    <div>
-                        <div className="font-bold text-white text-sm drop-shadow-sm">Agente Factoria</div>
-                        <div className="text-white/80 text-xs font-medium">Vendas & Suporte</div>
-                    </div>
-                </motion.div>
+
 
                 {/* Messages */}
                 <motion.div

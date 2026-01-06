@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +58,8 @@ interface DashboardSidebarProps {
     totalInstances?: number;
     integrations?: Integration[];
     onLogout?: () => void;
+    forceExpandIntegrations?: boolean;
+    onIntegrationClick?: (id: string) => void;
 }
 
 export default function DashboardSidebar({
@@ -69,10 +71,22 @@ export default function DashboardSidebar({
     totalInstances = 0,
     integrations = [],
     onLogout,
-}: DashboardSidebarProps) {
+    forceExpandIntegrations = false,
+    onIntegrationClick,
+}: DashboardSidebarProps & { forceExpandIntegrations?: boolean; onIntegrationClick?: (id: string) => void }) {
     const { isConnected } = useSocket();
     const { user } = useAuth();
     const [integrationsExpanded, setIntegrationsExpanded] = useState(false);
+
+    // Effect to handle forced expansion with delay
+    useEffect(() => {
+        if (forceExpandIntegrations && isOpen) {
+            const timer = setTimeout(() => {
+                setIntegrationsExpanded(true);
+            }, 300); // 300ms delay as requested
+            return () => clearTimeout(timer);
+        }
+    }, [forceExpandIntegrations, isOpen]);
 
     const connectedIntegrations = integrations.filter(i => i.connected).length;
 
@@ -274,11 +288,12 @@ export default function DashboardSidebar({
                                 {integrations.map((integration) => {
                                     const Icon = BrandIcons[integration.icon];
                                     return (
-                                        <div
+                                        <button
                                             key={integration.id}
+                                            onClick={() => onIntegrationClick?.(integration.id)}
                                             className={cn(
-                                                "flex items-center gap-3 px-3 py-2 rounded-lg",
-                                                "bg-gray-50 border",
+                                                "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
+                                                "bg-gray-50 border hover:bg-gray-100 hover:shadow-sm",
                                                 integration.connected
                                                     ? "border-emerald-200"
                                                     : "border-transparent"
@@ -290,18 +305,20 @@ export default function DashboardSidebar({
                                             >
                                                 {Icon && <Icon className="w-3.5 h-3.5 text-white" />}
                                             </div>
-                                            <div className="flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0 text-left">
                                                 <p className="text-xs font-medium text-gray-900 truncate">
                                                     {integration.name}
                                                 </p>
                                                 <p className="text-[10px] text-gray-400">
-                                                    {integration.connected ? "Conectado" : "Não conectado"}
+                                                    {integration.connected ? "Conectado" : "Conectar"}
                                                 </p>
                                             </div>
-                                            {integration.connected && (
+                                            {integration.connected ? (
                                                 <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                            ) : (
+                                                <ChevronRight className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100" />
                                             )}
-                                        </div>
+                                        </button>
                                     );
                                 })}
                             </div>
