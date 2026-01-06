@@ -175,94 +175,108 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         }
     }, [chatState.agentCreated, chatState.agentConfig, startTesting, chatState.testMessages.length, isSwitchingToTest]);
 
+    // Audio Refs for manual management
+    const integrationAudioContextRef = useRef<AudioContext | null>(null);
+    const integrationAnimationFrameRef = useRef<number>();
+
+    // Helper: Stop locally playing integration audio (and clean up context/visualizer)
+    const stopIntegrationAudio = useCallback(() => {
+        if (integrationAudioRef.current) {
+            integrationAudioRef.current.pause();
+            integrationAudioRef.current.currentTime = 0;
+            integrationAudioRef.current = null;
+        }
+        if (integrationAnimationFrameRef.current) {
+            cancelAnimationFrame(integrationAnimationFrameRef.current);
+            integrationAnimationFrameRef.current = undefined;
+        }
+        if (integrationAudioContextRef.current) {
+            integrationAudioContextRef.current.close().catch(console.error);
+            integrationAudioContextRef.current = null;
+        }
+        setIntegrationVoiceLevel(0);
+    }, []);
+
+    // Helper: Play integration audio with visualizer (interrupts everything else)
+    const playIntegrationAudio = useCallback(async (path: string, delay: number = 0) => {
+        // 1. Stop everything else first
+        stopIntegrationAudio();
+        stopTTS(); // Interrupt Lia if she's speaking
+
+        if (!path) return;
+
+        setTimeout(() => {
+            try {
+                // Double check stop to be safe
+                stopIntegrationAudio();
+
+                const audio = new Audio(path);
+                integrationAudioRef.current = audio;
+
+                // Setup Audio Context for Animation
+                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                const audioContext = new AudioContextClass();
+                integrationAudioContextRef.current = audioContext;
+
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+
+                // Connect audio element to context
+                const source = audioContext.createMediaElementSource(audio);
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                const updateVolume = () => {
+                    if (analyser) {
+                        analyser.getByteFrequencyData(dataArray);
+                        const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
+                        // Normalize to 0-1 range roughly
+                        const normalizedVolume = Math.min(avg / 128, 1);
+                        setIntegrationVoiceLevel(normalizedVolume);
+                        integrationAnimationFrameRef.current = requestAnimationFrame(updateVolume);
+                    }
+                };
+
+                audio.play().then(() => {
+                    updateVolume();
+                }).catch(e => {
+                    console.error("Audio play/context error:", e);
+                    // Fallback just play if context fails
+                    audio.play().catch(console.error);
+                });
+
+            } catch (e) {
+                console.error("Audio error:", e);
+            }
+        }, delay);
+
+    }, [stopIntegrationAudio, stopTTS]);
+
     // Play audio when entering specific screens - with cleanup and Animation
     useEffect(() => {
-        let animationFrameId: number;
-        let audioContext: AudioContext | null = null;
-        let analyser: AnalyserNode | null = null;
-        let source: MediaElementAudioSourceNode | null = null;
-        let timerId: NodeJS.Timeout | null = null;
-
         let trigger: AudioTriggerType | null = null;
         if (currentStep === 'integrations') trigger = 'integrations';
         else if (currentStep === 'dashboard') trigger = 'dashboard_suggestion';
 
         if (trigger) {
-            // FIX: Use 'integrations' (intro) instead of 'integrations_success' (completion)
             const audioVariation = getRandomAudio(trigger);
-
-            // Play directly
             if (audioVariation.path) {
-                // Add delay for 'integrations' (Congratulations) screen to allow load
-                const delay = trigger === 'integrations' ? 2000 : 0;
-
-                timerId = setTimeout(() => {
-                    try {
-                        // Stop any previous audio
-                        if (integrationAudioRef.current) {
-                            integrationAudioRef.current.pause();
-                            integrationAudioRef.current.currentTime = 0;
-                        }
-
-                        const audio = new Audio(audioVariation.path);
-                        integrationAudioRef.current = audio;
-
-                        // Setup Audio Context for Animation
-                        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-                        analyser = audioContext.createAnalyser();
-                        analyser.fftSize = 256;
-
-                        // Connect audio element to context
-                        source = audioContext.createMediaElementSource(audio);
-                        source.connect(analyser);
-                        analyser.connect(audioContext.destination);
-
-                        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-                        const updateVolume = () => {
-                            if (analyser) {
-                                analyser.getByteFrequencyData(dataArray);
-                                const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
-                                // Normalize to 0-1 range roughly
-                                const normalizedVolume = Math.min(avg / 128, 1);
-                                setIntegrationVoiceLevel(normalizedVolume);
-                                animationFrameId = requestAnimationFrame(updateVolume);
-                            }
-                        };
-
-                        audio.play().then(() => {
-                            updateVolume();
-                        }).catch(e => {
-                            console.error("Audio play/context error:", e);
-                            // Fallback just play if context fails (e.g. strict policies)
-                            audio.play().catch(console.error);
-                        });
-
-                    } catch (e) {
-                        console.error("Audio error:", e);
-                    }
-                }, delay);
+                // Add delay for 'integrations' (Congratulations) screen
+                const delay = trigger === 'integrations' ? 1000 : 0;
+                playIntegrationAudio(audioVariation.path, delay);
             }
         }
 
-        // Cleanup function to stop audio when leaving this step/effect
+        // Cleanup on unmount or change
         return () => {
-            if (timerId) {
-                clearTimeout(timerId);
-            }
-            if (integrationAudioRef.current) {
-                integrationAudioRef.current.pause();
-                integrationAudioRef.current.currentTime = 0;
-            }
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-            if (audioContext) {
-                audioContext.close().catch(console.error);
-            }
-            setIntegrationVoiceLevel(0); // Reset visual
+            // We don't necessarily want to stop audio when switching tabs arbitrarily, 
+            // but if we leave the step, yes.
+            // Actually, usually we do want to stop if the component unmounts or step changes.
+            stopIntegrationAudio();
         };
-    }, [currentStep]);
+    }, [currentStep, playIntegrationAudio, stopIntegrationAudio]);
 
 
     // NEW: Play success audio when WhatsApp connects (synced with UI)
@@ -278,19 +292,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 const audioVariation = getRandomAudio('integrations_success');
 
                 if (audioVariation.path) {
-                    try {
-                        // Stop previous audio (intro) if still playing
-                        if (integrationAudioRef.current) {
-                            integrationAudioRef.current.pause();
-                            integrationAudioRef.current.currentTime = 0;
-                        }
-
-                        const audio = new Audio(audioVariation.path);
-                        integrationAudioRef.current = audio;
-                        audio.play().catch(e => console.error("Success audio play error:", e));
-                    } catch (e) {
-                        console.error("Success audio error:", e);
-                    }
+                    playIntegrationAudio(audioVariation.path);
                 }
             }, 3000); // 3s delay for absolute certainty
 
@@ -340,6 +342,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         const fullAudioText = chunks.join(' ');
 
         try {
+            stopIntegrationAudio(); // Stop any background effects before speaking
             await speak(fullAudioText, 'Kore', {
                 onStart: () => {
                     if (pendingDisplayTextRef.current) {
@@ -395,6 +398,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
         resumeContext();
         playbackQueue.current = [];
         stopTTS();
+        stopIntegrationAudio(); // Ensure silence before new interaction
 
         const handleResponse = (chunk: any) => {
             if (chunk.type === 'audio') {
@@ -423,6 +427,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
                 // In handleResponse for text, we set display text.
                 // In handleResponse for audio, we play audio.
 
+                stopIntegrationAudio(); // Stop background effects before server audio
                 speak("", 'Kore', {
                     audioUrl: audioUrl,
                     onStart: () => setIsVisible(true)
@@ -528,12 +533,7 @@ export default function AgentCreator({ onOpenSidebar, isExiting, onStartChat }: 
 
                     // Manually play the audio file
                     if (audioVariation.path) {
-                        try {
-                            const audio = new Audio(audioVariation.path);
-                            audio.play().catch(e => console.error("Audio play error:", e));
-                        } catch (e) {
-                            console.error("Audio error:", e);
-                        }
+                        playIntegrationAudio(audioVariation.path);
                     }
 
                     // Update display text for big letters

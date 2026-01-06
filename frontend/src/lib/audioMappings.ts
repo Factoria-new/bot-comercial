@@ -89,9 +89,9 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático."
     ]),
     'upload_success': defineVariations('upload_success', 3, [
-        "Recebi o prompt do seu assistente e está tudo pronto. Se quiser ver como ele responde, é só clicar no botão 'Testar Assistente'.",
-        "Prompt recebido e processado com sucesso! Agora você pode verificar as respostas dele clicando em 'Testar Assistente'.",
-        "Tudo certo com o prompt do seu assistente! O ambiente de teste está liberado. Clique no botão 'Testar Assistente' para começar."
+        "Seu arquivo foi analisado com sucesso! Essa é a área de teste, onde você pode conversar com seu assistente para verificar como ele ficou.",
+        "Análise concluída! Já configurei seu assistente com base no arquivo. Aproveite este ambiente para testar as respostas dele.",
+        "Recebi e processei seu arquivo. Seu assistente está pronto para ser testado aqui nesta tela. Fique à vontade para fazer ajustes se precisar."
     ]),
     'integrations_success': defineVariations('integrations_success', 3, [
         "Integração realizada com sucesso! Seu assistente já está conectado e pronto para atender.",

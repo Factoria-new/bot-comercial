@@ -26,9 +26,9 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 
 const variations = [
     // Upload Success
-    { id: 'upload_success_v1', text: "Recebi o arquivo! Vou analisar e criar seu assistente agora mesmo." },
-    { id: 'upload_success_v2', text: "Arquivo recebido com sucesso. Aguarde um instante enquanto configuro seu assistente." },
-    { id: 'upload_success_v3', text: "Tudo certo com o upload. Já estou processando as informações do seu assistente." },
+    { id: 'upload_success_v1', text: "Seu arquivo foi analisado com sucesso! Essa é a área de teste, onde você pode conversar com seu assistente para verificar como ele ficou." },
+    { id: 'upload_success_v2', text: "Análise concluída! Já configurei seu assistente com base no arquivo. Aproveite este ambiente para testar as respostas dele." },
+    { id: 'upload_success_v3', text: "Recebi e processei seu arquivo. Seu assistente está pronto para ser testado aqui nesta tela. Fique à vontade para fazer ajustes se precisar." },
 
     // Integrations (Intro Screen)
     { id: 'integrations_v1', text: "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar." },
