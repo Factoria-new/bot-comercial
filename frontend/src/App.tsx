@@ -13,6 +13,7 @@ import Payment from "./pages/Payment";
 import CheckEmail from "./pages/CheckEmail";
 import SetupPassword from "./pages/SetupPassword";
 import ForgotPassword from "./pages/ForgotPassword";
+import InstagramCallback from "./pages/InstagramCallback";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/check-email" element={<CheckEmail />} />
               <Route path="/setup-password" element={<SetupPassword />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/instagram-callback" element={<InstagramCallback />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

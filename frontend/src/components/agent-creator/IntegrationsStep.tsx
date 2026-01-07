@@ -134,9 +134,93 @@ export const IntegrationsStep = ({
                 )}
             </div>
 
+            {/* Instagram Connection Modal */}
+            <AnimatePresence>
+                {selectedIntegration === 'instagram' && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setSelectedIntegration(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full"
+                        >
+                            <div className="flex justify-between items-start mb-6">
+                                <h2 className="text-2xl font-bold text-white">Conectar Instagram</h2>
+                                <Button variant="ghost" size="icon" onClick={() => setSelectedIntegration(null)} className="text-white/60 hover:text-white">
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+                            <p className="text-white/60 mb-8">
+                                Conecte sua conta do Instagram Business ou Creator para que seu agente possa atender seus clientes via DM.
+                            </p>
+                            <Button
+                                onClick={async () => {
+                                    try {
+                                        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+
+                                        // First check if already connected
+                                        const checkRes = await fetch(`${backendUrl}/api/instagram/status`);
+                                        const checkData = await checkRes.json();
+
+                                        if (checkData.isConnected) {
+                                            alert('✅ Instagram já está conectado! Conta: ' + (checkData.username || 'Instagram'));
+                                            setSelectedIntegration(null);
+                                            return;
+                                        }
+
+                                        const response = await fetch(`${backendUrl}/api/instagram/auth-url?userId=default-user`);
+                                        const data = await response.json();
+                                        if (data.success && data.authUrl) {
+                                            // Open OAuth popup
+                                            const popup = window.open(data.authUrl, 'instagram-oauth', 'width=600,height=700');
+
+                                            // Start polling after 5 second delay
+                                            setTimeout(() => {
+                                                const pollInterval = setInterval(async () => {
+                                                    try {
+                                                        const statusRes = await fetch(`${backendUrl}/api/instagram/status`);
+                                                        const statusData = await statusRes.json();
+
+                                                        if (statusData.isConnected) {
+                                                            clearInterval(pollInterval);
+                                                            if (popup && !popup.closed) popup.close();
+                                                            alert('✅ Instagram conectado com sucesso!');
+                                                            setSelectedIntegration(null);
+                                                        }
+                                                    } catch (e) {
+                                                        // Ignore polling errors
+                                                    }
+                                                }, 3000);
+
+                                                // Stop polling after 3 minutes
+                                                setTimeout(() => clearInterval(pollInterval), 180000);
+                                            }, 5000);
+                                        } else {
+                                            alert('Erro ao conectar: ' + (data.error || 'Tente novamente'));
+                                        }
+                                    } catch (error) {
+                                        alert('Erro de conexão. Verifique se o servidor está rodando.');
+                                    }
+                                }}
+                                className="w-full py-4 text-lg rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 hover:opacity-90 text-white"
+                            >
+                                Conectar Instagram
+                            </Button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Integration Connection Modal - Generic for non-WhatsApp */}
             <AnimatePresence>
-                {selectedIntegration && selectedIntegration !== 'whatsapp' && (
+                {selectedIntegration && selectedIntegration !== 'whatsapp' && selectedIntegration !== 'instagram' && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

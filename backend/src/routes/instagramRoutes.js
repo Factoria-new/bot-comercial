@@ -18,12 +18,19 @@ const router = express.Router();
  * GET /api/instagram/status
  * Get Instagram connection status
  */
-router.get('/status', (req, res) => {
-    const status = getConnectionStatus();
-    res.json({
-        success: true,
-        ...status
-    });
+router.get('/status', async (req, res) => {
+    try {
+        const status = await getConnectionStatus();
+        res.json({
+            success: true,
+            ...status
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 /**

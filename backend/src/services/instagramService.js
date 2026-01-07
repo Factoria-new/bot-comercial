@@ -168,9 +168,46 @@ export const getUserInfo = async (connectionId = null) => {
 };
 
 /**
- * Get connection status
+ * Get connection status - checks Composio for active connections
  */
-export const getConnectionStatus = () => {
+export const getConnectionStatus = async () => {
+    // If we already have a connection, return it
+    if (connectionState.isConnected) {
+        return {
+            isConnected: connectionState.isConnected,
+            username: connectionState.username,
+            igUserId: connectionState.igUserId,
+            errorMessage: connectionState.errorMessage
+        };
+    }
+
+    // Otherwise, check Composio for new connections
+    try {
+        const accounts = await composio.connectedAccounts.list({
+            appName: 'instagram'
+        });
+
+        if (accounts?.items?.length > 0) {
+            // Find an actual Instagram account (filter by appName to be safe)
+            const instagramAccount = accounts.items.find(acc =>
+                acc.appName?.toLowerCase() === 'instagram' && acc.status === 'ACTIVE'
+            );
+
+            if (instagramAccount) {
+                connectionState = {
+                    isConnected: true,
+                    connectionId: instagramAccount.id,
+                    igUserId: instagramAccount.metadata?.igUserId || null,
+                    username: instagramAccount.metadata?.username || 'Instagram',
+                    errorMessage: null
+                };
+                console.log('📸 Instagram: Connection found via polling -', connectionState.connectionId);
+            }
+        }
+    } catch (error) {
+        console.log('📸 Instagram: Error checking connection', error.message || '');
+    }
+
     return {
         isConnected: connectionState.isConnected,
         username: connectionState.username,
