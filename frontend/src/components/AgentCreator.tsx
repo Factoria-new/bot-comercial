@@ -162,7 +162,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 setTimeout(() => {
                     setChatMode('agent');
                     setIsSwitchingToTest(false);
-                }, 1000);
+                }, 8000);
             }
 
             // Ensure we initialize the test conversation if empty
@@ -195,14 +195,19 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     }, []);
 
     // Helper: Play integration audio with visualizer (interrupts everything else)
-    const playIntegrationAudio = useCallback(async (path: string, delay: number = 0) => {
+    const playIntegrationAudio = useCallback(async (path: string, delay: number = 0, onEnded?: () => void) => {
+        console.log(`[AudioDebug] playIntegrationAudio called with path: ${path}, delay: ${delay}`);
         // 1. Stop everything else first
         stopIntegrationAudio();
         stopTTS(); // Interrupt Lia if she's speaking
 
-        if (!path) return;
+        if (!path) {
+            console.warn("[AudioDebug] No path provided to playIntegrationAudio");
+            return;
+        }
 
         setTimeout(() => {
+            console.log("[AudioDebug] Executing delayed audio playback...");
             try {
                 // Double check stop to be safe
                 stopIntegrationAudio();
@@ -236,20 +241,34 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                     }
                 };
 
+                // NEW: Attach onEnded listener
+                audio.onended = () => {
+                    console.log("[AudioDebug] Audio finished.");
+                    if (onEnded) onEnded();
+                    // Optional: stop animation loop?
+                    // stopIntegrationAudio() handles cleanup, but maybe we want to keep context open?
+                    // No, usually good to cleanup. But if we cleanup, voiceLevel 0.
+                    stopIntegrationAudio();
+                };
+
+                console.log("[AudioDebug] Attempting to play audio...");
                 audio.play().then(() => {
+                    console.log("[AudioDebug] Audio playing successfully!");
                     updateVolume();
                 }).catch(e => {
-                    console.error("Audio play/context error:", e);
+                    console.error("[AudioDebug] Audio play/context error:", e);
                     // Fallback just play if context fails
                     audio.play().catch(console.error);
                 });
 
             } catch (e) {
-                console.error("Audio error:", e);
+                console.error("[AudioDebug] Audio critical error:", e);
             }
         }, delay);
 
     }, [stopIntegrationAudio, stopTTS]);
+
+
 
     // Play audio when entering specific screens - with cleanup and Animation
     useEffect(() => {
@@ -309,6 +328,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     // };
 
     const handleWizardComplete = () => {
+        resumeContext(); // Ensure AudioContext is active on user click
         setIsWizardOpen(false);
         // Compile final data
         const finalPayload = {
@@ -743,6 +763,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                         onStepChange={setWizardStep}
                         onComplete={handleWizardComplete}
                         voiceActive={voiceMode} // Still pass it even if voice controls hidden, in case used inside
+                        onPlayAudio={playIntegrationAudio} // NEW: Pass audio handler logic
                     />
 
                     {/* 3. UNIFIED CHAT MODE */}
@@ -834,7 +855,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
                                         {/* Finalizar Teste Button (Requirement #2) */}
                                         <Button
-                                            onClick={() => setCurrentStep('dashboard')}
+                                            onClick={() => setCurrentStep('integrations')}
                                             className="w-full bg-white/5 hover:bg-white/10 text-emerald-400 border border-emerald-500/30 rounded-xl py-3 mt-3 text-sm"
                                         >
                                             <Check className="w-4 h-4 mr-2" />
@@ -941,7 +962,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                                             {/* Re-reading request: "The first chat to be open should be the test chat... In Lia's chat the test button should be at bottom..." */}
                                             {/* So I will leave this one here too as it makes sense for the "Test" flow. */}
                                             <Button
-                                                onClick={() => setCurrentStep('dashboard')}
+                                                onClick={() => setCurrentStep('integrations')}
                                                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-2 mt-2"
                                             >
                                                 <Check className="w-4 h-4 mr-2" />

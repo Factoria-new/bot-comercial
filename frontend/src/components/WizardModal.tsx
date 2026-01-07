@@ -125,6 +125,7 @@ interface WizardModalProps {
     onStepChange: (newStep: number) => void;
     onComplete: () => void;
     voiceActive?: boolean;
+    onPlayAudio?: (path: string, delay?: number, onEnded?: () => void) => void;
 }
 
 
@@ -136,6 +137,8 @@ export function WizardModal({
     onDataUpdate,
     onStepChange,
     onComplete,
+    voiceActive,
+    onPlayAudio
 }: WizardModalProps) {
 
     const [formState, setFormState] = useState<Record<string, any>>({});
@@ -170,33 +173,26 @@ export function WizardModal({
         }
 
         try {
-            if (!audioRef.current) {
-                audioRef.current = new Audio();
-            }
-
             const variation = getRandomAudio(trigger);
             if (!variation || !variation.path) {
-                // Squelch missing audio warning for now
                 return;
             }
 
             console.log(`🎵 Playing Audio Guide: [${trigger}] -> ${variation.path}`);
 
-            audioRef.current.src = variation.path;
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(e => console.warn("Audio play blocked/error:", e));
-            }
-
             playedTriggers.current.add(trigger); // Mark as played
-
             setCurrentAudioText(variation.text);
 
-            // Clear text when audio finishes naturally
-            audioRef.current.onended = () => setCurrentAudioText(null);
+            if (onPlayAudio) {
+                onPlayAudio(variation.path, 0, () => {
+                    setCurrentAudioText(null);
+                });
+            } else {
+                console.warn("onPlayAudio prop missing, skipping audio playback.");
+                // Fallback or just clear text
+                setTimeout(() => setCurrentAudioText(null), 5000);
+            }
 
-            // Safety timeout (20s) in case audio stalls or doesn't fire ended
-            setTimeout(() => setCurrentAudioText(null), 20000);
         } catch (err) {
             console.error("Audio error:", err);
         }

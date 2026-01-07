@@ -104,7 +104,7 @@ export function useTTS() {
             try {
                 // Check if static audio URL is provided
                 if (options?.audioUrl) {
-                    console.log("💿 Playing static audio from URL:", options.audioUrl);
+                    console.log("[useTTS] 💿 Playing static audio from URL:", options.audioUrl);
 
                     // Create audio element directly from URL
                     const audio = new Audio(options.audioUrl);
@@ -150,16 +150,17 @@ export function useTTS() {
                             sourceRef.current = source;
                         }
                     } catch (e) {
-                        console.warn("Audio Graph Error:", e);
+                        console.warn("[useTTS] Audio Graph Error:", e);
                     }
 
                     let audioDuration = 0;
                     audio.onloadedmetadata = () => {
                         audioDuration = audio.duration;
-                        console.log(`Audio duration loaded: ${audioDuration}s`);
+                        console.log(`[useTTS] Audio duration loaded: ${audioDuration}s`);
                     };
 
                     audio.onended = () => {
+                        console.log("[useTTS] Static Audio playback ended.");
                         setIsSpeaking(false);
                         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
                         setVoiceLevel(0);
@@ -167,13 +168,26 @@ export function useTTS() {
                         resolve({ duration: audioDuration });
                     };
 
+                    audio.onerror = (e) => {
+                        console.error("[useTTS] Static Audio playback ERROR:", e, audio.error);
+                        reject(audio.error || new Error("Unknown Audio Error"));
+                    };
+
                     audio.onplay = () => {
+                        console.log("[useTTS] Static Audio started playing event.");
                         if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume();
                         analyze();
                         if (options?.onStart) options.onStart();
                     };
 
-                    await audio.play();
+                    console.log("[useTTS] Calling static audio.play()...");
+                    await audio.play().then(() => {
+                        console.log("[useTTS] static audio.play() promise resolved.");
+                    }).catch(e => {
+                        console.error("[useTTS] static audio.play() REJECTED:", e);
+                        reject(e);
+                    });
+
                     return; // Exit here, job done
                 }
 
