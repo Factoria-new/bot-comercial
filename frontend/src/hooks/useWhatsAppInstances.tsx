@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WhatsAppInstance } from '@/types/whatsapp';
 import { useSocket } from '@/contexts/SocketContext';
-import { ConnectionState } from '@/components/WhatsAppConnectionModal';
-import API_CONFIG from '@/config/api';
+// Define ConnectionState locally to avoid export issues
+export type ConnectionState = 'idle' | 'generating' | 'ready' | 'scanning' | 'connecting' | 'connected' | 'error';
 
 interface ModalState {
   isOpen: boolean;
@@ -32,32 +32,9 @@ export const useWhatsAppInstances = () => {
     }));
     setInstances(initialInstances);
 
-    // Verificar status das conexões no backend
-    checkInstancesStatus();
+    // DISABLED: No longer polling on startup to avoid noisy logs (ephemeral mode)
+    // checkInstancesStatus();
   }, []);
-
-  // Verificar status das conexões
-  const checkInstancesStatus = async () => {
-    try {
-      for (let i = 1; i <= 4; i++) {
-        const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SESSION_STATUS(`instance_${i}`)}`);
-        const data = await response.json();
-
-        if (data.connected && data.user) {
-          setInstances(prev => prev.map(instance =>
-            instance.id === i ? {
-              ...instance,
-              isConnected: true,
-              phoneNumber: data.user.phoneNumber,
-              lastConnected: new Date()
-            } : instance
-          ));
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao verificar status das conexões:', error);
-    }
-  };
 
   // Listener para eventos do WhatsApp
   useEffect(() => {
@@ -216,7 +193,7 @@ export const useWhatsAppInstances = () => {
     };
 
     const handleDisconnected = (event: CustomEvent) => {
-      const { sessionId, reason, willReconnect } = event.detail;
+      const { sessionId, willReconnect } = event.detail;
       const instanceId = parseInt(sessionId.split('_')[1]);
 
       // Atualizar conexão como desconectada
@@ -231,7 +208,7 @@ export const useWhatsAppInstances = () => {
     };
 
     const handleReconnectionFailed = (event: CustomEvent) => {
-      const { sessionId, error } = event.detail;
+      const { sessionId } = event.detail;
       const instanceId = parseInt(sessionId.split('_')[1]);
 
       // Atualizar conexão para indicar que a reconexão falhou

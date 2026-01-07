@@ -455,3 +455,34 @@ export const getActiveSessions = () => {
 
     return activeSessions;
 };
+
+/**
+ * Cleanup function for server shutdown
+ * Deletes all auth info to ensure ephemeral sessions
+ */
+export const cleanup = async () => {
+    console.log('🧹 Cleaning up WhatsApp service...');
+
+    try {
+        // Logout all active sessions first
+        for (const [sessionId, session] of sessions.entries()) {
+            try {
+                if (session.end) await session.end(undefined);
+            } catch (e) {
+                // Ignore errors during logout
+            }
+        }
+
+        sessions.clear();
+
+        // Delete auth_info directory
+        const authInfoPath = path.join(process.cwd(), 'auth_info');
+        if (fs.existsSync(authInfoPath)) {
+            console.log(`🗑️ Deleting auth info at ${authInfoPath}`);
+            fs.rmSync(authInfoPath, { recursive: true, force: true });
+        }
+        console.log('✅ WhatsApp service cleaned up (auth_info deleted)');
+    } catch (error) {
+        console.error('❌ Error cleaning up WhatsApp service:', error);
+    }
+};

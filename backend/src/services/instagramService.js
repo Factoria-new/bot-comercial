@@ -1,4 +1,4 @@
-import { Composio } from 'composio-core';
+import { Composio } from '@composio/core';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -26,7 +26,7 @@ export const initInstagramService = (io) => {
     console.log('📸 Instagram Service initialized');
 
     // Check existing connection on startup
-    checkExistingConnection();
+    // checkExistingConnection(); // DISABLED: Ephemeral mode
 };
 
 /**
@@ -62,6 +62,7 @@ const checkExistingConnection = async () => {
 export const getAuthUrl = async (userId) => {
     try {
         const authConfigId = process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
+        console.log('🔍 Debug: Using Instagram Auth Config ID:', authConfigId);
 
         if (!authConfigId) {
             throw new Error('Instagram Auth Config ID not configured');
@@ -188,9 +189,10 @@ export const getConnectionStatus = async () => {
         });
 
         if (accounts?.items?.length > 0) {
-            // Find an actual Instagram account (filter by appName to be safe)
+            // Find an actual Instagram account
+            // Note: SDK might return appName as undefined, so we accept that if it's active
             const instagramAccount = accounts.items.find(acc =>
-                acc.appName?.toLowerCase() === 'instagram' && acc.status === 'ACTIVE'
+                (acc.appName?.toLowerCase().includes('instagram') || !acc.appName) && acc.status === 'ACTIVE'
             );
 
             if (instagramAccount) {
@@ -437,6 +439,21 @@ export const disconnect = async () => {
     }
 };
 
+/**
+ * Cleanup function for server shutdown
+ */
+export const cleanup = async () => {
+    console.log('🧹 Cleaning up Instagram service...');
+    connectionState = {
+        isConnected: false,
+        connectionId: null,
+        igUserId: null,
+        username: null,
+        errorMessage: null
+    };
+    console.log('✅ Instagram service cleaned up');
+};
+
 export default {
     initInstagramService,
     getAuthUrl,
@@ -448,5 +465,6 @@ export default {
     sendDM,
     sendImageDM,
     markSeen,
-    disconnect
+    disconnect,
+    cleanup
 };

@@ -10,8 +10,8 @@ import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import internalToolsRoutes from './routes/internalToolsRoutes.js';
 import instagramRoutes from './routes/instagramRoutes.js';
-import { initWhatsAppService, getSessionStatus, setAgentPrompt } from './services/whatsappService.js';
-import { initInstagramService } from './services/instagramService.js';
+import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
+import { initInstagramService, cleanup as cleanupInstagram } from './services/instagramService.js';
 
 dotenv.config();
 
@@ -201,6 +201,24 @@ httpServer.listen(PORT, () => {
   console.log('');
   console.log('='.repeat(60));
 });
+
+// Handle graceful shutdown
+const gracefulShutdown = async () => {
+  console.log('\n🛑 Shutting down server...');
+
+  try {
+    await cleanupWhatsApp();
+    await cleanupInstagram();
+    console.log('✅ Services cleaned up');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error);
+    process.exit(1);
+  }
+};
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
 
 export default app;
 

@@ -18,6 +18,7 @@ interface IntegrationsStepProps {
     handleDisconnect: (instanceId: number) => void;
     closeWhatsappModal: () => void;
     qrCode?: string;
+    onInstagramConnect?: () => void;
 }
 
 export const IntegrationsStep = ({
@@ -30,7 +31,8 @@ export const IntegrationsStep = ({
     handleGenerateQR,
     handleDisconnect,
     closeWhatsappModal,
-    qrCode
+    qrCode,
+    onInstagramConnect
 }: IntegrationsStepProps) => {
 
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
@@ -171,6 +173,7 @@ export const IntegrationsStep = ({
 
                                         if (checkData.isConnected) {
                                             alert('✅ Instagram já está conectado! Conta: ' + (checkData.username || 'Instagram'));
+                                            if (onInstagramConnect) onInstagramConnect();
                                             setSelectedIntegration(null);
                                             return;
                                         }
@@ -192,6 +195,7 @@ export const IntegrationsStep = ({
                                                             clearInterval(pollInterval);
                                                             if (popup && !popup.closed) popup.close();
                                                             alert('✅ Instagram conectado com sucesso!');
+                                                            if (onInstagramConnect) onInstagramConnect();
                                                             setSelectedIntegration(null);
                                                         }
                                                     } catch (e) {

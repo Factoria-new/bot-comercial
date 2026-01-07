@@ -43,6 +43,9 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     const [testMessages, setTestMessages] = useState<AgentMessage[]>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
 
+    // Integration States
+    const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+
     // Transitions
     const [isSwitchingToTest, setIsSwitchingToTest] = useState(false);
     const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -113,7 +116,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     });
 
     const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
-    const integrations = getIntegrations(isWhatsAppConnected);
+    const integrations = getIntegrations(isWhatsAppConnected, isInstagramConnected);
     const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel, integrationVoiceLevel);
 
 
@@ -189,6 +192,23 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
             return () => clearTimeout(timer);
         }
     }, [whatsappModalState.connectionState, whatsappModalState.isOpen, playIntegrationAudio]);
+
+    // Check Instagram Status on Mount
+    useEffect(() => {
+        const checkInstagram = async () => {
+            try {
+                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+                const res = await fetch(`${backendUrl}/api/instagram/status`);
+                const data = await res.json();
+                if (data.isConnected) {
+                    setIsInstagramConnected(true);
+                }
+            } catch (e) {
+                console.error("Failed to check Instagram status:", e);
+            }
+        };
+        checkInstagram();
+    }, []);
 
 
     // --- HANDLERS ---
@@ -399,6 +419,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                                 handleDisconnect={handleDisconnect}
                                 closeWhatsappModal={closeWhatsappModal}
                                 qrCode={whatsappInstances[0]?.qrCode}
+                                onInstagramConnect={() => setIsInstagramConnected(true)}
                             />
                         )}
                     </AnimatePresence>
