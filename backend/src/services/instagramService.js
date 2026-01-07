@@ -414,7 +414,14 @@ export const markSeen = async (recipientId) => {
 export const disconnect = async () => {
     try {
         if (connectionState.connectionId) {
-            console.log('📸 Instagram: Disconnecting...');
+            console.log('📸 Instagram: Disconnecting and removing from Composio...');
+            try {
+                // Remove from Composio
+                await composio.connectedAccounts.delete(connectionState.connectionId);
+                console.log('✅ Removed connection from Composio:', connectionState.connectionId);
+            } catch (compError) {
+                console.warn('⚠️ Failed to remove from Composio (might already be deleted):', compError.message);
+            }
         }
 
         connectionState = {

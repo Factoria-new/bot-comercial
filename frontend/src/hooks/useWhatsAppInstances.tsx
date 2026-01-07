@@ -32,8 +32,31 @@ export const useWhatsAppInstances = () => {
     }));
     setInstances(initialInstances);
 
-    // DISABLED: No longer polling on startup to avoid noisy logs (ephemeral mode)
-    // checkInstancesStatus();
+    // Check status on mount to restore connection state
+    const checkInstancesStatus = async () => {
+      // Implement status check logic if not already available in context
+      // Or if using socket events, ensure we request status
+      // Since useSocket might not expose a direct check, we might rely on the socket connection event
+      // But the user says "Ao recarregar a página o 'conectado' com o WhatsApp é perdido"
+      // This implies we need to proactively ask "Am I connected?"
+      // The backend has `GET /api/whatsapp/status/:sessionId`.
+      // Let's implement that fetch here.
+      try {
+        initialInstances.forEach(async (instance) => {
+          const response = await fetch(`/api/whatsapp/status/instance_${instance.id}`);
+          const data = await response.json();
+          if (data.status === 'connected') {
+            setInstances(prev => prev.map(inst =>
+              inst.id === instance.id ? { ...inst, isConnected: true } : inst
+            ));
+          }
+        });
+      } catch (error) {
+        console.error("Failed to check WhatsApp status:", error);
+      }
+    };
+
+    checkInstancesStatus();
   }, []);
 
   // Listener para eventos do WhatsApp

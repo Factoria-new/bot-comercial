@@ -13,7 +13,6 @@ import {
     ChevronDown,
     Wifi,
     Link2,
-    Check,
     LogOut,
 } from "lucide-react";
 import { useSocket } from "@/contexts/SocketContext";
@@ -55,6 +54,7 @@ interface DashboardSidebarProps {
     onLogout?: () => void;
     forceExpandIntegrations?: boolean;
     onIntegrationClick?: (id: string) => void;
+    onIntegrationDisconnect?: (id: string) => void;
 }
 
 export default function DashboardSidebar({
@@ -68,7 +68,8 @@ export default function DashboardSidebar({
     onLogout,
     forceExpandIntegrations = false,
     onIntegrationClick,
-}: DashboardSidebarProps & { forceExpandIntegrations?: boolean; onIntegrationClick?: (id: string) => void }) {
+    onIntegrationDisconnect,
+}: DashboardSidebarProps) {
     const { isConnected } = useSocket();
     const { user } = useAuth();
     const [integrationsExpanded, setIntegrationsExpanded] = useState(false);
@@ -283,37 +284,55 @@ export default function DashboardSidebar({
                                 {integrations.map((integration) => {
                                     const Icon = BrandIcons[integration.icon];
                                     return (
-                                        <button
+                                        <div
                                             key={integration.id}
-                                            onClick={() => onIntegrationClick?.(integration.id)}
                                             className={cn(
                                                 "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
-                                                "bg-gray-50 border hover:bg-gray-100 hover:shadow-sm",
+                                                "bg-gray-50 border",
                                                 integration.connected
                                                     ? "border-emerald-200"
                                                     : "border-transparent"
                                             )}
                                         >
-                                            <div
-                                                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                                                style={{ backgroundColor: integration.color }}
+                                            <button
+                                                onClick={() => !integration.connected && onIntegrationClick?.(integration.id)}
+                                                className="flex-1 flex items-center gap-3 text-left w-full min-w-0"
                                             >
-                                                {Icon && <Icon className="w-3.5 h-3.5 text-white" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0 text-left">
-                                                <p className="text-xs font-medium text-gray-900 truncate">
-                                                    {integration.name}
-                                                </p>
-                                                <p className="text-[10px] text-gray-400">
-                                                    {integration.connected ? "Conectado" : "Conectar"}
-                                                </p>
-                                            </div>
+                                                <div
+                                                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                                                    style={{ backgroundColor: integration.color }}
+                                                >
+                                                    {Icon && <Icon className="w-3.5 h-3.5 text-white" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium text-gray-900 truncate">
+                                                        {integration.name}
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-400">
+                                                        {integration.connected ? "Conectado" : "Conectar"}
+                                                    </p>
+                                                </div>
+                                            </button>
+
                                             {integration.connected ? (
-                                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onIntegrationDisconnect?.(integration.id);
+                                                    }}
+                                                    className="p-1 hover:bg-gray-200 rounded-full transition-colors group/disconnect"
+                                                    title="Desconectar"
+                                                >
+                                                    <LogOut className="w-4 h-4 text-red-400 group-hover/disconnect:text-red-500" />
+                                                </button>
                                             ) : (
-                                                <ChevronRight className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100" />
+                                                <button
+                                                    onClick={() => onIntegrationClick?.(integration.id)}
+                                                >
+                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-300 hover:text-gray-500" />
+                                                </button>
                                             )}
-                                        </button>
+                                        </div>
                                     );
                                 })}
                             </div>

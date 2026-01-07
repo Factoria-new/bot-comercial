@@ -10,7 +10,7 @@ interface WhatsAppConnectionModalProps {
   onClose: () => void;
   modalState: {
     isOpen: boolean;
-    connectionState: 'idle' | 'generating' | 'ready' | 'connecting' | 'connected' | 'error';
+    connectionState: 'idle' | 'generating' | 'ready' | 'connecting' | 'connected' | 'error' | 'scanning';
     errorMessage?: string;
   };
   instance: {

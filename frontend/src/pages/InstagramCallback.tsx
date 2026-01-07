@@ -30,9 +30,9 @@ const InstagramCallback = () => {
                     return;
                 }
 
-                // If we have a connection ID, confirm it with the backend
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-                const response = await fetch(`${backendUrl}/api/instagram/callback`, {
+                // Use relative URL to leverage proxy if available, or absolute if needed
+                // Since this page is loaded in frontend, '/api/...' should work via Vite proxy
+                const response = await fetch('/api/instagram/callback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ connectionId })
@@ -86,7 +86,18 @@ const InstagramCallback = () => {
                         </div>
                         <h1 className="text-2xl font-bold text-white mb-2">Sucesso!</h1>
                         <p className="text-white/60">{message}</p>
-                        <p className="text-white/40 text-sm mt-4">Esta janela fechará automaticamente...</p>
+                        <p className="text-white/40 text-sm mt-4">Esta janela deve fechar automaticamente...</p>
+                        <button
+                            onClick={() => {
+                                if (window.opener) {
+                                    window.opener.postMessage({ type: 'instagram-connected', success: true }, '*');
+                                }
+                                window.close();
+                            }}
+                            className="mt-6 px-6 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg transition-colors border border-emerald-500/30"
+                        >
+                            Fechar Agora
+                        </button>
                     </>
                 )}
 
@@ -99,7 +110,7 @@ const InstagramCallback = () => {
                         <p className="text-white/60 mb-6">{message}</p>
                         <button
                             onClick={() => window.close()}
-                            className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                            className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors border border-white/10"
                         >
                             Fechar
                         </button>
