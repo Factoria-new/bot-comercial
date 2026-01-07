@@ -34,7 +34,6 @@ const Dashboard = () => {
     { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
     { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: false },
     { id: 'facebook', name: 'Facebook', color: '#1877F2', icon: 'facebook', connected: false },
-    { id: 'tiktok', name: 'TikTok', color: '#000000', icon: 'tiktok', connected: false },
   ];
 
   const { toast } = useToast();

@@ -35,7 +35,7 @@ export interface CompanyInfo {
 export interface Integration {
     id: string;
     name: string;
-    icon: 'whatsapp' | 'instagram' | 'tiktok' | 'facebook' | 'twitter';
+    icon: 'whatsapp' | 'instagram' | 'facebook';
     color: string;
     connected: boolean;
     username?: string;
@@ -61,9 +61,7 @@ export interface OnboardingState {
 export const DEFAULT_INTEGRATIONS: Integration[] = [
     { id: 'whatsapp', name: 'WhatsApp', icon: 'whatsapp', color: '#25D366', connected: false },
     { id: 'instagram', name: 'Instagram', icon: 'instagram', color: '#E4405F', connected: false },
-    { id: 'tiktok', name: 'TikTok', icon: 'tiktok', color: '#000000', connected: false },
     { id: 'facebook', name: 'Facebook', icon: 'facebook', color: '#1877F2', connected: false },
-    { id: 'twitter', name: 'Twitter / X', icon: 'twitter', color: '#1DA1F2', connected: false },
 ];
 
 export const INITIAL_ONBOARDING_STATE: OnboardingState = {
