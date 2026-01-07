@@ -17,7 +17,7 @@ export const useWhatsAppInstances = () => {
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     instanceId: null,
-    connectionState: 'generating'
+    connectionState: 'idle'
   });
   const { generateQR, logout } = useSocket();
 
@@ -162,7 +162,7 @@ export const useWhatsAppInstances = () => {
 
       // Fechar modal se já estiver conectado
       if (modalState.isOpen && modalState.instanceId === instanceId) {
-        setModalState({ isOpen: false, instanceId: null, connectionState: 'generating' });
+        setModalState({ isOpen: false, instanceId: null, connectionState: 'idle' });
       }
 
       setIsGeneratingQR(null);
@@ -327,7 +327,7 @@ export const useWhatsAppInstances = () => {
     setModalState({
       isOpen: false,
       instanceId: null,
-      connectionState: 'generating'
+      connectionState: 'idle'
     });
   }, [modalState.instanceId]);
 
