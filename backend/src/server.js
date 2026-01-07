@@ -9,7 +9,9 @@ import mercadoPagoRoutes from './routes/mercadoPagoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import internalToolsRoutes from './routes/internalToolsRoutes.js';
+import instagramRoutes from './routes/instagramRoutes.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt } from './services/whatsappService.js';
+import { initInstagramService } from './services/instagramService.js';
 
 dotenv.config();
 
@@ -50,6 +52,9 @@ export { io };
 
 // Initialize WhatsApp service with Socket.IO
 initWhatsAppService(io);
+
+// Initialize Instagram service with Socket.IO
+initInstagramService(io);
 
 // Função para verificar origem permitida
 const isOriginAllowed = (origin) => {
@@ -134,6 +139,9 @@ app.use('/api/agent', agentRoutes);
 
 // Rotas Internas (Ferramentas para AI Engine)
 app.use('/api/internal', internalToolsRoutes);
+
+// Rotas do Instagram
+app.use('/api/instagram', instagramRoutes);
 
 // Rotas de Status do WhatsApp
 app.get('/api/whatsapp/status/:sessionId', (req, res) => {
