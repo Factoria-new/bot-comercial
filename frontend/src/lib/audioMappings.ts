@@ -84,9 +84,9 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Agente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho."
     ]),
     'integrations': defineVariations('integrations', 3, [
-        "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar.",
-        "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes.",
-        "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático."
+        "Parabéns! Seu assistente está pronto! Agora é hora de conectá-lo aos seus canais de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes em diferentes plataformas. Escolha uma opção abaixo para começar.",
+        "Excelente! Seu assistente está configurado. Vamos ativá-lo nos seus canais de comunicação? Escolha abaixo onde você quer que ele atenda seus clientes.",
+        "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático nos seus canais."
     ]),
     'upload_success': defineVariations('upload_success', 3, [
         "Seu arquivo foi analisado com sucesso! Essa é a área de teste, onde você pode conversar com seu assistente para verificar como ele ficou.",
@@ -99,14 +99,14 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Tudo certo! Integração finalizada. Seu assistente já começou a trabalhar."
     ]),
     'step_operations': defineVariations('step_operations', 3, [
-        "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu WhatsApp ou agendamento.",
+        "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu contato ou agendamento.",
         "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento.",
         "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar."
     ]),
     'dashboard_suggestion': defineVariations('dashboard_suggestion', 3, [
-        "Seu painel está ativo! Dica rápida: que tal conectar também o Instagram ou Facebook para centralizar todo o seu atendimento aqui?",
-        "Tudo pronto por aqui. Se quiser ampliar o alcance do seu assistente, sugiro conectar outras redes sociais clicando em 'Gerenciar Integrações'.",
-        "Bem-vindo ao seu Dashboard. Aproveite para explorar outras integrações e deixar seu assistente ainda mais completo em todos os canais."
+        "Seu painel está ativo! Dica rápida: que tal conectar também outros canais para centralizar todo o seu atendimento aqui?",
+        "Tudo pronto por aqui. Se quiser ampliar o alcance do seu assistente, sugiro conectar outros canais clicando em 'Gerenciar Integrações'.",
+        "Bem-vindo ao seu Dashboard. Aproveite para explorar outras integrações e deixar seu assistente ainda mais completo em todos os seus canais."
     ]),
     'step_details': defineVariations('step_details', 3, [
         "Agora, me diga quais são seus principais produtos ou serviços. Preciso saber o nome e o preço ou uma breve descrição.",

@@ -35,9 +35,9 @@ const AUDIO_DATA = [
     { id: 'step_identity_v3', text: "Para começar, preciso saber o nome da empresa e como vamos chamar seu assistente." },
 
     // STEP OPERATIONS
-    { id: 'step_operations_v1', text: "Agora, como você quer que ele trabalhe? Venda direta ou apenas atendimento?" },
-    { id: 'step_operations_v2', text: "Certo! Vamos configurar como o assistente vai vender e seus horários." },
-    { id: 'step_operations_v3', text: "Entendi. Agora me diga: qual o seu modelo de venda e horário de funcionamento?" },
+    { id: 'step_operations_v1', text: "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu contato ou agendamento." },
+    { id: 'step_operations_v2', text: "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento." },
+    { id: 'step_operations_v3', text: "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar." },
 
     // STEP CATALOG
     { id: 'step_catalog_v1', text: "Quase lá! Agora vamos adicionar seus produtos ou serviços principais." },
@@ -55,9 +55,9 @@ const AUDIO_DATA = [
     { id: 'help_assistant_name_v3', text: "Como você quer que o assistente se apresente? Escolha um nome legal." },
 
     // COMPLETE
-    { id: 'wizard_complete_v1', text: "Tudo pronto! Seu assistente foi criado. Vamos testar?" },
-    { id: 'wizard_complete_v2', text: "Parabéns! Finalizamos. Você já pode conversar com seu novo assistente." },
-    { id: 'wizard_complete_v3', text: "Excelente! Configurei tudo. Clique em testar para ver como ficou." }
+    { id: 'wizard_complete_v1', text: "Pronto! Seu agente foi criado. Aqui nesta tela você pode testá-lo e, se precisar de ajustes, é só me pedir no chat ao lado." },
+    { id: 'wizard_complete_v2', text: "Terminamos! Agora você está no ambiente de teste. Converse com seu agente para ver como ele responde, e me chame se quiser mudar alguma coisa." },
+    { id: 'wizard_complete_v3', text: "Agente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho." }
 ];
 
 async function generateAudioItem(item) {
@@ -86,8 +86,8 @@ async function run() {
 
     for (const item of AUDIO_DATA) {
         await generateAudioItem(item);
-        // Delay to avoid rate limits (approx 2 RPM)
-        await new Promise(r => setTimeout(r, 35000));
+        // Delay to avoid rate limits (approx 12 RPM)
+        await new Promise(r => setTimeout(r, 5000));
     }
 
     console.log(`✨ All Done!`);

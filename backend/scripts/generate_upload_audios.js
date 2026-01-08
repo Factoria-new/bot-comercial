@@ -31,9 +31,9 @@ const variations = [
     { id: 'upload_success_v3', text: "Recebi e processei seu arquivo. Seu assistente está pronto para ser testado aqui nesta tela. Fique à vontade para fazer ajustes se precisar." },
 
     // Integrations (Intro Screen)
-    { id: 'integrations_v1', text: "Parabéns! Seu assistente está pronto! Agora é hora de conectar ele às suas plataformas de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes. Escolha uma plataforma abaixo para começar." },
-    { id: 'integrations_v2', text: "Excelente! Seu assistente está configurado. Vamos ativá-lo nas suas redes sociais? Escolha abaixo onde você quer que ele atenda seus clientes." },
-    { id: 'integrations_v3', text: "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático." },
+    { id: 'integrations_v1', text: "Parabéns! Seu assistente está pronto! Agora é hora de conectá-lo aos seus canais de atendimento. As integrações permitem que seu assistente responda automaticamente seus clientes em diferentes plataformas. Escolha uma opção abaixo para começar." },
+    { id: 'integrations_v2', text: "Excelente! Seu assistente está configurado. Vamos ativá-lo nos seus canais de comunicação? Escolha abaixo onde você quer que ele atenda seus clientes." },
+    { id: 'integrations_v3', text: "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático nos seus canais." },
 
     // Integrations Success (After connecting)
     { id: 'integrations_success_v1', text: "Integração realizada! Seu assistente já está conectado e pronto." },
@@ -41,9 +41,9 @@ const variations = [
     { id: 'integrations_success_v3', text: "Pronto! Integração concluída. Vamos ver o assistente em ação?" },
 
     // Dashboard Suggestion
-    { id: 'dashboard_suggestion_v1', text: "Seu painel está ativo! Dica rápida: que tal conectar também o Instagram ou Facebook para centralizar todo o seu atendimento aqui?" },
-    { id: 'dashboard_suggestion_v2', text: "Tudo pronto por aqui. Se quiser ampliar o alcance do seu assistente, sugiro conectar outras redes sociais clicando em 'Gerenciar Integrações'." },
-    { id: 'dashboard_suggestion_v3', text: "Bem-vindo ao seu Dashboard. Aproveite para explorar outras integrações e deixar seu assistente ainda mais completo em todos os canais." },
+    { id: 'dashboard_suggestion_v1', text: "Seu painel está ativo! Dica rápida: que tal conectar também outros canais para centralizar todo o seu atendimento aqui?" },
+    { id: 'dashboard_suggestion_v2', text: "Tudo pronto por aqui. Se quiser ampliar o alcance do seu assistente, sugiro conectar outros canais clicando em 'Gerenciar Integrações'." },
+    { id: 'dashboard_suggestion_v3', text: "Bem-vindo ao seu Dashboard. Aproveite para explorar outras integrações e deixar seu assistente ainda mais completo em todos os seus canais." },
 
     // Step Details (Configuração Geral -> Produtos/Serviços)
     { id: 'step_details_v1', text: "Agora, me diga quais são seus principais produtos ou serviços. Preciso saber o nome e o preço ou uma breve descrição." },

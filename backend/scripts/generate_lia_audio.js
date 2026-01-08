@@ -12,7 +12,7 @@ const OUTPUT_DIR = path.resolve(__dirname, '../../frontend/public/audio/lia');
 
 const PHRASES = {
     'step_operations': [
-        "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu WhatsApp ou agendamento.",
+        "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu contato ou agendamento.",
         "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento.",
         "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar."
     ],
