@@ -502,3 +502,21 @@
 .text-orange {
   color: #FF6B00;
 }
+
+/* Specific class for custom scrollbars in containers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(117, 211, 175, 0.2);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(117, 211, 175, 0.4);
+}

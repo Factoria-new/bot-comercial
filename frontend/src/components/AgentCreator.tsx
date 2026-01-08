@@ -302,7 +302,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
             </div>
 
             {/* Content Layer */}
-            <div className="relative z-10 w-full max-w-6xl mx-auto flex-1 flex flex-col" >
+            <div className="relative z-10 w-full max-w-[2000px] mx-auto flex-1 flex flex-col" >
 
                 {/* --- MAIN MAIN AREA --- */}
                 <div className="flex-1 flex flex-col items-center justify-center relative min-h-[60vh]">
