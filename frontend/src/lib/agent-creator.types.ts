@@ -17,9 +17,6 @@ export interface AgentMessage {
     content: string;
 }
 
-export interface Integration {
-    id: string;
-    name: string;
-    color: string;
-    connected: boolean;
-}
+// Re-export Integration from the canonical source to avoid duplication
+export type { Integration } from '@/types/onboarding';
+

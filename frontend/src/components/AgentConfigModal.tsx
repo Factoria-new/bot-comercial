@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,13 +13,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bot, Save, Sparkles, FileText, Volume2, Calendar, CheckCircle, ExternalLink, Loader2, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bot, Save, Sparkles, FileText, Volume2, Calendar, CheckCircle, ExternalLink, Loader2, Settings } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
-import API_CONFIG from '@/config/api';
+import { useCalendarConnection } from '@/hooks/useCalendarConnection';
 import CalendarSettingsModal from './CalendarSettingsModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { CalendarSettings } from '@/lib/scheduleTypes';
 
 export interface AgentConfig {
   aiProvider: 'gemini' | 'openai';
@@ -72,17 +72,31 @@ const AgentConfigModal = ({
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const { authenticatedFetch } = useAuthenticatedFetch();
   const { user } = useAuth();
   const isPro = user?.role === 'pro' || user?.role === 'admin';
 
-  // Estados para integração do Google Calendar
+  // Use centralized calendar connection hook
+  const sessionId = instanceId ? `instance_${instanceId}` : '';
+  const {
+    isConnected: calendarConnected,
+    isLoading: isCheckingCalendar,
+    isConnecting: isConnectingCalendar,
+    savedSettings: calendarSettings,
+    connect: connectCalendar,
+    disconnect: disconnectCalendar
+  } = useCalendarConnection({
+    sessionId,
+    userEmail,
+    autoCheck: isOpen && !!instanceId
+  });
+
   const [calendarEnabled, setCalendarEnabled] = useState(false);
-  const [calendarConnected, setCalendarConnected] = useState(false);
-  const [isCheckingCalendar, setIsCheckingCalendar] = useState(false);
-  const [isConnectingCalendar, setIsConnectingCalendar] = useState(false);
   const [showCalendarSettings, setShowCalendarSettings] = useState(false);
-  const [calendarSettings, setCalendarSettings] = useState<any>(null);
+
+  // Sync calendarEnabled with connection status
+  useEffect(() => {
+    setCalendarEnabled(calendarConnected);
+  }, [calendarConnected]);
 
   useEffect(() => {
     if (initialConfig) {
@@ -95,178 +109,18 @@ const AgentConfigModal = ({
     }
   }, [initialConfig]);
 
-  // Verificar status do Calendar quando o modal abrir
-  useEffect(() => {
-    if (isOpen && instanceId) {
-      checkCalendarStatus();
-    }
-  }, [isOpen, instanceId]);
-
-  const checkCalendarStatus = async () => {
-    if (!instanceId) return;
-
-    setIsCheckingCalendar(true);
-    try {
-      const sessionId = `instance_${instanceId}`;
-      let url = `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}`;
-      const params = new URLSearchParams();
-      if (userEmail) params.append('userId', userEmail);
-      if (params.toString()) url += `?${params.toString()}`;
-
-      const response = await authenticatedFetch(url);
-      const data = await response.json();
-
-      setCalendarConnected(data.connected || false);
-      setCalendarEnabled(data.connected || false);
-      if (data.settings) {
-        setCalendarSettings(data.settings);
-      }
-    } catch (error) {
-      console.error('Erro ao verificar status do Calendar:', error);
-    } finally {
-      setIsCheckingCalendar(false);
-    }
-  };
-
   const handleConnectCalendar = () => {
     setShowCalendarSettings(true);
   };
 
-  const handleCalendarSettingsConfirm = async (settings: any) => {
-    if (!instanceId) return;
-
-    setIsConnectingCalendar(true);
-    const sessionId = `instance_${instanceId}`;
-
-    try {
-      const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/calendar/connect`, {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId,
-          userId: userEmail,
-          settings
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.alreadyConnected) {
-        setCalendarConnected(true);
-        setIsConnectingCalendar(false);
-        setShowCalendarSettings(false);
-        setCalendarSettings(settings);
-        toast({
-          title: "Conexão Reativada",
-          description: "Sua conta do Google Calendar foi reativada com sucesso.",
-        });
-        return;
-      }
-
-      if (data.authUrl && data.connectionId) {
-        setShowCalendarSettings(false);
-        setCalendarSettings(settings);
-
-        // Abrir popup OAuth
-        const width = 600;
-        const height = 700;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
-
-        const authWindow = window.open(
-          data.authUrl,
-          'Connect Google Calendar',
-          `width=${width},height=${height},top=${top},left=${left}`
-        );
-
-        // Polling para verificar se conectou
-        const startTime = Date.now();
-        const checkInterval = setInterval(async () => {
-          if (Date.now() - startTime > 300000) {
-            clearInterval(checkInterval);
-            setIsConnectingCalendar(false);
-            return;
-          }
-
-          let isWindowClosed = false;
-          try {
-            isWindowClosed = !!authWindow?.closed;
-          } catch (e) {
-            // Ignorar erro de Cross-Origin
-          }
-
-          if (isWindowClosed) {
-            clearInterval(checkInterval);
-            await checkCalendarStatus();
-            setIsConnectingCalendar(false);
-          } else {
-            try {
-              let statusUrl = `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}?connectionId=${data.connectionId}`;
-              if (userEmail) statusUrl += `&userId=${userEmail}`;
-
-              const statusResponse = await authenticatedFetch(statusUrl);
-              const statusData = await statusResponse.json();
-
-              if (statusData.connected) {
-                clearInterval(checkInterval);
-                try { authWindow?.close(); } catch (e) { }
-                setCalendarConnected(true);
-                setIsConnectingCalendar(false);
-                toast({
-                  title: "Conectado!",
-                  description: "Google Calendar conectado com sucesso.",
-                });
-              }
-            } catch (e) {
-              // Ignorar erros de rede temporários
-            }
-          }
-        }, 2000);
-      } else {
-        throw new Error('URL de autenticação não recebida');
-      }
-    } catch (error) {
-      console.error('Erro ao conectar Calendar:', error);
-      setIsConnectingCalendar(false);
-      toast({
-        title: "Erro",
-        description: "Falha ao iniciar conexão. Verifique o backend.",
-        variant: "destructive"
-      });
-    }
+  const handleCalendarSettingsConfirm = async (settings: CalendarSettings) => {
+    setShowCalendarSettings(false);
+    await connectCalendar(settings);
   };
 
   const handleDisconnectCalendar = async () => {
-    if (!instanceId) return;
-
-    try {
-      const sessionId = `instance_${instanceId}`;
-      let disconnectUrl = `${API_CONFIG.BASE_URL}/api/calendar/disconnect/${sessionId}`;
-      if (userEmail) disconnectUrl += `?userId=${userEmail}`;
-
-      const response = await authenticatedFetch(disconnectUrl, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha ao desconectar');
-      }
-
-      setCalendarConnected(false);
-      setCalendarEnabled(false);
-      setCalendarSettings(null);
-
-      toast({
-        title: "Desconectado",
-        description: "Google Calendar desconectado com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao desconectar Calendar:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível desconectar o Google Calendar.",
-        variant: "destructive"
-      });
-    }
+    await disconnectCalendar();
+    setCalendarEnabled(false);
   };
 
   const handleSave = async () => {

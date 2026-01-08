@@ -20,101 +20,30 @@ import {
     Volume2,
     TrendingUp,
     ArrowRightCircle,
-    Zap,
-    Moon,
-    Sun,
     Trash2,
     Plus,
+    Zap,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NicheSchema, FormField } from "@/lib/nicheSchemas";
 import { getRandomAudio, AudioTriggerType } from "@/lib/audioMappings";
+import {
+    TimeSlot,
+    DaySchedule,
+    WeekDay,
+    PresetType,
+    WEEKDAYS_MAP,
+    WEEKDAYS_SHORT,
+    DEFAULT_SCHEDULE,
+    SCHEDULE_PRESETS
+} from "@/lib/scheduleTypes";
 
-// --- TYPES & CONSTANTS FOR SCHEDULE ---
-export interface TimeSlot {
-    start: string;
-    end: string;
-}
+// Re-export types for backwards compatibility
+export type { TimeSlot, DaySchedule, WeekDay };
 
-export interface DaySchedule {
-    enabled: boolean;
-    slots: TimeSlot[];
-}
-
-export type WeekDay = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
-
-const WEEKDAYS_MAP: Record<WeekDay, string> = {
-    'seg': 'Segunda-feira',
-    'ter': 'Terça-feira',
-    'qua': 'Quarta-feira',
-    'qui': 'Quinta-feira',
-    'sex': 'Sexta-feira',
-    'sab': 'Sábado',
-    'dom': 'Domingo',
-};
-
-const WEEKDAYS_SHORT: Record<WeekDay, string> = {
-    'seg': 'S',
-    'ter': 'T',
-    'qua': 'Q',
-    'qui': 'Q',
-    'sex': 'S',
-    'sab': 'S',
-    'dom': 'D',
-};
-
-const DEFAULT_SCHEDULE: Record<WeekDay, DaySchedule> = {
-    'seg': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'ter': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'qua': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'qui': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'sex': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'sab': { enabled: false, slots: [{ start: '09:00', end: '13:00' }] },
-    'dom': { enabled: false, slots: [] },
-};
-
-const PRESETS: Record<string, { label: string; icon: any; schedule: Record<WeekDay, DaySchedule> }> = {
-    'business': {
-        label: 'Horário Comercial',
-        icon: Sun,
-        schedule: {
-            'seg': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'ter': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'qua': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'qui': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'sex': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'sab': { enabled: false, slots: [] },
-            'dom': { enabled: false, slots: [] },
-        }
-    },
-    '24-7': {
-        label: '24/7 Disponível',
-        icon: Zap,
-        schedule: {
-            'seg': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'ter': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'qua': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'qui': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'sex': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'sab': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'dom': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-        }
-    },
-    'weekends': {
-        label: 'Apenas Fins de Semana',
-        icon: Moon,
-        schedule: {
-            'seg': { enabled: false, slots: [] },
-            'ter': { enabled: false, slots: [] },
-            'qua': { enabled: false, slots: [] },
-            'qui': { enabled: false, slots: [] },
-            'sex': { enabled: false, slots: [] },
-            'sab': { enabled: true, slots: [{ start: '10:00', end: '16:00' }] },
-            'dom': { enabled: true, slots: [{ start: '10:00', end: '16:00' }] },
-        }
-    }
-};
+// Alias for local usage
+const PRESETS = SCHEDULE_PRESETS;
 
 interface WizardModalProps {
     open: boolean;
@@ -288,7 +217,7 @@ export function WizardModal({
             updateSchedule(newSchedule);
         };
 
-        const applyPreset = (presetKey: string) => {
+        const applyPreset = (presetKey: PresetType) => {
             updateSchedule(JSON.parse(JSON.stringify(PRESETS[presetKey].schedule)));
         };
 
@@ -303,7 +232,7 @@ export function WizardModal({
                                 Presets Rápidos
                             </Label>
                             <div className="space-y-2">
-                                {Object.entries(PRESETS).map(([key, preset]) => {
+                                {(Object.entries(PRESETS) as [PresetType, typeof PRESETS[PresetType]][]).map(([key, preset]) => {
                                     const Icon = preset.icon;
                                     return (
                                         <button

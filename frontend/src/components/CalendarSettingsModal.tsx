@@ -5,31 +5,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, CalendarDays, Video, MapPin, Plus, Trash2, Clock, Zap, Moon, Sun } from 'lucide-react';
+import { Loader2, CalendarDays, Video, MapPin, Plus, Trash2, Clock, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+    TimeSlot,
+    DaySchedule,
+    WeekDay,
+    CalendarSettings,
+    PresetType,
+    WEEKDAYS_MAP,
+    WEEKDAYS_SHORT,
+    DEFAULT_SCHEDULE,
+    SCHEDULE_PRESETS
+} from '@/lib/scheduleTypes';
 
-// Interfaces atualizadas para suportar horários granulares
-export interface TimeSlot {
-    start: string;
-    end: string;
-}
-
-export interface DaySchedule {
-    enabled: boolean;
-    slots: TimeSlot[];
-}
-
-export type WeekDay = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
-
-export interface CalendarSettings {
-    schedule: Record<WeekDay, DaySchedule>;
-    meetingDuration: number; // minutes
-    breakDuration: number; // minutes
-    meetingType: 'online' | 'in-person';
-    meetingAddress?: string; // Endereço para reuniões presenciais
-}
+// Re-export types for backwards compatibility
+export type { TimeSlot, DaySchedule, WeekDay, CalendarSettings };
 
 interface CalendarSettingsModalProps {
     isOpen: boolean;
@@ -39,85 +32,8 @@ interface CalendarSettingsModalProps {
     initialSettings?: any; // Pode vir no formato antigo, precisaremos migrar
 }
 
-const WEEKDAYS_MAP: Record<WeekDay, string> = {
-    'seg': 'Segunda-feira',
-    'ter': 'Terça-feira',
-    'qua': 'Quarta-feira',
-    'qui': 'Quinta-feira',
-    'sex': 'Sexta-feira',
-    'sab': 'Sábado',
-    'dom': 'Domingo',
-};
-
-const WEEKDAYS_SHORT: Record<WeekDay, string> = {
-    'seg': 'S',
-    'ter': 'T',
-    'qua': 'Q',
-    'qui': 'Q',
-    'sex': 'S',
-    'sab': 'S',
-    'dom': 'D',
-};
-
-const DEFAULT_SCHEDULE: Record<WeekDay, DaySchedule> = {
-    'seg': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'ter': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'qua': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'qui': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'sex': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-    'sab': { enabled: false, slots: [{ start: '09:00', end: '13:00' }] },
-    'dom': { enabled: false, slots: [] },
-};
-
-// Quick presets
-type PresetType = 'business' | '24-7' | 'weekends' | 'custom';
-
-const PRESETS: Record<PresetType, { label: string; icon: any; schedule: Record<WeekDay, DaySchedule> }> = {
-    'business': {
-        label: 'Horário Comercial',
-        icon: Sun,
-        schedule: {
-            'seg': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'ter': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'qua': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'qui': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'sex': { enabled: true, slots: [{ start: '09:00', end: '18:00' }] },
-            'sab': { enabled: false, slots: [] },
-            'dom': { enabled: false, slots: [] },
-        }
-    },
-    '24-7': {
-        label: '24/7 Disponível',
-        icon: Zap,
-        schedule: {
-            'seg': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'ter': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'qua': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'qui': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'sex': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'sab': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-            'dom': { enabled: true, slots: [{ start: '00:00', end: '23:59' }] },
-        }
-    },
-    'weekends': {
-        label: 'Apenas Fins de Semana',
-        icon: Moon,
-        schedule: {
-            'seg': { enabled: false, slots: [] },
-            'ter': { enabled: false, slots: [] },
-            'qua': { enabled: false, slots: [] },
-            'qui': { enabled: false, slots: [] },
-            'sex': { enabled: false, slots: [] },
-            'sab': { enabled: true, slots: [{ start: '10:00', end: '16:00' }] },
-            'dom': { enabled: true, slots: [{ start: '10:00', end: '16:00' }] },
-        }
-    },
-    'custom': {
-        label: 'Personalizado',
-        icon: CalendarDays,
-        schedule: DEFAULT_SCHEDULE
-    }
-};
+// Use centralized presets
+const PRESETS = SCHEDULE_PRESETS;
 
 const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
     isOpen,
