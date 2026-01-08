@@ -17,6 +17,14 @@ const conversationHistory = new Map();
 // Store LID to phone number mappings (for Baileys v7 LID workaround)
 const lidMapping = new Map();
 
+// --- METRICS STATE ---
+let metrics = {
+    totalMessages: 0,
+    newContacts: 0,
+    activeChats: 0
+};
+// ---------------------
+
 // Initialize WhatsApp service with Socket.IO
 export const initWhatsAppService = (io) => {
     console.log('📱 WhatsApp Service initialized (Baileys v7)');
@@ -50,6 +58,19 @@ export const initWhatsAppService = (io) => {
                 console.error(`❌ Error logging out session ${sessionId}:`, error);
             }
         });
+
+        // --- METRICS EVENTS ---
+        // Send current metrics immediately upon connection/request
+        socket.on('request-metrics', () => {
+            // Calculate active chats dynamically
+            metrics.activeChats = sessions.size;
+            socket.emit('metrics-update', metrics);
+        });
+
+        // Also emit on connection just in case
+        metrics.activeChats = sessions.size;
+        socket.emit('metrics-update', metrics);
+        // ----------------------
     });
 };
 
@@ -159,6 +180,10 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                 });
 
                 io.emit('connected', { sessionId, message: 'WhatsApp conectado!' });
+
+                // Update active chats metric
+                metrics.activeChats = sessions.size;
+                io.emit('metrics-update', metrics);
             }
 
             // Connection closed - handle reconnection per Baileys docs
@@ -201,6 +226,10 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     socket.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
                     io.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
 
+                    // Update active chats metric
+                    metrics.activeChats = sessions.size;
+                    io.emit('metrics-update', metrics);
+
                     clearSessionData(sessionId);
 
                     socket.emit('logged-out', { sessionId });
@@ -218,8 +247,11 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
             if (type !== 'notify') return;
 
             for (const msg of messages) {
-                // Skip messages from self and empty messages
-                if (msg.key.fromMe || !msg.message) continue;
+                // Skip empty messages
+                if (!msg.message) {
+                    console.log('⚠️ Skipping: No message content');
+                    continue;
+                }
 
                 // Extract message text
                 const messageText = msg.message.conversation ||
@@ -227,7 +259,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     msg.message.imageMessage?.caption ||
                     '';
 
-                if (!messageText) continue;
+                console.log(`📝 Processing message: "${messageText}" from ${msg.key.remoteJid}`);
+
 
                 const remoteJid = msg.key.remoteJid;
                 const contactId = `${sessionId}:${remoteJid}`;
@@ -252,10 +285,23 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
 
                 try {
                     // Get or create conversation history for this contact
+                    let isNewContact = false;
                     if (!conversationHistory.has(contactId)) {
                         conversationHistory.set(contactId, []);
+                        isNewContact = true;
                     }
                     const history = conversationHistory.get(contactId);
+
+                    // --- UPDATE METRICS ---
+                    metrics.totalMessages++;
+                    if (isNewContact) {
+                        metrics.newContacts++;
+                    }
+                    metrics.activeChats = sessions.size; // Update active chats count
+
+                    // Emit updates to all connected clients
+                    io.emit('metrics-update', metrics);
+                    // ---------------------
 
                     // Add user message to history
                     history.push({ role: 'user', content: messageText });
@@ -414,7 +460,9 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
     console.log(`📤 Sending message to ${remoteJid} (session: ${sessionId})`);
 
     try {
-        await session.sendMessage(remoteJid, { text: message });
+        // Add identifier to message to prevent loops
+        const messageWithId = `${BOT_IDENTIFIER} ${message}`;
+        await session.sendMessage(remoteJid, { text: messageWithId });
 
         // Add to conversation history so AI remembers context
         const contactId = `${sessionId}:${remoteJid}`;

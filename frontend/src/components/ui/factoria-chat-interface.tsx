@@ -15,6 +15,7 @@ import {
 import { useOnboarding } from "@/hooks/useOnboarding";
 import ChatMessages from "@/components/chat/ChatMessages";
 import IntegrationCards from "@/components/chat/IntegrationCards";
+import MetricsTable from "@/components/dashboard/MetricsTable";
 
 interface AutoResizeProps {
     minHeight: number;
@@ -202,15 +203,13 @@ export default function FactoriaChatInterface({
                 <Menu className="w-5 h-5" />
             </Button>
 
-            {/* Left Panel - Empty for now (metrics in the future) */}
+            {/* Left Panel - Metrics Table */}
             {isOnboardingComplete && (
                 <div
-                    className="h-full flex items-center justify-center bg-gray-50"
+                    className="h-full flex items-center justify-center bg-gray-50 overflow-y-auto"
                     style={{ width: `${leftPanelWidth}%` }}
                 >
-                    <div className="text-center text-gray-400 p-8">
-                        <p className="text-sm">Métricas e análises em breve</p>
-                    </div>
+                    <MetricsTable />
                 </div>
             )}
 

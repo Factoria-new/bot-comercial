@@ -2,7 +2,7 @@ import pino from 'pino';
 
 // Logger para o Baileys (sem pretty print)
 export const baileysLogger = pino({
-  level: 'info' // Alterado para info para debug
+  level: 'error' // Alterado para error para reduzir logs
 });
 
 // Logger geral da aplicação (com pretty print)

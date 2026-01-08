@@ -2,13 +2,45 @@ import { motion } from "framer-motion";
 import { Link2, Sparkles, MessageCircle, FlaskConical, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Integration } from "@/lib/agent-creator.types";
+import { useSocket } from "@/contexts/SocketContext";
+import { useEffect, useState } from "react";
 
 interface DashboardStepProps {
     integrations: Integration[];
     onOpenIntegrations?: () => void;
 }
 
+interface Metrics {
+    totalMessages: number;
+    newContacts: number;
+    activeChats: number;
+}
+
 export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardStepProps) => {
+    const { socket } = useSocket();
+    const [metrics, setMetrics] = useState<Metrics>({
+        totalMessages: 0,
+        newContacts: 0,
+        activeChats: 0
+    });
+
+    useEffect(() => {
+        if (!socket) return;
+
+        // Listen for metrics updates
+        socket.on('metrics-update', (newMetrics: Metrics) => {
+            console.log('📊 DashboardStep received metrics:', newMetrics);
+            setMetrics(newMetrics);
+        });
+
+        // Request initial metrics
+        socket.emit('request-metrics');
+
+        return () => {
+            socket.off('metrics-update');
+        };
+    }, [socket]);
+
     return (
         <motion.div
             key="dashboard"
@@ -74,7 +106,7 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                                     <MessageCircle className="w-5 h-5 text-blue-400" />
                                 </div>
                             </div>
-                            <p className="text-2xl md:text-3xl font-bold text-white">0</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">{metrics.totalMessages}</p>
                             <p className="text-white/50 text-sm">Mensagens Recebidas</p>
                         </motion.div>
 
@@ -90,11 +122,11 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                                     <Sparkles className="w-5 h-5 text-emerald-400" />
                                 </div>
                             </div>
-                            <p className="text-2xl md:text-3xl font-bold text-white">0</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">{metrics.newContacts}</p>
                             <p className="text-white/50 text-sm">Novos Clientes</p>
                         </motion.div>
 
-                        {/* Atendimentos */}
+                        {/* Atendimentos (Using Active Chats as proxy for now) */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -106,11 +138,11 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                                     <FlaskConical className="w-5 h-5 text-purple-400" />
                                 </div>
                             </div>
-                            <p className="text-2xl md:text-3xl font-bold text-white">0</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">{metrics.activeChats}</p>
                             <p className="text-white/50 text-sm">Atendimentos</p>
                         </motion.div>
 
-                        {/* Taxa de Resposta */}
+                        {/* Taxa de Resposta (Using Placeholder Logic or calculate later) */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -122,7 +154,7 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                                     <ArrowRight className="w-5 h-5 text-orange-400" />
                                 </div>
                             </div>
-                            <p className="text-2xl md:text-3xl font-bold text-white">0%</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">100%</p>
                             <p className="text-white/50 text-sm">Taxa de Resposta</p>
                         </motion.div>
                     </div>
