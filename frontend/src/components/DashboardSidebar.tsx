@@ -50,18 +50,47 @@ export default function DashboardSidebar({
     const { isConnected } = useSocket();
     const { user } = useAuth();
     const [integrationsExpanded, setIntegrationsExpanded] = useState(false);
+    const [liveIntegrations, setLiveIntegrations] = useState<Integration[]>(integrations);
+
+    // Update liveIntegrations when prop changes
+    useEffect(() => {
+        setLiveIntegrations(integrations);
+    }, [integrations]);
+
+    // Fetch live Instagram status when sidebar opens
+    useEffect(() => {
+        if (!isOpen || !user?.email) return;
+
+        const fetchInstagramStatus = async () => {
+            try {
+                const res = await fetch(`/api/instagram/status?userId=${encodeURIComponent(user.email!)}`);
+                const data = await res.json();
+
+                // Update the Instagram integration status based on live data
+                setLiveIntegrations(prev => prev.map(integration =>
+                    integration.id === 'instagram'
+                        ? { ...integration, connected: data.isConnected || false }
+                        : integration
+                ));
+            } catch (error) {
+                console.error('Failed to fetch Instagram status:', error);
+            }
+        };
+
+        fetchInstagramStatus();
+    }, [isOpen, user?.email]);
 
     // Effect to handle forced expansion with delay
     useEffect(() => {
         if (forceExpandIntegrations && isOpen) {
             const timer = setTimeout(() => {
                 setIntegrationsExpanded(true);
-            }, 300); // 300ms delay as requested
+            }, 300);
             return () => clearTimeout(timer);
         }
     }, [forceExpandIntegrations, isOpen]);
 
-    const connectedIntegrations = integrations.filter(i => i.connected).length;
+    const connectedIntegrations = liveIntegrations.filter(i => i.connected).length;
 
     const menuItems = [
         {
@@ -258,7 +287,7 @@ export default function DashboardSidebar({
                             )}
                         >
                             <div className="pl-4 pr-2 py-2 space-y-1">
-                                {integrations.map((integration) => {
+                                {liveIntegrations.map((integration) => {
                                     const Icon = BrandIcons[integration.icon];
                                     return (
                                         <div

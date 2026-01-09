@@ -6,66 +6,31 @@ dotenv.config();
 // Initialize Composio client
 const composio = new Composio(process.env.COMPOSIO_API_KEY);
 
-// Store connection state
-let connectionState = {
-    isConnected: false,
-    connectionId: null,
-    igUserId: null,
-    username: null,
-    errorMessage: null
-};
-
 // Socket.IO instance reference
 let socketIO = null;
 
 /**
  * Initialize Instagram service with Socket.IO
+ * @param {object} io - Socket.IO instance
  */
 export const initInstagramService = (io) => {
     socketIO = io;
-    console.log('📸 Instagram Service initialized');
-
-    // Check existing connection on startup
-    // checkExistingConnection(); // DISABLED: Ephemeral mode
-};
-
-/**
- * Check if there's an existing Instagram connection
- */
-const checkExistingConnection = async () => {
-    try {
-        // List connected accounts to check for existing Instagram connection
-        const accounts = await composio.connectedAccounts.list({
-            appName: 'instagram'
-        });
-
-        if (accounts?.items?.length > 0) {
-            const account = accounts.items[0];
-            connectionState = {
-                isConnected: true,
-                connectionId: account.id,
-                igUserId: account.metadata?.igUserId || null,
-                username: account.metadata?.username || null,
-                errorMessage: null
-            };
-            console.log('📸 Instagram: Existing connection found -', connectionState.username || account.id);
-        }
-    } catch (error) {
-        console.log('📸 Instagram: No existing connection found', error.message || '');
-    }
 };
 
 /**
  * Generate OAuth URL for Instagram authentication
- * @param {string} userId - Unique identifier for the user
+ * @param {string} userId - User's email (unique identifier) - REQUIRED
+ * @returns {Promise<{success: boolean, authUrl?: string, connectionId?: string, error?: string}>}
  */
 export const getAuthUrl = async (userId) => {
+    if (!userId) {
+        return { success: false, error: 'userId (email) is required' };
+    }
+
     try {
         const authConfigId = process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
-        console.log('🔍 Debug: Using Instagram Auth Config ID:', authConfigId);
-
         if (!authConfigId) {
-            throw new Error('Instagram Auth Config ID not configured');
+            return { success: false, error: 'Instagram Auth Config ID not configured' };
         }
 
         const connectionRequest = await composio.connectedAccounts.initiate(
@@ -76,389 +41,302 @@ export const getAuthUrl = async (userId) => {
             }
         );
 
-        console.log('📸 Instagram: Auth URL generated for user', userId);
-
         return {
             success: true,
             authUrl: connectionRequest.redirectUrl,
             connectionId: connectionRequest.connectedAccountId || connectionRequest.id
         };
     } catch (error) {
-        console.error('📸 Instagram Auth Error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error('Instagram Auth Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
  * Handle OAuth callback after user authenticates
  * @param {string} connectionId - The connection ID returned from auth flow
+ * @returns {Promise<{success: boolean, connectionId?: string, username?: string, error?: string}>}
  */
 export const handleCallback = async (connectionId) => {
+    if (!connectionId) {
+        return { success: false, error: 'connectionId is required' };
+    }
+
     try {
         const connectedAccount = await composio.connectedAccounts.get(connectionId);
 
-        if (connectedAccount.status === 'ACTIVE') {
-            // Get user info
-            const userInfo = await getUserInfo(connectionId);
-
-            connectionState = {
-                isConnected: true,
-                connectionId: connectionId,
-                igUserId: userInfo?.id || null,
-                username: userInfo?.username || null,
-                errorMessage: null
-            };
-
-            // Emit connection success via Socket.IO
-            if (socketIO) {
-                socketIO.emit('instagram:connected', {
-                    success: true,
-                    username: connectionState.username
-                });
-            }
-
-            console.log('📸 Instagram: Connected successfully -', connectionState.username);
-
-            return {
-                success: true,
-                connectionId: connectionId,
-                username: connectionState.username
-            };
-        } else {
-            throw new Error('Connection not active');
+        if (connectedAccount.status !== 'ACTIVE') {
+            return { success: false, error: 'Connection not active' };
         }
-    } catch (error) {
-        console.error('📸 Instagram Callback Error:', error);
-        connectionState.errorMessage = error.message;
 
-        return {
-            success: false,
-            error: error.message
+        // Try to get user info
+        const userInfo = await getUserInfo(connectionId);
+
+        const result = {
+            success: true,
+            connectionId: connectionId,
+            username: userInfo?.username || null,
+            igUserId: userInfo?.id || null
         };
+
+        // Emit connection success via Socket.IO (for real-time updates)
+        if (socketIO) {
+            socketIO.emit('instagram:connected', {
+                success: true,
+                username: result.username
+            });
+        }
+
+        return result;
+    } catch (error) {
+        console.error('Instagram Callback Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
  * Get connected Instagram user info
+ * @param {string} connectionId - The Composio connection ID
+ * @returns {Promise<object|null>}
  */
-export const getUserInfo = async (connectionId = null) => {
-    try {
-        const connId = connectionId || connectionState.connectionId;
-        if (!connId) {
-            throw new Error('No Instagram connection');
-        }
+export const getUserInfo = async (connectionId) => {
+    if (!connectionId) {
+        return null;
+    }
 
+    try {
         const toolset = composio.getToolSet();
         const result = await toolset.executeAction(
             'INSTAGRAM_GET_USER_INFO',
             {},
-            connId
+            connectionId
         );
 
-        if (result.successful) {
-            return result.data;
-        }
-        return null;
+        return result.successful ? result.data : null;
     } catch (error) {
-        console.error('📸 Instagram Get User Info Error:', error);
+        console.error('Instagram Get User Info Error:', error.message);
         return null;
     }
 };
 
 /**
- * Get connection status - checks Composio for active connections
+ * Get connection status for a specific user
+ * @param {string} userId - User's email (unique identifier) - REQUIRED
+ * @returns {Promise<{isConnected: boolean, username?: string, igUserId?: string, connectionId?: string}>}
  */
-export const getConnectionStatus = async () => {
-    // If we already have a connection, return it
-    if (connectionState.isConnected) {
-        return {
-            isConnected: connectionState.isConnected,
-            username: connectionState.username,
-            igUserId: connectionState.igUserId,
-            errorMessage: connectionState.errorMessage
-        };
+export const getConnectionStatus = async (userId) => {
+    if (!userId) {
+        return { isConnected: false, error: 'userId (email) is required' };
     }
 
-    // Otherwise, check Composio for new connections
     try {
         const accounts = await composio.connectedAccounts.list({
-            appName: 'instagram'
+            appName: 'instagram',
+            entityId: userId
         });
 
-        if (accounts?.items?.length > 0) {
-            // Find an actual Instagram account
-            // Note: SDK might return appName as undefined, so we accept that if it's active
-            const instagramAccount = accounts.items.find(acc =>
-                (acc.appName?.toLowerCase().includes('instagram') || !acc.appName) && acc.status === 'ACTIVE'
-            );
-
-            if (instagramAccount) {
-                connectionState = {
-                    isConnected: true,
-                    connectionId: instagramAccount.id,
-                    igUserId: instagramAccount.metadata?.igUserId || null,
-                    username: instagramAccount.metadata?.username || 'Instagram',
-                    errorMessage: null
-                };
-                console.log('📸 Instagram: Connection found via polling -', connectionState.connectionId);
-            }
+        if (!accounts?.items?.length) {
+            return { isConnected: false };
         }
-    } catch (error) {
-        console.log('📸 Instagram: Error checking connection', error.message || '');
-    }
 
-    return {
-        isConnected: connectionState.isConnected,
-        username: connectionState.username,
-        igUserId: connectionState.igUserId,
-        errorMessage: connectionState.errorMessage
-    };
+        // Find active Instagram account for this user
+        const activeAccount = accounts.items.find(acc => acc.status === 'ACTIVE');
+
+        if (!activeAccount) {
+            return { isConnected: false };
+        }
+
+        return {
+            isConnected: true,
+            connectionId: activeAccount.id,
+            username: activeAccount.metadata?.username || null,
+            igUserId: activeAccount.metadata?.igUserId || null
+        };
+    } catch (error) {
+        console.error('Instagram Status Check Error:', error.message);
+        return { isConnected: false, error: error.message };
+    }
 };
 
 /**
- * List all DM conversations
+ * List all DM conversations for a user
+ * @param {string} userId - User's email
+ * @param {number} limit - Max conversations to return
  */
-export const listConversations = async (limit = 25) => {
-    try {
-        if (!connectionState.connectionId) {
-            throw new Error('Instagram not connected');
-        }
+export const listConversations = async (userId, limit = 25) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Instagram not connected' };
+    }
 
+    try {
         const toolset = composio.getToolSet();
         const result = await toolset.executeAction(
             'INSTAGRAM_LIST_ALL_CONVERSATIONS',
-            { limit: limit },
-            connectionState.connectionId
+            { limit },
+            status.connectionId
         );
 
-        if (result.successful) {
-            return {
-                success: true,
-                conversations: result.data || []
-            };
-        }
-
-        return {
-            success: false,
-            error: result.error || 'Failed to list conversations'
-        };
+        return result.successful
+            ? { success: true, conversations: result.data || [] }
+            : { success: false, error: result.error || 'Failed to list conversations' };
     } catch (error) {
-        console.error('📸 Instagram List Conversations Error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error('Instagram List Conversations Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
  * Get messages from a specific conversation
+ * @param {string} userId - User's email
+ * @param {string} conversationId - Conversation ID
+ * @param {number} limit - Max messages to return
  */
-export const getMessages = async (conversationId, limit = 25) => {
-    try {
-        if (!connectionState.connectionId) {
-            throw new Error('Instagram not connected');
-        }
+export const getMessages = async (userId, conversationId, limit = 25) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Instagram not connected' };
+    }
 
+    try {
         const toolset = composio.getToolSet();
         const result = await toolset.executeAction(
             'INSTAGRAM_LIST_ALL_MESSAGES',
-            {
-                conversation_id: conversationId,
-                limit: limit
-            },
-            connectionState.connectionId
+            { conversation_id: conversationId, limit },
+            status.connectionId
         );
 
-        if (result.successful) {
-            return {
-                success: true,
-                messages: result.data || []
-            };
-        }
-
-        return {
-            success: false,
-            error: result.error || 'Failed to get messages'
-        };
+        return result.successful
+            ? { success: true, messages: result.data || [] }
+            : { success: false, error: result.error || 'Failed to get messages' };
     } catch (error) {
-        console.error('📸 Instagram Get Messages Error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error('Instagram Get Messages Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
  * Send a text DM to a user
+ * @param {string} userId - User's email
  * @param {string} recipientId - Instagram user ID to send message to
  * @param {string} text - Message text
  */
-export const sendDM = async (recipientId, text) => {
-    try {
-        if (!connectionState.connectionId) {
-            throw new Error('Instagram not connected');
-        }
+export const sendDM = async (userId, recipientId, text) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Instagram not connected' };
+    }
 
+    try {
         const toolset = composio.getToolSet();
         const result = await toolset.executeAction(
             'INSTAGRAM_SEND_TEXT_MESSAGE',
-            {
-                recipient_id: recipientId,
-                text: text
-            },
-            connectionState.connectionId
+            { recipient_id: recipientId, text },
+            status.connectionId
         );
 
-        if (result.successful) {
-            console.log('📸 Instagram: DM sent to', recipientId);
-            return {
-                success: true,
-                messageId: result.data?.id
-            };
-        }
-
-        return {
-            success: false,
-            error: result.error || 'Failed to send DM'
-        };
+        return result.successful
+            ? { success: true, messageId: result.data?.id }
+            : { success: false, error: result.error || 'Failed to send DM' };
     } catch (error) {
-        console.error('📸 Instagram Send DM Error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error('Instagram Send DM Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
  * Send an image DM to a user
- * @param {string} recipientId - Instagram user ID to send image to
+ * @param {string} userId - User's email
+ * @param {string} recipientId - Instagram user ID
  * @param {string} imageUrl - URL of the image
  * @param {string} caption - Optional caption
  */
-export const sendImageDM = async (recipientId, imageUrl, caption = '') => {
-    try {
-        if (!connectionState.connectionId) {
-            throw new Error('Instagram not connected');
-        }
+export const sendImageDM = async (userId, recipientId, imageUrl, caption = '') => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Instagram not connected' };
+    }
 
+    try {
         const toolset = composio.getToolSet();
         const result = await toolset.executeAction(
             'INSTAGRAM_SEND_IMAGE',
-            {
-                recipient_id: recipientId,
-                image_url: imageUrl,
-                caption: caption
-            },
-            connectionState.connectionId
+            { recipient_id: recipientId, image_url: imageUrl, caption },
+            status.connectionId
         );
 
-        if (result.successful) {
-            console.log('📸 Instagram: Image DM sent to', recipientId);
-            return {
-                success: true,
-                messageId: result.data?.id
-            };
-        }
-
-        return {
-            success: false,
-            error: result.error || 'Failed to send image DM'
-        };
+        return result.successful
+            ? { success: true, messageId: result.data?.id }
+            : { success: false, error: result.error || 'Failed to send image DM' };
     } catch (error) {
-        console.error('📸 Instagram Send Image Error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error('Instagram Send Image Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
  * Mark messages as seen
+ * @param {string} userId - User's email
  * @param {string} recipientId - Instagram user ID
  */
-export const markSeen = async (recipientId) => {
-    try {
-        if (!connectionState.connectionId) {
-            throw new Error('Instagram not connected');
-        }
+export const markSeen = async (userId, recipientId) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Instagram not connected' };
+    }
 
+    try {
         const toolset = composio.getToolSet();
         const result = await toolset.executeAction(
             'INSTAGRAM_MARK_SEEN',
             { recipient_id: recipientId },
-            connectionState.connectionId
+            status.connectionId
         );
 
-        return {
-            success: result.successful
-        };
+        return { success: result.successful };
     } catch (error) {
-        console.error('📸 Instagram Mark Seen Error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error('Instagram Mark Seen Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
- * Disconnect Instagram account
+ * Disconnect Instagram account for a user
+ * @param {string} userId - User's email - REQUIRED
  */
-export const disconnect = async () => {
+export const disconnect = async (userId) => {
+    if (!userId) {
+        return { success: false, error: 'userId (email) is required' };
+    }
+
     try {
-        if (connectionState.connectionId) {
-            console.log('📸 Instagram: Disconnecting and removing from Composio...');
+        const status = await getConnectionStatus(userId);
+
+        if (status.connectionId) {
             try {
-                // Remove from Composio
-                await composio.connectedAccounts.delete(connectionState.connectionId);
-                console.log('✅ Removed connection from Composio:', connectionState.connectionId);
-            } catch (compError) {
-                console.warn('⚠️ Failed to remove from Composio (might already be deleted):', compError.message);
+                await composio.connectedAccounts.delete(status.connectionId);
+            } catch (deleteError) {
+                // Connection might already be deleted
+                console.warn('Could not delete from Composio:', deleteError.message);
             }
         }
 
-        connectionState = {
-            isConnected: false,
-            connectionId: null,
-            igUserId: null,
-            username: null,
-            errorMessage: null
-        };
-
         if (socketIO) {
-            socketIO.emit('instagram:disconnected');
+            socketIO.emit('instagram:disconnected', { userId });
         }
 
         return { success: true };
     } catch (error) {
-        console.error('📸 Instagram Disconnect Error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error('Instagram Disconnect Error:', error.message);
+        return { success: false, error: error.message };
     }
 };
 
 /**
- * Cleanup function for server shutdown
+ * Cleanup function for server shutdown (no-op in multi-tenant mode)
  */
 export const cleanup = async () => {
-    console.log('🧹 Cleaning up Instagram service...');
-    connectionState = {
-        isConnected: false,
-        connectionId: null,
-        igUserId: null,
-        username: null,
-        errorMessage: null
-    };
-    console.log('✅ Instagram service cleaned up');
+    // No global state to cleanup in multi-tenant mode
 };
 
 export default {

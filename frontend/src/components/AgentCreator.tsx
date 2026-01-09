@@ -12,6 +12,7 @@ import { WizardModal } from "./WizardModal";
 import { NicheSchema, NICHE_SCHEMAS } from "@/lib/nicheSchemas";
 import { getRandomAudio } from "@/lib/audioMappings";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
+import { useAuth } from "@/contexts/AuthContext";
 
 // New Imports
 import { AgentCreatorProps, ChatMode, CreatorStep, AgentMessage } from "@/lib/agent-creator.types";
@@ -84,6 +85,9 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         closeModal: closeWhatsappModal,
         handleDisconnect
     } = useWhatsAppInstances();
+
+    const { user } = useAuth();
+    const userEmail = user?.email || '';
 
     const {
         integrationVoiceLevel,
@@ -196,19 +200,18 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     // Check Instagram Status on Mount
     useEffect(() => {
         const checkInstagram = async () => {
+            if (!userEmail) return;
             try {
                 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-                const res = await fetch(`${backendUrl}/api/instagram/status`);
+                const res = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
                 const data = await res.json();
-                if (data.isConnected) {
-                    setIsInstagramConnected(true);
-                }
+                setIsInstagramConnected(data.isConnected || false);
             } catch (e) {
                 console.error("Failed to check Instagram status:", e);
             }
         };
         checkInstagram();
-    }, []);
+    }, [userEmail]);
 
 
     // --- HANDLERS ---
@@ -420,6 +423,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                                 closeWhatsappModal={closeWhatsappModal}
                                 qrCode={whatsappInstances[0]?.qrCode}
                                 onInstagramConnect={() => setIsInstagramConnected(true)}
+                                userEmail={userEmail}
                             />
                         )}
                     </AnimatePresence>

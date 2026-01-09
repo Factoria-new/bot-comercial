@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 import { Integration } from "@/lib/agent-creator.types";
 import { IntegrationCard } from "./IntegrationCard";
 import { WhatsAppConnectionModal } from "./WhatsAppConnectionModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface IntegrationsStepProps {
     integrations: Integration[];
@@ -19,6 +20,7 @@ interface IntegrationsStepProps {
     closeWhatsappModal: () => void;
     qrCode?: string;
     onInstagramConnect?: () => void;
+    userEmail: string; // User's email for Composio entityId
 }
 
 export const IntegrationsStep = ({
@@ -32,26 +34,39 @@ export const IntegrationsStep = ({
     handleDisconnect,
     closeWhatsappModal,
     qrCode,
-    onInstagramConnect
+    onInstagramConnect,
+    userEmail
 }: IntegrationsStepProps) => {
-
+    const { toast } = useToast();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+    const [isConnecting, setIsConnecting] = useState(false);
+    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const popupRef = useRef<Window | null>(null);
 
     const handleIntegrationClick = (id: string) => {
-        // Logic for specialized modals if needed
         setSelectedIntegration(id);
     };
 
-    const handleSave = async () => {
-        console.log('Saving integrations... Configuring agent prompts');
+    const cleanupPolling = () => {
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+        popupRef.current = null;
+    };
 
+    const handleCloseInstagramModal = () => {
+        cleanupPolling();
+        setSelectedIntegration(null);
+        setIsConnecting(false);
+    };
+
+    const handleSave = async () => {
         if (!agentPrompt) {
-            console.warn('No agent prompt configured');
             onSaveAndFinish();
             return;
         }
 
-        // Configure agent for WhatsApp (instance_1)
         if (isWhatsAppConnected) {
             try {
                 const response = await fetch('http://localhost:3003/api/whatsapp/configure-agent', {
@@ -62,15 +77,94 @@ export const IntegrationsStep = ({
                         prompt: agentPrompt
                     })
                 });
-
-                const result = await response.json();
-                console.log('WhatsApp agent configured:', result);
+                await response.json();
             } catch (error) {
                 console.error('Error configuring WhatsApp agent:', error);
             }
         }
 
         onSaveAndFinish();
+    };
+
+    const handleInstagramConnect = async () => {
+        if (!userEmail) {
+            toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+            return;
+        }
+
+        setIsConnecting(true);
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+
+            // Check if already connected
+            const checkRes = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
+            const checkData = await checkRes.json();
+
+            if (checkData.isConnected) {
+                toast({ title: "Já conectado!", description: `Instagram @${checkData.username || ''} já está conectado.` });
+                if (onInstagramConnect) onInstagramConnect();
+                handleCloseInstagramModal();
+                return;
+            }
+
+            // Get auth URL
+            const response = await fetch(`${backendUrl}/api/instagram/auth-url?userId=${encodeURIComponent(userEmail)}`);
+            const data = await response.json();
+
+            if (!data.success || !data.authUrl) {
+                toast({ title: "Erro", description: data.error || "Não foi possível iniciar a conexão.", variant: "destructive" });
+                setIsConnecting(false);
+                return;
+            }
+
+            // Open OAuth popup
+            popupRef.current = window.open(data.authUrl, 'instagram-oauth', 'width=600,height=700');
+
+            toast({ title: "Aguardando...", description: "Complete a autenticação na janela pop-up.", duration: 30000 });
+
+            // Poll for connection status - also check if popup was closed
+            pollIntervalRef.current = setInterval(async () => {
+                // Stop polling if popup was closed without connecting
+                if (popupRef.current && popupRef.current.closed) {
+                    cleanupPolling();
+                    setIsConnecting(false);
+                    // Do one final check in case connection completed right before close
+                    try {
+                        const finalCheck = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
+                        const finalData = await finalCheck.json();
+                        if (finalData.isConnected) {
+                            toast({ title: "Conectado!", description: "Instagram conectado com sucesso." });
+                            if (onInstagramConnect) onInstagramConnect();
+                        }
+                    } catch {
+                        // Ignore
+                    }
+                    handleCloseInstagramModal();
+                    return;
+                }
+
+                try {
+                    const statusRes = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
+                    const statusData = await statusRes.json();
+
+                    if (statusData.isConnected) {
+                        cleanupPolling();
+                        if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+                        toast({ title: "Conectado!", description: "Instagram conectado com sucesso." });
+                        if (onInstagramConnect) onInstagramConnect();
+                        handleCloseInstagramModal();
+                    }
+                } catch {
+                    // Ignore polling errors
+                }
+            }, 3000);
+
+            // Stop polling after 3 minutes
+            setTimeout(cleanupPolling, 180000);
+        } catch (error) {
+            toast({ title: "Erro", description: "Erro de conexão. Verifique se o servidor está rodando.", variant: "destructive" });
+            setIsConnecting(false);
+        }
     };
 
     return (
@@ -144,7 +238,7 @@ export const IntegrationsStep = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                        onClick={() => setSelectedIntegration(null)}
+                        onClick={handleCloseInstagramModal}
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
@@ -155,7 +249,7 @@ export const IntegrationsStep = ({
                         >
                             <div className="flex justify-between items-start mb-6">
                                 <h2 className="text-2xl font-bold text-white">Conectar Instagram</h2>
-                                <Button variant="ghost" size="icon" onClick={() => setSelectedIntegration(null)} className="text-white/60 hover:text-white">
+                                <Button variant="ghost" size="icon" onClick={handleCloseInstagramModal} className="text-white/60 hover:text-white">
                                     <X className="w-5 h-5" />
                                 </Button>
                             </div>
@@ -163,59 +257,15 @@ export const IntegrationsStep = ({
                                 Conecte sua conta do Instagram Business ou Creator para que seu agente possa atender seus clientes via DM.
                             </p>
                             <Button
-                                onClick={async () => {
-                                    try {
-                                        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-
-                                        // First check if already connected
-                                        const checkRes = await fetch(`${backendUrl}/api/instagram/status`);
-                                        const checkData = await checkRes.json();
-
-                                        if (checkData.isConnected) {
-                                            alert('✅ Instagram já está conectado! Conta: ' + (checkData.username || 'Instagram'));
-                                            if (onInstagramConnect) onInstagramConnect();
-                                            setSelectedIntegration(null);
-                                            return;
-                                        }
-
-                                        const response = await fetch(`${backendUrl}/api/instagram/auth-url?userId=default-user`);
-                                        const data = await response.json();
-                                        if (data.success && data.authUrl) {
-                                            // Open OAuth popup
-                                            const popup = window.open(data.authUrl, 'instagram-oauth', 'width=600,height=700');
-
-                                            // Start polling after 5 second delay
-                                            setTimeout(() => {
-                                                const pollInterval = setInterval(async () => {
-                                                    try {
-                                                        const statusRes = await fetch(`${backendUrl}/api/instagram/status`);
-                                                        const statusData = await statusRes.json();
-
-                                                        if (statusData.isConnected) {
-                                                            clearInterval(pollInterval);
-                                                            if (popup && !popup.closed) popup.close();
-                                                            alert('✅ Instagram conectado com sucesso!');
-                                                            if (onInstagramConnect) onInstagramConnect();
-                                                            setSelectedIntegration(null);
-                                                        }
-                                                    } catch (e) {
-                                                        // Ignore polling errors
-                                                    }
-                                                }, 3000);
-
-                                                // Stop polling after 3 minutes
-                                                setTimeout(() => clearInterval(pollInterval), 180000);
-                                            }, 5000);
-                                        } else {
-                                            alert('Erro ao conectar: ' + (data.error || 'Tente novamente'));
-                                        }
-                                    } catch (error) {
-                                        alert('Erro de conexão. Verifique se o servidor está rodando.');
-                                    }
-                                }}
-                                className="w-full py-4 text-lg rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 hover:opacity-90 text-white"
+                                onClick={handleInstagramConnect}
+                                disabled={isConnecting}
+                                className="w-full py-4 text-lg rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 hover:opacity-90 text-white disabled:opacity-50"
                             >
-                                Conectar Instagram
+                                {isConnecting ? (
+                                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Conectando...</>
+                                ) : (
+                                    'Conectar Instagram'
+                                )}
                             </Button>
                         </motion.div>
                     </motion.div>

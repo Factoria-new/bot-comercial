@@ -101,9 +101,14 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Logging de requisições
+// Logging de requisições (skip high-frequency polling endpoints)
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`);
+  // Skip logging for status polling endpoints to reduce noise
+  const skipPaths = ['/api/instagram/status', '/api/whatsapp/status'];
+  const shouldSkip = skipPaths.some(path => req.path.startsWith(path));
+  if (!shouldSkip) {
+    logger.info(`${req.method} ${req.path}`);
+  }
   next();
 });
 

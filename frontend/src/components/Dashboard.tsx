@@ -12,24 +12,28 @@ import { AnimatePresence } from 'framer-motion';
 import { Integration } from "@/types/onboarding";
 
 const Dashboard = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false); // NEW
-  const [showChat, setShowChat] = useState(false);
-  const [agentCreated, setAgentCreated] = useState(false); // Kept for legacy compatibility if needed
-  const [showWelcome, setShowWelcome] = useState(true); // Default to true for new flow
-  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
+  // Hooks declarations first
+  const { toast } = useToast();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const userEmail = user?.email || '';
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [agentCreated, setAgentCreated] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
 
   // Fetch Instagram status
   useEffect(() => {
     const checkInstagramStatus = async () => {
+      if (!user?.email) return;
       try {
-        const response = await fetch('/api/instagram/status');
+        const response = await fetch(`/api/instagram/status?userId=${encodeURIComponent(user.email)}`);
         const data = await response.json();
-        if (data.success && data.isConnected) {
-          setIsInstagramConnected(true);
-        }
+        setIsInstagramConnected(data.success && data.isConnected);
       } catch (error) {
         console.error('Error checking Instagram status:', error);
       }
@@ -50,7 +54,7 @@ const Dashboard = () => {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [user?.email, toast]);
 
   // WhatsApp Integration Hook
   const {
@@ -68,10 +72,6 @@ const Dashboard = () => {
     { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: isInstagramConnected },
     { id: 'facebook', name: 'Facebook', color: '#1877F2', icon: 'facebook', connected: false },
   ];
-
-  const { toast } = useToast();
-  const { logout } = useAuth();
-  const navigate = useNavigate();
 
   // Block browser back button when on dashboard
   useEffect(() => {
@@ -161,9 +161,15 @@ const Dashboard = () => {
           if (id === 'whatsapp') {
             handleDisconnect(1);
           } else if (id === 'instagram') {
+            if (!userEmail) {
+              toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+              return;
+            }
             try {
               const response = await fetch('/api/instagram/disconnect', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userEmail })
               });
               const data = await response.json();
               if (data.success) {
@@ -172,13 +178,6 @@ const Dashboard = () => {
                   title: "Desconectado",
                   description: "Conta do Instagram desconectada com sucesso.",
                 });
-                // Trigger re-fetch or state update if needed. 
-                // Since integrations checks 'connected' prop, we need to ensure local state reflects this.
-                // However, 'integrations' array is derived from `isWhatsAppConnected` and static false for others in this file currently.
-                // We need to fetch Instagram status to make it dynamic or update a local state.
-                // Ideally, we should have a `useInstagram` hook or similar, but for now sticking to existing pattern.
-                // The current code has `connected: false` hardcoded for Instagram (line 35).
-                // I should probably switch that to state if I want it to update visually.
               } else {
                 throw new Error(data.error);
               }
@@ -198,15 +197,15 @@ const Dashboard = () => {
               handleGenerateQR(1);
             }
           } else if (id === 'instagram') {
+            if (!userEmail) {
+              toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+              return;
+            }
             try {
-              // Fetch auth URL from backend
-              const response = await fetch('/api/instagram/auth-url', {
-                method: 'GET',
-              });
+              const response = await fetch(`/api/instagram/auth-url?userId=${encodeURIComponent(userEmail)}`);
               const data = await response.json();
 
               if (data.success && data.authUrl) {
-                // Redirect user to Instagram/Composio auth page in a popup window
                 const width = 600;
                 const height = 700;
                 const left = window.screen.width / 2 - width / 2;
@@ -218,45 +217,31 @@ const Dashboard = () => {
                   `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
                 );
 
-                // Toast ID or reference to update/dismiss
-                const toastId = toast({
+                toast({
                   title: "Aguardando conexão...",
                   description: "Por favor, complete a autenticação na janela pop-up.",
-                  duration: Infinity, // Keep open until done or closed
+                  duration: 30000,
                 });
 
-                // Monitor popup
-                const checkPopup = setInterval(() => {
+                // Monitor popup and check status when closed
+                const checkPopup = setInterval(async () => {
                   if (popup && popup.closed) {
                     clearInterval(checkPopup);
-
-                    // The user closed the window manually.
-                    // We should trigger a status check to see if they connected successfully before closing.
-                    const checkStatus = async () => {
-                      try {
-                        const response = await fetch('/api/instagram/status');
-                        const data = await response.json();
-                        if (data.success && data.isConnected) {
-                          setIsInstagramConnected(true);
-                          toast({
-                            title: "Conectado!",
-                            description: "Instagram conectado com sucesso.",
-                          });
-                        } else {
-                          // If still not connected, maybe inform user or just be silent (assumed cancelled)
-                          // But if the toast "Aguardando..." is still up, we should probably dismiss it or replace it?
-                          // Since we can't dismiss easily, let's show a "cancelled" or "checking" info if needed.
-                          // For now, let's just attempt connection.
-                        }
-                      } catch (error) {
-                        console.error('Error checking Instagram status:', error);
+                    try {
+                      const statusRes = await fetch(`/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
+                      const statusData = await statusRes.json();
+                      if (statusData.success && statusData.isConnected) {
+                        setIsInstagramConnected(true);
+                        toast({ title: "Conectado!", description: "Instagram conectado com sucesso." });
                       }
-                    };
-                    checkStatus();
+                    } catch (err) {
+                      console.error('Error checking Instagram status:', err);
+                    }
                   }
                 }, 1000);
 
-                // Store popup reference to clear interval if component unmounts? (Not strictly necessary for quick action)
+                // Cleanup interval after 3 minutes max
+                setTimeout(() => clearInterval(checkPopup), 180000);
               } else {
                 toast({
                   title: "Erro",
