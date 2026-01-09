@@ -1,5 +1,6 @@
 import express from 'express';
 import { sendMessageToUser } from '../services/whatsappService.js';
+import { sendDM, addToHistory } from '../services/instagramService.js';
 import logger from '../config/logger.js';
 
 const router = express.Router();
@@ -32,6 +33,35 @@ router.post('/whatsapp/send-text', async (req, res) => {
             success: false,
             error: error.message || 'Failed to send message'
         });
+    }
+});
+
+// POST /instagram/send-dm
+// Called by Python AI Engine to send Instagram DMs
+router.post('/instagram/send-dm', async (req, res) => {
+    try {
+        const { userId, recipientId, message } = req.body;
+
+        if (!userId || !recipientId || !message) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: userId, recipientId, message'
+            });
+        }
+
+        const result = await sendDM(userId, recipientId, message);
+
+        if (result.success) {
+            // Update conversation history
+            addToHistory(userId, recipientId, message);
+            logger.info(`Instagram DM sent to ${recipientId} (User: ${userId})`);
+            res.json({ success: true, messageId: result.messageId });
+        } else {
+            res.status(500).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        logger.error(`Error sending Instagram DM: ${error.message}`);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 

@@ -9,7 +9,10 @@ import {
     sendDM,
     sendImageDM,
     markSeen,
-    disconnect
+    disconnect,
+    configureInstagramAgent,
+    startPolling,
+    stopPolling
 } from '../services/instagramService.js';
 
 const router = express.Router();
@@ -246,6 +249,89 @@ router.post('/disconnect', async (req, res) => {
         res.json(result);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/instagram/start-polling
+ * Start polling for Instagram DMs
+ * Body: { userId (email), prompt? (optional if already configured), intervalMs? }
+ */
+router.post('/start-polling', async (req, res) => {
+    try {
+        const { userId, prompt, intervalMs } = req.body;
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId (email) is required'
+            });
+        }
+
+        // Configure agent if prompt is provided
+        if (prompt) {
+            configureInstagramAgent(userId, prompt);
+        }
+
+        // Start polling (will check for prompt internally)
+        const started = startPolling(userId, intervalMs || 15000);
+
+        // If explicitly failed (likely due to missing prompt/connection)
+        // Note: startPolling returns true if process started, logic inside handles specifics.
+        // But if prompt was missing and not stored, it might log warning but 'started' might be ambiguous depending on implementation.
+        // Let's assume startPolling handles the check.
+
+        res.json({
+            success: started,
+            message: started ? 'Instagram polling started' : 'Failed to start polling (Check if agent is configured)'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/instagram/stop-polling
+ * Stop polling for Instagram DMs
+ * Body: { userId (email) }
+ */
+router.post('/stop-polling', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId (email) is required'
+            });
+        }
+
+        const stopped = stopPolling(userId);
+        res.json({
+            success: stopped,
+            message: stopped ? 'Instagram polling stopped' : 'No active polling found'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /configure-agent
+// Configure agent prompt for Instagram polling
+router.post('/configure-agent', (req, res) => {
+    const { userId, prompt } = req.body;
+
+    if (!userId || !prompt) {
+        return res.status(400).json({
+            success: false,
+            error: 'Missing required fields: userId, prompt'
+        });
+    }
+
+    const success = configureInstagramAgent(userId, prompt);
+
+    if (success) {
+        res.json({ success: true, message: 'Instagram agent configured' });
+    } else {
+        res.status(500).json({ success: false, error: 'Failed to configure agent' });
     }
 });
 

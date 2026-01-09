@@ -1,5 +1,5 @@
 from crewai import Agent, LLM
-from tools import WhatsAppSendTool
+from tools import WhatsAppSendTool, InstagramSendTool
 import os
 
 def get_agents(user_id, custom_prompt=None):
@@ -57,3 +57,33 @@ def get_agents(user_id, custom_prompt=None):
     )
 
     return comercial, social_media, trafego
+
+
+def get_instagram_agent(user_id, custom_prompt=None):
+    """
+    Create a single agent for Instagram DM responses.
+    user_id is the user's email (connected account owner)
+    """
+    
+    gemini_llm = LLM(
+        model="gemini/gemini-2.0-flash-exp",
+        temperature=0.7
+    )
+
+    instagram_tool = InstagramSendTool(user_id=user_id)
+
+    backstory = 'Atendente experiente, empático e focado em ajudar o cliente.'
+    goal = 'Atender clientes do Instagram DM com excelência.'
+    
+    if custom_prompt:
+        backstory = f"Você é um agente de atendimento operando no Instagram DM. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo."
+        goal = "Atender o cliente seguindo estritamente as instruções fornecidas."
+
+    return Agent(
+        role='Atendente Instagram',
+        goal=goal,
+        backstory=backstory,
+        tools=[instagram_tool],
+        llm=gemini_llm,
+        verbose=True
+    )

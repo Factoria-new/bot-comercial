@@ -67,9 +67,12 @@ export const IntegrationsStep = ({
             return;
         }
 
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+
+        // Save for WhatsApp (Mock ID for now)
         if (isWhatsAppConnected) {
             try {
-                const response = await fetch('http://localhost:3003/api/whatsapp/configure-agent', {
+                await fetch(`${backendUrl}/api/whatsapp/configure-agent`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -77,9 +80,39 @@ export const IntegrationsStep = ({
                         prompt: agentPrompt
                     })
                 });
-                await response.json();
             } catch (error) {
                 console.error('Error configuring WhatsApp agent:', error);
+            }
+        }
+
+        // Save for Instagram (using userEmail)
+        // Check if Instagram is connected first? Or just always try to configure if we have the userEmail?
+        // It's safer to just configure it. The backend stores it by userId.
+        if (userEmail) {
+            try {
+                await fetch(`${backendUrl}/api/instagram/configure-agent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: userEmail,
+                        prompt: agentPrompt
+                    })
+                });
+
+                // Also trigger polling start (backend handles check if connected)
+                await fetch(`${backendUrl}/api/instagram/start-polling`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: userEmail,
+                        // prompt is already configured above, but we can pass it or omit it.
+                        // sending it ensures it's set if the above call failed or was skipped?
+                        // But we just configured it. Let's omit and rely on the new optional logic.
+                    })
+                });
+
+            } catch (error) {
+                console.error('Error configuring Instagram agent:', error);
             }
         }
 

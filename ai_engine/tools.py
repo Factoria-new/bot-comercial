@@ -32,3 +32,34 @@ class WhatsAppSendTool(BaseTool):
                 return f"Falha ao enviar: {response.text}"
         except Exception as e:
             return f"Erro de conexão com o WhatsApp: {str(e)}"
+
+
+class InstagramSendTool(BaseTool):
+    name: str = "Enviar Mensagem Instagram"
+    description: str = "Envia uma mensagem de texto para o cliente no Instagram DM. Use o sender_id fornecido na tarefa para responder."
+    
+    # Store user_id (email) as instance variable
+    user_id: str = Field(default="", description="Email do usuário conectado")
+
+    def _run(self, recipient_id: str, message: str):
+        """
+        Envia mensagem para o Instagram DM.
+        
+        Args:
+            recipient_id: O ID do cliente no Instagram
+            message: A mensagem a ser enviada
+        """
+        node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
+        
+        try:
+            response = requests.post(f"{node_api_url}/api/internal/instagram/send-dm", json={
+                "userId": self.user_id,
+                "recipientId": recipient_id,
+                "message": message
+            })
+            if response.status_code == 200:
+                return f"Mensagem Instagram enviada com sucesso para {recipient_id}."
+            else:
+                return f"Falha ao enviar Instagram DM: {response.text}"
+        except Exception as e:
+            return f"Erro de conexão com o Instagram: {str(e)}"
