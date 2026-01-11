@@ -1,5 +1,5 @@
 from crewai import Agent, LLM
-from tools import WhatsAppSendTool, InstagramSendTool
+from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool
 import os
 
 def get_agents(user_id, custom_prompt=None):
@@ -10,13 +10,20 @@ def get_agents(user_id, custom_prompt=None):
     
     # Configure Gemini LLM using CrewAI's native format
     # Requires GEMINI_API_KEY environment variable
+    # Configure Gemini LLM using CrewAI's native format
+    # Requires GEMINI_API_KEY environment variable
+    # Configure Gemini LLM using CrewAI's native format
+    # Requires GEMINI_API_KEY environment variable
+    # Configure Gemini LLM using CrewAI's native format
+    # Requires GEMINI_API_KEY environment variable
     gemini_llm = LLM(
-        model="gemini/gemini-2.0-flash-exp",  # Same model used in backend
+        model="gemini/gemini-3-flash-preview",  # Corrected to preview ID
         temperature=0.7
     )
 
     # WhatsApp Tool with correct session_id
     whats_tool = WhatsAppSendTool(session_id=user_id)
+    whats_audio_tool = WhatsAppSendAudioTool(session_id=user_id)
 
     # Define dynamic backstory based on user prompt
     comercial_backstory = 'Vendedor experiente, empático e focado em fechamento.'
@@ -31,7 +38,7 @@ def get_agents(user_id, custom_prompt=None):
         role='Gerente Comercial / Atendente',
         goal=comercial_goal,
         backstory=comercial_backstory,
-        tools=[whats_tool],
+        tools=[whats_tool, whats_audio_tool],
         llm=gemini_llm,
         verbose=True
     )
@@ -66,7 +73,7 @@ def get_instagram_agent(user_id, custom_prompt=None):
     """
     
     gemini_llm = LLM(
-        model="gemini/gemini-2.0-flash-exp",
+        model="gemini/gemini-3-flash-preview",
         temperature=0.7
     )
 

@@ -5,6 +5,12 @@ import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 
+// TTS and Config imports
+import { getSessionConfig, isTtsEnabled, getTtsVoice, getTtsRules } from './sessionConfigService.js';
+import { generateAudio } from './ttsService.js';
+import { convertWavToOgg } from '../utils/audioConverter.js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
 // Store active WhatsApp sessions
 const sessions = new Map();
 
@@ -23,6 +29,9 @@ let metrics = {
     newContacts: 0,
     activeChats: 0
 };
+
+// Bot message identifier to prevent message loops
+const BOT_IDENTIFIER = '[BOT]';
 // ---------------------
 
 // Initialize WhatsApp service with Socket.IO
@@ -259,10 +268,40 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     msg.message.imageMessage?.caption ||
                     '';
 
+                // Skip messages from ourselves (sent by the bot or manually from this device)
+                if (msg.key.fromMe) {
+                    console.log('⏭️ Skipping: Message sent by us (fromMe)');
+                    continue;
+                }
+
+                // Skip group messages - only respond to private chats
+                if (msg.key.remoteJid?.endsWith('@g.us')) {
+                    console.log('⏭️ Skipping: Group message');
+                    continue;
+                }
+
+                // Skip bot-generated messages (contains BOT_IDENTIFIER)
+                if (messageText.startsWith(BOT_IDENTIFIER)) {
+                    console.log('⏭️ Skipping: Bot-generated message');
+                    continue;
+                }
+
                 console.log(`📝 Processing message: "${messageText}" from ${msg.key.remoteJid}`);
 
 
                 const remoteJid = msg.key.remoteJid;
+
+                // Skip messages from our own number (connected device)
+                const session = sessions.get(sessionId);
+                if (session?.user?.id) {
+                    const ownNumber = session.user.id.split(':')[0];
+                    const senderNumber = remoteJid?.split('@')[0];
+                    if (ownNumber === senderNumber) {
+                        console.log('⏭️ Skipping: Message from our own number');
+                        continue;
+                    }
+                }
+
                 const contactId = `${sessionId}:${remoteJid}`;
 
                 // Baileys v7 LID workaround: store LID to phone mapping
@@ -413,10 +452,13 @@ export const getAgentPrompt = (sessionId) => {
 };
 
 // Send message to user (for external tools)
-export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
+// incomingMessageType: 'text' | 'audio' | 'image' etc. - used for TTS rule evaluation
+// Modified to accept options object
+export const sendMessageToUser = async (sessionId, phoneNumber, message, incomingMessageType = 'text', options = {}) => {
     const session = sessions.get(sessionId);
 
     if (!session) {
+        console.error(`❌ Session ${sessionId} not found`);
         throw new Error('Session not found or not connected');
     }
 
@@ -427,6 +469,7 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
 
     // Format JID properly
     let remoteJid = phoneNumber;
+    const originalRemoteJid = phoneNumber; // Keep track of the original ID for history lookup
 
     // If it's a LID, try to convert to phone number using our mapping
     if (remoteJid.includes('@lid')) {
@@ -460,9 +503,66 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
     console.log(`📤 Sending message to ${remoteJid} (session: ${sessionId})`);
 
     try {
-        // Add identifier to message to prevent loops
-        const messageWithId = `${BOT_IDENTIFIER} ${message}`;
-        await session.sendMessage(remoteJid, { text: messageWithId });
+        // Check if TTS is enabled for this session
+        const config = getSessionConfig(sessionId);
+        let shouldSendAudio = false;
+
+        if (options.forceAudio) {
+            shouldSendAudio = true;
+            console.log(`🎤 TTS Forced via Function Calling for ${remoteJid}`);
+        } else if (config.ttsEnabled) {
+            // Get last user message for context using ORIGINAL ID from upstream
+            // This is crucial because history is stored with the ID that received the message (likely LID)
+            const contactId = `${sessionId}:${originalRemoteJid}`;
+
+            // Fallback: try the converted ID just in case
+            const contactIdConverted = `${sessionId}:${remoteJid}`;
+
+            let history = conversationHistory.get(contactId);
+            if (!history || history.length === 0) {
+                history = conversationHistory.get(contactIdConverted) || [];
+                if (history.length > 0) console.log('Found history on converted ID');
+            } else {
+                console.log('Found history on original ID');
+            }
+
+            const lastUserMsgObj = [...history].reverse().find(msg => msg.role === 'user');
+            const lastUserMessage = lastUserMsgObj ? lastUserMsgObj.content : '';
+
+            console.log(`🎤 Smart TTS Context: Last User Message="${lastUserMessage}" (History Size: ${history.length})`);
+
+            shouldSendAudio = await evaluateTtsRules(config.ttsRules, incomingMessageType, message, lastUserMessage, config.apiKey || process.env.GEMINI_API_KEY);
+            console.log(`🎤 TTS enabled. Rules evaluation result: ${shouldSendAudio ? 'SEND AUDIO' : 'SEND TEXT'}`);
+        }
+
+        if (shouldSendAudio) {
+            // Generate and send audio
+            try {
+                const voice = options.voice || config.ttsVoice || 'Kore';
+                console.log(`🎤 Generating audio with voice: ${voice}`);
+                const ttsResult = await generateAudio(message, voice, config.apiKey || process.env.GEMINI_API_KEY);
+
+                // Convert WAV to OGG for WhatsApp
+                const wavBuffer = Buffer.from(ttsResult.audioContent, 'base64');
+                const oggBuffer = await convertWavToOgg(wavBuffer);
+
+                // Send as voice message (ptt = push-to-talk)
+                await session.sendMessage(remoteJid, {
+                    audio: oggBuffer,
+                    mimetype: 'audio/ogg; codecs=opus',
+                    ptt: true
+                });
+
+                console.log(`🎤 Audio message sent to ${remoteJid}`);
+            } catch (ttsError) {
+                console.error('⚠️ TTS failed, falling back to text:', ttsError.message);
+                // Fallback to text message
+                await session.sendMessage(remoteJid, { text: message });
+            }
+        } else {
+            // Send text message
+            await session.sendMessage(remoteJid, { text: message });
+        }
 
         // Add to conversation history so AI remembers context
         const contactId = `${sessionId}:${remoteJid}`;
@@ -484,6 +584,94 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message) => {
         throw error;
     }
 };
+
+/**
+ * Evaluate TTS rules to determine if audio should be sent
+ * Uses simple keyword matching for common patterns
+ * @param {string} rules - Natural language rules
+ * @param {string} incomingType - Type of incoming message
+ * @param {string} responseText - The response text
+ * @param {string} lastUserMessage - The last message from the user (context)
+ * @param {string} apiKey - Gemini API Key
+ * @returns {Promise<boolean>}
+ */
+async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessage = '', apiKey) {
+    if (!rules || rules.trim() === '') {
+        // No rules = always send audio when TTS is enabled
+        return true;
+    }
+
+    const rulesLower = rules.toLowerCase();
+
+    // 1. FAST PATH: Simple Regex (avoid AI latency for obvious cases)
+
+    // Always/Never patterns
+    if (rulesLower.includes('nunca enviar audio') || rulesLower.includes('nunca enviar áudio') || rulesLower.includes('desativar audio')) {
+        return false;
+    }
+    if (rulesLower.includes('sempre enviar audio') || rulesLower.includes('sempre enviar áudio')) {
+        return true;
+    }
+
+    // "Only when receiving audio" pattern (strict)
+    if ((rulesLower.includes('somente quando receber') || rulesLower.includes('apenas quando receber')) &&
+        (rulesLower.includes('audio') || rulesLower.includes('áudio'))) {
+        return incomingType === 'audio'; // Strict regex check
+    }
+
+    // 2. SMART PATH: Use Gemini 3 Flash Preview for semantic evaluation
+    // This handles complex logical rules like "only if user asks for it", "if message is short", "if it's morning", etc.
+    try {
+        console.log('🧠 Smart TTS: Evaluating complex rule with Gemini 3 Flash Preview...');
+        if (!apiKey) {
+            console.warn('⚠️ No API Key for Smart TTS, falling back to regex default (true)');
+            return true;
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+
+        const prompt = `
+        You are a decision engine for a WhatsApp Bot TTS (Text-to-Speech) system.
+        Determine if the bot should send an AUDIO message instead of text, based on the User's Rule and the Conversation Context.
+        
+        User Rule: "${rules}"
+        
+        Context:
+        - Incoming Message Type: ${incomingType} (what the user sent us)
+        - Last User Message Content: "${lastUserMessage}"
+        - Bot Response Content: "${responseText}"
+        
+        INSTRUCTIONS:
+        1. Analyze the "User Rule" logic carefully. using specific semantics.
+        2. Check if the "Context" satisfies the rule.
+        3. Logic "Only if requested" -> Check if "Last User Message Content" contains a request for audio (e.g., "manda audio", "pode falar?", "audio por favor").
+        4. Logic "Only if receiving audio" -> Check if "Incoming Message Type" is 'audio'.
+        5. Return ONLY a JSON object: { "sendAudio": boolean, "reason": "short explanation" }
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
+
+        // Extract JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const decision = JSON.parse(jsonMatch[0]);
+            console.log(`🧠 Smart TTS Decision: ${decision.sendAudio} (Reason: ${decision.reason})`);
+            return decision.sendAudio;
+        }
+
+    } catch (error) {
+        console.error('❌ Smart TTS Error:', error);
+        // Fallback to true (default enabling behavior) or false?
+        // Let's fallback to true if rule is not "never"
+        return true;
+    }
+
+    // Default fallback
+    return true;
+}
 
 // Get all active sessions
 export const getActiveSessions = () => {

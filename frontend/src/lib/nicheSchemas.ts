@@ -74,6 +74,14 @@ const STRATEGY_FIELDS: FormField[] = [
                 icon: 'ArrowRightCircle'
             }
         ]
+    },
+    {
+        name: 'ctaLink',
+        label: 'Link de Redirecionamento',
+        type: 'text',
+        placeholder: 'https://wa.me/55...',
+        helperText: 'Para onde o cliente vai ao clicar?',
+        showIf: { field: 'agentGoal', value: 'redirect', operator: 'eq' }
     }
 ];
 

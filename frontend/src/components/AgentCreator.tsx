@@ -44,8 +44,6 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     const [testMessages, setTestMessages] = useState<AgentMessage[]>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
 
-    // Integration States
-    const [isInstagramConnected, setIsInstagramConnected] = useState(false);
 
     // Transitions
     const [isSwitchingToTest, setIsSwitchingToTest] = useState(false);
@@ -120,7 +118,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     });
 
     const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
-    const integrations = getIntegrations(isWhatsAppConnected, isInstagramConnected);
+    const integrations = getIntegrations(isWhatsAppConnected);
     const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel, integrationVoiceLevel);
 
 
@@ -197,21 +195,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         }
     }, [whatsappModalState.connectionState, whatsappModalState.isOpen, playIntegrationAudio]);
 
-    // Check Instagram Status on Mount
-    useEffect(() => {
-        const checkInstagram = async () => {
-            if (!userEmail) return;
-            try {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-                const res = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
-                const data = await res.json();
-                setIsInstagramConnected(data.isConnected || false);
-            } catch (e) {
-                console.error("Failed to check Instagram status:", e);
-            }
-        };
-        checkInstagram();
-    }, [userEmail]);
+
 
 
     // --- HANDLERS ---
@@ -415,6 +399,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                                 integrations={integrations}
                                 isWhatsAppConnected={isWhatsAppConnected}
                                 agentPrompt={chatState.agentConfig?.prompt}
+                                wizardData={wizardData}
+                                nicheId={currentSchema?.id}
                                 onSaveAndFinish={() => setCurrentStep('dashboard')}
                                 onBack={() => setCurrentStep('chat')}
                                 whatsappModalState={whatsappModalState}
@@ -422,7 +408,6 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                                 handleDisconnect={handleDisconnect}
                                 closeWhatsappModal={closeWhatsappModal}
                                 qrCode={whatsappInstances[0]?.qrCode}
-                                onInstagramConnect={() => setIsInstagramConnected(true)}
                                 userEmail={userEmail}
                             />
                         )}

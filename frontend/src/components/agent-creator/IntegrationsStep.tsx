@@ -1,11 +1,10 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Integration } from "@/lib/agent-creator.types";
 import { IntegrationCard } from "./IntegrationCard";
 import { WhatsAppConnectionModal } from "./WhatsAppConnectionModal";
-import { useToast } from "@/hooks/use-toast";
 
 interface IntegrationsStepProps {
     integrations: Integration[];
@@ -19,8 +18,9 @@ interface IntegrationsStepProps {
     handleDisconnect: (instanceId: number) => void;
     closeWhatsappModal: () => void;
     qrCode?: string;
-    onInstagramConnect?: () => void;
-    userEmail: string; // User's email for Composio entityId
+    userEmail: string;
+    wizardData?: Record<string, any>;
+    nicheId?: string;
 }
 
 export const IntegrationsStep = ({
@@ -34,31 +34,13 @@ export const IntegrationsStep = ({
     handleDisconnect,
     closeWhatsappModal,
     qrCode,
-    onInstagramConnect,
-    userEmail
+    wizardData,
+    nicheId
 }: IntegrationsStepProps) => {
-    const { toast } = useToast();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
-    const [isConnecting, setIsConnecting] = useState(false);
-    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const popupRef = useRef<Window | null>(null);
 
     const handleIntegrationClick = (id: string) => {
         setSelectedIntegration(id);
-    };
-
-    const cleanupPolling = () => {
-        if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-        }
-        popupRef.current = null;
-    };
-
-    const handleCloseInstagramModal = () => {
-        cleanupPolling();
-        setSelectedIntegration(null);
-        setIsConnecting(false);
     };
 
     const handleSave = async () => {
@@ -69,7 +51,7 @@ export const IntegrationsStep = ({
 
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
 
-        // Save for WhatsApp (Mock ID for now)
+        // Configure WhatsApp agent
         if (isWhatsAppConnected) {
             try {
                 await fetch(`${backendUrl}/api/whatsapp/configure-agent`, {
@@ -77,7 +59,9 @@ export const IntegrationsStep = ({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sessionId: 'instance_1',
-                        prompt: agentPrompt
+                        prompt: agentPrompt,
+                        data: wizardData,
+                        niche: nicheId
                     })
                 });
             } catch (error) {
@@ -85,119 +69,7 @@ export const IntegrationsStep = ({
             }
         }
 
-        // Save for Instagram (using userEmail)
-        // Check if Instagram is connected first? Or just always try to configure if we have the userEmail?
-        // It's safer to just configure it. The backend stores it by userId.
-        if (userEmail) {
-            try {
-                await fetch(`${backendUrl}/api/instagram/configure-agent`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: userEmail,
-                        prompt: agentPrompt
-                    })
-                });
-
-                // Also trigger polling start (backend handles check if connected)
-                await fetch(`${backendUrl}/api/instagram/start-polling`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: userEmail,
-                        // prompt is already configured above, but we can pass it or omit it.
-                        // sending it ensures it's set if the above call failed or was skipped?
-                        // But we just configured it. Let's omit and rely on the new optional logic.
-                    })
-                });
-
-            } catch (error) {
-                console.error('Error configuring Instagram agent:', error);
-            }
-        }
-
         onSaveAndFinish();
-    };
-
-    const handleInstagramConnect = async () => {
-        if (!userEmail) {
-            toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
-            return;
-        }
-
-        setIsConnecting(true);
-        try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-
-            // Check if already connected
-            const checkRes = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
-            const checkData = await checkRes.json();
-
-            if (checkData.isConnected) {
-                toast({ title: "Já conectado!", description: `Instagram @${checkData.username || ''} já está conectado.` });
-                if (onInstagramConnect) onInstagramConnect();
-                handleCloseInstagramModal();
-                return;
-            }
-
-            // Get auth URL
-            const response = await fetch(`${backendUrl}/api/instagram/auth-url?userId=${encodeURIComponent(userEmail)}`);
-            const data = await response.json();
-
-            if (!data.success || !data.authUrl) {
-                toast({ title: "Erro", description: data.error || "Não foi possível iniciar a conexão.", variant: "destructive" });
-                setIsConnecting(false);
-                return;
-            }
-
-            // Open OAuth popup
-            popupRef.current = window.open(data.authUrl, 'instagram-oauth', 'width=600,height=700');
-
-            toast({ title: "Aguardando...", description: "Complete a autenticação na janela pop-up.", duration: 30000 });
-
-            // Poll for connection status - also check if popup was closed
-            pollIntervalRef.current = setInterval(async () => {
-                // Stop polling if popup was closed without connecting
-                if (popupRef.current && popupRef.current.closed) {
-                    cleanupPolling();
-                    setIsConnecting(false);
-                    // Do one final check in case connection completed right before close
-                    try {
-                        const finalCheck = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
-                        const finalData = await finalCheck.json();
-                        if (finalData.isConnected) {
-                            toast({ title: "Conectado!", description: "Instagram conectado com sucesso." });
-                            if (onInstagramConnect) onInstagramConnect();
-                        }
-                    } catch {
-                        // Ignore
-                    }
-                    handleCloseInstagramModal();
-                    return;
-                }
-
-                try {
-                    const statusRes = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
-                    const statusData = await statusRes.json();
-
-                    if (statusData.isConnected) {
-                        cleanupPolling();
-                        if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-                        toast({ title: "Conectado!", description: "Instagram conectado com sucesso." });
-                        if (onInstagramConnect) onInstagramConnect();
-                        handleCloseInstagramModal();
-                    }
-                } catch {
-                    // Ignore polling errors
-                }
-            }, 3000);
-
-            // Stop polling after 3 minutes
-            setTimeout(cleanupPolling, 180000);
-        } catch (error) {
-            toast({ title: "Erro", description: "Erro de conexão. Verifique se o servidor está rodando.", variant: "destructive" });
-            setIsConnecting(false);
-        }
     };
 
     return (
@@ -224,15 +96,15 @@ export const IntegrationsStep = ({
                 <p className="text-white/70 text-lg leading-relaxed">
                     Agora é hora de conectar ele às suas plataformas de atendimento.
                     As <span className="text-emerald-400 font-medium">integrações</span> permitem que seu assistente
-                    responda automaticamente seus clientes no WhatsApp, Instagram, Facebook e outras redes.
+                    responda automaticamente seus clientes no WhatsApp.
                 </p>
                 <p className="text-white/50 text-base mt-4">
-                    Escolha uma plataforma abaixo para começar:
+                    Clique no WhatsApp abaixo para começar:
                 </p>
             </motion.div>
 
             {/* Integration Cards Grid */}
-            <div className="flex flex-col md:flex-row justify-between gap-6 w-full">
+            <div className="flex flex-col md:flex-row justify-center gap-6 w-full">
                 {integrations.map((integration) => (
                     <IntegrationCard
                         key={integration.id}
@@ -263,97 +135,7 @@ export const IntegrationsStep = ({
                 )}
             </div>
 
-            {/* Instagram Connection Modal */}
-            <AnimatePresence>
-                {selectedIntegration === 'instagram' && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                        onClick={handleCloseInstagramModal}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full"
-                        >
-                            <div className="flex justify-between items-start mb-6">
-                                <h2 className="text-2xl font-bold text-white">Conectar Instagram</h2>
-                                <Button variant="ghost" size="icon" onClick={handleCloseInstagramModal} className="text-white/60 hover:text-white">
-                                    <X className="w-5 h-5" />
-                                </Button>
-                            </div>
-                            <p className="text-white/60 mb-8">
-                                Conecte sua conta do Instagram Business ou Creator para que seu agente possa atender seus clientes via DM.
-                            </p>
-                            <Button
-                                onClick={handleInstagramConnect}
-                                disabled={isConnecting}
-                                className="w-full py-4 text-lg rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 hover:opacity-90 text-white disabled:opacity-50"
-                            >
-                                {isConnecting ? (
-                                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Conectando...</>
-                                ) : (
-                                    'Conectar Instagram'
-                                )}
-                            </Button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Integration Connection Modal - Generic for non-WhatsApp */}
-            <AnimatePresence>
-                {selectedIntegration && selectedIntegration !== 'whatsapp' && selectedIntegration !== 'instagram' && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                        onClick={() => setSelectedIntegration(null)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full"
-                        >
-                            <div className="flex justify-between items-start mb-6">
-                                <h2 className="text-2xl font-bold text-white">
-                                    Conectar {integrations.find(i => i.id === selectedIntegration)?.name}
-                                </h2>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setSelectedIntegration(null)}
-                                    className="text-white/60 hover:text-white"
-                                >
-                                    <X className="w-5 h-5" />
-                                </Button>
-                            </div>
-
-                            <p className="text-white/60 mb-8">
-                                Conecte sua conta do {integrations.find(i => i.id === selectedIntegration)?.name} para que seu agente possa atender seus clientes automaticamente.
-                            </p>
-
-                            <Button
-                                className="w-full py-4 text-lg rounded-xl"
-                                style={{
-                                    backgroundColor: integrations.find(i => i.id === selectedIntegration)?.color,
-                                }}
-                            >
-                                Conectar {integrations.find(i => i.id === selectedIntegration)?.name}
-                            </Button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* WhatsApp Modal handled separately to keep logic clean */}
+            {/* WhatsApp Connection Modal */}
             <WhatsAppConnectionModal
                 isOpen={selectedIntegration === 'whatsapp'}
                 connectionState={whatsappModalState.connectionState}

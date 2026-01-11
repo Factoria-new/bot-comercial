@@ -9,9 +9,8 @@ import mercadoPagoRoutes from './routes/mercadoPagoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import internalToolsRoutes from './routes/internalToolsRoutes.js';
-import instagramRoutes from './routes/instagramRoutes.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
-import { initInstagramService, cleanup as cleanupInstagram } from './services/instagramService.js';
+import { PROMPTS } from './prompts/agentPrompts.js';
 
 dotenv.config();
 
@@ -53,8 +52,8 @@ export { io };
 // Initialize WhatsApp service with Socket.IO
 initWhatsAppService(io);
 
-// Initialize Instagram service with Socket.IO
-initInstagramService(io);
+// Import session config service (separated to avoid circular dependencies)
+import { getSessionConfig, setSessionConfig } from './services/sessionConfigService.js';
 
 // Função para verificar origem permitida
 const isOriginAllowed = (origin) => {
@@ -145,9 +144,6 @@ app.use('/api/agent', agentRoutes);
 // Rotas Internas (Ferramentas para AI Engine)
 app.use('/api/internal', internalToolsRoutes);
 
-// Rotas do Instagram
-app.use('/api/instagram', instagramRoutes);
-
 // Rotas de Status do WhatsApp
 app.get('/api/whatsapp/status/:sessionId', (req, res) => {
   const { sessionId } = req.params;
@@ -155,22 +151,81 @@ app.get('/api/whatsapp/status/:sessionId', (req, res) => {
   res.json(status);
 });
 
+// --- Session Configuration Endpoints ---
+// GET - Retrieve session configuration
+app.get('/api/whatsapp/config/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const config = getSessionConfig(sessionId);
+  res.json({ success: true, config });
+});
+
+// POST - Save session configuration
+app.post('/api/whatsapp/config/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const config = req.body;
+
+  try {
+    setSessionConfig(sessionId, config);
+
+    // Also update the agent prompt if systemPrompt is provided
+    if (config.systemPrompt) {
+      setAgentPrompt(sessionId, config.systemPrompt);
+    }
+
+    res.json({
+      success: true,
+      message: 'Configuração salva com sucesso',
+      config: getSessionConfig(sessionId)
+    });
+  } catch (error) {
+    logger.error('Error saving session config:', error);
+    res.status(500).json({ success: false, error: 'Erro ao salvar configuração' });
+  }
+});
+
 // Rota para configurar o prompt do agente para uma sessão WhatsApp
 app.post('/api/whatsapp/configure-agent', (req, res) => {
-  const { sessionId, prompt } = req.body;
+  const { sessionId, prompt, data, niche } = req.body;
 
-  if (!sessionId || !prompt) {
+  if (!sessionId) {
     return res.status(400).json({
       success: false,
-      error: 'sessionId e prompt são obrigatórios'
+      error: 'sessionId é obrigatório'
     });
   }
 
-  const success = setAgentPrompt(sessionId, prompt);
+  // Determine final prompt: either raw string or generated from data
+  let finalPrompt = prompt;
+
+  if (!finalPrompt && data && niche) {
+    // Generate prompt from data using backend template
+    // Dynamically import or use the imported PROMPTS
+    // We need to import PROMPTS at top level or here if dynamic.
+    // Since we can't easily change top imports in this block, we assume PROMPTS is imported or we use a helper.
+    // WAIT: I need to add the import to the top of the file first!
+    // I will do this in a multi-edit. But for now, let's assume I fix the import in the next step or use require if possible (but this is ESM).
+    // Let's assume I will add `import { PROMPTS } from './prompts/agentPrompts.js';` at the top.
+
+    const generator = PROMPTS[niche] || PROMPTS['general'] || PROMPTS['services']; // Fallback
+    if (generator) {
+      finalPrompt = generator(data);
+      logger.info(`📝 Prompt gerado dinamicamente para nicho: ${niche}`);
+    }
+  }
+
+  if (!finalPrompt) {
+    return res.status(400).json({
+      success: false,
+      error: 'É necessário fornecer "prompt" (string) OU "data" (objeto) e "niche" (string) para gerar o prompt.'
+    });
+  }
+
+  const success = setAgentPrompt(sessionId, finalPrompt);
 
   res.json({
     success,
-    message: success ? 'Prompt configurado com sucesso' : 'Erro ao configurar prompt'
+    message: success ? 'Prompt configurado com sucesso' : 'Erro ao configurar prompt',
+    generatedPromptPreview: finalPrompt.substring(0, 100) + '...'
   });
 });
 
@@ -213,7 +268,6 @@ const gracefulShutdown = async () => {
 
   try {
     await cleanupWhatsApp();
-    await cleanupInstagram();
     console.log('✅ Services cleaned up');
     process.exit(0);
   } catch (error) {

@@ -11,7 +11,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check, X, LogOut } from "lucide-react";
+import { Loader2, Check, X, LogOut, QrCode as QRCodeIcon } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/brand-icons";
 
 // Connection state types
@@ -54,13 +54,6 @@ export type WhatsAppConnectionModalProps = WhatsAppConnectionModalDirectProps | 
 function isWrappedProps(props: WhatsAppConnectionModalProps): props is WhatsAppConnectionModalWrappedProps {
   return 'modalState' in props;
 }
-
-// QR Code icon component
-const QRCodeIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M3 3h7v7H3V3zm1 1v5h5V4H4zm-1 9h7v7H3v-7zm1 1v5h5v-5H4zm9-10h7v7h-7V3zm1 1v5h5V4h-5zm-1 9h2v2h-2v-2zm2 2h2v2h-2v-2zm2 2h2v2h-2v-2zm-4 0h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2z" />
-  </svg>
-);
 
 export function WhatsAppConnectionModal(props: WhatsAppConnectionModalProps) {
   // Normalize props to a common format

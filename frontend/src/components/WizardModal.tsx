@@ -174,6 +174,7 @@ export function WizardModal({
     // --- SCHEDULE PICKER SUB-COMPONENT ---
     const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) => void }) => {
         const schedule = (value as Record<WeekDay, DaySchedule>) || JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+        const [selectedPreset, setSelectedPreset] = useState<PresetType | null>(null);
 
         const updateSchedule = (newSchedule: Record<WeekDay, DaySchedule>) => {
             onChange(newSchedule);
@@ -218,6 +219,7 @@ export function WizardModal({
         };
 
         const applyPreset = (presetKey: PresetType) => {
+            setSelectedPreset(presetKey);
             updateSchedule(JSON.parse(JSON.stringify(PRESETS[presetKey].schedule)));
         };
 
@@ -238,12 +240,28 @@ export function WizardModal({
                                         <button
                                             key={key}
                                             onClick={() => applyPreset(key)}
-                                            className="w-full p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all text-left flex items-center gap-3 group"
+                                            className={cn(
+                                                "w-full p-3 rounded-xl border transition-all text-left flex items-center gap-3 group",
+                                                selectedPreset === key
+                                                    ? "bg-purple-600/20 border-purple-500 ring-1 ring-purple-500/50"
+                                                    : "border-white/10 bg-black/20 hover:bg-white/5"
+                                            )}
                                         >
-                                            <div className="p-2 rounded-lg bg-white/5 group-hover:bg-purple-500/20 transition-colors">
-                                                <Icon className="h-4 w-4 text-purple-400" />
+                                            <div className={cn(
+                                                "p-2 rounded-lg transition-colors",
+                                                selectedPreset === key
+                                                    ? "bg-purple-500/30"
+                                                    : "bg-white/5 group-hover:bg-purple-500/20"
+                                            )}>
+                                                <Icon className={cn(
+                                                    "h-4 w-4",
+                                                    selectedPreset === key ? "text-purple-300" : "text-purple-400"
+                                                )} />
                                             </div>
-                                            <span className="text-sm font-medium text-white/80 group-hover:text-white">
+                                            <span className={cn(
+                                                "text-sm font-medium",
+                                                selectedPreset === key ? "text-white" : "text-white/80 group-hover:text-white"
+                                            )}>
                                                 {preset.label}
                                             </span>
                                         </button>

@@ -14,11 +14,25 @@ import {
     Wifi,
     Link2,
     LogOut,
+    Volume2,
+    Mic,
 } from "lucide-react";
 import { useSocket } from "@/contexts/SocketContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Integration } from "@/types/onboarding";
 import { BrandIcons } from "@/components/ui/brand-icons";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+
+const VOICE_OPTIONS = [
+    { value: 'Kore', label: 'Kore', gender: 'Feminino' },
+    { value: 'Aoede', label: 'Aoede', gender: 'Feminino' },
+    { value: 'Zephyr', label: 'Zephyr', gender: 'Feminino' },
+    { value: 'Charon', label: 'Charon', gender: 'Masculino' },
+    { value: 'Fenrir', label: 'Fenrir', gender: 'Masculino' },
+    { value: 'Puck', label: 'Puck', gender: 'Não-binário' },
+    { value: 'Orus', label: 'Orus', gender: 'Masculino' },
+];
 
 interface DashboardSidebarProps {
     isOpen: boolean;
@@ -32,6 +46,7 @@ interface DashboardSidebarProps {
     forceExpandIntegrations?: boolean;
     onIntegrationClick?: (id: string) => void;
     onIntegrationDisconnect?: (id: string) => void;
+    sessionId?: string;
 }
 
 export default function DashboardSidebar({
@@ -46,39 +61,88 @@ export default function DashboardSidebar({
     forceExpandIntegrations = false,
     onIntegrationClick,
     onIntegrationDisconnect,
+    sessionId = '1'
 }: DashboardSidebarProps) {
     const { isConnected } = useSocket();
     const { user } = useAuth();
-    const [integrationsExpanded, setIntegrationsExpanded] = useState(false);
-    const [liveIntegrations, setLiveIntegrations] = useState<Integration[]>(integrations);
+    const { toast } = useToast();
 
-    // Update liveIntegrations when prop changes
+    // Integrations keys are numbers in the array, but we want to know if specific integrations are active
+    const activeIntegrationsCount = integrations.filter(i => i.connected).length;
+    const connectedIntegrations = connectedInstances > 0 ? connectedInstances : activeIntegrationsCount;
+
+    const [integrationsExpanded, setIntegrationsExpanded] = useState(forceExpandIntegrations);
+
+    // TTS State
+    const [ttsExpanded, setTtsExpanded] = useState(false);
+    const [ttsEnabled, setTtsEnabled] = useState(false);
+    const [ttsVoice, setTtsVoice] = useState('Kore');
+    const [ttsRules, setTtsRules] = useState('');
+    const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
+    const [isSavingTts, setIsSavingTts] = useState(false);
+
+    const isPro = user?.role === 'pro' || user?.role === 'admin';
+    const selectedVoice = VOICE_OPTIONS.find(v => v.value === ttsVoice);
+
+    // Initial load of configurations (TTS, etc)
     useEffect(() => {
-        setLiveIntegrations(integrations);
-    }, [integrations]);
+        loadTtsConfig();
+    }, [sessionId]); // Reload if sessionId changes
 
-    // Fetch live Instagram status when sidebar opens
-    useEffect(() => {
-        if (!isOpen || !user?.email) return;
-
-        const fetchInstagramStatus = async () => {
-            try {
-                const res = await fetch(`/api/instagram/status?userId=${encodeURIComponent(user.email!)}`);
-                const data = await res.json();
-
-                // Update the Instagram integration status based on live data
-                setLiveIntegrations(prev => prev.map(integration =>
-                    integration.id === 'instagram'
-                        ? { ...integration, connected: data.isConnected || false }
-                        : integration
-                ));
-            } catch (error) {
-                console.error('Failed to fetch Instagram status:', error);
+    const loadTtsConfig = async () => {
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.config) {
+                    setTtsEnabled(data.config.ttsEnabled || false);
+                    setTtsVoice(data.config.ttsVoice || 'Kore');
+                    setTtsRules(data.config.ttsRules || '');
+                }
             }
-        };
+        } catch (error) {
+            console.error('Error loading TTS config:', error);
+        }
+    };
 
-        fetchInstagramStatus();
-    }, [isOpen, user?.email]);
+    const handleSaveTts = async () => {
+        if (!isPro) return;
+        setIsSavingTts(true);
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ttsEnabled,
+                    ttsVoice,
+                    ttsRules
+                })
+            });
+
+            if (response.ok) {
+                toast({
+                    title: "Configurações salvas",
+                    description: "As preferências de voz foram atualizadas.",
+                    className: "bg-emerald-500 text-white border-0"
+                });
+            } else {
+                throw new Error('Falha ao salvar');
+            }
+        } catch (error) {
+            console.error('Error saving TTS config:', error);
+            toast({
+                title: "Erro ao salvar",
+                description: "Tente novamente mais tarde.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSavingTts(false);
+        }
+    };
+
+
 
     // Effect to handle forced expansion with delay
     useEffect(() => {
@@ -90,7 +154,7 @@ export default function DashboardSidebar({
         }
     }, [forceExpandIntegrations, isOpen]);
 
-    const connectedIntegrations = liveIntegrations.filter(i => i.connected).length;
+
 
     const menuItems = [
         {
@@ -137,18 +201,19 @@ export default function DashboardSidebar({
                 onClick={onClose}
             />
 
-            {/* Sidebar - Light Mode */}
+            {/* Sidebar - Dark Mode com gradiente */}
             <div
                 className={cn(
-                    "fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white z-50",
-                    "border-r border-gray-200 shadow-xl",
+                    "fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50",
+                    "bg-gradient-to-b from-slate-900 via-slate-900 to-purple-950",
+                    "border-r border-white/10 shadow-2xl",
                     "transform transition-transform duration-300 ease-out",
                     "flex flex-col",
                     isOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 {/* Header */}
-                <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200">
+                <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-white/10">
                     <div className="flex items-center gap-3">
                         <img
                             src="/logo-header.png"
@@ -156,15 +221,15 @@ export default function DashboardSidebar({
                             className="h-8 w-auto"
                         />
                         <div>
-                            <h2 className="text-gray-900 font-semibold text-sm">Factoria</h2>
+                            <h2 className="text-white font-semibold text-sm">Factoria</h2>
                             <div className="flex items-center gap-1.5">
                                 <div
                                     className={cn(
                                         "w-2 h-2 rounded-full",
-                                        isConnected ? "bg-emerald-500" : "bg-red-500"
+                                        isConnected ? "bg-emerald-400" : "bg-red-400"
                                     )}
                                 />
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-white/60">
                                     {isConnected ? "Online" : "Offline"}
                                 </span>
                             </div>
@@ -174,28 +239,28 @@ export default function DashboardSidebar({
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                        className="text-white/60 hover:text-white hover:bg-white/10"
                     >
                         <X className="w-5 h-5" />
                     </Button>
                 </div>
 
                 {/* User Info */}
-                <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex-shrink-0 p-4 border-b border-white/10 bg-white/5">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg">
                             {user?.email?.charAt(0).toUpperCase() || "U"}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-gray-900 text-sm font-medium truncate">
+                            <p className="text-white text-sm font-medium truncate">
                                 {user?.email}
                             </p>
                             <span
                                 className={cn(
                                     "text-[10px] font-bold px-2 py-0.5 rounded-full",
                                     user?.role === "pro" || user?.role === "admin"
-                                        ? "text-emerald-600 bg-emerald-100"
-                                        : "text-gray-500 bg-gray-200"
+                                        ? "text-emerald-300 bg-emerald-500/20 border border-emerald-500/30"
+                                        : "text-white/60 bg-white/10"
                                 )}
                             >
                                 {user?.role === "pro" || user?.role === "admin" ? "PRO" : "BÁSICO"}
@@ -216,28 +281,28 @@ export default function DashboardSidebar({
                             }}
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                                "group hover:bg-gray-100",
+                                "group hover:bg-white/10",
                                 currentPage === item.id
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "text-gray-700 hover:text-gray-900"
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "text-white/80 hover:text-white"
                             )}
                         >
                             <item.icon
                                 className={cn(
                                     "w-5 h-5 transition-colors",
                                     currentPage === item.id
-                                        ? "text-emerald-600"
-                                        : "text-gray-400 group-hover:text-gray-600"
+                                        ? "text-emerald-400"
+                                        : "text-white/50 group-hover:text-white/80"
                                 )}
                             />
                             <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">{item.label}</p>
-                                <p className="text-xs text-gray-400">{item.description}</p>
+                                <p className="text-xs text-white/40">{item.description}</p>
                             </div>
                             <ChevronRight
                                 className={cn(
                                     "w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity",
-                                    currentPage === item.id ? "text-emerald-500" : "text-gray-300"
+                                    currentPage === item.id ? "text-emerald-400" : "text-white/40"
                                 )}
                             />
                         </button>
@@ -249,33 +314,33 @@ export default function DashboardSidebar({
                             onClick={() => setIntegrationsExpanded(!integrationsExpanded)}
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                                "group hover:bg-gray-100",
+                                "group hover:bg-white/10",
                                 integrationsExpanded
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "text-gray-700 hover:text-gray-900"
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "text-white/80 hover:text-white"
                             )}
                         >
                             <Link2
                                 className={cn(
                                     "w-5 h-5 transition-colors",
                                     integrationsExpanded
-                                        ? "text-emerald-600"
-                                        : "text-gray-400 group-hover:text-gray-600"
+                                        ? "text-emerald-400"
+                                        : "text-white/50 group-hover:text-white/80"
                                 )}
                             />
                             <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">Integrações</p>
-                                <p className="text-xs text-gray-400">{connectedIntegrations} conectada(s)</p>
+                                <p className="text-xs text-white/40">{connectedIntegrations} conectada(s)</p>
                             </div>
                             {connectedIntegrations > 0 && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                                     {connectedIntegrations}
                                 </span>
                             )}
                             {integrationsExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-emerald-500" />
+                                <ChevronDown className="w-4 h-4 text-emerald-400" />
                             ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400" />
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white/60" />
                             )}
                         </button>
 
@@ -287,17 +352,17 @@ export default function DashboardSidebar({
                             )}
                         >
                             <div className="pl-4 pr-2 py-2 space-y-1">
-                                {liveIntegrations.map((integration) => {
+                                {integrations.map((integration) => {
                                     const Icon = BrandIcons[integration.icon];
                                     return (
                                         <div
                                             key={integration.id}
                                             className={cn(
                                                 "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
-                                                "bg-gray-50 border",
+                                                "bg-white/5 border",
                                                 integration.connected
-                                                    ? "border-emerald-200"
-                                                    : "border-transparent"
+                                                    ? "border-emerald-500/30"
+                                                    : "border-white/10"
                                             )}
                                         >
                                             <button
@@ -311,10 +376,10 @@ export default function DashboardSidebar({
                                                     {Icon && <Icon className="w-3.5 h-3.5 text-white" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-medium text-gray-900 truncate">
+                                                    <p className="text-xs font-medium text-white truncate">
                                                         {integration.name}
                                                     </p>
-                                                    <p className="text-[10px] text-gray-400">
+                                                    <p className="text-[10px] text-white/50">
                                                         {integration.connected ? "Conectado" : "Conectar"}
                                                     </p>
                                                 </div>
@@ -326,21 +391,157 @@ export default function DashboardSidebar({
                                                         e.stopPropagation();
                                                         onIntegrationDisconnect?.(integration.id);
                                                     }}
-                                                    className="p-1 hover:bg-gray-200 rounded-full transition-colors group/disconnect"
+                                                    className="p-1 hover:bg-white/10 rounded-full transition-colors group/disconnect"
                                                     title="Desconectar"
                                                 >
-                                                    <LogOut className="w-4 h-4 text-red-400 group-hover/disconnect:text-red-500" />
+                                                    <LogOut className="w-4 h-4 text-red-400 group-hover/disconnect:text-red-300" />
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={() => onIntegrationClick?.(integration.id)}
                                                 >
-                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-300 hover:text-gray-500" />
+                                                    <ChevronRight className="w-3.5 h-3.5 text-white/40 hover:text-white/60" />
                                                 </button>
                                             )}
                                         </div>
                                     );
                                 })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Respostas em Áudio - TTS Section */}
+                    <div>
+                        <button
+                            onClick={() => setTtsExpanded(!ttsExpanded)}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                                "group hover:bg-white/10",
+                                ttsExpanded
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "text-white/80 hover:text-white"
+                            )}
+                        >
+                            <Volume2
+                                className={cn(
+                                    "w-5 h-5 transition-colors",
+                                    ttsExpanded || ttsEnabled
+                                        ? "text-emerald-400"
+                                        : "text-white/50 group-hover:text-white/80"
+                                )}
+                            />
+                            <div className="flex-1 text-left">
+                                <p className="text-sm font-medium">Respostas em Áudio</p>
+                                <p className="text-xs text-white/40">
+                                    {ttsEnabled ? `${selectedVoice?.label} • Ativo` : "Desativado"}
+                                </p>
+                            </div>
+                            {ttsEnabled && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                    ON
+                                </span>
+                            )}
+                            {ttsExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white/60" />
+                            )}
+                        </button>
+
+                        {/* Expanded TTS Config */}
+                        <div
+                            className={cn(
+                                "overflow-hidden transition-all duration-300",
+                                ttsExpanded ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+                            )}
+                        >
+                            <div className="pl-4 pr-2 py-3 space-y-3">
+                                {/* Toggle */}
+                                <div className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-white/80">Ativar TTS</span>
+                                        {!isPro && (
+                                            <span className="text-[9px] font-bold text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">
+                                                PRO
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Switch
+                                        checked={ttsEnabled}
+                                        onCheckedChange={(checked) => {
+                                            if (!isPro) {
+                                                toast({ title: "Recurso PRO", description: "Faça upgrade.", variant: "destructive" });
+                                                return;
+                                            }
+                                            setTtsEnabled(checked);
+                                        }}
+                                        disabled={!isPro}
+                                        className="data-[state=checked]:bg-emerald-500 scale-90"
+                                    />
+                                </div>
+
+                                {ttsEnabled && (
+                                    <>
+                                        {/* Voice Selector */}
+                                        <div className="px-3">
+                                            <label className="text-xs text-white/50 mb-1.5 block">Voz</label>
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setShowVoiceDropdown(!showVoiceDropdown)}
+                                                    className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white hover:bg-white/10 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                                                        <span>{selectedVoice?.label}</span>
+                                                        <span className="text-white/40 text-xs">({selectedVoice?.gender})</span>
+                                                    </div>
+                                                    <ChevronDown className={cn("w-3.5 h-3.5 text-white/40 transition-transform", showVoiceDropdown && "rotate-180")} />
+                                                </button>
+
+                                                {showVoiceDropdown && (
+                                                    <div className="absolute z-30 w-full mt-1 bg-slate-800 border border-white/20 rounded-lg shadow-xl overflow-hidden">
+                                                        {VOICE_OPTIONS.map((voice) => (
+                                                            <button
+                                                                key={voice.value}
+                                                                onClick={() => { setTtsVoice(voice.value); setShowVoiceDropdown(false); }}
+                                                                className={cn(
+                                                                    "w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors",
+                                                                    ttsVoice === voice.value && "bg-emerald-500/20 text-emerald-400"
+                                                                )}
+                                                            >
+                                                                <span className="text-white">{voice.label}</span>
+                                                                <span className="text-white/40 text-xs">{voice.gender}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Rules */}
+                                        <div className="px-3">
+                                            <label className="text-xs text-white/50 mb-1.5 block">Regras (opcional)</label>
+                                            <textarea
+                                                value={ttsRules}
+                                                onChange={(e) => setTtsRules(e.target.value)}
+                                                placeholder="Ex: somente quando receber áudio"
+                                                className="w-full min-h-[50px] bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500/50 resize-none"
+                                            />
+                                        </div>
+
+                                        {/* Save */}
+                                        <div className="px-3">
+                                            <Button
+                                                onClick={handleSaveTts}
+                                                disabled={isSavingTts}
+                                                size="sm"
+                                                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs py-2"
+                                            >
+                                                {isSavingTts ? "Salvando..." : "Salvar"}
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -355,33 +556,33 @@ export default function DashboardSidebar({
                             }}
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                                "group hover:bg-gray-100",
+                                "group hover:bg-white/10",
                                 currentPage === item.id
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "text-gray-700 hover:text-gray-900"
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "text-white/80 hover:text-white"
                             )}
                         >
                             <item.icon
                                 className={cn(
                                     "w-5 h-5 transition-colors",
                                     currentPage === item.id
-                                        ? "text-emerald-600"
-                                        : "text-gray-400 group-hover:text-gray-600"
+                                        ? "text-emerald-400"
+                                        : "text-white/50 group-hover:text-white/80"
                                 )}
                             />
                             <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">{item.label}</p>
-                                <p className="text-xs text-gray-400">{item.description}</p>
+                                <p className="text-xs text-white/40">{item.description}</p>
                             </div>
                             {item.badge && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                                     {item.badge}
                                 </span>
                             )}
                             <ChevronRight
                                 className={cn(
                                     "w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity",
-                                    currentPage === item.id ? "text-emerald-500" : "text-gray-300"
+                                    currentPage === item.id ? "text-emerald-400" : "text-white/40"
                                 )}
                             />
                         </button>
@@ -389,20 +590,20 @@ export default function DashboardSidebar({
                 </nav>
 
                 {/* Footer with Logout */}
-                <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 space-y-3">
+                <div className="flex-shrink-0 p-4 border-t border-white/10 bg-black/20 space-y-3">
                     {onLogout && (
                         <button
                             onClick={() => {
                                 onLogout();
                                 onClose();
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-red-600 hover:bg-red-50 hover:text-red-700 group"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-red-400 hover:bg-red-500/10 hover:text-red-300 group"
                         >
                             <LogOut className="w-5 h-5" />
                             <span className="text-sm font-medium">Sair da conta</span>
                         </button>
                     )}
-                    <p className="text-xs text-gray-400 text-center">
+                    <p className="text-xs text-white/30 text-center">
                         © {new Date().getFullYear()} Factoria Assistant
                     </p>
                 </div>

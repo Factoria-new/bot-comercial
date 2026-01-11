@@ -16,45 +16,37 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const userEmail = user?.email || '';
+
+  // Load persisted state from localStorage
+  const getPersistedState = () => {
+    try {
+      const saved = localStorage.getItem('dashboard_state');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading persisted state:', e);
+    }
+    return null;
+  };
+
+  const persistedState = getPersistedState();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
-  const [showChat, setShowChat] = useState(false);
-  const [agentCreated, setAgentCreated] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
-  const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+  const [showChat, setShowChat] = useState(persistedState?.showChat || false);
+  const [agentCreated, setAgentCreated] = useState(persistedState?.agentCreated || false);
+  const [showWelcome, setShowWelcome] = useState(persistedState?.showWelcome ?? true);
+  const [agentPrompt, setAgentPrompt] = useState<string | null>(persistedState?.agentPrompt || null);
 
-  // Fetch Instagram status
+  // Persist state when it changes
   useEffect(() => {
-    const checkInstagramStatus = async () => {
-      if (!user?.email) return;
-      try {
-        const response = await fetch(`/api/instagram/status?userId=${encodeURIComponent(user.email)}`);
-        const data = await response.json();
-        setIsInstagramConnected(data.success && data.isConnected);
-      } catch (error) {
-        console.error('Error checking Instagram status:', error);
-      }
-    };
-    checkInstagramStatus();
+    const stateToSave = { showChat, agentCreated, showWelcome, agentPrompt };
+    localStorage.setItem('dashboard_state', JSON.stringify(stateToSave));
+  }, [showChat, agentCreated, showWelcome, agentPrompt]);
 
-    // Listen for connection success message from popup
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'instagram-connected' && event.data?.success) {
-        checkInstagramStatus();
-        toast({
-          title: "Conectado!",
-          description: `Instagram ${event.data.username ? `@${event.data.username}` : ''} conectado com sucesso.`,
-          duration: 5000,
-        });
-      }
-    };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [user?.email, toast]);
+
 
   // WhatsApp Integration Hook
   const {
@@ -66,11 +58,10 @@ const Dashboard = () => {
   } = useWhatsAppInstances();
 
   const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
+  const currentSessionId = String(whatsappInstances[0]?.id || '1');
 
   const integrations: Integration[] = [
     { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
-    { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: isInstagramConnected },
-    { id: 'facebook', name: 'Facebook', color: '#1877F2', icon: 'facebook', connected: false },
   ];
 
   // Block browser back button when on dashboard
@@ -157,105 +148,16 @@ const Dashboard = () => {
         integrations={integrations}
         onLogout={handleLogout}
         forceExpandIntegrations={shouldExpandIntegrations}
-        onIntegrationDisconnect={async (id) => {
-          if (id === 'whatsapp') {
-            handleDisconnect(1);
-          } else if (id === 'instagram') {
-            if (!userEmail) {
-              toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
-              return;
-            }
-            try {
-              const response = await fetch('/api/instagram/disconnect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userEmail })
-              });
-              const data = await response.json();
-              if (data.success) {
-                setIsInstagramConnected(false);
-                toast({
-                  title: "Desconectado",
-                  description: "Conta do Instagram desconectada com sucesso.",
-                });
-              } else {
-                throw new Error(data.error);
-              }
-            } catch (error) {
-              console.error("Erro ao desconectar Instagram:", error);
-              toast({
-                title: "Erro",
-                description: "Não foi possível desconectar do Instagram.",
-                variant: "destructive",
-              });
-            }
+        onIntegrationDisconnect={(id) => {
+          if (id === 'whatsapp' && whatsappInstances.length > 0) {
+            handleDisconnect(whatsappInstances[0].id);
           }
         }}
+        sessionId={currentSessionId}
         onIntegrationClick={async (id) => {
           if (id === 'whatsapp') {
             if (!isWhatsAppConnected) {
               handleGenerateQR(1);
-            }
-          } else if (id === 'instagram') {
-            if (!userEmail) {
-              toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
-              return;
-            }
-            try {
-              const response = await fetch(`/api/instagram/auth-url?userId=${encodeURIComponent(userEmail)}`);
-              const data = await response.json();
-
-              if (data.success && data.authUrl) {
-                const width = 600;
-                const height = 700;
-                const left = window.screen.width / 2 - width / 2;
-                const top = window.screen.height / 2 - height / 2;
-
-                const popup = window.open(
-                  data.authUrl,
-                  'InstagramAuth',
-                  `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
-                );
-
-                toast({
-                  title: "Aguardando conexão...",
-                  description: "Por favor, complete a autenticação na janela pop-up.",
-                  duration: 30000,
-                });
-
-                // Monitor popup and check status when closed
-                const checkPopup = setInterval(async () => {
-                  if (popup && popup.closed) {
-                    clearInterval(checkPopup);
-                    try {
-                      const statusRes = await fetch(`/api/instagram/status?userId=${encodeURIComponent(userEmail)}`);
-                      const statusData = await statusRes.json();
-                      if (statusData.success && statusData.isConnected) {
-                        setIsInstagramConnected(true);
-                        toast({ title: "Conectado!", description: "Instagram conectado com sucesso." });
-                      }
-                    } catch (err) {
-                      console.error('Error checking Instagram status:', err);
-                    }
-                  }
-                }, 1000);
-
-                // Cleanup interval after 3 minutes max
-                setTimeout(() => clearInterval(checkPopup), 180000);
-              } else {
-                toast({
-                  title: "Erro",
-                  description: "Não foi possível iniciar a conexão com Instagram.",
-                  variant: "destructive",
-                });
-              }
-            } catch (error) {
-              console.error("Erro ao iniciar conexão Instagram:", error);
-              toast({
-                title: "Erro",
-                description: "Erro ao conectar com servidor.",
-                variant: "destructive",
-              });
             }
           } else {
             toast({

@@ -30,6 +30,7 @@ export interface AgentConfig {
   assistantId?: string; // Para OpenAI
   ttsEnabled?: boolean; // Habilitar TTS
   ttsVoice?: string; // Voz do TTS
+  ttsRules?: string; // Regras em linguagem natural para quando enviar áudio
 }
 
 interface AgentConfigModalProps {
@@ -68,7 +69,8 @@ const AgentConfigModal = ({
   const [systemPrompt, setSystemPrompt] = useState(initialConfig?.systemPrompt || DEFAULT_SYSTEM_PROMPT);
   const [assistantId, setAssistantId] = useState(initialConfig?.assistantId || '');
   const [ttsEnabled, setTtsEnabled] = useState(initialConfig?.ttsEnabled || false);
-  const [ttsVoice, setTtsVoice] = useState(initialConfig?.ttsVoice || 'Zephyr');
+  const [ttsVoice, setTtsVoice] = useState(initialConfig?.ttsVoice || 'Kore');
+  const [ttsRules, setTtsRules] = useState(initialConfig?.ttsRules || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -154,6 +156,7 @@ const AgentConfigModal = ({
         assistantId: aiProvider === 'openai' ? assistantId.trim() : undefined,
         ttsEnabled: aiProvider === 'gemini' ? ttsEnabled : undefined,
         ttsVoice: aiProvider === 'gemini' && ttsEnabled ? ttsVoice : undefined,
+        ttsRules: aiProvider === 'gemini' && ttsEnabled ? ttsRules : undefined,
       };
 
       await onSave(config);
@@ -341,6 +344,23 @@ const AgentConfigModal = ({
                       <p className="text-xs text-gray-500">
                         ℹ️ O <span className="text-[#00A947]">TTS</span> funciona perfeitamente com o Gemini 2.5 Flash configurado no sistema.
                       </p>
+
+                      {/* Campo de Regras TTS */}
+                      <div className="space-y-2 pt-2 border-t border-gray-200">
+                        <Label htmlFor="tts-rules" className="text-sm text-gray-900 font-medium">
+                          Regras de Áudio (Linguagem Natural)
+                        </Label>
+                        <Textarea
+                          id="tts-rules"
+                          value={ttsRules}
+                          onChange={(e) => setTtsRules(e.target.value)}
+                          placeholder="Ex: Mande áudio somente quando receber mensagem de áudio"
+                          className="min-h-[60px] bg-white/90 backdrop-blur-sm border-gray-200 text-gray-900 placeholder:text-gray-400 resize-none"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Deixe vazio para sempre enviar áudio, ou defina regras como "mande áudio somente quando receber áudio"
+                        </p>
+                      </div>
                     </div>
                   )}
 

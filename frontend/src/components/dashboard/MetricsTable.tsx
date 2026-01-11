@@ -3,6 +3,7 @@ import { useSocket } from '@/contexts/SocketContext';
 import { MessageSquare, Users, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import VoiceCard from './VoiceCard';
 
 interface Metrics {
     totalMessages: number;
@@ -102,6 +103,9 @@ const MetricsTable: React.FC = () => {
                     ))}
                 </AnimatePresence>
             </div>
+
+            {/* Voice/TTS Configuration Card */}
+            <VoiceCard sessionId="1" />
 
             {/* Detailed Table View can be added here if needed */}
         </div>

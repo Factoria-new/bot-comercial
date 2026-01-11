@@ -65,4 +65,35 @@ router.post('/instagram/send-dm', async (req, res) => {
     }
 });
 
+// POST /whatsapp/send-audio
+// Called by Python AI Engine to send AUDIO messages (TTS)
+router.post('/whatsapp/send-audio', async (req, res) => {
+    try {
+        const { userId, phoneNumber, message } = req.body;
+
+        if (!userId || !phoneNumber || !message) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: userId, phoneNumber, message'
+            });
+        }
+
+        // Call sendMessageToUser with forceAudio option
+        await sendMessageToUser(userId, phoneNumber, message, 'text', { forceAudio: true });
+
+        logger.info(`Audio message (TTS) sent via internal tool to ${phoneNumber} (Session: ${userId})`);
+
+        res.json({
+            success: true,
+            message: 'Audio message sent successfully'
+        });
+    } catch (error) {
+        logger.error(`Error sending audio via internal tool: ${error.message}`);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to send audio'
+        });
+    }
+});
+
 export default router;
