@@ -77,7 +77,11 @@ export default function DashboardSidebar({
     const [ttsExpanded, setTtsExpanded] = useState(false);
     const [ttsEnabled, setTtsEnabled] = useState(false);
     const [ttsVoice, setTtsVoice] = useState('Kore');
-    const [ttsRules, setTtsRules] = useState('');
+    const [ttsRules, setTtsRules] = useState({
+        audioOnRequest: false,      // Regra 1: Áudio somente quando solicitado
+        audioOnAudioReceived: false, // Regra 2: Áudio quando recebe áudio
+        audioOnly: false            // Regra 3: Somente áudio (exclusiva)
+    });
     const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
     const [isSavingTts, setIsSavingTts] = useState(false);
 
@@ -98,7 +102,15 @@ export default function DashboardSidebar({
                 if (data.success && data.config) {
                     setTtsEnabled(data.config.ttsEnabled || false);
                     setTtsVoice(data.config.ttsVoice || 'Kore');
-                    setTtsRules(data.config.ttsRules || '');
+                    // Handle both old string format and new object format
+                    const rules = data.config.ttsRules;
+                    if (typeof rules === 'object' && rules !== null) {
+                        setTtsRules({
+                            audioOnRequest: rules.audioOnRequest || false,
+                            audioOnAudioReceived: rules.audioOnAudioReceived || false,
+                            audioOnly: rules.audioOnly || false
+                        });
+                    }
                 }
             }
         } catch (error) {
@@ -518,15 +530,84 @@ export default function DashboardSidebar({
                                             </div>
                                         </div>
 
-                                        {/* Rules */}
-                                        <div className="px-3">
-                                            <label className="text-xs text-white/50 mb-1.5 block">Regras (opcional)</label>
-                                            <textarea
-                                                value={ttsRules}
-                                                onChange={(e) => setTtsRules(e.target.value)}
-                                                placeholder="Ex: somente quando receber áudio"
-                                                className="w-full min-h-[50px] bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500/50 resize-none"
-                                            />
+                                        {/* Rules - Predefined Toggles */}
+                                        <div className="px-3 space-y-1">
+                                            <label className="text-xs text-white/50 mb-1.5 block">Regras de Áudio</label>
+
+                                            {/* Rule 1: Audio on request */}
+                                            <div
+                                                className={cn(
+                                                    "flex items-center justify-between p-2.5 rounded-lg transition-colors",
+                                                    ttsRules.audioOnly ? "opacity-50" : "hover:bg-white/5 cursor-pointer"
+                                                )}
+                                                onClick={() => {
+                                                    if (!ttsRules.audioOnly) {
+                                                        setTtsRules(prev => ({ ...prev, audioOnRequest: !prev.audioOnRequest }))
+                                                    }
+                                                }}
+                                            >
+                                                <span className="text-xs text-white/80">Áudio somente quando solicitado</span>
+                                                <div className={cn(
+                                                    "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",
+                                                    ttsRules.audioOnRequest
+                                                        ? "border-emerald-500 bg-emerald-500"
+                                                        : "border-white/30 bg-transparent"
+                                                )}>
+                                                    {ttsRules.audioOnRequest && (
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Rule 2: Audio when receiving audio */}
+                                            <div
+                                                className={cn(
+                                                    "flex items-center justify-between p-2.5 rounded-lg transition-colors",
+                                                    ttsRules.audioOnly ? "opacity-50" : "hover:bg-white/5 cursor-pointer"
+                                                )}
+                                                onClick={() => {
+                                                    if (!ttsRules.audioOnly) {
+                                                        setTtsRules(prev => ({ ...prev, audioOnAudioReceived: !prev.audioOnAudioReceived }))
+                                                    }
+                                                }}
+                                            >
+                                                <span className="text-xs text-white/80">Áudio quando recebe áudio</span>
+                                                <div className={cn(
+                                                    "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",
+                                                    ttsRules.audioOnAudioReceived
+                                                        ? "border-emerald-500 bg-emerald-500"
+                                                        : "border-white/30 bg-transparent"
+                                                )}>
+                                                    {ttsRules.audioOnAudioReceived && (
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Rule 3: Audio only (exclusive) */}
+                                            <div
+                                                className="flex items-center justify-between p-2.5 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+                                                onClick={() => setTtsRules({
+                                                    audioOnRequest: false,
+                                                    audioOnAudioReceived: false,
+                                                    audioOnly: !ttsRules.audioOnly
+                                                })}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-white/80">Somente áudio</span>
+                                                    <span className="text-[10px] text-amber-400/70">(exclusiva)</span>
+                                                </div>
+                                                <div className={cn(
+                                                    "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",
+                                                    ttsRules.audioOnly
+                                                        ? "border-emerald-500 bg-emerald-500"
+                                                        : "border-white/30 bg-transparent"
+                                                )}>
+                                                    {ttsRules.audioOnly && (
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Save */}

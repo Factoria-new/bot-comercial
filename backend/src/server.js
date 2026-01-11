@@ -167,6 +167,14 @@ app.post('/api/whatsapp/config/:sessionId', (req, res) => {
   try {
     setSessionConfig(sessionId, config);
 
+    // Backward compatibility: sync between "1" and "instance_1"
+    // Frontend uses "1", WhatsApp service uses "instance_1"
+    if (sessionId === '1') {
+      setSessionConfig('instance_1', config);
+    } else if (sessionId === 'instance_1') {
+      setSessionConfig('1', config);
+    }
+
     // Also update the agent prompt if systemPrompt is provided
     if (config.systemPrompt) {
       setAgentPrompt(sessionId, config.systemPrompt);

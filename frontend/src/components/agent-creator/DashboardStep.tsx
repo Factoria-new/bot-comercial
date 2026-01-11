@@ -3,7 +3,7 @@ import { Link2, Sparkles, MessageCircle, FlaskConical, ArrowRight, Check } from 
 import { Button } from "@/components/ui/button";
 import { Integration } from "@/lib/agent-creator.types";
 import { useSocket } from "@/contexts/SocketContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface DashboardStepProps {
     integrations: Integration[];
@@ -23,6 +23,63 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
         newContacts: 0,
         activeChats: 0
     });
+
+    // Chat state for Lia metrics assistant
+    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'lia', content: string }[]>([]);
+    const [inputValue, setInputValue] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const chatEndRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to bottom when new messages arrive
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages]);
+
+    // Generate Lia's response based on the question and current metrics
+    const generateLiaResponse = (question: string): string => {
+        const q = question.toLowerCase();
+
+        if (q.includes('mensage') || q.includes('receb')) {
+            return `📊 Hoje recebemos ${metrics.totalMessages} mensagens no total. ${metrics.totalMessages > 10 ? 'Ótimo movimento!' : 'Ainda está tranquilo por aqui.'}`;
+        }
+        if (q.includes('novo') || q.includes('cliente') || q.includes('contato')) {
+            return `👥 Temos ${metrics.newContacts} novos contatos hoje. ${metrics.newContacts > 0 ? 'Cada novo contato é uma oportunidade! 🎯' : 'Vamos trabalhar para atrair mais leads!'}`;
+        }
+        if (q.includes('chat') || q.includes('ativo') || q.includes('conversa')) {
+            return `💬 Há ${metrics.activeChats} conversas ativas no momento. ${metrics.activeChats > 0 ? 'Seu agente está trabalhando!' : 'Nenhum chat ativo agora.'}`;
+        }
+        if (q.includes('taxa') || q.includes('resposta') || q.includes('desempenho')) {
+            const responseRate = metrics.totalMessages > 0 ? '100%' : 'N/A';
+            return `⚡ Taxa de resposta: ${responseRate}. O agente responde automaticamente todas as mensagens recebidas!`;
+        }
+        if (q.includes('resum') || q.includes('tudo') || q.includes('geral')) {
+            return `📈 Resumo do dia:\n• Mensagens: ${metrics.totalMessages}\n• Novos contatos: ${metrics.newContacts}\n• Chats ativos: ${metrics.activeChats}\n\nPrecisa de mais detalhes sobre algo específico?`;
+        }
+        if (q.includes('oi') || q.includes('olá') || q.includes('ola')) {
+            return `Olá! 👋 Sou a Lia, sua assistente de métricas. Posso te ajudar com informações sobre mensagens, contatos e desempenho. O que você quer saber?`;
+        }
+
+        return `Posso te ajudar com:\n• Quantas mensagens recebemos?\n• Quantos novos contatos?\n• Chats ativos\n• Taxa de resposta\n\nÉ só perguntar! 😊`;
+    };
+
+    // Handle sending a message
+    const handleSendMessage = () => {
+        if (!inputValue.trim() || isTyping) return;
+
+        const userMessage = inputValue.trim();
+        setInputValue('');
+
+        // Add user message
+        setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+        // Simulate Lia typing
+        setIsTyping(true);
+        setTimeout(() => {
+            const response = generateLiaResponse(userMessage);
+            setChatMessages(prev => [...prev, { role: 'lia', content: response }]);
+            setIsTyping(false);
+        }, 800);
+    };
 
     useEffect(() => {
         if (!socket) return;
@@ -249,14 +306,58 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                         </div>
                     </div>
 
+                    {/* Dynamic Chat Messages */}
+                    {chatMessages.length > 0 && (
+                        <div className="space-y-4 mb-4">
+                            {chatMessages.map((msg, idx) => (
+                                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                                    {msg.role === 'lia' && (
+                                        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs shrink-0">L</div>
+                                    )}
+                                    <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${msg.role === 'user'
+                                        ? 'bg-emerald-600 text-white rounded-tr-none'
+                                        : 'bg-white/10 text-white rounded-tl-none border border-white/5'
+                                        }`}>
+                                        <p className="text-sm whitespace-pre-line">{msg.content}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {isTyping && (
+                                <div className="flex gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs">L</div>
+                                    <div className="bg-white/10 rounded-2xl rounded-tl-none px-4 py-3 border border-white/5">
+                                        <div className="flex gap-1">
+                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </div>
+                    )}
+
                     {/* Chat Input */}
                     <div className="flex gap-3 relative z-10">
                         <input
                             type="text"
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage();
+                                }
+                            }}
                             placeholder="Pergunte sobre suas métricas..."
                             className="flex-1 bg-black/20 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500/50 focus:bg-black/30 transition-all min-w-0"
                         />
-                        <Button className="bg-emerald-500 hover:bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-lg shadow-emerald-500/20 shrink-0 flex items-center justify-center">
+                        <Button
+                            onClick={handleSendMessage}
+                            disabled={isTyping || !inputValue.trim()}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-lg shadow-emerald-500/20 shrink-0 flex items-center justify-center disabled:opacity-50"
+                        >
                             <ArrowRight className="w-6 h-6" />
                         </Button>
                     </div>

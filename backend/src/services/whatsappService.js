@@ -1,4 +1,4 @@
-import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from 'baileys';
+import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, downloadMediaMessage } from 'baileys';
 import { baileysLogger } from '../config/logger.js';
 import axios from 'axios';
 import QRCode from 'qrcode';
@@ -23,6 +23,9 @@ const conversationHistory = new Map();
 // Store LID to phone number mappings (for Baileys v7 LID workaround)
 const lidMapping = new Map();
 
+// Store the last incoming message type per contact (for TTS rules)
+const lastIncomingMessageType = new Map();
+
 // --- METRICS STATE ---
 let metrics = {
     totalMessages: 0,
@@ -33,6 +36,48 @@ let metrics = {
 // Bot message identifier to prevent message loops
 const BOT_IDENTIFIER = '[BOT]';
 // ---------------------
+
+/**
+ * Transcribe audio using Gemini API
+ * @param {Buffer} audioBuffer - The audio file buffer
+ * @param {string} mimeType - MIME type of the audio (e.g., 'audio/ogg; codecs=opus')
+ * @returns {Promise<string>} - Transcribed text
+ */
+async function transcribeAudio(audioBuffer, mimeType = 'audio/ogg') {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        console.error('❌ GEMINI_API_KEY not configured for audio transcription');
+        return '[Áudio não transcrito - API Key ausente]';
+    }
+
+    try {
+        console.log('🎤 Transcribing audio with Gemini 2.5 Flash...');
+        const genAI = new GoogleGenerativeAI(apiKey);
+        // Using gemini-2.5-flash for native audio support
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        // Convert buffer to base64
+        const base64Audio = audioBuffer.toString('base64');
+
+        // Gemini multimodal: send audio as inline data
+        const result = await model.generateContent([
+            {
+                inlineData: {
+                    mimeType: mimeType.split(';')[0], // Remove codec info if present
+                    data: base64Audio
+                }
+            },
+            "Transcreva este áudio para texto em português. Retorne APENAS a transcrição literal do que foi dito, sem comentários ou explicações adicionais."
+        ]);
+
+        const transcription = result.response.text().trim();
+        console.log(`✅ Audio transcribed: "${transcription.substring(0, 100)}..."`);
+        return transcription;
+    } catch (error) {
+        console.error('❌ Audio transcription error:', error.message);
+        return '[Erro ao transcrever áudio]';
+    }
+}
 
 // Initialize WhatsApp service with Socket.IO
 export const initWhatsAppService = (io) => {
@@ -262,11 +307,41 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     continue;
                 }
 
-                // Extract message text
-                const messageText = msg.message.conversation ||
+                // Extract message text (or transcribe audio)
+                let messageText = msg.message.conversation ||
                     msg.message.extendedTextMessage?.text ||
                     msg.message.imageMessage?.caption ||
                     '';
+
+                let incomingMessageType = 'text';
+
+                // Check for audio message
+                if (msg.message.audioMessage) {
+                    console.log('🎤 Audio message detected, downloading and transcribing...');
+                    incomingMessageType = 'audio';
+                    try {
+                        // Download the audio
+                        const audioBuffer = await downloadMediaMessage(
+                            msg,
+                            'buffer',
+                            {},
+                            {
+                                logger: baileysLogger,
+                                reuploadRequest: sock.updateMediaMessage
+                            }
+                        );
+
+                        // Get MIME type
+                        const mimeType = msg.message.audioMessage.mimetype || 'audio/ogg';
+                        console.log(`📥 Audio downloaded: ${audioBuffer.length} bytes, type: ${mimeType}`);
+
+                        // Transcribe using Gemini
+                        messageText = await transcribeAudio(audioBuffer, mimeType);
+                    } catch (error) {
+                        console.error('❌ Failed to process audio:', error.message);
+                        messageText = '[Áudio recebido mas não foi possível transcrever]';
+                    }
+                }
 
                 // Skip messages from ourselves (sent by the bot or manually from this device)
                 if (msg.key.fromMe) {
@@ -280,13 +355,23 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     continue;
                 }
 
+                // Skip all non-private chat messages (channels, newsletters, broadcasts, status, lists, etc.)
+                // Only process private chats: @s.whatsapp.net (phone) or @lid (linked device ID)
+                const jid = msg.key.remoteJid || '';
+                const isPrivateChat = jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid');
+
+                if (!isPrivateChat) {
+                    console.log(`⏭️ Skipping: Non-private chat (${jid})`);
+                    continue;
+                }
+
                 // Skip bot-generated messages (contains BOT_IDENTIFIER)
                 if (messageText.startsWith(BOT_IDENTIFIER)) {
                     console.log('⏭️ Skipping: Bot-generated message');
                     continue;
                 }
 
-                console.log(`📝 Processing message: "${messageText}" from ${msg.key.remoteJid}`);
+                console.log(`📝 Processing message (${incomingMessageType}): "${messageText.substring(0, 100)}" from ${msg.key.remoteJid}`);
 
 
                 const remoteJid = msg.key.remoteJid;
@@ -303,6 +388,10 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                 }
 
                 const contactId = `${sessionId}:${remoteJid}`;
+
+                // Store the incoming message type for TTS rules evaluation
+                lastIncomingMessageType.set(contactId, incomingMessageType);
+                console.log(`📋 Stored messageType=${incomingMessageType} for ${contactId}`);
 
                 // Baileys v7 LID workaround: store LID to phone mapping
                 // Check if we have an alternate JID (phone number) available
@@ -505,6 +594,7 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
     try {
         // Check if TTS is enabled for this session
         const config = getSessionConfig(sessionId);
+        console.log(`📋 TTS Config for ${sessionId}:`, JSON.stringify(config));
         let shouldSendAudio = false;
 
         if (options.forceAudio) {
@@ -531,7 +621,14 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
 
             console.log(`🎤 Smart TTS Context: Last User Message="${lastUserMessage}" (History Size: ${history.length})`);
 
-            shouldSendAudio = await evaluateTtsRules(config.ttsRules, incomingMessageType, message, lastUserMessage, config.apiKey || process.env.GEMINI_API_KEY);
+            // Retrieve stored incoming message type for TTS rules evaluation
+            let storedMessageType = lastIncomingMessageType.get(contactId) || lastIncomingMessageType.get(contactIdConverted);
+            if (!storedMessageType) {
+                storedMessageType = 'text'; // Default fallback
+            }
+            console.log(`📋 Retrieved messageType=${storedMessageType} for TTS rules`);
+
+            shouldSendAudio = await evaluateTtsRules(config.ttsRules, storedMessageType, message, lastUserMessage);
             console.log(`🎤 TTS enabled. Rules evaluation result: ${shouldSendAudio ? 'SEND AUDIO' : 'SEND TEXT'}`);
         }
 
@@ -587,90 +684,67 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
 
 /**
  * Evaluate TTS rules to determine if audio should be sent
- * Uses simple keyword matching for common patterns
- * @param {string} rules - Natural language rules
- * @param {string} incomingType - Type of incoming message
+ * Now uses structured object-based rules (predefined checkboxes)
+ * @param {Object} rules - Rule object with audioOnRequest, audioOnAudioReceived, audioOnly
+ * @param {string} incomingType - Type of incoming message ('text' or 'audio')
  * @param {string} responseText - The response text
  * @param {string} lastUserMessage - The last message from the user (context)
- * @param {string} apiKey - Gemini API Key
  * @returns {Promise<boolean>}
  */
-async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessage = '', apiKey) {
-    if (!rules || rules.trim() === '') {
-        // No rules = always send audio when TTS is enabled
+async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessage = '') {
+    // Handle case where rules is null/undefined or old string format
+    if (!rules || typeof rules === 'string') {
+        // Legacy string format or no rules = always send audio when TTS is enabled
+        console.log('📋 TTS Rules: No rules or legacy format - defaulting to audio');
         return true;
     }
 
-    const rulesLower = rules.toLowerCase();
+    console.log(`📋 TTS Rules evaluation:`, JSON.stringify(rules));
+    console.log(`📋 Context: incomingType=${incomingType}, lastUserMessage="${lastUserMessage?.substring(0, 50)}..."`);
 
-    // 1. FAST PATH: Simple Regex (avoid AI latency for obvious cases)
-
-    // Always/Never patterns
-    if (rulesLower.includes('nunca enviar audio') || rulesLower.includes('nunca enviar áudio') || rulesLower.includes('desativar audio')) {
-        return false;
-    }
-    if (rulesLower.includes('sempre enviar audio') || rulesLower.includes('sempre enviar áudio')) {
+    // Rule 3: Audio Only (exclusive - always send audio)
+    if (rules.audioOnly) {
+        console.log('✅ TTS Rule: audioOnly=true -> Sending audio');
         return true;
     }
 
-    // "Only when receiving audio" pattern (strict)
-    if ((rulesLower.includes('somente quando receber') || rulesLower.includes('apenas quando receber')) &&
-        (rulesLower.includes('audio') || rulesLower.includes('áudio'))) {
-        return incomingType === 'audio'; // Strict regex check
+    // If no rules are active, default to send audio
+    if (!rules.audioOnRequest && !rules.audioOnAudioReceived) {
+        console.log('✅ TTS Rule: No rules active -> Sending audio');
+        return true;
     }
 
-    // 2. SMART PATH: Use Gemini 3 Flash Preview for semantic evaluation
-    // This handles complex logical rules like "only if user asks for it", "if message is short", "if it's morning", etc.
-    try {
-        console.log('🧠 Smart TTS: Evaluating complex rule with Gemini 3 Flash Preview...');
-        if (!apiKey) {
-            console.warn('⚠️ No API Key for Smart TTS, falling back to regex default (true)');
+    // Rule 2: Audio when receiving audio
+    if (rules.audioOnAudioReceived && incomingType === 'audio') {
+        console.log('✅ TTS Rule: audioOnAudioReceived=true and received audio -> Sending audio');
+        return true;
+    }
+
+    // Rule 1: Audio only when requested
+    if (rules.audioOnRequest) {
+        // Check if user explicitly requested audio
+        const lowerMessage = (lastUserMessage || '').toLowerCase();
+        const audioRequestPatterns = [
+            'manda audio', 'manda áudio', 'mande audio', 'mande áudio',
+            'envia audio', 'envia áudio', 'envie audio', 'envie áudio',
+            'pode falar', 'fala pra mim', 'fala para mim',
+            'me fala', 'me explica por audio', 'me explica por áudio',
+            'audio por favor', 'áudio por favor', 'quero audio', 'quero áudio',
+            'prefiro audio', 'prefiro áudio', 'por audio', 'por áudio',
+            'em audio', 'em áudio', 'via audio', 'via áudio'
+        ];
+
+        const requestedAudio = audioRequestPatterns.some(pattern => lowerMessage.includes(pattern));
+
+        if (requestedAudio) {
+            console.log('✅ TTS Rule: audioOnRequest=true and user requested audio -> Sending audio');
             return true;
         }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-
-        const prompt = `
-        You are a decision engine for a WhatsApp Bot TTS (Text-to-Speech) system.
-        Determine if the bot should send an AUDIO message instead of text, based on the User's Rule and the Conversation Context.
-        
-        User Rule: "${rules}"
-        
-        Context:
-        - Incoming Message Type: ${incomingType} (what the user sent us)
-        - Last User Message Content: "${lastUserMessage}"
-        - Bot Response Content: "${responseText}"
-        
-        INSTRUCTIONS:
-        1. Analyze the "User Rule" logic carefully. using specific semantics.
-        2. Check if the "Context" satisfies the rule.
-        3. Logic "Only if requested" -> Check if "Last User Message Content" contains a request for audio (e.g., "manda audio", "pode falar?", "audio por favor").
-        4. Logic "Only if receiving audio" -> Check if "Incoming Message Type" is 'audio'.
-        5. Return ONLY a JSON object: { "sendAudio": boolean, "reason": "short explanation" }
-        `;
-
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
-
-        // Extract JSON from response
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            const decision = JSON.parse(jsonMatch[0]);
-            console.log(`🧠 Smart TTS Decision: ${decision.sendAudio} (Reason: ${decision.reason})`);
-            return decision.sendAudio;
-        }
-
-    } catch (error) {
-        console.error('❌ Smart TTS Error:', error);
-        // Fallback to true (default enabling behavior) or false?
-        // Let's fallback to true if rule is not "never"
-        return true;
     }
 
-    // Default fallback
-    return true;
+    // If we got here, rules are active but conditions not met -> send text
+    console.log('❌ TTS Rule: Conditions not met -> Sending text');
+    return false;
 }
 
 // Get all active sessions
