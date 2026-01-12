@@ -6,12 +6,8 @@ import { cn } from "@/lib/utils";
 import {
     X,
     MessageSquare,
-    Bot,
-    Calendar,
-    Settings,
     ChevronRight,
     ChevronDown,
-    Wifi,
     Link2,
     LogOut,
     Volume2,
@@ -174,31 +170,6 @@ export default function DashboardSidebar({
             label: "Chat",
             icon: MessageSquare,
             description: "Tela inicial",
-        },
-        {
-            id: "connections",
-            label: "Conexões WhatsApp",
-            icon: Wifi,
-            description: `${connectedInstances}/${totalInstances} ativas`,
-            badge: totalInstances > 0 ? `${connectedInstances}/${totalInstances}` : undefined,
-        },
-        {
-            id: "ai-status",
-            label: "Status da IA",
-            icon: Bot,
-            description: "Configurar assistente",
-        },
-        {
-            id: "calendar",
-            label: "Calendário",
-            icon: Calendar,
-            description: "Integração Google",
-        },
-        {
-            id: "settings",
-            label: "Configurações",
-            icon: Settings,
-            description: "Preferências",
         },
     ];
 
@@ -655,11 +626,7 @@ export default function DashboardSidebar({
                                 <p className="text-sm font-medium">{item.label}</p>
                                 <p className="text-xs text-white/40">{item.description}</p>
                             </div>
-                            {item.badge && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                    {item.badge}
-                                </span>
-                            )}
+
                             <ChevronRight
                                 className={cn(
                                     "w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity",

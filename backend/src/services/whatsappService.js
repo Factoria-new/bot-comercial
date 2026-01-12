@@ -35,6 +35,9 @@ let metrics = {
 
 // Bot message identifier to prevent message loops
 const BOT_IDENTIFIER = '[BOT]';
+
+// Contador de tentativas de reconexão para backoff exponencial
+const reconnectionAttempts = new Map(); // sessionId -> { count, lastAttempt }
 // ---------------------
 
 /**
@@ -181,8 +184,17 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
             markOnlineOnConnect: false
         });
 
-        // Store session
-        sessions.set(sessionId, sock);
+        // Store session as an object with socket reference
+        const sessionData = {
+            sock,
+            socket, // frontend socket
+            io,
+            user: null,
+            keepAliveInterval: null,
+            healthCheckInterval: null,
+            keepAliveFailCount: 0
+        };
+        sessions.set(sessionId, sessionData);
 
         // Connection update handler - SIMPLIFIED per Baileys docs
         sock.ev.on('connection.update', async (update) => {
@@ -217,8 +229,14 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
             if (connection === 'open') {
                 console.log(`✅ Connected: ${sessionId}`);
 
-                const user = sock.user;
-                sessions.set(sessionId, { ...sock, user });
+                // Update session data with user info (keep same reference!)
+                const sessionData = sessions.get(sessionId);
+                if (sessionData) {
+                    sessionData.user = sock.user;
+                    console.log(`📝 Session data updated for ${sessionId} with user: ${sock.user?.id}`);
+                } else {
+                    console.error(`❌ Session data not found for ${sessionId} on open!`);
+                }
 
                 socket.emit('connected', {
                     sessionId,
@@ -228,8 +246,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                 socket.emit('user-info', {
                     sessionId,
                     user: {
-                        number: user?.id?.split(':')[0] || user?.id,
-                        name: user?.name || user?.verifiedName || 'WhatsApp User'
+                        number: sock.user?.id?.split(':')[0] || sock.user?.id,
+                        name: sock.user?.name || sock.user?.verifiedName || 'WhatsApp User'
                     }
                 });
 
@@ -238,44 +256,180 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                 // Update active chats metric
                 metrics.activeChats = sessions.size;
                 io.emit('metrics-update', metrics);
+
+                // ✨ KEEP-ALIVE APRIMORADO: enviar presença a cada 15 segundos
+                const keepAliveInterval = setInterval(async () => {
+                    try {
+                        const session = sessions.get(sessionId);
+                        const sessionExists = !!session;
+                        const isOpen = session ? isSocketOpen(session, true) : false;
+
+                        console.log(`💓 Keep-alive check para ${sessionId}: sessionExists=${sessionExists}, isOpen=${isOpen}`);
+
+                        if (session && isOpen && session.sock) {
+                            await session.sock.sendPresenceUpdate('available');
+                            console.log(`💓 Keep-alive enviado com sucesso para ${sessionId}`);
+                        } else {
+                            console.warn(`⚠️ Keep-alive: sessão ${sessionId} não encontrada ou socket fechado - limpando interval`);
+                            clearInterval(keepAliveInterval);
+                        }
+                    } catch (err) {
+                        console.error(`❌ Erro no keep-alive para ${sessionId}:`, err?.message || err);
+                        const session = sessions.get(sessionId);
+                        if (session) {
+                            if (!session.keepAliveFailCount) session.keepAliveFailCount = 0;
+                            session.keepAliveFailCount++;
+                            console.log(`⚠️ Keep-alive falha #${session.keepAliveFailCount} para ${sessionId}`);
+                            if (session.keepAliveFailCount >= 3) {
+                                console.warn(`⚠️ Keep-alive falhou 3 vezes para ${sessionId} - forçando reconexão`);
+                                clearInterval(keepAliveInterval);
+                                setTimeout(() => forceReconnect(sessionId, socket, io).catch(e => console.error('Erro ao reconectar:', e)), 1000);
+                            }
+                        }
+                    }
+                }, 15000);
+
+                // Salvar interval na sessão
+                const sessionWithIntervals = sessions.get(sessionId);
+                if (sessionWithIntervals) {
+                    sessionWithIntervals.keepAliveInterval = keepAliveInterval;
+                    sessionWithIntervals.keepAliveFailCount = 0;
+                    console.log(`✅ Keep-alive aprimorado ativado para ${sessionId} (intervalo: 15s)`);
+                } else {
+                    console.error(`❌ Falha ao salvar keep-alive interval - sessão ${sessionId} não encontrada no Map!`);
+                }
+
+                // 🏥 HEALTH CHECK: Verificar estado da conexão a cada 2 minutos
+                const healthCheckInterval = setInterval(async () => {
+                    try {
+                        const session = sessions.get(sessionId);
+                        if (!session) {
+                            console.warn(`⚠️ Health check: sessão ${sessionId} não encontrada - limpando interval`);
+                            clearInterval(healthCheckInterval);
+                            return;
+                        }
+
+                        console.log(`🏥 Health check executando para ${sessionId}...`);
+                        const isOpen = isSocketOpen(session, true);
+                        const hasUser = !!session.user;
+
+                        if (!isOpen || !hasUser) {
+                            console.error(`❌ Health check FALHOU para ${sessionId}: isOpen=${isOpen}, hasUser=${hasUser}`);
+                            console.warn(`🔄 Iniciando reconexão automática para ${sessionId}...`);
+                            clearInterval(healthCheckInterval);
+                            if (session.keepAliveInterval) {
+                                clearInterval(session.keepAliveInterval);
+                            }
+                            sessions.delete(sessionId);
+                            setTimeout(() => forceReconnect(sessionId, socket, io).catch(e => console.error('Erro ao reconectar no health check:', e)), 1000);
+                        } else {
+                            console.log(`✅ Health check OK para ${sessionId} - conexão saudável`);
+                        }
+                    } catch (err) {
+                        console.error(`Erro no health check para ${sessionId}:`, err?.message || err);
+                    }
+                }, 2 * 60 * 1000);
+
+                // Salvar health check interval
+                const sessionForHealth = sessions.get(sessionId);
+                if (sessionForHealth) {
+                    sessionForHealth.healthCheckInterval = healthCheckInterval;
+                    console.log(`🏥 Health check ativado para ${sessionId} (intervalo: 2min)`);
+                } else {
+                    console.error(`❌ Falha ao salvar health check interval - sessão ${sessionId} não encontrada no Map!`);
+                }
             }
 
-            // Connection closed - handle reconnection per Baileys docs
-            // IMPORTANT: After QR scan, WhatsApp forcibly disconnects - this is NORMAL!
-            // We must recreate the socket in this case
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                const payloadMessage = lastDisconnect?.error?.output?.payload?.message;
 
-                console.log(`❌ Connection closed for ${sessionId}. Status: ${statusCode}, Reconnect: ${shouldReconnect}`);
+                // Verificar se é erro de conflito (device_removed)
+                const errorData = lastDisconnect?.error?.data;
+                const isDeviceRemoved = errorData?.content?.[0]?.attrs?.type === 'device_removed';
+
+                // Tratar alguns códigos/erros como irreparáveis
+                const unrecoverableStatusCodes = [440];
+                const isUnrecoverableCode = unrecoverableStatusCodes.includes(Number(statusCode));
+                const isLoggedOutFlag = statusCode === DisconnectReason.loggedOut || payloadMessage === 'loggedOut' || payloadMessage === 'Invalid session';
+
+                // Se for erro 401 com device_removed, é logout definitivo
+                const is401Conflict = statusCode === 401 && (isDeviceRemoved || payloadMessage?.includes('conflict'));
+                const shouldReconnect = !(isUnrecoverableCode || isLoggedOutFlag || is401Conflict);
+
+                console.log(`❌ Connection closed for ${sessionId}. statusCode=${statusCode} payloadMessage=${payloadMessage} isDeviceRemoved=${isDeviceRemoved} shouldReconnect=${shouldReconnect}`);
+
+                // ✨ LIMPAR INTERVALS antes de qualquer coisa
+                const sessionToClean = sessions.get(sessionId);
+                if (sessionToClean?.keepAliveInterval) {
+                    clearInterval(sessionToClean.keepAliveInterval);
+                    console.log(`🧹 Keep-alive interval limpo para ${sessionId}`);
+                }
+                if (sessionToClean?.healthCheckInterval) {
+                    clearInterval(sessionToClean.healthCheckInterval);
+                    console.log(`🧹 Health check interval limpo para ${sessionId}`);
+                }
 
                 // Clean up current session
                 sessions.delete(sessionId);
 
                 if (shouldReconnect) {
-                    // This is normal behavior per Baileys docs - just recreate the socket
-                    console.log(`🔄 Reconnecting ${sessionId}...`);
+                    // Backoff exponencial: aumentar delay a cada tentativa falhada
+                    const attemptData = reconnectionAttempts.get(sessionId) || { count: 0, lastAttempt: 0 };
+                    const now = Date.now();
+
+                    // Resetar contador se última tentativa foi há mais de 5 minutos
+                    if (now - attemptData.lastAttempt > 5 * 60 * 1000) {
+                        attemptData.count = 0;
+                    }
+
+                    attemptData.count++;
+                    attemptData.lastAttempt = now;
+                    reconnectionAttempts.set(sessionId, attemptData);
+
+                    // Calcular delay: 2s, 4s, 8s, 16s, 32s, máximo 60s
+                    const delay = Math.min(2000 * Math.pow(2, attemptData.count - 1), 60000);
+
+                    console.log(`🔄 Reconexão ${attemptData.count} para ${sessionId} agendada em ${delay}ms`);
                     socket.emit('connection-status', {
                         sessionId,
-                        message: 'Reconectando...',
+                        message: `Reconectando... (tentativa ${attemptData.count})`,
                         retrying: true
                     });
 
-                    // Recreate session after short delay
-                    setTimeout(() => {
-                        createSession(sessionId, socket, io, phoneNumber);
-                    }, 2000);
+                    setTimeout(async () => {
+                        try {
+                            console.log(`🔌 Tentando reconectar ${sessionId} (tentativa ${attemptData.count})...`);
+                            await createSession(sessionId, socket, io, phoneNumber);
+                            reconnectionAttempts.delete(sessionId);
+                            console.log(`✅ Reconexão bem-sucedida para ${sessionId}`);
+                        } catch (error) {
+                            console.error(`❌ Erro ao reconectar ${sessionId} (tentativa ${attemptData.count}):`, error?.message || error);
+                            if (attemptData.count >= 10) {
+                                console.error(`❌ Limite de tentativas de reconexão atingido para ${sessionId}`);
+                                reconnectionAttempts.delete(sessionId);
+                                io.emit('reconnection-failed', {
+                                    sessionId,
+                                    error: 'Limite de tentativas de reconexão atingido. Por favor, escaneie o QR novamente.'
+                                });
+                            }
+                        }
+                    }, delay);
                 } else {
                     // User logged out - clean everything
                     console.log(`🚪 User logged out for ${sessionId}`);
 
-                    try {
-                        if (fs.existsSync(authFolder)) {
-                            fs.rmSync(authFolder, { recursive: true, force: true });
+                    // Delay auth folder deletion to avoid race condition with saveCreds
+                    setTimeout(() => {
+                        try {
+                            if (fs.existsSync(authFolder)) {
+                                fs.rmSync(authFolder, { recursive: true, force: true });
+                                console.log(`🗑️ Auth folder deleted for ${sessionId}`);
+                            }
+                        } catch (e) {
+                            console.error('Error cleaning auth folder:', e);
                         }
-                    } catch (e) {
-                        console.error('Error cleaning auth folder:', e);
-                    }
+                    }, 2000); // Wait 2 seconds for any pending saveCreds calls
 
                     socket.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
                     io.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
@@ -285,6 +439,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     io.emit('metrics-update', metrics);
 
                     clearSessionData(sessionId);
+                    reconnectionAttempts.delete(sessionId);
 
                     socket.emit('logged-out', { sessionId });
                     io.emit('logged-out', { sessionId });
@@ -292,8 +447,20 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
             }
         });
 
-        // Save credentials when updated
-        sock.ev.on('creds.update', saveCreds);
+        // Save credentials when updated - with error handling for deleted folders
+        sock.ev.on('creds.update', async () => {
+            try {
+                // Check if session still exists before saving
+                if (sessions.has(sessionId) && fs.existsSync(authFolder)) {
+                    await saveCreds();
+                }
+            } catch (err) {
+                // Ignore ENOENT errors (folder was deleted during logout)
+                if (err.code !== 'ENOENT') {
+                    console.error(`Erro ao salvar credenciais para ${sessionId}:`, err.message);
+                }
+            }
+        });
 
         // Handle incoming messages
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
@@ -475,6 +642,53 @@ const clearSessionData = (sessionId) => {
         }
     }
     agentPrompts.delete(sessionId);
+    lastIncomingMessageType.delete(sessionId);
+};
+
+// Helper to check if socket is open
+const isSocketOpen = (sessionData, logDetails = false) => {
+    // Get the actual Baileys socket from session data
+    const sock = sessionData?.sock || sessionData;
+
+    // Baileys can use different properties, check all of them
+    const wsReadyState = sock?.ws?.readyState;
+    const wsIsOpen = sock?.ws?.isOpen;
+    const sockIsOpen = sock?.isOpen;
+    const sockWsExists = !!sock?.ws;
+
+    // isOpen is the most reliable in Baileys
+    const isOpen = wsIsOpen === true || sockIsOpen === true || wsReadyState === 1;
+
+    if (logDetails) {
+        console.log(`🔍 Socket check: wsReadyState=${wsReadyState}, wsIsOpen=${wsIsOpen}, sockIsOpen=${sockIsOpen}, sockWsExists=${sockWsExists} => isOpen=${isOpen}`);
+    }
+
+    return isOpen;
+};
+
+// Force reconnect a session
+const forceReconnect = async (sessionId, socket, io) => {
+    console.log(`🔄 Forçando reconexão para ${sessionId}...`);
+
+    // Limpar sessão existente
+    const session = sessions.get(sessionId);
+    if (session) {
+        if (session.keepAliveInterval) {
+            clearInterval(session.keepAliveInterval);
+        }
+        if (session.healthCheckInterval) {
+            clearInterval(session.healthCheckInterval);
+        }
+        sessions.delete(sessionId);
+    }
+
+    // Limpar contador de reconexão
+    reconnectionAttempts.delete(sessionId);
+
+    // Recriar sessão
+    await createSession(sessionId, socket, io);
+
+    return { success: true, message: 'Reconexão iniciada' };
 };
 
 // Logout session
@@ -482,8 +696,20 @@ const logoutSession = async (sessionId, socket) => {
     const session = sessions.get(sessionId);
 
     if (session) {
+        // ✨ LIMPAR INTERVALS antes de logout
+        if (session.keepAliveInterval) {
+            clearInterval(session.keepAliveInterval);
+            console.log(`🧹 Keep-alive interval limpo para ${sessionId}`);
+        }
+        if (session.healthCheckInterval) {
+            clearInterval(session.healthCheckInterval);
+            console.log(`🧹 Health check interval limpo para ${sessionId}`);
+        }
+
         try {
-            await session.logout();
+            if (session.sock?.logout) {
+                await session.sock.logout();
+            }
         } catch (e) {
             console.log(`Note: logout() threw:`, e.message);
         }
@@ -501,6 +727,7 @@ const logoutSession = async (sessionId, socket) => {
     }
 
     clearSessionData(sessionId);
+    reconnectionAttempts.delete(sessionId);
 
     socket.emit('logged-out', { sessionId });
 };
@@ -513,9 +740,12 @@ export const getSessionStatus = (sessionId) => {
         return { connected: false, user: null };
     }
 
+    const sock = session.sock;
     const user = session.user;
+    const isOpen = sock?.ws?.isOpen === true || sock?.isOpen === true;
+
     return {
-        connected: !!session.ws?.isOpen,
+        connected: isOpen,
         user: user ? {
             number: user.id?.split(':')[0] || user.id,
             name: user.name || user.verifiedName || 'WhatsApp User'
@@ -546,13 +776,15 @@ export const getAgentPrompt = (sessionId) => {
 export const sendMessageToUser = async (sessionId, phoneNumber, message, incomingMessageType = 'text', options = {}) => {
     const session = sessions.get(sessionId);
 
-    if (!session) {
+    if (!session || !session.sock) {
         console.error(`❌ Session ${sessionId} not found`);
         throw new Error('Session not found or not connected');
     }
 
+    const sock = session.sock;
+
     // Check if socket is still open
-    if (!session.ws?.isOpen) {
+    if (!isSocketOpen(session)) {
         throw new Error('WhatsApp connection is not open');
     }
 
@@ -569,7 +801,7 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
         } else {
             // Try to get from Baileys signalRepository if available
             try {
-                const phoneNum = await session.signalRepository?.lidMapping?.getPNForLID?.(remoteJid);
+                const phoneNum = await sock.signalRepository?.lidMapping?.getPNForLID?.(remoteJid);
                 if (phoneNum) {
                     console.log(`📱 Got phone from signalRepository: ${phoneNum}`);
                     remoteJid = phoneNum;
@@ -644,7 +876,7 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
                 const oggBuffer = await convertWavToOgg(wavBuffer);
 
                 // Send as voice message (ptt = push-to-talk)
-                await session.sendMessage(remoteJid, {
+                await sock.sendMessage(remoteJid, {
                     audio: oggBuffer,
                     mimetype: 'audio/ogg; codecs=opus',
                     ptt: true
@@ -654,11 +886,11 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
             } catch (ttsError) {
                 console.error('⚠️ TTS failed, falling back to text:', ttsError.message);
                 // Fallback to text message
-                await session.sendMessage(remoteJid, { text: message });
+                await sock.sendMessage(remoteJid, { text: message });
             }
         } else {
             // Send text message
-            await session.sendMessage(remoteJid, { text: message });
+            await sock.sendMessage(remoteJid, { text: message });
         }
 
         // Add to conversation history so AI remembers context
@@ -752,7 +984,9 @@ export const getActiveSessions = () => {
     const activeSessions = [];
 
     sessions.forEach((session, sessionId) => {
-        if (session?.ws?.isOpen) {
+        const sock = session.sock;
+        const isOpen = sock?.ws?.isOpen === true || sock?.isOpen === true;
+        if (isOpen) {
             activeSessions.push({
                 sessionId,
                 user: session.user ? {
@@ -777,7 +1011,7 @@ export const cleanup = async () => {
         // Logout all active sessions first
         for (const [sessionId, session] of sessions.entries()) {
             try {
-                if (session.end) await session.end(undefined);
+                if (session.sock?.end) await session.sock.end(undefined);
             } catch (e) {
                 // Ignore errors during logout
             }
