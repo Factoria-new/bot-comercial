@@ -26,6 +26,10 @@ const lidMapping = new Map();
 // Store the last incoming message type per contact (for TTS rules)
 const lastIncomingMessageType = new Map();
 
+// Store audio mode state per contact (for "audio until stopped" feature)
+// When true, bot responds with audio until user explicitly asks to stop
+const audioModeEnabled = new Map(); // contactId -> boolean
+
 // --- METRICS STATE ---
 let metrics = {
     totalMessages: 0,
@@ -860,7 +864,7 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
             }
             console.log(`📋 Retrieved messageType=${storedMessageType} for TTS rules`);
 
-            shouldSendAudio = await evaluateTtsRules(config.ttsRules, storedMessageType, message, lastUserMessage);
+            shouldSendAudio = await evaluateTtsRules(config.ttsRules, storedMessageType, message, lastUserMessage, contactId);
             console.log(`🎤 TTS enabled. Rules evaluation result: ${shouldSendAudio ? 'SEND AUDIO' : 'SEND TEXT'}`);
         }
 
@@ -917,13 +921,19 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
 /**
  * Evaluate TTS rules to determine if audio should be sent
  * Now uses structured object-based rules (predefined checkboxes)
+ * 
+ * For audioOnRequest rule: Implements PERSISTENT audio mode
+ * - When user requests audio, mode is ACTIVATED and persists
+ * - Mode remains active until user explicitly asks to stop
+ * 
  * @param {Object} rules - Rule object with audioOnRequest, audioOnAudioReceived, audioOnly
  * @param {string} incomingType - Type of incoming message ('text' or 'audio')
  * @param {string} responseText - The response text
  * @param {string} lastUserMessage - The last message from the user (context)
+ * @param {string} contactId - Unique identifier for this contact (sessionId:remoteJid)
  * @returns {Promise<boolean>}
  */
-async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessage = '') {
+async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessage = '', contactId = '') {
     // Handle case where rules is null/undefined or old string format
     if (!rules || typeof rules === 'string') {
         // Legacy string format or no rules = always send audio when TTS is enabled
@@ -932,7 +942,7 @@ async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessa
     }
 
     console.log(`📋 TTS Rules evaluation:`, JSON.stringify(rules));
-    console.log(`📋 Context: incomingType=${incomingType}, lastUserMessage="${lastUserMessage?.substring(0, 50)}..."`);
+    console.log(`📋 Context: incomingType=${incomingType}, lastUserMessage="${lastUserMessage?.substring(0, 50)}...", contactId=${contactId}`);
 
     // Rule 3: Audio Only (exclusive - always send audio)
     if (rules.audioOnly) {
@@ -952,26 +962,56 @@ async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessa
         return true;
     }
 
-    // Rule 1: Audio only when requested
-    if (rules.audioOnRequest) {
-        // Check if user explicitly requested audio
+    // Rule 1: Audio only when requested (PERSISTENT MODE)
+    if (rules.audioOnRequest && contactId) {
         const lowerMessage = (lastUserMessage || '').toLowerCase();
-        const audioRequestPatterns = [
+
+        // Patterns to START audio mode
+        const startAudioPatterns = [
             'manda audio', 'manda áudio', 'mande audio', 'mande áudio',
             'envia audio', 'envia áudio', 'envie audio', 'envie áudio',
             'pode falar', 'fala pra mim', 'fala para mim',
             'me fala', 'me explica por audio', 'me explica por áudio',
             'audio por favor', 'áudio por favor', 'quero audio', 'quero áudio',
             'prefiro audio', 'prefiro áudio', 'por audio', 'por áudio',
-            'em audio', 'em áudio', 'via audio', 'via áudio'
+            'em audio', 'em áudio', 'via audio', 'via áudio',
+            'responde em audio', 'responde em áudio', 'responda em audio', 'responda em áudio'
         ];
 
-        const requestedAudio = audioRequestPatterns.some(pattern => lowerMessage.includes(pattern));
+        // Patterns to STOP audio mode
+        const stopAudioPatterns = [
+            'para com audio', 'para com áudio', 'parar audio', 'parar áudio',
+            'desliga audio', 'desliga áudio', 'desativar audio', 'desativar áudio',
+            'quero texto', 'volta pro texto', 'volta para texto', 'volta ao texto',
+            'texto por favor', 'sem audio', 'sem áudio', 'cancela audio', 'cancela áudio',
+            'prefiro texto', 'manda texto', 'mande texto', 'envia texto', 'envie texto',
+            'responde em texto', 'responda em texto', 'só texto', 'somente texto'
+        ];
 
-        if (requestedAudio) {
-            console.log('✅ TTS Rule: audioOnRequest=true and user requested audio -> Sending audio');
+        // Check if user wants to STOP audio
+        const wantsToStopAudio = stopAudioPatterns.some(pattern => lowerMessage.includes(pattern));
+        if (wantsToStopAudio) {
+            audioModeEnabled.set(contactId, false);
+            console.log(`🔇 Audio mode DEACTIVATED for ${contactId}`);
+            return false; // Send text for this response
+        }
+
+        // Check if user wants to START audio
+        const wantsToStartAudio = startAudioPatterns.some(pattern => lowerMessage.includes(pattern));
+        if (wantsToStartAudio) {
+            audioModeEnabled.set(contactId, true);
+            console.log(`🎤 Audio mode ACTIVATED for ${contactId}`);
+            return true; // Send audio for this response
+        }
+
+        // Check current audio mode state (persistent)
+        const isAudioModeActive = audioModeEnabled.get(contactId) || false;
+        if (isAudioModeActive) {
+            console.log(`🎤 TTS Rule: audioOnRequest mode active for ${contactId} -> Sending audio`);
             return true;
         }
+
+        console.log(`📝 TTS Rule: audioOnRequest but mode not active for ${contactId} -> Sending text`);
     }
 
     // If we got here, rules are active but conditions not met -> send text

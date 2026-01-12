@@ -573,7 +573,7 @@ export default function DashboardSidebar({
                                                     }
                                                 }}
                                             >
-                                                <span className="text-xs text-white/80">Áudio somente quando solicitado</span>
+                                                <span className="text-xs text-white/80">Áudio quando solicitado (até pedir para parar)</span>
                                                 <div className={cn(
                                                     "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",
                                                     ttsRules.audioOnRequest
