@@ -16,23 +16,36 @@ const formatPrice = (price) => {
 const generateCatalogString = (data, niche) => {
     let catalog = "";
 
-    if (niche === 'restaurant') {
+    // Check niche-specific fields first
+    if (niche === 'restaurant' && data.menuItems?.length > 0) {
         catalog += "CARDÁPIO:\n";
-        catalog += (data.menuItems || []).map(item => `- ${item.name}: ${item.description} | ${formatPrice(item.price)}`).join('\n');
+        catalog += data.menuItems.map(item => `- ${item.name}: ${item.description} | ${formatPrice(item.price)}`).join('\n');
         if (data.deliveryArea) catalog += `\nÁREA DE ENTREGA: ${data.deliveryArea}`;
-    } else if (niche === 'beauty') {
+    } else if (niche === 'beauty' && data.servicesList?.length > 0) {
         catalog += "SERVIÇOS:\n";
-        catalog += (data.servicesList || []).map(s => `- ${s.name}: Duração ${s.duration} | ${formatPrice(s.price)}`).join('\n');
-    } else if (niche === 'services') {
+        catalog += data.servicesList.map(s => `- ${s.name}: Duração ${s.duration} | ${formatPrice(s.price)}`).join('\n');
+    } else if (niche === 'services' && data.serviceTypes?.length > 0) {
         catalog += "ESPECIALIDADES:\n";
-        catalog += (data.serviceTypes || []).map(s => `- ${s.type}: ${s.details}`).join('\n');
-    } else if (niche === 'real_estate') {
+        catalog += data.serviceTypes.map(s => `- ${s.type}: ${s.details}`).join('\n');
+    } else if (niche === 'real_estate' && data.propertyTypes?.length > 0) {
         catalog += "FOCO DE ATUAÇÃO:\n";
-        catalog += (data.propertyTypes || []).join(', ');
+        catalog += data.propertyTypes.join(', ');
         if (data.creci) catalog += `\nCRECI: ${data.creci}`;
     }
 
+    // Universal fallback: use 'products' field if no niche-specific data OR niche is 'general'
+    if ((!catalog || niche === 'general') && data.products?.length > 0) {
+        catalog = "PRODUTOS & SERVIÇOS:\n";
+        catalog += data.products.map(p => `- ${p.name}: ${p.description || ''}`).join('\n');
+    }
+
     if (data.openingHours) catalog += `\nHORÁRIO DE ATENDIMENTO: ${data.openingHours}`;
+
+    // Add useful links if present
+    if (data.usefulLinks?.length > 0) {
+        catalog += `\n\nLINKS ÚTEIS:\n`;
+        catalog += data.usefulLinks.map(l => `- ${l.description || 'Link'}: ${l.url}`).join('\n');
+    }
 
     return catalog;
 };
