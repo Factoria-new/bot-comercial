@@ -1,129 +1,170 @@
+// Auth Service - Gerenciamento de autenticação com Prisma/Supabase
+// Migrado de Firebase/Firestore para Prisma/PostgreSQL
+
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { db } from '../config/firebase.js';
+import prisma from '../config/prisma.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_dev';
 const SALT_ROUNDS = 10;
 
-// Create a new user (Pending state) called after payment
+/**
+ * Cria um novo usuário (estado Pending) - chamado após pagamento
+ * @param {string} email - Email do usuário
+ * @param {string} name - Nome do usuário (opcional)
+ * @returns {Promise<string>} Token de ativação
+ */
 export const createPendingUser = async (email, name) => {
-    const userRef = db.collection('users').where('email', '==', email).limit(1);
-    const snapshot = await userRef.get();
+    // Verificar se usuário já existe
+    let user = await prisma.user.findUnique({
+        where: { email }
+    });
 
-    let uid;
-    if (!snapshot.empty) {
-        // User already exists, maybe update status or check if already active
-        const userDoc = snapshot.docs[0];
-        uid = userDoc.id;
-        // Optional: Update name if provided and not set?
-        if (name && !userDoc.data().displayName) {
-            await userDoc.ref.update({ displayName: name });
+    if (user) {
+        // Usuário já existe, atualizar nome se não estiver definido
+        if (name && !user.displayName) {
+            user = await prisma.user.update({
+                where: { id: user.id },
+                data: { displayName: name }
+            });
         }
     } else {
-        // Create new user
-        const newUser = {
-            email,
-            displayName: name || '',
-            role: 'basic', // Default payment role
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-        };
-        const res = await db.collection('users').add(newUser);
-        uid = res.id;
+        // Criar novo usuário
+        user = await prisma.user.create({
+            data: {
+                email,
+                displayName: name || '',
+                role: 'basic',
+                status: 'pending'
+            }
+        });
     }
 
-    // Generate Activation Token (valid for 24h)
-    const token = jwt.sign({ uid, email, type: 'activation' }, JWT_SECRET, { expiresIn: '24h' });
+    // Gerar Token de Ativação (válido por 24h)
+    const token = jwt.sign(
+        { uid: user.id, email, type: 'activation' },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+    );
+
     return token;
 };
 
-// Request Password Reset
+/**
+ * Solicitar reset de senha
+ * @param {string} email - Email do usuário
+ * @returns {Promise<string>} Token de reset
+ */
 export const requestPasswordReset = async (email) => {
-    const usersRef = db.collection('users');
-    const snapshot = await usersRef.where('email', '==', email).limit(1).get();
+    const user = await prisma.user.findUnique({
+        where: { email }
+    });
 
-    if (snapshot.empty) {
-        // Silently fail for security or throw error? 
-        // Standard practice is to not reveal user existence, but for this app explicit error might be better for UX
-        // Let's return null to controller to decide or throw generic message
+    if (!user) {
         throw new Error('User not found');
     }
 
-    const startUser = snapshot.docs[0];
-    const uid = startUser.id;
+    const token = jwt.sign(
+        { uid: user.id, email, type: 'reset' },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+    );
 
-    const token = jwt.sign({ uid, email, type: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
     return token;
 };
 
-// Set Password (Activation or Reset)
+/**
+ * Definir senha (Ativação ou Reset)
+ * @param {string} token - Token de ativação/reset
+ * @param {string} password - Nova senha
+ * @returns {Promise<string>} Token de sessão
+ */
 export const setPassword = async (token, password) => {
     const decoded = jwt.verify(token, JWT_SECRET);
+
     if (!['activation', 'reset'].includes(decoded.type)) {
         throw new Error('Invalid token type');
     }
 
     const { uid } = decoded;
-    const userRef = db.collection('users').doc(uid);
-    const userSnap = await userRef.get();
 
-    if (!userSnap.exists) {
+    const user = await prisma.user.findUnique({
+        where: { id: uid }
+    });
+
+    if (!user) {
         throw new Error('User not found');
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const userData = userSnap.data();
-
-    await userRef.update({
-        password: hashedPassword,
-        status: 'active',
-        updatedAt: new Date().toISOString(),
+    await prisma.user.update({
+        where: { id: uid },
+        data: {
+            password: hashedPassword,
+            status: 'active'
+        }
     });
 
-    // Return new session token with role
-    const sessionToken = jwt.sign({
-        uid,
-        email: decoded.email,
-        role: userData.role || 'basic'
-    }, JWT_SECRET, { expiresIn: '7d' });
+    // Retornar novo token de sessão com role
+    const sessionToken = jwt.sign(
+        { uid, email: decoded.email, role: user.role || 'basic' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+
     return sessionToken;
 };
 
-// Login
+/**
+ * Login
+ * @param {string} email - Email do usuário
+ * @param {string} password - Senha do usuário
+ * @returns {Promise<{token: string, user: object}>}
+ */
 export const login = async (email, password) => {
-    const usersRef = db.collection('users');
-    const snapshot = await usersRef.where('email', '==', email).limit(1).get();
+    const user = await prisma.user.findUnique({
+        where: { email }
+    });
 
-    if (snapshot.empty) {
+    if (!user) {
         throw new Error('Invalid credentials');
     }
 
-    const userDoc = snapshot.docs[0];
-    const userData = userDoc.data();
-
-    if (!userData.password) {
+    if (!user.password) {
         throw new Error('Account not activated or uses different login method');
     }
 
-    const match = await bcrypt.compare(password, userData.password);
+    const match = await bcrypt.compare(password, user.password);
     if (!match) {
         throw new Error('Invalid credentials');
     }
 
-    const sessionToken = jwt.sign({ uid: userDoc.id, email: userData.email, role: userData.role }, JWT_SECRET, { expiresIn: '7d' });
+    const sessionToken = jwt.sign(
+        { uid: user.id, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+    );
 
     return {
         token: sessionToken,
         user: {
-            uid: userDoc.id,
-            email: userData.email,
-            role: userData.role,
-            ...userData
+            uid: user.id,
+            email: user.email,
+            role: user.role,
+            displayName: user.displayName,
+            status: user.status,
+            plan: user.plan,
+            subscriptionStatus: user.subscriptionStatus
         }
     };
 };
 
+/**
+ * Verificar token JWT
+ * @param {string} token - Token JWT
+ * @returns {Promise<object>} Dados decodificados do token
+ */
 export const verifyToken = async (token) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
@@ -131,4 +172,52 @@ export const verifyToken = async (token) => {
     } catch (error) {
         throw new Error('Invalid token');
     }
-}
+};
+
+/**
+ * Buscar usuário por email
+ * @param {string} email - Email do usuário
+ * @returns {Promise<object|null>}
+ */
+export const getUserByEmail = async (email) => {
+    return await prisma.user.findUnique({
+        where: { email }
+    });
+};
+
+/**
+ * Buscar usuário por ID
+ * @param {string} id - ID do usuário
+ * @returns {Promise<object|null>}
+ */
+export const getUserById = async (id) => {
+    return await prisma.user.findUnique({
+        where: { id }
+    });
+};
+
+/**
+ * Atualizar dados de assinatura do usuário
+ * @param {string} userId - ID do usuário
+ * @param {object} subscriptionData - Dados da assinatura
+ * @returns {Promise<object>}
+ */
+export const updateUserSubscription = async (userId, subscriptionData) => {
+    return await prisma.user.update({
+        where: { id: userId },
+        data: subscriptionData
+    });
+};
+
+/**
+ * Atualizar usuário por email
+ * @param {string} email - Email do usuário
+ * @param {object} data - Dados a atualizar
+ * @returns {Promise<object>}
+ */
+export const updateUserByEmail = async (email, data) => {
+    return await prisma.user.update({
+        where: { email },
+        data
+    });
+};

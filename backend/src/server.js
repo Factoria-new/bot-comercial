@@ -4,8 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import logger from './config/logger.js';
-import stripeRoutes from './routes/stripeRoutes.js';
-import mercadoPagoRoutes from './routes/mercadoPagoRoutes.js';
+import caktoRoutes from './routes/caktoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import internalToolsRoutes from './routes/internalToolsRoutes.js';
@@ -129,11 +128,8 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Rotas do Stripe
-app.use('/api/stripe', stripeRoutes);
-
-// Rotas do Mercado Pago
-app.use('/api/mercadopago', mercadoPagoRoutes);
+// Rotas de Pagamento (Cakto)
+app.use('/api/cakto', caktoRoutes);
 
 // Rotas de Autenticação
 app.use('/api/auth', authRoutes);
