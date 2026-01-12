@@ -114,7 +114,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         playIntegrationAudio,
         setIsWizardOpen,
         setChatMode,
-        chatMode
+        chatMode,
+        speak // Pass the speak from useTTS to share voiceLevel
     });
 
     const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
@@ -200,22 +201,52 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     // --- HANDLERS ---
 
-    const handleWizardComplete = () => {
+    const handleWizardComplete = async () => {
         resumeContext();
         setIsWizardOpen(false);
-        const finalPayload = {
-            _niche_id: currentSchema?.id,
-            _niche_title: currentSchema?.title,
-            ...wizardData
-        };
-        console.log("🎉 Wizard Complete! Payload:", finalPayload);
-
-        const summary = Object.entries(finalPayload)
-            .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-            .join('\n');
-
         setIsSwitchingToTest(true);
-        handleManualInput(`[SYSTEM] Cadastro finalizado com sucesso! Dados:\n${summary}\n\n[FORCE_COMPLETION]`);
+
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+
+        try {
+            // Generate prompt directly from template (NO LIA)
+            const response = await fetch(`${backendUrl}/api/agent/generate-prompt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: wizardData,
+                    niche: currentSchema?.id || 'general'
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.prompt) {
+                console.log(`✅ Prompt generated from template (${result.niche}): ${result.prompt.length} chars`);
+                console.log(`🔍 DEBUG: Calling setAgentPrompt with prompt:`, result.prompt.substring(0, 100) + '...');
+                setAgentPrompt(result.prompt);
+                console.log(`🔍 DEBUG: After setAgentPrompt, chatState.agentConfig?.prompt:`, chatState.agentConfig?.prompt?.substring(0, 50) || 'UNDEFINED');
+                setChatMode('agent');
+
+                // 🎤 Play Lia's completion audio feedback
+                const audioVariation = getRandomAudio('complete');
+                if (audioVariation.path) {
+                    playIntegrationAudio(audioVariation.path, 500);
+                }
+
+                // Transition to test mode after loading animation
+                setTimeout(() => {
+                    setIsSwitchingToTest(false);
+                    startTesting();
+                }, 4000);
+            } else {
+                console.error('❌ Failed to generate prompt:', result.error);
+                setIsSwitchingToTest(false);
+            }
+        } catch (error) {
+            console.error('❌ Error calling generate-prompt:', error);
+            setIsSwitchingToTest(false);
+        }
     };
 
     // Agent Test Chat Handler
@@ -229,6 +260,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         setIsTestTyping(true);
 
         try {
+            console.log(`🔍 DEBUG handleTestSend: chatState.agentConfig?.prompt length:`, chatState.agentConfig?.prompt?.length || 0);
+            console.log(`🔍 DEBUG handleTestSend: Prompt first 100 chars:`, chatState.agentConfig?.prompt?.substring(0, 100) || 'EMPTY');
             const history = updatedMessages.map(msg => ({
                 role: msg.type === 'user' ? 'user' : 'model',
                 content: msg.content

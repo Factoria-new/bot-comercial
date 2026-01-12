@@ -5,6 +5,7 @@ import { runArchitectAgent, runGeminiLiveAudioStream, chatWithAgent } from '../s
 import multer from 'multer';
 import pdf from 'pdf-parse/lib/pdf-parse.js';
 import mammoth from 'mammoth';
+import { PROMPTS } from '../prompts/agentPrompts.js';
 
 const router = express.Router();
 
@@ -83,6 +84,51 @@ router.post('/architect', async (req, res) => {
             success: false,
             error: 'Erro no processamento do Architect Agent',
             response: 'Desculpe, tive um problema técnico.'
+        });
+    }
+});
+
+// ============================================
+// Generate Prompt Endpoint (Direct from Template)
+// Generates prompt from agentPrompts.js template - NO LIA
+// ============================================
+router.post('/generate-prompt', async (req, res) => {
+    try {
+        const { data, niche } = req.body;
+
+        if (!data) {
+            return res.status(400).json({
+                success: false,
+                error: 'Dados do wizard são obrigatórios (data)'
+            });
+        }
+
+        const nicheKey = niche || 'general';
+        const generator = PROMPTS[nicheKey] || PROMPTS['services'] || PROMPTS['general'];
+
+        if (!generator) {
+            return res.status(400).json({
+                success: false,
+                error: `Niche "${nicheKey}" não encontrado e nenhum fallback disponível`
+            });
+        }
+
+        // Generate prompt from template
+        const generatedPrompt = generator(data);
+
+        console.log(`✅ [Generate Prompt] Prompt gerado para niche "${nicheKey}" (${generatedPrompt.length} chars)`);
+
+        res.json({
+            success: true,
+            prompt: generatedPrompt,
+            niche: nicheKey
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao gerar prompt:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao gerar prompt a partir do template'
         });
     }
 });

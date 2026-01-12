@@ -1,6 +1,4 @@
 import { useState, useRef, useCallback } from "react";
-import { useTTS } from "@/hooks/useTTS";
-import { useOnboarding } from "@/hooks/useOnboarding";
 import { getRandomAudio } from "@/lib/audioMappings";
 
 interface LiaChatProps {
@@ -19,6 +17,7 @@ interface LiaChatProps {
     setIsWizardOpen: (isOpen: boolean) => void;
     setChatMode: (mode: 'lia' | 'agent') => void;
     chatMode: 'lia' | 'agent';
+    speak: (text: string, voice?: string, options?: any) => Promise<any>; // NEW: receive speak from parent
 }
 
 export const useLiaChat = ({
@@ -36,7 +35,8 @@ export const useLiaChat = ({
     playIntegrationAudio,
     setIsWizardOpen,
     setChatMode,
-    chatMode
+    chatMode,
+    speak // NEW: receive from parent
 }: LiaChatProps) => {
 
     const [displayText, setDisplayText] = useState("");
@@ -48,7 +48,7 @@ export const useLiaChat = ({
     const processingQueue = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { speak } = useTTS();
+    // speak is now received from props - no internal useTTS instance
 
     // Stream Processor
     const processCompleteStream = useCallback(async () => {
