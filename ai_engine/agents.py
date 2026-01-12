@@ -30,8 +30,8 @@ def get_agents(user_id, custom_prompt=None):
     comercial_goal = 'Converter leads do WhatsApp em vendas.'
     
     if custom_prompt:
-        comercial_backstory = f"Você é um agente comercial operando no WhatsApp. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo."
-        comercial_goal = f"Atender o cliente seguindo estritamente as instruções fornecidas."
+        comercial_backstory = f"Você é um agente comercial operando no WhatsApp. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo."
+        comercial_goal = f"Atender o cliente seguindo estritamente as instruções fornecidas, sem usar formatação markdown."
 
     # Commercial Agent (Uses WhatsApp)
     comercial = Agent(
@@ -83,8 +83,8 @@ def get_instagram_agent(user_id, custom_prompt=None):
     goal = 'Atender clientes do Instagram DM com excelência.'
     
     if custom_prompt:
-        backstory = f"Você é um agente de atendimento operando no Instagram DM. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo."
-        goal = "Atender o cliente seguindo estritamente as instruções fornecidas."
+        backstory = f"Você é um agente de atendimento operando no Instagram DM. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo."
+        goal = "Atender o cliente seguindo estritamente as instruções fornecidas, sem usar formatação markdown."
 
     return Agent(
         role='Atendente Instagram',

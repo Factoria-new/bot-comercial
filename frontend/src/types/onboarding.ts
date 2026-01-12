@@ -35,7 +35,7 @@ export interface CompanyInfo {
 export interface Integration {
     id: string;
     name: string;
-    icon: 'whatsapp' | 'instagram' | 'facebook';
+    icon: 'whatsapp' | 'instagram' | 'facebook' | 'google_calendar';
     color: string;
     connected: boolean;
     username?: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +12,8 @@ import {
     LogOut,
     Volume2,
     Mic,
+    Play,
+    Pause,
 } from "lucide-react";
 import { useSocket } from "@/contexts/SocketContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,13 +23,12 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 const VOICE_OPTIONS = [
-    { value: 'Kore', label: 'Kore', gender: 'Feminino' },
-    { value: 'Aoede', label: 'Aoede', gender: 'Feminino' },
-    { value: 'Zephyr', label: 'Zephyr', gender: 'Feminino' },
-    { value: 'Charon', label: 'Charon', gender: 'Masculino' },
-    { value: 'Fenrir', label: 'Fenrir', gender: 'Masculino' },
-    { value: 'Puck', label: 'Puck', gender: 'Não-binário' },
-    { value: 'Orus', label: 'Orus', gender: 'Masculino' },
+    { value: 'Kore', label: 'Kore', gender: 'Feminino', audioSrc: '/voices/kore.wav' },
+    { value: 'Aoede', label: 'Aoede', gender: 'Feminino', audioSrc: '/voices/aoede.wav' },
+    { value: 'Zephyr', label: 'Zephyr', gender: 'Feminino', audioSrc: '/voices/zephyr.wav' },
+    { value: 'Charon', label: 'Charon', gender: 'Masculino', audioSrc: '/voices/charon.wav' },
+    { value: 'Fenrir', label: 'Fenrir', gender: 'Masculino', audioSrc: '/voices/fenrir.wav' },
+    { value: 'Puck', label: 'Puck', gender: 'Não-binário', audioSrc: '/voices/puck.wav' },
 ];
 
 interface DashboardSidebarProps {
@@ -51,7 +52,7 @@ export default function DashboardSidebar({
     onNavigate,
     currentPage,
     connectedInstances = 0,
-    totalInstances = 0,
+    // totalInstances = 0,
     integrations = [],
     onLogout,
     forceExpandIntegrations = false,
@@ -80,6 +81,42 @@ export default function DashboardSidebar({
     });
     const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
     const [isSavingTts, setIsSavingTts] = useState(false);
+
+    // Audio Player Logic
+    const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    const handlePlayAudio = (e: React.MouseEvent, src: string) => {
+        e.stopPropagation();
+
+        if (playingAudio === src) {
+            // Stop current
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
+            setPlayingAudio(null);
+        } else {
+            // Play new
+            if (audioRef.current) {
+                audioRef.current.pause();
+            }
+
+            const audio = new Audio(src);
+            audio.onended = () => setPlayingAudio(null);
+            audio.play().catch(err => console.error("Error playing audio:", err));
+            audioRef.current = audio;
+            setPlayingAudio(src);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+            }
+        };
+    }, []);
 
     const isPro = user?.role === 'pro' || user?.role === 'admin';
     const selectedVoice = VOICE_OPTIONS.find(v => v.value === ttsVoice);
@@ -482,19 +519,38 @@ export default function DashboardSidebar({
                                                 </button>
 
                                                 {showVoiceDropdown && (
-                                                    <div className="absolute z-30 w-full mt-1 bg-slate-800 border border-white/20 rounded-lg shadow-xl overflow-hidden">
+                                                    <div className="absolute z-30 w-full mt-1 bg-slate-800 border border-white/20 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                                                         {VOICE_OPTIONS.map((voice) => (
-                                                            <button
+                                                            <div
                                                                 key={voice.value}
                                                                 onClick={() => { setTtsVoice(voice.value); setShowVoiceDropdown(false); }}
                                                                 className={cn(
-                                                                    "w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors",
+                                                                    "w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors cursor-pointer",
                                                                     ttsVoice === voice.value && "bg-emerald-500/20 text-emerald-400"
                                                                 )}
                                                             >
-                                                                <span className="text-white">{voice.label}</span>
-                                                                <span className="text-white/40 text-xs">{voice.gender}</span>
-                                                            </button>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Mic className={cn("w-3.5 h-3.5", ttsVoice === voice.value ? "text-emerald-400" : "text-white/40")} />
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-white font-medium">{voice.label}</span>
+                                                                        <span className="text-white/40 text-[10px]">{voice.gender}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={(e) => handlePlayAudio(e, voice.audioSrc)}
+                                                                    className={cn(
+                                                                        "p-1.5 rounded-full hover:bg-white/10 transition-all",
+                                                                        playingAudio === voice.audioSrc ? "text-emerald-400 bg-emerald-500/10" : "text-white/50 hover:text-white"
+                                                                    )}
+                                                                >
+                                                                    {playingAudio === voice.audioSrc ? (
+                                                                        <Pause className="w-4 h-4" />
+                                                                    ) : (
+                                                                        <Play className="w-4 h-4 ml-0.5" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
                                                         ))}
                                                     </div>
                                                 )}

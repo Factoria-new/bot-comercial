@@ -14,7 +14,7 @@ import { Integration } from "@/types/onboarding";
 const Dashboard = () => {
   // Hooks declarations first
   const { toast } = useToast();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   // Load persisted state from localStorage
@@ -62,6 +62,7 @@ const Dashboard = () => {
 
   const integrations: Integration[] = [
     { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
+    { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: false },
   ];
 
   // Block browser back button when on dashboard

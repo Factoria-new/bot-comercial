@@ -55,7 +55,213 @@ interface WizardModalProps {
     onComplete: () => void;
     voiceActive?: boolean;
     onPlayAudio?: (path: string, delay?: number, onEnded?: () => void) => void;
+    onClose?: () => void;
 }
+
+// --- SCHEDULE PICKER SUB-COMPONENT ---
+const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) => void }) => {
+    const schedule = (value as Record<WeekDay, DaySchedule>) || JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+    // ... (rest of SchedulePicker is unchanged)
+    const [selectedPreset, setSelectedPreset] = useState<PresetType | null>(null);
+
+    const updateSchedule = (newSchedule: Record<WeekDay, DaySchedule>) => {
+        onChange(newSchedule);
+    };
+
+    const handleDayToggle = (day: WeekDay) => {
+        const newSchedule = { ...schedule };
+        newSchedule[day] = {
+            ...newSchedule[day],
+            enabled: !newSchedule[day].enabled,
+            slots: !newSchedule[day].enabled && newSchedule[day].slots.length === 0
+                ? [{ start: '09:00', end: '18:00' }]
+                : newSchedule[day].slots
+        };
+        updateSchedule(newSchedule);
+    };
+
+    const addSlot = (day: WeekDay) => {
+        const newSchedule = { ...schedule };
+        newSchedule[day] = {
+            ...newSchedule[day],
+            slots: [...newSchedule[day].slots, { start: '08:00', end: '12:00' }]
+        };
+        updateSchedule(newSchedule);
+    };
+
+    const removeSlot = (day: WeekDay, index: number) => {
+        const newSchedule = { ...schedule };
+        newSchedule[day] = {
+            ...newSchedule[day],
+            slots: newSchedule[day].slots.filter((_, i) => i !== index)
+        };
+        updateSchedule(newSchedule);
+    };
+
+    const updateSlot = (day: WeekDay, index: number, field: 'start' | 'end', val: string) => {
+        const newSchedule = { ...schedule };
+        const newSlots = [...newSchedule[day].slots];
+        newSlots[index] = { ...newSlots[index], [field]: val };
+        newSchedule[day] = { ...newSchedule[day], slots: newSlots };
+        updateSchedule(newSchedule);
+    };
+
+    const applyPreset = (presetKey: PresetType) => {
+        setSelectedPreset(presetKey);
+        updateSchedule(JSON.parse(JSON.stringify(PRESETS[presetKey].schedule)));
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {/* Presets & Selection (1/4) */}
+                <div className="space-y-6">
+                    <div className="space-y-3">
+                        <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider flex items-center gap-2">
+                            <Zap className="h-3 w-3 text-purple-400" />
+                            Presets Rápidos
+                        </Label>
+                        <div className="space-y-2">
+                            {(Object.entries(PRESETS) as [PresetType, typeof PRESETS[PresetType]][]).map(([key, preset]) => {
+                                const Icon = preset.icon;
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => applyPreset(key)}
+                                        className={cn(
+                                            "w-full p-3 rounded-xl border transition-all text-left flex items-center gap-3 group",
+                                            selectedPreset === key
+                                                ? "bg-purple-600/20 border-purple-500 ring-1 ring-purple-500/50"
+                                                : "border-white/10 bg-black/20 hover:bg-white/5"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "p-2 rounded-lg transition-colors",
+                                            selectedPreset === key
+                                                ? "bg-purple-500/30"
+                                                : "bg-white/5 group-hover:bg-purple-500/20"
+                                        )}>
+                                            <Icon className={cn(
+                                                "h-4 w-4",
+                                                selectedPreset === key ? "text-purple-300" : "text-purple-400"
+                                            )} />
+                                        </div>
+                                        <span className={cn(
+                                            "text-sm font-medium",
+                                            selectedPreset === key ? "text-white" : "text-white/80 group-hover:text-white"
+                                        )}>
+                                            {preset.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 p-4 bg-black/20 rounded-xl border border-white/10">
+                        <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                            Ativar Dias
+                        </Label>
+                        <div className="grid grid-cols-7 gap-1">
+                            {(Object.keys(WEEKDAYS_SHORT) as WeekDay[]).map((day) => {
+                                const isEnabled = schedule[day]?.enabled;
+                                return (
+                                    <button
+                                        key={day}
+                                        onClick={() => handleDayToggle(day)}
+                                        className={cn(
+                                            "aspect-square rounded-full font-bold text-[10px] transition-all",
+                                            isEnabled
+                                                ? "bg-purple-600 text-white shadow-lg shadow-purple-900/50"
+                                                : "bg-white/5 text-white/30 border border-white/5 hover:border-white/20"
+                                        )}
+                                    >
+                                        {WEEKDAYS_SHORT[day]}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Detailed Slots (3/4) */}
+                <div className="lg:col-span-3 space-y-4">
+                    <ScrollArea className="h-[350px] pr-4">
+                        <div className="space-y-3">
+                            {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
+                                const daySchedule = schedule[key] || { enabled: false, slots: [] };
+
+                                return (
+                                    <div
+                                        key={key}
+                                        className={cn(
+                                            "flex flex-col gap-3 p-4 rounded-xl border transition-all",
+                                            daySchedule.enabled
+                                                ? "bg-white/5 border-purple-500/30"
+                                                : "bg-black/10 border-white/5 opacity-40"
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Switch
+                                                    checked={daySchedule.enabled}
+                                                    onCheckedChange={() => handleDayToggle(key)}
+                                                    className="data-[state=checked]:bg-purple-600"
+                                                />
+                                                <span className={cn(
+                                                    "text-sm font-semibold",
+                                                    daySchedule.enabled ? "text-white" : "text-white/40"
+                                                )}>
+                                                    {label}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {daySchedule.enabled && (
+                                            <div className="space-y-2 pl-12">
+                                                {daySchedule.slots.map((slot, index) => (
+                                                    <div key={index} className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-lg border border-white/10 flex-1">
+                                                            <Input
+                                                                type="time"
+                                                                value={slot.start}
+                                                                onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
+                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                            />
+                                                            <span className="text-white/30">→</span>
+                                                            <Input
+                                                                type="time"
+                                                                value={slot.end}
+                                                                onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
+                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => removeSlot(key, index)}
+                                                            className="p-2 text-white/30 hover:text-red-400 transition-colors"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                <button
+                                                    onClick={() => addSlot(key)}
+                                                    className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1.5 mt-1"
+                                                >
+                                                    <Plus className="h-3 w-3" /> Adicionar Período
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </ScrollArea>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 
 export function WizardModal({
@@ -67,7 +273,8 @@ export function WizardModal({
     onStepChange,
     onComplete,
     voiceActive,
-    onPlayAudio
+    onPlayAudio,
+    onClose
 }: WizardModalProps) {
 
     const [formState, setFormState] = useState<Record<string, any>>({});
@@ -171,209 +378,7 @@ export function WizardModal({
 
     // --- RENDER HELPERS ---
 
-    // --- SCHEDULE PICKER SUB-COMPONENT ---
-    const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) => void }) => {
-        const schedule = (value as Record<WeekDay, DaySchedule>) || JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
-        const [selectedPreset, setSelectedPreset] = useState<PresetType | null>(null);
 
-        const updateSchedule = (newSchedule: Record<WeekDay, DaySchedule>) => {
-            onChange(newSchedule);
-        };
-
-        const handleDayToggle = (day: WeekDay) => {
-            const newSchedule = { ...schedule };
-            newSchedule[day] = {
-                ...newSchedule[day],
-                enabled: !newSchedule[day].enabled,
-                slots: !newSchedule[day].enabled && newSchedule[day].slots.length === 0
-                    ? [{ start: '09:00', end: '18:00' }]
-                    : newSchedule[day].slots
-            };
-            updateSchedule(newSchedule);
-        };
-
-        const addSlot = (day: WeekDay) => {
-            const newSchedule = { ...schedule };
-            newSchedule[day] = {
-                ...newSchedule[day],
-                slots: [...newSchedule[day].slots, { start: '08:00', end: '12:00' }]
-            };
-            updateSchedule(newSchedule);
-        };
-
-        const removeSlot = (day: WeekDay, index: number) => {
-            const newSchedule = { ...schedule };
-            newSchedule[day] = {
-                ...newSchedule[day],
-                slots: newSchedule[day].slots.filter((_, i) => i !== index)
-            };
-            updateSchedule(newSchedule);
-        };
-
-        const updateSlot = (day: WeekDay, index: number, field: 'start' | 'end', val: string) => {
-            const newSchedule = { ...schedule };
-            const newSlots = [...newSchedule[day].slots];
-            newSlots[index] = { ...newSlots[index], [field]: val };
-            newSchedule[day] = { ...newSchedule[day], slots: newSlots };
-            updateSchedule(newSchedule);
-        };
-
-        const applyPreset = (presetKey: PresetType) => {
-            setSelectedPreset(presetKey);
-            updateSchedule(JSON.parse(JSON.stringify(PRESETS[presetKey].schedule)));
-        };
-
-        return (
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    {/* Presets & Selection (1/4) */}
-                    <div className="space-y-6">
-                        <div className="space-y-3">
-                            <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider flex items-center gap-2">
-                                <Zap className="h-3 w-3 text-purple-400" />
-                                Presets Rápidos
-                            </Label>
-                            <div className="space-y-2">
-                                {(Object.entries(PRESETS) as [PresetType, typeof PRESETS[PresetType]][]).map(([key, preset]) => {
-                                    const Icon = preset.icon;
-                                    return (
-                                        <button
-                                            key={key}
-                                            onClick={() => applyPreset(key)}
-                                            className={cn(
-                                                "w-full p-3 rounded-xl border transition-all text-left flex items-center gap-3 group",
-                                                selectedPreset === key
-                                                    ? "bg-purple-600/20 border-purple-500 ring-1 ring-purple-500/50"
-                                                    : "border-white/10 bg-black/20 hover:bg-white/5"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "p-2 rounded-lg transition-colors",
-                                                selectedPreset === key
-                                                    ? "bg-purple-500/30"
-                                                    : "bg-white/5 group-hover:bg-purple-500/20"
-                                            )}>
-                                                <Icon className={cn(
-                                                    "h-4 w-4",
-                                                    selectedPreset === key ? "text-purple-300" : "text-purple-400"
-                                                )} />
-                                            </div>
-                                            <span className={cn(
-                                                "text-sm font-medium",
-                                                selectedPreset === key ? "text-white" : "text-white/80 group-hover:text-white"
-                                            )}>
-                                                {preset.label}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 p-4 bg-black/20 rounded-xl border border-white/10">
-                            <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-                                Ativar Dias
-                            </Label>
-                            <div className="grid grid-cols-7 gap-1">
-                                {(Object.keys(WEEKDAYS_SHORT) as WeekDay[]).map((day) => {
-                                    const isEnabled = schedule[day]?.enabled;
-                                    return (
-                                        <button
-                                            key={day}
-                                            onClick={() => handleDayToggle(day)}
-                                            className={cn(
-                                                "aspect-square rounded-full font-bold text-[10px] transition-all",
-                                                isEnabled
-                                                    ? "bg-purple-600 text-white shadow-lg shadow-purple-900/50"
-                                                    : "bg-white/5 text-white/30 border border-white/5 hover:border-white/20"
-                                            )}
-                                        >
-                                            {WEEKDAYS_SHORT[day]}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Detailed Slots (3/4) */}
-                    <div className="lg:col-span-3 space-y-4">
-                        <ScrollArea className="h-[350px] pr-4">
-                            <div className="space-y-3">
-                                {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
-                                    const daySchedule = schedule[key] || { enabled: false, slots: [] };
-
-                                    return (
-                                        <div
-                                            key={key}
-                                            className={cn(
-                                                "flex flex-col gap-3 p-4 rounded-xl border transition-all",
-                                                daySchedule.enabled
-                                                    ? "bg-white/5 border-purple-500/30"
-                                                    : "bg-black/10 border-white/5 opacity-40"
-                                            )}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <Switch
-                                                        checked={daySchedule.enabled}
-                                                        onCheckedChange={() => handleDayToggle(key)}
-                                                        className="data-[state=checked]:bg-purple-600"
-                                                    />
-                                                    <span className={cn(
-                                                        "text-sm font-semibold",
-                                                        daySchedule.enabled ? "text-white" : "text-white/40"
-                                                    )}>
-                                                        {label}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {daySchedule.enabled && (
-                                                <div className="space-y-2 pl-12">
-                                                    {daySchedule.slots.map((slot, index) => (
-                                                        <div key={index} className="flex items-center gap-2">
-                                                            <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-lg border border-white/10 flex-1">
-                                                                <Input
-                                                                    type="time"
-                                                                    value={slot.start}
-                                                                    onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
-                                                                    className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
-                                                                />
-                                                                <span className="text-white/30">→</span>
-                                                                <Input
-                                                                    type="time"
-                                                                    value={slot.end}
-                                                                    onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
-                                                                    className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
-                                                                />
-                                                            </div>
-                                                            <button
-                                                                onClick={() => removeSlot(key, index)}
-                                                                className="p-2 text-white/30 hover:text-red-400 transition-colors"
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                    <button
-                                                        onClick={() => addSlot(key)}
-                                                        className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1.5 mt-1"
-                                                    >
-                                                        <Plus className="h-3 w-3" /> Adicionar Período
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </ScrollArea>
-                    </div>
-                </div>
-            </div>
-        );
-    };
 
     const renderField = (field: FormField, parentName?: string, index?: number) => {
         const fieldId = parentName && index !== undefined ? `${parentName}-${index}-${field.name}` : field.name;
@@ -747,7 +752,16 @@ export function WizardModal({
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Voltar
                         </Button>
-                    ) : <div />}
+                    ) : (
+                        <Button
+                            variant="ghost"
+                            onClick={onClose}
+                            className="text-white/30 hover:text-white hover:bg-white/5 rounded-xl h-12 px-6 text-sm"
+                        >
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Voltar e adicionar o prompt
+                        </Button>
+                    )}
 
                     <Button
                         onClick={() => {

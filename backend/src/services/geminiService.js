@@ -214,7 +214,7 @@ export async function chatWithAgent(message, systemPrompt, history = []) {
         const genAI = new GoogleGenerativeAI(API_KEY);
         const model = genAI.getGenerativeModel({
             model: "gemini-2.0-flash-exp",
-            systemInstruction: systemPrompt,
+            systemInstruction: systemPrompt + " IMPORTANTE: NUNCA use asteriscos (*). Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo.",
             generationConfig: { temperature: 0.7 }
         });
 

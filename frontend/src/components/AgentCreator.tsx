@@ -361,6 +361,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                         onComplete={handleWizardComplete}
                         voiceActive={voiceMode}
                         onPlayAudio={playIntegrationAudio}
+                        onClose={() => setIsWizardOpen(false)}
                     />
 
                     {/* 3. UNIFIED CHAT MODE (Lia or Agent) */}
