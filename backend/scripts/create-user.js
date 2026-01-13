@@ -1,13 +1,19 @@
 // Script para criar usuário de desenvolvimento
 // Uso: node scripts/create-user.js
 
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const { Pool } = pg;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -16,9 +22,9 @@ const prisma = new PrismaClient({ adapter });
 
 async function createUser() {
     // Dados do usuário de desenvolvimento
-    const email = 'bruno@factoria.com';
-    const password = 'admin123';
-    const displayName = 'Bruno Porto';
+    const email = 'nathanods@gmail.com';
+    const password = '123123';
+    const displayName = 'Nathan Oliveira';
     const role = 'pro';
 
     console.log('🔧 Criando usuário de desenvolvimento...\n');

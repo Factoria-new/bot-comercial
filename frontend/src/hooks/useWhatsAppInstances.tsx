@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WhatsAppInstance } from '@/types/whatsapp';
 import { useSocket } from '@/contexts/SocketContext';
+import { useAuth } from '@/contexts/AuthContext';
 // Define ConnectionState locally to avoid export issues
 export type ConnectionState = 'idle' | 'generating' | 'ready' | 'scanning' | 'connecting' | 'connected' | 'error';
 
@@ -20,6 +21,7 @@ export const useWhatsAppInstances = () => {
     connectionState: 'idle'
   });
   const { generateQR, logout } = useSocket();
+  const { user } = useAuth();
 
   // Inicializar conexões
   useEffect(() => {
@@ -277,6 +279,11 @@ export const useWhatsAppInstances = () => {
   }, [modalState.isOpen, modalState.instanceId]);
 
   const handleGenerateQR = useCallback(async (instanceId: number) => {
+    if (!user?.uid) {
+      console.error('❌ Usuário não autenticado, não é possível gerar QR');
+      return;
+    }
+
     setIsGeneratingQR(instanceId);
 
     // Abrir modal com estado "generating"
@@ -287,8 +294,8 @@ export const useWhatsAppInstances = () => {
     });
 
     const sessionId = `instance_${instanceId}`;
-    generateQR(sessionId);
-  }, [generateQR]);
+    generateQR(sessionId, undefined, user.uid);
+  }, [generateQR, user]);
 
   const handleDisconnect = useCallback(async (instanceId: number) => {
     const sessionId = `instance_${instanceId}`;

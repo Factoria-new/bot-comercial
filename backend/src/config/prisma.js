@@ -1,5 +1,6 @@
 // Prisma Client singleton para o backend - Prisma 7 com Driver Adapter
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import dotenv from 'dotenv';

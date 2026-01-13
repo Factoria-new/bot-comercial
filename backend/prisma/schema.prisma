@@ -30,17 +30,22 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   
+  // Relação 1:1 com Instance
+  instance           Instance?
+  
   @@map("users")
 }
 
 // Instância do bot (número conectado ao WhatsApp)
 model Instance {
   id           String         @id @default(uuid())
+  userId       String         @unique // Foreign key para User (1:1)
   phoneNumber  String         @unique // Número que está conectado ao bot
   name         String?        // Nome opcional da instância
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations Conversation[]
   
   @@map("instances")

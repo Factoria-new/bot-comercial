@@ -6,7 +6,7 @@ import API_CONFIG from '@/config/api';
 interface SocketContextData {
   socket: Socket | null;
   isConnected: boolean;
-  generateQR: (sessionId: string, phoneNumber?: string) => void;
+  generateQR: (sessionId: string, phoneNumber?: string, userId?: string) => void;
   logout: (sessionId: string) => void;
   forceReconnect: (sessionId: string) => void;
 }
@@ -190,12 +190,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Executar apenas uma vez ao montar (toast não deve ser dependência)
 
-  const generateQR = (sessionId: string, phoneNumber?: string) => {
-    console.log('🔍 generateQR chamado:', { sessionId, phoneNumber, socketConnected: !!socket, isConnected });
+  const generateQR = (sessionId: string, phoneNumber?: string, userId?: string) => {
+    console.log('🔍 generateQR chamado:', { sessionId, phoneNumber, userId, socketConnected: !!socket, isConnected });
 
     if (socket && isConnected) {
-      console.log('📡 Emitindo evento generate-qr:', { sessionId, phoneNumber });
-      socket.emit('generate-qr', { sessionId, phoneNumber });
+      console.log('📡 Emitindo evento generate-qr:', { sessionId, phoneNumber, userId });
+      socket.emit('generate-qr', { sessionId, phoneNumber, userId });
     } else {
       console.error('❌ Socket não conectado:', { socket: !!socket, isConnected });
       toast({

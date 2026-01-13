@@ -5,6 +5,7 @@ export interface UserProfile {
     uid: string;
     email: string | null;
     role: "basic" | "pro" | "admin";
+    displayName?: string;
     // Add other fields from Firestore as needed
 }
 
@@ -55,7 +56,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     setUser({
                         uid: decoded.uid,
                         email: decoded.email,
-                        role: decoded.role || 'basic'
+                        role: decoded.role || 'basic',
+                        displayName: decoded.displayName
                     });
                 } else {
                     localStorage.removeItem('token');

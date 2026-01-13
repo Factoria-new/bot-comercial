@@ -8,27 +8,26 @@ import logger from '../config/logger.js';
 const DEFAULT_HISTORY_LIMIT = 20;
 
 /**
- * Obtém ou cria uma instância pelo número de telefone
+ * Obtém uma instância pelo número de telefone
+ * NOTA: Instâncias são criadas no whatsappService quando o usuário conecta
  * @param {string} phoneNumber - Número de telefone da instância (bot)
- * @returns {Promise<Instance>}
+ * @returns {Promise<Instance|null>}
  */
-async function getOrCreateInstance(phoneNumber) {
+async function getInstance(phoneNumber) {
     try {
-        let instance = await prisma.instance.findUnique({
+        const instance = await prisma.instance.findUnique({
             where: { phoneNumber }
         });
 
         if (!instance) {
-            instance = await prisma.instance.create({
-                data: { phoneNumber }
-            });
-            logger.info(`📱 Nova instância criada: ${phoneNumber}`);
+            logger.warn(`📭 Instância não encontrada para ${phoneNumber} - isso pode indicar que o usuário não está conectado`);
+            return null;
         }
 
         return instance;
     } catch (error) {
-        logger.error(`❌ Erro ao obter/criar instância: ${error.message}`);
-        throw error;
+        logger.error(`❌ Erro ao buscar instância: ${error.message}`);
+        return null;
     }
 }
 
@@ -36,11 +35,16 @@ async function getOrCreateInstance(phoneNumber) {
  * Obtém ou cria uma conversa entre instância e cliente
  * @param {string} instancePhone - Número da instância (bot)
  * @param {string} customerPhone - Número do cliente
- * @returns {Promise<Conversation>}
+ * @returns {Promise<Conversation|null>}
  */
 async function getOrCreateConversation(instancePhone, customerPhone) {
     try {
-        const instance = await getOrCreateInstance(instancePhone);
+        const instance = await getInstance(instancePhone);
+
+        if (!instance) {
+            logger.warn(`⚠️ Não foi possível criar conversa: instância ${instancePhone} não encontrada`);
+            return null;
+        }
 
         let conversation = await prisma.conversation.findUnique({
             where: {
@@ -64,7 +68,7 @@ async function getOrCreateConversation(instancePhone, customerPhone) {
         return conversation;
     } catch (error) {
         logger.error(`❌ Erro ao obter/criar conversa: ${error.message}`);
-        throw error;
+        return null;
     }
 }
 
@@ -127,13 +131,18 @@ export async function getConversationHistory(instancePhone, customerPhone, limit
  * @param {string} customerPhone - Número do cliente
  * @param {string} role - "user" ou "model"
  * @param {string} content - Conteúdo da mensagem
- * @returns {Promise<Message>}
+ * @returns {Promise<Message|null>}
  */
 export async function saveMessage(instancePhone, customerPhone, role, content) {
     try {
         logger.debug(`💾 Salvando mensagem - instancePhone: ${instancePhone}, customerPhone: ${customerPhone}, role: ${role}`);
 
         const conversation = await getOrCreateConversation(instancePhone, customerPhone);
+
+        if (!conversation) {
+            logger.warn(`⚠️ Não foi possível salvar mensagem: conversa não disponível para ${instancePhone} <-> ${customerPhone}`);
+            return null;
+        }
 
         const message = await prisma.message.create({
             data: {

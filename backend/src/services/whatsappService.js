@@ -11,6 +11,7 @@ import { generateAudio } from './ttsService.js';
 import { convertWavToOgg } from '../utils/audioConverter.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getConversationHistory, saveMessage } from './historyService.js';
+import prisma from '../config/prisma.js';
 
 // Store active WhatsApp sessions
 const sessions = new Map();
@@ -104,11 +105,34 @@ export const initWhatsAppService = (io) => {
         console.log(`🔌 WhatsApp handler attached to socket: ${socket.id}`);
 
         // Handle QR code generation request
-        socket.on('generate-qr', async ({ sessionId, phoneNumber }) => {
-            console.log(`📲 Generate QR requested for session: ${sessionId}`);
+        socket.on('generate-qr', async ({ sessionId, phoneNumber, userId }) => {
+            console.log(`📲 Generate QR requested for session: ${sessionId}, userId: ${userId}`);
+
+            if (!userId) {
+                console.error('❌ Generate QR failed: userId é obrigatório');
+                socket.emit('qr-error', {
+                    sessionId,
+                    error: 'Usuário não autenticado'
+                });
+                return;
+            }
 
             try {
-                await createSession(sessionId, socket, io, phoneNumber);
+                // Criar ou atualizar instância vinculada ao usuário
+                // Como é 1:1, usamos upsert com userId como chave
+                const instance = await prisma.instance.upsert({
+                    where: { userId },
+                    update: {}, // Não atualizar nada se já existe
+                    create: {
+                        userId,
+                        phoneNumber: phoneNumber || 'pending' // Será atualizado quando conectar
+                    }
+                });
+                console.log(`📱 Instance found/created: ${instance.id} for user ${userId}`);
+
+                // Armazenar referência do userId na sessão para uso posterior
+                const effectiveSessionId = `user_${userId}`;
+                await createSession(effectiveSessionId, socket, io, phoneNumber, userId);
             } catch (error) {
                 console.error(`❌ Error creating session ${sessionId}:`, error);
                 socket.emit('qr-error', {
@@ -145,7 +169,7 @@ export const initWhatsAppService = (io) => {
 };
 
 // Create a new WhatsApp session
-const createSession = async (sessionId, socket, io, phoneNumber = null) => {
+const createSession = async (sessionId, socket, io, phoneNumber = null, userId = null) => {
     // Check if session already exists and is connected
     const existingSession = sessions.get(sessionId);
     if (existingSession?.ws?.isOpen) {
@@ -203,6 +227,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
             socket, // frontend socket
             io,
             user: null,
+            userId, // ID do usuário do sistema (tabela users)
             keepAliveInterval: null,
             healthCheckInterval: null,
             keepAliveFailCount: 0
@@ -247,6 +272,20 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                 if (sessionData) {
                     sessionData.user = sock.user;
                     console.log(`📝 Session data updated for ${sessionId} with user: ${sock.user?.id}`);
+
+                    // Atualizar phoneNumber na instância do banco de dados
+                    if (sessionData.userId && sock.user?.id) {
+                        const connectedPhoneNumber = sock.user.id.split(':')[0];
+                        try {
+                            await prisma.instance.update({
+                                where: { userId: sessionData.userId },
+                                data: { phoneNumber: connectedPhoneNumber }
+                            });
+                            console.log(`✅ Instance phoneNumber updated to ${connectedPhoneNumber} for user ${sessionData.userId}`);
+                        } catch (dbError) {
+                            console.error(`❌ Error updating instance phoneNumber:`, dbError.message);
+                        }
+                    }
                 } else {
                     console.error(`❌ Session data not found for ${sessionId} on open!`);
                 }
