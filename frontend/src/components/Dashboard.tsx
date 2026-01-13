@@ -7,7 +7,9 @@ import WelcomeScreen from '@/components/WelcomeScreen';
 import FactoriaChatInterface from '@/components/ui/factoria-chat-interface';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import WhatsAppConnectionModal from '@/components/WhatsAppConnectionModal';
+import LiaSidebar from '@/components/LiaSidebar';
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
+import { useSocket } from '@/contexts/SocketContext';
 import { AnimatePresence } from 'framer-motion';
 import { Integration } from "@/types/onboarding";
 
@@ -38,6 +40,27 @@ const Dashboard = () => {
   const [agentCreated, setAgentCreated] = useState(persistedState?.agentCreated || false);
   const [showWelcome, setShowWelcome] = useState(persistedState?.showWelcome ?? true);
   const [agentPrompt, setAgentPrompt] = useState<string | null>(persistedState?.agentPrompt || null);
+  const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
+
+  // Socket for metrics
+  const { socket } = useSocket();
+  const [metrics, setMetrics] = useState({
+    totalMessages: 0,
+    newContacts: 0,
+    activeChats: 0
+  });
+
+  // Listen for metrics from socket
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('metrics-update', (newMetrics: typeof metrics) => {
+      setMetrics(newMetrics);
+    });
+    socket.emit('request-metrics');
+    return () => {
+      socket.off('metrics-update');
+    };
+  }, [socket]);
 
   // Persist state when it changes
   useEffect(() => {
@@ -167,6 +190,7 @@ const Dashboard = () => {
             });
           }
         }}
+        onOpenLiaChat={() => setIsLiaChatOpen(true)}
       />
 
       {/* Global WhatsApp Modal */}
@@ -181,6 +205,13 @@ const Dashboard = () => {
       // Let's check WhatsAppConnectionModal definition in previous step.
       // I defined it as `instance: { ... } | undefined` (singular).
       // And passing whatsappInstances[0] is correct.
+      />
+
+      {/* Lia Chat Sidebar */}
+      <LiaSidebar
+        isOpen={isLiaChatOpen}
+        onClose={() => setIsLiaChatOpen(false)}
+        metrics={metrics}
       />
     </>
   );

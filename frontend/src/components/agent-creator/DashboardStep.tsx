@@ -3,7 +3,9 @@ import { Link2, Sparkles, MessageCircle, FlaskConical, ArrowRight, Check } from 
 import { Button } from "@/components/ui/button";
 import { Integration } from "@/lib/agent-creator.types";
 import { useSocket } from "@/contexts/SocketContext";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import LiaSidebar from "@/components/LiaSidebar";
+import { BrandIcons } from "@/components/ui/brand-icons";
 
 interface DashboardStepProps {
     integrations: Integration[];
@@ -24,62 +26,8 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
         activeChats: 0
     });
 
-    // Chat state for Lia metrics assistant
-    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'lia', content: string }[]>([]);
-    const [inputValue, setInputValue] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
-    const chatEndRef = useRef<HTMLDivElement>(null);
-
-    // Scroll to bottom when new messages arrive
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages]);
-
-    // Generate Lia's response based on the question and current metrics
-    const generateLiaResponse = (question: string): string => {
-        const q = question.toLowerCase();
-
-        if (q.includes('mensage') || q.includes('receb')) {
-            return `📊 Hoje recebemos ${metrics.totalMessages} mensagens no total. ${metrics.totalMessages > 10 ? 'Ótimo movimento!' : 'Ainda está tranquilo por aqui.'}`;
-        }
-        if (q.includes('novo') || q.includes('cliente') || q.includes('contato')) {
-            return `👥 Temos ${metrics.newContacts} novos contatos hoje. ${metrics.newContacts > 0 ? 'Cada novo contato é uma oportunidade! 🎯' : 'Vamos trabalhar para atrair mais leads!'}`;
-        }
-        if (q.includes('chat') || q.includes('ativo') || q.includes('conversa')) {
-            return `💬 Há ${metrics.activeChats} conversas ativas no momento. ${metrics.activeChats > 0 ? 'Seu agente está trabalhando!' : 'Nenhum chat ativo agora.'}`;
-        }
-        if (q.includes('taxa') || q.includes('resposta') || q.includes('desempenho')) {
-            const responseRate = metrics.totalMessages > 0 ? '100%' : 'N/A';
-            return `⚡ Taxa de resposta: ${responseRate}. O agente responde automaticamente todas as mensagens recebidas!`;
-        }
-        if (q.includes('resum') || q.includes('tudo') || q.includes('geral')) {
-            return `📈 Resumo do dia:\n• Mensagens: ${metrics.totalMessages}\n• Novos contatos: ${metrics.newContacts}\n• Chats ativos: ${metrics.activeChats}\n\nPrecisa de mais detalhes sobre algo específico?`;
-        }
-        if (q.includes('oi') || q.includes('olá') || q.includes('ola')) {
-            return `Olá! 👋 Sou a Lia, sua assistente de métricas. Posso te ajudar com informações sobre mensagens, contatos e desempenho. O que você quer saber?`;
-        }
-
-        return `Posso te ajudar com:\n• Quantas mensagens recebemos?\n• Quantos novos contatos?\n• Chats ativos\n• Taxa de resposta\n\nÉ só perguntar! 😊`;
-    };
-
-    // Handle sending a message
-    const handleSendMessage = () => {
-        if (!inputValue.trim() || isTyping) return;
-
-        const userMessage = inputValue.trim();
-        setInputValue('');
-
-        // Add user message
-        setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-
-        // Simulate Lia typing
-        setIsTyping(true);
-        setTimeout(() => {
-            const response = generateLiaResponse(userMessage);
-            setChatMessages(prev => [...prev, { role: 'lia', content: response }]);
-            setIsTyping(false);
-        }, 800);
-    };
+    // State for Lia sidebar
+    const [isLiaSidebarOpen, setIsLiaSidebarOpen] = useState(false);
 
     useEffect(() => {
         if (!socket) return;
@@ -104,11 +52,11 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="w-full max-w-[80%] mx-auto p-6 md:p-10 h-full"
+            className="w-full max-w-6xl mx-auto p-6 md:p-10 h-full"
         >
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full">
-                {/* Left Side - Metrics Panel */}
-                <div className="lg:col-span-3 space-y-8">
+            <div className="space-y-8 h-full">
+                {/* Metrics Panel - Now full width */}
+                <div className="space-y-8">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -225,144 +173,58 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                     >
                         <h3 className="text-xl font-semibold text-white mb-6">Integrações Ativas</h3>
                         <div className="flex flex-wrap gap-4">
-                            {integrations.filter(i => i.connected).map((integration) => (
-                                <div
-                                    key={integration.id}
-                                    className="flex items-center gap-3 bg-white/10 rounded-full px-6 py-3"
-                                >
+                            {integrations.filter(i => i.connected).map((integration) => {
+                                const Icon = BrandIcons[integration.icon];
+                                return (
                                     <div
-                                        className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-                                        style={{ backgroundColor: integration.color }}
-                                    />
-                                    <span className="text-white font-medium">{integration.name}</span>
-                                    <Check className="w-5 h-5 text-emerald-400" />
-                                </div>
-                            ))}
+                                        key={integration.id}
+                                        className="flex items-center gap-3 bg-white/10 rounded-full px-5 py-2.5"
+                                    >
+                                        <div
+                                            className="w-8 h-8 rounded-full flex items-center justify-center"
+                                            style={{ backgroundColor: integration.color }}
+                                        >
+                                            {Icon && <Icon className="w-4 h-4 text-white" />}
+                                        </div>
+                                        <span className="text-white font-medium">{integration.name}</span>
+                                        <Check className="w-5 h-5 text-emerald-400" />
+                                    </div>
+                                );
+                            })}
                             {integrations.filter(i => i.connected).length === 0 && (
                                 <p className="text-white/40 text-base italic">Nenhuma integração ativa no momento.</p>
                             )}
                         </div>
                     </motion.div>
                 </div>
-
-                {/* Right Side - Chat with Lia */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="lg:col-span-2 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl border border-emerald-500/20 rounded-3xl p-8 flex flex-col h-full shadow-[0_0_40px_rgba(16,185,129,0.05)] relative overflow-hidden"
-                >
-                    {/* Decorative glow */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-
-                    {/* Chat Header */}
-                    <div className="flex items-center gap-4 mb-6 pb-6 border-b border-white/10 relative z-10">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-emerald-500 blur-lg opacity-40 animate-pulse" />
-                            <div className="w-14 h-14 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xl relative z-10 border-2 border-white/20">
-                                L
-                            </div>
-                            <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 border-2 border-black rounded-full z-20" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                Lia
-                                <span className="text-xs font-normal text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20">Online</span>
-                            </h3>
-                            <p className="text-white/60 text-sm">Sua assistente de métricas</p>
-                        </div>
-                    </div>
-
-                    {/* Chat Messages */}
-                    <div className="flex-1 overflow-y-auto space-y-6 mb-6 pr-2 relative z-10 custom-scrollbar">
-                        <div className="flex gap-4">
-                            <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm shrink-0 border border-white/10">
-                                L
-                            </div>
-                            <div className="bg-white/10 rounded-2xl rounded-tl-none p-5 max-w-[90%] border border-white/5">
-                                <p className="text-white text-base leading-relaxed">
-                                    Olá! Estou aqui para te ajudar a entender suas métricas com profundidade.
-                                    Você pode me perguntar sobre:
-                                </p>
-                                <ul className="text-white/70 text-sm mt-3 space-y-2">
-                                    <li className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        Quantas mensagens recebemos hoje?
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        Quantos novos clientes temos?
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        Qual a taxa de resposta?
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        Como está o desempenho do agente?
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Dynamic Chat Messages */}
-                    {chatMessages.length > 0 && (
-                        <div className="space-y-4 mb-4">
-                            {chatMessages.map((msg, idx) => (
-                                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                                    {msg.role === 'lia' && (
-                                        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs shrink-0">L</div>
-                                    )}
-                                    <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${msg.role === 'user'
-                                        ? 'bg-emerald-600 text-white rounded-tr-none'
-                                        : 'bg-white/10 text-white rounded-tl-none border border-white/5'
-                                        }`}>
-                                        <p className="text-sm whitespace-pre-line">{msg.content}</p>
-                                    </div>
-                                </div>
-                            ))}
-                            {isTyping && (
-                                <div className="flex gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs">L</div>
-                                    <div className="bg-white/10 rounded-2xl rounded-tl-none px-4 py-3 border border-white/5">
-                                        <div className="flex gap-1">
-                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={chatEndRef} />
-                        </div>
-                    )}
-
-                    {/* Chat Input */}
-                    <div className="flex gap-3 relative z-10">
-                        <input
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSendMessage();
-                                }
-                            }}
-                            placeholder="Pergunte sobre suas métricas..."
-                            className="flex-1 bg-black/20 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500/50 focus:bg-black/30 transition-all min-w-0"
-                        />
-                        <Button
-                            onClick={handleSendMessage}
-                            disabled={isTyping || !inputValue.trim()}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-lg shadow-emerald-500/20 shrink-0 flex items-center justify-center disabled:opacity-50"
-                        >
-                            <ArrowRight className="w-6 h-6" />
-                        </Button>
-                    </div>
-                </motion.div>
             </div>
+
+            {/* Floating Action Button to open Lia */}
+            <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
+                onClick={() => setIsLiaSidebarOpen(true)}
+                className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full shadow-2xl shadow-emerald-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform z-30 group"
+            >
+                {/* Pulse ring */}
+                <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-25" />
+
+                {/* Avatar */}
+                <span className="relative z-10 font-bold text-2xl">L</span>
+
+                {/* Tooltip */}
+                <div className="absolute right-20 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg border border-white/10">
+                    Pergunte à Lia sobre métricas
+                </div>
+            </motion.button>
+
+            {/* Lia Sidebar */}
+            <LiaSidebar
+                isOpen={isLiaSidebarOpen}
+                onClose={() => setIsLiaSidebarOpen(false)}
+                metrics={metrics}
+            />
         </motion.div>
     );
 };

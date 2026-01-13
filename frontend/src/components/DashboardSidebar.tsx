@@ -52,6 +52,7 @@ interface DashboardSidebarProps {
     onIntegrationClick?: (id: string) => void;
     onIntegrationDisconnect?: (id: string) => void;
     sessionId?: string;
+    onOpenLiaChat?: () => void;
 }
 
 export default function DashboardSidebar({
@@ -66,7 +67,8 @@ export default function DashboardSidebar({
     forceExpandIntegrations = false,
     onIntegrationClick,
     onIntegrationDisconnect,
-    sessionId = '1'
+    sessionId = '1',
+    onOpenLiaChat
 }: DashboardSidebarProps) {
 
     const { user } = useAuth();
@@ -215,7 +217,11 @@ export default function DashboardSidebar({
             id: "chat",
             label: "Chat",
             icon: MessageSquare,
-            description: "Tela inicial",
+            description: "Falar com a Lia",
+            onClick: () => {
+                onOpenLiaChat?.();
+                onClose();
+            }
         },
         {
             id: "my-prompt",
