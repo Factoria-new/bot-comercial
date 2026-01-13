@@ -15,7 +15,7 @@ import { Loader2, Check, X, LogOut, QrCode as QRCodeIcon } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/brand-icons";
 
 // Connection state types
-export type ConnectionState = 'idle' | 'generating' | 'ready' | 'connecting' | 'connected' | 'error' | 'scanning';
+export type ConnectionState = 'idle' | 'generating' | 'ready' | 'connecting' | 'connected' | 'error' | 'scanning' | 'already-connected';
 
 // Props for simpler direct usage
 export interface WhatsAppConnectionModalDirectProps {
@@ -83,6 +83,7 @@ export function WhatsAppConnectionModal(props: WhatsAppConnectionModalProps) {
   const getSubtitleText = () => {
     switch (connectionState) {
       case 'connected': return 'Conectado!';
+      case 'already-connected': return 'Já conectado';
       case 'ready': return 'Escaneie o QR Code';
       case 'generating': return 'Gerando QR Code...';
       case 'connecting':
@@ -229,6 +230,41 @@ export function WhatsAppConnectionModal(props: WhatsAppConnectionModalProps) {
                     >
                       <LogOut className="w-4 h-4" />
                       Desconectar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Already Connected State - User came back to a session that was already connected */}
+            {connectionState === 'already-connected' && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6">
+                  <Check className="w-10 h-10 text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">WhatsApp já está conectado!</h3>
+                <p className="text-white/60 text-center mb-6">
+                  Sua conta do WhatsApp já está vinculada e pronta para uso.
+                  Não é necessário conectar novamente.
+                </p>
+                <div className="flex flex-col gap-3 w-full">
+                  <Button
+                    onClick={onClose}
+                    className="w-full py-4 text-lg rounded-xl bg-white/10 hover:bg-white/20 text-white"
+                  >
+                    Voltar
+                  </Button>
+                  {onDisconnect && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        onDisconnect(instanceId);
+                        onClose();
+                      }}
+                      className="w-full py-4 text-base rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Desconectar para usar outra conta
                     </Button>
                   )}
                 </div>

@@ -120,19 +120,20 @@ export const initWhatsAppService = (io) => {
             try {
                 // Criar ou atualizar instância vinculada ao usuário
                 // Como é 1:1, usamos upsert com userId como chave
+                // phoneNumber temporário usa o userId para garantir unicidade
+                const tempPhoneNumber = phoneNumber || `pending_${userId}`;
                 const instance = await prisma.instance.upsert({
                     where: { userId },
                     update: {}, // Não atualizar nada se já existe
                     create: {
                         userId,
-                        phoneNumber: phoneNumber || 'pending' // Será atualizado quando conectar
+                        phoneNumber: tempPhoneNumber
                     }
                 });
                 console.log(`📱 Instance found/created: ${instance.id} for user ${userId}`);
 
-                // Armazenar referência do userId na sessão para uso posterior
-                const effectiveSessionId = `user_${userId}`;
-                await createSession(effectiveSessionId, socket, io, phoneNumber, userId);
+                // Usar o sessionId original do frontend para manter compatibilidade
+                await createSession(sessionId, socket, io, phoneNumber, userId);
             } catch (error) {
                 console.error(`❌ Error creating session ${sessionId}:`, error);
                 socket.emit('qr-error', {
@@ -172,7 +173,11 @@ export const initWhatsAppService = (io) => {
 const createSession = async (sessionId, socket, io, phoneNumber = null, userId = null) => {
     // Check if session already exists and is connected
     const existingSession = sessions.get(sessionId);
-    if (existingSession?.ws?.isOpen) {
+
+    // Verificar se sessão existe e está conectada (sock.ws?.isOpen ou sock tem usuário)
+    const isConnected = existingSession?.sock?.ws?.isOpen || existingSession?.user;
+
+    if (existingSession && isConnected) {
         console.log(`📱 Session ${sessionId} already connected`);
 
         const user = existingSession.user;
@@ -241,7 +246,16 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
             console.log(`📡 Connection update for ${sessionId}:`, { connection, hasQR: !!qr });
 
             // QR Code received - send to frontend
+            // Só emitir QR se a sessão não estiver já conectada (não tem user)
             if (qr) {
+                const currentSessionData = sessions.get(sessionId);
+
+                // Se sessão já tem usuário conectado, ignorar QR (já está autenticado)
+                if (currentSessionData?.user) {
+                    console.log(`⚠️ QR recebido mas sessão ${sessionId} já está conectada - ignorando`);
+                    return;
+                }
+
                 try {
                     const qrImage = await QRCode.toDataURL(qr, {
                         width: 256,

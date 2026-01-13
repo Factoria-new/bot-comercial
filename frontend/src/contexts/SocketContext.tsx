@@ -129,8 +129,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     socketInstance.on('already-connected', ({ sessionId, user }) => {
       toast({
-        title: "Já Conectado",
-        description: "Esta conexão já está conectada ao WhatsApp.",
+        title: "WhatsApp já conectado",
+        description: "Sua conta já está vinculada e pronta para uso.",
       });
       window.dispatchEvent(new CustomEvent('whatsapp-already-connected', {
         detail: { sessionId, user }

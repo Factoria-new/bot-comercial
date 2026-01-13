@@ -3,7 +3,7 @@ import { WhatsAppInstance } from '@/types/whatsapp';
 import { useSocket } from '@/contexts/SocketContext';
 import { useAuth } from '@/contexts/AuthContext';
 // Define ConnectionState locally to avoid export issues
-export type ConnectionState = 'idle' | 'generating' | 'ready' | 'scanning' | 'connecting' | 'connected' | 'error';
+export type ConnectionState = 'idle' | 'generating' | 'ready' | 'scanning' | 'connecting' | 'connected' | 'error' | 'already-connected';
 
 interface ModalState {
   isOpen: boolean;
@@ -63,44 +63,50 @@ export const useWhatsAppInstances = () => {
 
   // Listener para eventos do WhatsApp
   useEffect(() => {
+    // Helper: verifica se o sessionId pertence ao usuário atual
+    const isMySession = (sessionId: string) => {
+      if (!user?.uid) return false;
+      return sessionId === `user_${user.uid}`;
+    };
+
     const handleQR = (event: CustomEvent) => {
       const { qr, sessionId } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
-      // Atualizar conexão com código
-      setInstances(prev => prev.map(instance =>
-        instance.id === instanceId ? {
-          ...instance,
-          qrCode: qr
-        } : instance
+      // Ignorar eventos de QR se já está conectado (evita sobrescrever estado)
+      if (modalState.connectionState === 'already-connected' || modalState.connectionState === 'connected') {
+        console.log('⚠️ Ignorando QR event - sessão já conectada');
+        return;
+      }
+
+      // Atualizar a primeira instância com o QR code (usuário tem apenas 1)
+      setInstances(prev => prev.map((instance, index) =>
+        index === 0 ? { ...instance, qrCode: qr } : instance
       ));
 
       // Atualizar modal para mostrar código
-      if (modalState.isOpen && modalState.instanceId === instanceId) {
+      if (modalState.isOpen) {
         setModalState(prev => ({ ...prev, connectionState: 'ready' }));
       }
     };
 
     const handleQRScanned = (event: CustomEvent) => {
       const { sessionId } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
       // Atualizar modal para mostrar que o QR foi escaneado
-      if (modalState.isOpen && modalState.instanceId === instanceId) {
+      if (modalState.isOpen) {
         setModalState(prev => ({ ...prev, connectionState: 'scanning' }));
       }
     };
 
     const handleConnecting = (event: CustomEvent) => {
       const { sessionId } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
       // Atualizar modal para mostrar que está conectando
-      // FIX: Só mostrar "conectando" se já tivermos passado pelo scan ('scanning')
-      // Isso evita mostrar "Conectando..." prematuramente enquanto o QR ainda está sendo gerado
-      if (modalState.isOpen && modalState.instanceId === instanceId) {
+      if (modalState.isOpen) {
         setModalState(prev => {
-          // Se estivermos em states iniciais, ignorar o evento 'connecting'
           if (['generating', 'ready', 'selection', 'input-phone', 'pairing'].includes(prev.connectionState)) {
             return prev;
           }
@@ -111,11 +117,11 @@ export const useWhatsAppInstances = () => {
 
     const handleConnected = (event: CustomEvent) => {
       const { sessionId } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
-      // Atualizar conexão como conectada
-      setInstances(prev => prev.map(instance =>
-        instance.id === instanceId ? {
+      // Atualizar a primeira instância como conectada
+      setInstances(prev => prev.map((instance, index) =>
+        index === 0 ? {
           ...instance,
           isConnected: true,
           qrCode: undefined,
@@ -124,11 +130,8 @@ export const useWhatsAppInstances = () => {
       ));
 
       // Atualizar modal
-      if (modalState.isOpen && modalState.instanceId === instanceId) {
-        // FORCE 'connecting' state first to show animation
+      if (modalState.isOpen) {
         setModalState(prev => ({ ...prev, connectionState: 'connecting' }));
-
-        // Wait 4 seconds for the cycle to complete
         setTimeout(() => {
           setModalState(prev => ({ ...prev, connectionState: 'connected' }));
         }, 4000);
@@ -138,33 +141,30 @@ export const useWhatsAppInstances = () => {
     };
 
     const handleUserInfo = (event: CustomEvent) => {
-      const { sessionId, user } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      const { sessionId, user: whatsappUser } = event.detail;
+      if (!isMySession(sessionId)) return;
 
-      setInstances(prev => prev.map(instance =>
-        instance.id === instanceId ? {
-          ...instance,
-          phoneNumber: user.number
-        } : instance
+      setInstances(prev => prev.map((instance, index) =>
+        index === 0 ? { ...instance, phoneNumber: whatsappUser.number } : instance
       ));
     };
 
     const handleAlreadyConnected = (event: CustomEvent) => {
-      const { sessionId, user } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      const { sessionId, user: whatsappUser } = event.detail;
+      if (!isMySession(sessionId)) return;
 
-      setInstances(prev => prev.map(instance =>
-        instance.id === instanceId ? {
+      setInstances(prev => prev.map((instance, index) =>
+        index === 0 ? {
           ...instance,
           isConnected: true,
-          phoneNumber: user?.number,
+          phoneNumber: whatsappUser?.number,
           qrCode: undefined
         } : instance
       ));
 
-      // Fechar modal se já estiver conectado
-      if (modalState.isOpen && modalState.instanceId === instanceId) {
-        setModalState({ isOpen: false, instanceId: null, connectionState: 'idle' });
+      // Mostrar modal com estado "already-connected" em vez de fechar
+      if (modalState.isOpen) {
+        setModalState(prev => ({ ...prev, connectionState: 'already-connected' }));
       }
 
       setIsGeneratingQR(null);
@@ -172,10 +172,10 @@ export const useWhatsAppInstances = () => {
 
     const handleLoggedOut = (event: CustomEvent) => {
       const { sessionId } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
-      setInstances(prev => prev.map(instance =>
-        instance.id === instanceId ? {
+      setInstances(prev => prev.map((instance, index) =>
+        index === 0 ? {
           ...instance,
           isConnected: false,
           qrCode: undefined,
@@ -187,10 +187,9 @@ export const useWhatsAppInstances = () => {
 
     const handleQRError = (event: CustomEvent) => {
       const { sessionId, error } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
-      // Atualizar modal para mostrar erro
-      if (modalState.isOpen && modalState.instanceId === instanceId) {
+      if (modalState.isOpen) {
         setModalState(prev => ({
           ...prev,
           connectionState: 'error',
@@ -203,10 +202,9 @@ export const useWhatsAppInstances = () => {
 
     const handleConnectionError = (event: CustomEvent) => {
       const { sessionId, error } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
-      // Atualizar modal para mostrar erro
-      if (modalState.isOpen && modalState.instanceId === instanceId) {
+      if (modalState.isOpen) {
         setModalState(prev => ({
           ...prev,
           connectionState: 'error',
@@ -219,14 +217,13 @@ export const useWhatsAppInstances = () => {
 
     const handleDisconnected = (event: CustomEvent) => {
       const { sessionId, willReconnect } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
-      // Atualizar conexão como desconectada
-      setInstances(prev => prev.map(instance =>
-        instance.id === instanceId ? {
+      setInstances(prev => prev.map((instance, index) =>
+        index === 0 ? {
           ...instance,
           isConnected: false,
-          isReconnecting: willReconnect, // Adicionar flag de reconexão
+          isReconnecting: willReconnect,
           qrCode: undefined
         } : instance
       ));
@@ -234,11 +231,10 @@ export const useWhatsAppInstances = () => {
 
     const handleReconnectionFailed = (event: CustomEvent) => {
       const { sessionId } = event.detail;
-      const instanceId = parseInt(sessionId.split('_')[1]);
+      if (!isMySession(sessionId)) return;
 
-      // Atualizar conexão para indicar que a reconexão falhou
-      setInstances(prev => prev.map(instance =>
-        instance.id === instanceId ? {
+      setInstances(prev => prev.map((instance, index) =>
+        index === 0 ? {
           ...instance,
           isConnected: false,
           isReconnecting: false,
@@ -276,7 +272,7 @@ export const useWhatsAppInstances = () => {
       window.removeEventListener('whatsapp-disconnected', handleDisconnected as EventListener);
       window.removeEventListener('whatsapp-reconnection-failed', handleReconnectionFailed as EventListener);
     };
-  }, [modalState.isOpen, modalState.instanceId]);
+  }, [modalState.isOpen, modalState.connectionState, user?.uid]);
 
   const handleGenerateQR = useCallback(async (instanceId: number) => {
     if (!user?.uid) {
@@ -293,14 +289,17 @@ export const useWhatsAppInstances = () => {
       connectionState: 'generating'
     });
 
-    const sessionId = `instance_${instanceId}`;
+    // Usar userId como sessionId para garantir isolamento entre usuários
+    // Cada usuário terá sua própria sessão única
+    const sessionId = `user_${user.uid}`;
     generateQR(sessionId, undefined, user.uid);
   }, [generateQR, user]);
 
-  const handleDisconnect = useCallback(async (instanceId: number) => {
-    const sessionId = `instance_${instanceId}`;
+  const handleDisconnect = useCallback(async () => {
+    if (!user?.uid) return;
+    const sessionId = `user_${user.uid}`;
     logout(sessionId);
-  }, [logout]);
+  }, [logout, user]);
 
   const handleSaveConfig = useCallback(async (instanceId: number, config: { name: string; apiKey: string; assistantId: string }) => {
     setInstances(prev => prev.map(instance =>
