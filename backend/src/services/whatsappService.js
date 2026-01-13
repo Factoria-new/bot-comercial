@@ -10,6 +10,7 @@ import { getSessionConfig, isTtsEnabled, getTtsVoice, getTtsRules } from './sess
 import { generateAudio } from './ttsService.js';
 import { convertWavToOgg } from '../utils/audioConverter.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getConversationHistory, saveMessage } from './historyService.js';
 
 // Store active WhatsApp sessions
 const sessions = new Map();
@@ -42,6 +43,14 @@ const BOT_IDENTIFIER = '[BOT]';
 
 // Contador de tentativas de reconexão para backoff exponencial
 const reconnectionAttempts = new Map(); // sessionId -> { count, lastAttempt }
+
+// --- MESSAGE BUFFER (Debounce de 10 segundos) ---
+// Buffer para acumular mensagens do mesmo contato
+const messageBuffer = new Map(); // contactId -> { messages: [], lastIncomingType: 'text', sessionId: '', sock: null, socket: null }
+// Timers de debounce por contato
+const bufferTimers = new Map(); // contactId -> timeoutId
+// Tempo de espera em ms (10 segundos)
+const BUFFER_DELAY_MS = 10000;
 // ---------------------
 
 /**
@@ -542,6 +551,19 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     continue;
                 }
 
+                // Skip archived messages - não responder conversas arquivadas
+                if (msg.message?.messageContextInfo?.isForwardedMedia === false &&
+                    msg.messageStubType === 36) {
+                    console.log('⏭️ Skipping: Archived conversation');
+                    continue;
+                }
+
+                // Verificar se a mensagem é de uma conversa arquivada (broadcast list ou status)
+                if (msg.broadcast || msg.key.remoteJid === 'status@broadcast') {
+                    console.log('⏭️ Skipping: Broadcast/Status message');
+                    continue;
+                }
+
                 console.log(`📝 Processing message (${incomingMessageType}): "${messageText.substring(0, 100)}" from ${msg.key.remoteJid}`);
 
 
@@ -582,59 +604,134 @@ const createSession = async (sessionId, socket, io, phoneNumber = null) => {
                     continue;
                 }
 
-                try {
-                    // Get or create conversation history for this contact
-                    let isNewContact = false;
-                    if (!conversationHistory.has(contactId)) {
-                        conversationHistory.set(contactId, []);
-                        isNewContact = true;
-                    }
-                    const history = conversationHistory.get(contactId);
+                // --- MESSAGE BUFFER LOGIC (Debounce de 10 segundos) ---
+                // Acumula mensagens do mesmo contato e espera 10s sem novas mensagens para processar
 
-                    // --- UPDATE METRICS ---
-                    metrics.totalMessages++;
-                    if (isNewContact) {
-                        metrics.newContacts++;
-                    }
-                    metrics.activeChats = sessions.size; // Update active chats count
-
-                    // Emit updates to all connected clients
-                    io.emit('metrics-update', metrics);
-                    // ---------------------
-
-                    // Add user message to history
-                    history.push({ role: 'user', content: messageText });
-
-                    // Keep history limited to last 20 messages
-                    if (history.length > 20) {
-                        history.splice(0, history.length - 20);
-                    }
-
-                    // Forward to Python AI Engine
-                    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-                    console.log(`🤖 Forwarding message to AI Engine: ${aiServiceUrl}`);
-
-                    await axios.post(`${aiServiceUrl}/webhook/whatsapp`, {
-                        userId: sessionId,
-                        remoteJid: remoteJid,
-                        message: messageText,
-                        history: history.map(h => ({ role: h.role, content: h.content })),
-                        agentPrompt: agentPrompt
+                // Pegar ou criar buffer para este contato
+                if (!messageBuffer.has(contactId)) {
+                    messageBuffer.set(contactId, {
+                        messages: [],
+                        lastIncomingType: incomingMessageType,
+                        sessionId: sessionId,
+                        sock: sock,
+                        socket: socket,
+                        agentPrompt: agentPrompt,
+                        remoteJid: remoteJid
                     });
-
-                    console.log(`✅ Message forwarded to AI Engine for ${remoteJid}`);
-                } catch (error) {
-                    console.error(`❌ Error handling message from ${remoteJid}:`, error.message);
                 }
+
+                const buffer = messageBuffer.get(contactId);
+
+                // Adicionar mensagem ao buffer
+                buffer.messages.push(messageText);
+                buffer.lastIncomingType = incomingMessageType; // Manter o último tipo de mensagem
+                console.log(`📦 Mensagem adicionada ao buffer de ${contactId} (${buffer.messages.length} mensagens acumuladas)`);
+
+                // Cancelar timer anterior se existir (reset do debounce)
+                if (bufferTimers.has(contactId)) {
+                    clearTimeout(bufferTimers.get(contactId));
+                    console.log(`⏱️ Timer resetado para ${contactId}`);
+                }
+
+                // Criar novo timer de 10 segundos
+                const timerId = setTimeout(async () => {
+                    await processBufferedMessages(contactId, io);
+                }, BUFFER_DELAY_MS);
+
+                bufferTimers.set(contactId, timerId);
+                console.log(`⏱️ Timer de ${BUFFER_DELAY_MS / 1000}s iniciado para ${contactId}`);
+
+                // --- FIM DA LÓGICA DE BUFFER ---
             }
         });
-
     } catch (error) {
         console.error(`❌ Error in createSession for ${sessionId}:`, error);
         socket.emit('qr-error', {
             sessionId,
             error: error.message || 'Erro ao criar sessão'
         });
+    }
+};
+
+/**
+ * Processa mensagens acumuladas no buffer após timeout de debounce
+ * Esta função é chamada quando o timer de 10 segundos expira
+ * @param {string} contactId - ID do contato (sessionId:remoteJid)
+ * @param {object} io - Socket.IO instance
+ */
+const processBufferedMessages = async (contactId, io) => {
+    const buffer = messageBuffer.get(contactId);
+
+    if (!buffer || buffer.messages.length === 0) {
+        console.log(`⚠️ Buffer vazio para ${contactId}`);
+        messageBuffer.delete(contactId);
+        bufferTimers.delete(contactId);
+        return;
+    }
+
+    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid } = buffer;
+
+    // Concatenar todas as mensagens em uma só, separadas por quebra de linha
+    const combinedMessage = messages.join('\n');
+
+    console.log(`📤 Processando ${messages.length} mensagens acumuladas de ${contactId}`);
+    console.log(`📝 Mensagem combinada: "${combinedMessage.substring(0, 200)}..."`);
+
+    // Limpar buffer e timer
+    messageBuffer.delete(contactId);
+    bufferTimers.delete(contactId);
+
+    try {
+        // Extrair número da instância (bot) do sessionId ou da sessão
+        const session = sessions.get(sessionId);
+        const instancePhone = session?.user?.id?.split(':')[0] || sessionId;
+        const customerPhone = remoteJid.split('@')[0];
+
+        // Buscar histórico do banco de dados
+        const dbHistory = await getConversationHistory(instancePhone, customerPhone, 20);
+        const isNewContact = dbHistory.length === 0;
+
+        console.log(`📚 Histórico carregado do BD: ${dbHistory.length} mensagens para ${customerPhone}`);
+
+        // --- UPDATE METRICS ---
+        metrics.totalMessages += messages.length;
+        if (isNewContact) {
+            metrics.newContacts++;
+        }
+        metrics.activeChats = sessions.size;
+
+        // Emit updates to all connected clients
+        io.emit('metrics-update', metrics);
+        // ---------------------
+
+        // Salvar mensagem do usuário no banco de dados
+        await saveMessage(instancePhone, customerPhone, 'user', combinedMessage);
+        console.log(`💾 Mensagem do usuário salva no BD`);
+
+        // Construir histórico para enviar à IA (DB + mensagem atual)
+        const historyForAI = [
+            ...dbHistory.map(h => ({ role: h.role, content: h.content })),
+            { role: 'user', content: combinedMessage }
+        ];
+
+        // Forward to Python AI Engine
+        const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+        console.log(`🤖 Forwarding ${messages.length} buffered messages to AI Engine: ${aiServiceUrl}`);
+
+        await axios.post(`${aiServiceUrl}/webhook/whatsapp`, {
+            userId: sessionId,
+            remoteJid: remoteJid,
+            message: combinedMessage,
+            history: historyForAI,
+            agentPrompt: agentPrompt,
+            incomingMessageType: lastIncomingType,
+            instancePhone: instancePhone,
+            customerPhone: customerPhone
+        });
+
+        console.log(`✅ Buffered messages forwarded to AI Engine for ${remoteJid}`);
+    } catch (error) {
+        console.error(`❌ Error processing buffered messages for ${remoteJid}:`, error.message);
     }
 };
 
@@ -897,20 +994,21 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
             await sock.sendMessage(remoteJid, { text: message });
         }
 
-        // Add to conversation history so AI remembers context
-        const contactId = `${sessionId}:${remoteJid}`;
-        if (!conversationHistory.has(contactId)) {
-            conversationHistory.set(contactId, []);
-        }
-        const history = conversationHistory.get(contactId);
-        history.push({ role: 'assistant', content: message });
+        // Salvar resposta da IA no banco de dados
+        try {
+            // Extrair número da instância (bot) e do cliente
+            const instancePhone = session?.user?.id?.split(':')[0] || sessionId;
+            const customerPhone = remoteJid.split('@')[0];
 
-        // Limit history size
-        if (history.length > 20) {
-            history.splice(0, history.length - 20);
+            // Salvar mensagem da IA com role 'model' no banco
+            await saveMessage(instancePhone, customerPhone, 'model', message);
+            console.log(`💾 Resposta da IA salva no BD para ${customerPhone}`);
+        } catch (dbError) {
+            console.error(`⚠️ Erro ao salvar resposta no BD: ${dbError.message}`);
+            // Não falhar a função se o salvamento falhar
         }
 
-        console.log(`✅ Message sent to ${remoteJid} and added to history`);
+        console.log(`✅ Message sent to ${remoteJid}`);
         return { success: true, remoteJid };
     } catch (error) {
         console.error(`❌ Error sending message:`, error);

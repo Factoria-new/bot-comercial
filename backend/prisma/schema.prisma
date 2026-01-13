@@ -32,3 +32,49 @@ model User {
   
   @@map("users")
 }
+
+// Instância do bot (número conectado ao WhatsApp)
+model Instance {
+  id           String         @id @default(uuid())
+  phoneNumber  String         @unique // Número que está conectado ao bot
+  name         String?        // Nome opcional da instância
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  conversations Conversation[]
+  
+  @@map("instances")
+}
+
+// Conversa entre uma instância e um cliente
+model Conversation {
+  id            String    @id @default(uuid())
+  instanceId    String
+  customerPhone String    // Número do cliente que está conversando
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  instance      Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  
+  @@unique([instanceId, customerPhone]) // Uma conversa única por instância + cliente
+  @@index([instanceId])
+  @@index([customerPhone])
+  @@index([updatedAt]) // Para ordenar conversas recentes
+  @@map("conversations")
+}
+
+// Mensagens individuais da conversa
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  role           String       // "user" ou "model"
+  content        String       // Conteúdo da mensagem (texto)
+  createdAt      DateTime     @default(now())
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([conversationId, createdAt]) // Índice composto para buscar histórico ordenado
+  @@index([createdAt]) // Para limpeza de mensagens antigas
+  @@map("messages")
+}
