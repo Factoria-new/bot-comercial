@@ -68,6 +68,18 @@ const Dashboard = () => {
     localStorage.setItem('dashboard_state', JSON.stringify(stateToSave));
   }, [showChat, agentCreated, showWelcome, agentPrompt]);
 
+  // Auto-skip wizard if user has a custom prompt
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user?.customPrompt && !agentCreated) {
+      console.log("Found custom prompt, skipping wizard...");
+      setAgentCreated(true);
+      setShowChat(true);
+      setShowWelcome(false);
+      setAgentPrompt(user.customPrompt);
+    }
+  }, [user]);
+
 
 
 
@@ -164,34 +176,37 @@ const Dashboard = () => {
       </AnimatePresence>
 
       {/* Sidebar - Light mode */}
-      <DashboardSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => { setIsSidebarOpen(false); setShouldExpandIntegrations(false); }}
-        onNavigate={() => { }}
-        currentPage="chat"
-        integrations={integrations}
-        onLogout={handleLogout}
-        forceExpandIntegrations={shouldExpandIntegrations}
-        onIntegrationDisconnect={(id) => {
-          if (id === 'whatsapp' && whatsappInstances.length > 0) {
-            handleDisconnect(whatsappInstances[0].id);
-          }
-        }}
-        sessionId={currentSessionId}
-        onIntegrationClick={async (id) => {
-          if (id === 'whatsapp') {
-            if (!isWhatsAppConnected) {
-              handleGenerateQR(1);
+      {/* Sidebar - Light mode - Only show in Dashboard/Test Area */}
+      {showChat && (
+        <DashboardSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => { setIsSidebarOpen(false); setShouldExpandIntegrations(false); }}
+          onNavigate={() => { }}
+          currentPage="chat"
+          integrations={integrations}
+          onLogout={handleLogout}
+          forceExpandIntegrations={shouldExpandIntegrations}
+          onIntegrationDisconnect={(id) => {
+            if (id === 'whatsapp' && whatsappInstances.length > 0) {
+              handleDisconnect(whatsappInstances[0].id);
             }
-          } else {
-            toast({
-              title: "Em breve",
-              description: "Integração disponível em breve.",
-            });
-          }
-        }}
-        onOpenLiaChat={() => setIsLiaChatOpen(true)}
-      />
+          }}
+          sessionId={currentSessionId}
+          onIntegrationClick={async (id) => {
+            if (id === 'whatsapp') {
+              if (!isWhatsAppConnected) {
+                handleGenerateQR(1);
+              }
+            } else {
+              toast({
+                title: "Em breve",
+                description: "Integração disponível em breve.",
+              });
+            }
+          }}
+          onOpenLiaChat={() => setIsLiaChatOpen(true)}
+        />
+      )}
 
       {/* Global WhatsApp Modal */}
       <WhatsAppConnectionModal

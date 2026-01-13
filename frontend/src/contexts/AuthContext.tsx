@@ -6,6 +6,7 @@ export interface UserProfile {
     email: string | null;
     role: "basic" | "pro" | "admin";
     displayName?: string;
+    customPrompt?: string | null;
     // Add other fields from Firestore as needed
 }
 

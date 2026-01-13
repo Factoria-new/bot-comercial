@@ -34,32 +34,33 @@ export const useWhatsAppInstances = () => {
     }));
     setInstances(initialInstances);
 
-    // Check status on mount to restore connection state
+    // Check status on mount and when user is available
     const checkInstancesStatus = async () => {
-      // Implement status check logic if not already available in context
-      // Or if using socket events, ensure we request status
-      // Since useSocket might not expose a direct check, we might rely on the socket connection event
-      // But the user says "Ao recarregar a página o 'conectado' com o WhatsApp é perdido"
-      // This implies we need to proactively ask "Am I connected?"
-      // The backend has `GET /api/whatsapp/status/:sessionId`.
-      // Let's implement that fetch here.
+      if (!user?.uid) return;
+
       try {
-        initialInstances.forEach(async (instance) => {
-          const response = await fetch(`/api/whatsapp/status/instance_${instance.id}`);
-          const data = await response.json();
-          if (data.status === 'connected') {
-            setInstances(prev => prev.map(inst =>
-              inst.id === instance.id ? { ...inst, isConnected: true } : inst
-            ));
-          }
-        });
+        // Check functionality for the single user session
+        const sessionId = `user_${user.uid}`;
+        const response = await fetch(`/api/whatsapp/status/${sessionId}`);
+        const data = await response.json();
+
+        // Map the single session to the first instance slot
+        if (data && (data.status === 'connected' || data.status === 'ready')) {
+          setInstances(prev => prev.map((inst, index) =>
+            index === 0 ? {
+              ...inst,
+              isConnected: true,
+              phoneNumber: data.user || undefined
+            } : inst
+          ));
+        }
       } catch (error) {
         console.error("Failed to check WhatsApp status:", error);
       }
     };
 
     checkInstancesStatus();
-  }, []);
+  }, [user]);
 
   // Listener para eventos do WhatsApp
   useEffect(() => {

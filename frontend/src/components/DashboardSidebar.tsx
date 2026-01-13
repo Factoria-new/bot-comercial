@@ -42,7 +42,7 @@ const VOICE_OPTIONS = [
 interface DashboardSidebarProps {
     isOpen: boolean;
     onClose: () => void;
-    onNavigate: (page: "chat" | "connections" | "integrations" | "ai-status" | "calendar" | "settings") => void;
+    onNavigate: (page: "chat" | "connections" | "integrations" | "ai-status" | "calendar" | "settings" | "my-prompt") => void;
     currentPage: string;
     connectedInstances?: number;
     totalInstances?: number;
@@ -229,11 +229,8 @@ export default function DashboardSidebar({
             icon: Sparkles,
             description: "Gerenciar personalidade",
             onClick: () => {
-                // Future functionality
-                toast({
-                    title: "Em breve",
-                    description: "Esta funcionalidade estará disponível em breve.",
-                });
+                onNavigate("my-prompt");
+                onClose();
             }
         },
     ];
