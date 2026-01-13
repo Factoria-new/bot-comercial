@@ -69,6 +69,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
     };
 
     const handleDayToggle = (day: WeekDay) => {
+        setSelectedPreset('custom');
         const newSchedule = { ...schedule };
         newSchedule[day] = {
             ...newSchedule[day],
@@ -81,6 +82,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
     };
 
     const addSlot = (day: WeekDay) => {
+        setSelectedPreset('custom');
         const newSchedule = { ...schedule };
         newSchedule[day] = {
             ...newSchedule[day],
@@ -90,6 +92,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
     };
 
     const removeSlot = (day: WeekDay, index: number) => {
+        setSelectedPreset('custom');
         const newSchedule = { ...schedule };
         newSchedule[day] = {
             ...newSchedule[day],
@@ -99,6 +102,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
     };
 
     const updateSlot = (day: WeekDay, index: number, field: 'start' | 'end', val: string) => {
+        setSelectedPreset('custom');
         const newSchedule = { ...schedule };
         const newSlots = [...newSchedule[day].slots];
         newSlots[index] = { ...newSlots[index], [field]: val };

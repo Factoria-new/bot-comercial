@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link2, Sparkles, MessageCircle, FlaskConical, ArrowRight, Check } from "lucide-react";
+import { Link2, Sparkles, MessageCircle, MessagesSquare, Zap, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Integration } from "@/lib/agent-creator.types";
 import { useSocket } from "@/contexts/SocketContext";
@@ -97,70 +97,78 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                         </Button>
                     </motion.div>
 
-                    {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {/* Metrics Grid - Compact Design */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Mensagens Recebidas */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.2 }}
-                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors"
+                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all hover:border-blue-500/30 group"
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
-                                    <MessageCircle className="w-6 h-6 text-blue-400" />
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                                    <MessageCircle className="w-5 h-5 text-blue-400" />
                                 </div>
+                                <span className="text-xs text-blue-400/70 bg-blue-500/10 px-2 py-1 rounded-full">Hoje</span>
                             </div>
-                            <p className="text-3xl md:text-4xl font-bold text-white">{metrics.totalMessages}</p>
-                            <p className="text-white/50 text-base mt-2">Mensagens Recebidas</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">{metrics.totalMessages}</p>
+                            <p className="text-white/50 text-sm mt-1">Mensagens</p>
+                            <p className="text-white/30 text-xs mt-0.5">Recebidas pelo bot</p>
                         </motion.div>
 
-                        {/* Novos Clientes */}
+                        {/* Novos Contatos */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.25 }}
-                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors"
+                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all hover:border-emerald-500/30 group"
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
-                                    <Sparkles className="w-6 h-6 text-emerald-400" />
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
+                                    <Sparkles className="w-5 h-5 text-emerald-400" />
                                 </div>
+                                <span className="text-xs text-emerald-400/70 bg-emerald-500/10 px-2 py-1 rounded-full">Novos</span>
                             </div>
-                            <p className="text-3xl md:text-4xl font-bold text-white">{metrics.newContacts}</p>
-                            <p className="text-white/50 text-base mt-2">Novos Clientes</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">{metrics.newContacts}</p>
+                            <p className="text-white/50 text-sm mt-1">Contatos</p>
+                            <p className="text-white/30 text-xs mt-0.5">Leads captados</p>
                         </motion.div>
 
-                        {/* Atendimentos (Using Active Chats as proxy for now) */}
+                        {/* Conversas Ativas */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.3 }}
-                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors"
+                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all hover:border-purple-500/30 group"
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center">
-                                    <FlaskConical className="w-6 h-6 text-purple-400" />
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
+                                    <MessagesSquare className="w-5 h-5 text-purple-400" />
                                 </div>
+                                <span className="text-xs text-purple-400/70 bg-purple-500/10 px-2 py-1 rounded-full">Ativo</span>
                             </div>
-                            <p className="text-3xl md:text-4xl font-bold text-white">{metrics.activeChats}</p>
-                            <p className="text-white/50 text-base mt-2">Atendimentos</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">{metrics.activeChats}</p>
+                            <p className="text-white/50 text-sm mt-1">Conversas</p>
+                            <p className="text-white/30 text-xs mt-0.5">Em andamento</p>
                         </motion.div>
 
-                        {/* Taxa de Resposta (Using Placeholder Logic or calculate later) */}
+                        {/* Taxa de Resposta */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.35 }}
-                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors"
+                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all hover:border-amber-500/30 group"
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center">
-                                    <ArrowRight className="w-6 h-6 text-orange-400" />
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/30 transition-colors">
+                                    <Zap className="w-5 h-5 text-amber-400" />
                                 </div>
+                                <span className="text-xs text-amber-400/70 bg-amber-500/10 px-2 py-1 rounded-full">100%</span>
                             </div>
-                            <p className="text-3xl md:text-4xl font-bold text-white">100%</p>
-                            <p className="text-white/50 text-base mt-2">Taxa de Resposta</p>
+                            <p className="text-2xl md:text-3xl font-bold text-white">100%</p>
+                            <p className="text-white/50 text-sm mt-1">Resposta</p>
+                            <p className="text-white/30 text-xs mt-0.5">Taxa automática</p>
                         </motion.div>
                     </div>
 
