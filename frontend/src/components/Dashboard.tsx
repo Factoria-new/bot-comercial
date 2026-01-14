@@ -12,7 +12,7 @@ import WhatsAppConnectionModal from '@/components/WhatsAppConnectionModal';
 import LiaSidebar from '@/components/LiaSidebar';
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { useSocket } from '@/contexts/SocketContext';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Integration } from "@/types/onboarding";
 import { promptService } from '@/services/promptService';
 
@@ -200,7 +200,7 @@ const Dashboard = () => {
             className="animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]"
           >
             {/* Hamburger Menu Button */}
-            <div className="absolute top-4 left-4 z-50">
+            <div className="fixed top-4 left-4 z-50">
               <Button
                 variant="ghost"
                 size="icon"
@@ -272,6 +272,28 @@ const Dashboard = () => {
         onClose={() => setIsLiaChatOpen(false)}
         metrics={metrics}
       />
+
+      {/* Floating Lia Button - Always visible after onboarding */}
+      {!showWelcome && phase === 'app' && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
+          onClick={() => setIsLiaChatOpen(true)}
+          className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full shadow-2xl shadow-emerald-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform z-30 group"
+        >
+          {/* Pulse ring */}
+          <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-25" />
+
+          {/* Avatar */}
+          <span className="relative z-10 font-bold text-2xl">L</span>
+
+          {/* Tooltip */}
+          <div className="absolute right-20 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg border border-white/10">
+            Falar com a Lia
+          </div>
+        </motion.button>
+      )}
     </>
   );
 };

@@ -11,6 +11,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import LiaSidebar from "@/components/LiaSidebar";
 import WhatsAppConnectionModal from "@/components/WhatsAppConnectionModal";
 import { Integration } from "@/types/onboarding";
+import { motion } from "framer-motion";
 
 interface Metrics {
     totalMessages: number;
@@ -111,10 +112,7 @@ const MeuPrompt = () => {
         navigate('/login');
     };
 
-    const handleOpenIntegrations = () => {
-        setIsSidebarOpen(true);
-        setShouldExpandIntegrations(true);
-    };
+
 
     const handleSave = async () => {
         if (!prompt.trim()) {
@@ -213,18 +211,22 @@ const MeuPrompt = () => {
     return (
         <>
             <div className="min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]">
+                {/* Hamburger Menu - Always visible */}
+                <div className="fixed top-4 left-4 z-50">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="text-white/70 hover:bg-white/10"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </Button>
+                </div>
+
                 {/* Header */}
                 <header className="sticky top-0 z-10 bg-black/50 backdrop-blur-xl border-b border-white/10">
                     <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setIsSidebarOpen(true)}
-                                className="text-white/60 hover:text-white hover:bg-white/10"
-                            >
-                                <Menu className="w-5 h-5" />
-                            </Button>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
                                     <Sparkles className="w-5 h-5 text-purple-400" />
@@ -395,6 +397,26 @@ const MeuPrompt = () => {
                 onClose={() => setIsLiaChatOpen(false)}
                 metrics={metrics}
             />
+
+            {/* Floating Lia Button */}
+            <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
+                onClick={() => setIsLiaChatOpen(true)}
+                className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full shadow-2xl shadow-emerald-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform z-30 group"
+            >
+                {/* Pulse ring */}
+                <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-25" />
+
+                {/* Avatar */}
+                <span className="relative z-10 font-bold text-2xl">L</span>
+
+                {/* Tooltip */}
+                <div className="absolute right-20 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg border border-white/10">
+                    Falar com a Lia
+                </div>
+            </motion.button>
         </>
     );
 };

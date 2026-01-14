@@ -229,22 +229,22 @@ export default function DashboardSidebar({
             }
         },
         {
-            id: "chat",
-            label: "Chat",
-            icon: MessageSquare,
-            description: "Falar com a Lia",
-            onClick: () => {
-                onOpenLiaChat?.();
-                onClose();
-            }
-        },
-        {
             id: "my-prompt",
             label: "Meu Prompt",
             icon: Sparkles,
             description: "Gerenciar personalidade",
             onClick: () => {
                 navigate('/meu-prompt');
+                onClose();
+            }
+        },
+        {
+            id: "chat",
+            label: "Chat",
+            icon: MessageSquare,
+            description: "Falar com a Lia",
+            onClick: () => {
+                onOpenLiaChat?.();
                 onClose();
             }
         },
