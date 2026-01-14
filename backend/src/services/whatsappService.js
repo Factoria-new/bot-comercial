@@ -154,6 +154,46 @@ export const initWhatsAppService = (io) => {
             }
         });
 
+        // Handle cancel connection request (when user closes modal without scanning QR)
+        socket.on('cancel-connection', async ({ sessionId }) => {
+            console.log(`🚫 Cancel connection requested for session: ${sessionId}`);
+
+            const session = sessions.get(sessionId);
+            if (session) {
+                // Só cancelar se NÃO estiver conectado (evitar desconectar sessões ativas)
+                const isConnected = session.sock?.ws?.isOpen === true && !!session.user?.id;
+
+                if (!isConnected) {
+                    console.log(`🧹 Cleaning up pending session: ${sessionId}`);
+
+                    // Limpar intervals se existirem
+                    if (session.keepAliveInterval) {
+                        clearInterval(session.keepAliveInterval);
+                    }
+                    if (session.healthCheckInterval) {
+                        clearInterval(session.healthCheckInterval);
+                    }
+
+                    // Fechar socket se existir
+                    try {
+                        if (session.sock?.ws) {
+                            session.sock.ws.close();
+                        }
+                    } catch (e) {
+                        console.log(`⚠️ Error closing socket for ${sessionId}:`, e.message);
+                    }
+
+                    // Remover sessão do mapa
+                    sessions.delete(sessionId);
+                    console.log(`✅ Pending session ${sessionId} cleaned up`);
+                } else {
+                    console.log(`⚠️ Session ${sessionId} is connected, not cancelling`);
+                }
+            } else {
+                console.log(`⚠️ No session found for ${sessionId} to cancel`);
+            }
+        });
+
         // --- METRICS EVENTS ---
         // Send current metrics immediately upon connection/request
         socket.on('request-metrics', () => {
@@ -174,8 +214,12 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
     // Check if session already exists and is connected
     const existingSession = sessions.get(sessionId);
 
-    // Verificar se sessão existe e está conectada (sock.ws?.isOpen ou sock tem usuário)
-    const isConnected = existingSession?.sock?.ws?.isOpen || existingSession?.user;
+    // Verificar se sessão existe e REALMENTE está conectada (WebSocket aberto E tem usuário autenticado)
+    // Usar apenas sock.ws?.isOpen NÃO é suficiente pois o socket pode estar aberto antes da autenticação
+    // Precisamos verificar se o WebSocket está aberto E se há um usuário autenticado
+    const wsIsOpen = existingSession?.sock?.ws?.isOpen === true;
+    const hasAuthenticatedUser = !!existingSession?.user?.id;
+    const isConnected = wsIsOpen && hasAuthenticatedUser;
 
     if (existingSession && isConnected) {
         console.log(`📱 Session ${sessionId} already connected`);
@@ -286,10 +330,12 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                 if (sessionData) {
                     sessionData.user = sock.user;
                     console.log(`📝 Session data updated for ${sessionId} with user: ${sock.user?.id}`);
+                    console.log(`📝 Session userId: ${sessionData.userId}, sock.user.id: ${sock.user?.id}`);
 
                     // Atualizar phoneNumber na instância do banco de dados
                     if (sessionData.userId && sock.user?.id) {
                         const connectedPhoneNumber = sock.user.id.split(':')[0];
+                        console.log(`📱 Updating phoneNumber to ${connectedPhoneNumber} for userId ${sessionData.userId}`);
                         try {
                             await prisma.instance.update({
                                 where: { userId: sessionData.userId },
@@ -299,6 +345,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         } catch (dbError) {
                             console.error(`❌ Error updating instance phoneNumber:`, dbError.message);
                         }
+                    } else {
+                        console.warn(`⚠️ Cannot update phoneNumber: userId=${sessionData.userId}, sock.user.id=${sock.user?.id}`);
                     }
                 } else {
                     console.error(`❌ Session data not found for ${sessionId} on open!`);
@@ -427,6 +475,11 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
 
                 // ✨ LIMPAR INTERVALS antes de qualquer coisa
                 const sessionToClean = sessions.get(sessionId);
+
+                // ✨ PRESERVAR userId ANTES de deletar a sessão (necessário para reconexão)
+                const preservedUserId = sessionToClean?.userId;
+                const preservedPhoneNumber = phoneNumber;
+
                 if (sessionToClean?.keepAliveInterval) {
                     clearInterval(sessionToClean.keepAliveInterval);
                     console.log(`🧹 Keep-alive interval limpo para ${sessionId}`);
@@ -456,7 +509,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                     // Calcular delay: 2s, 4s, 8s, 16s, 32s, máximo 60s
                     const delay = Math.min(2000 * Math.pow(2, attemptData.count - 1), 60000);
 
-                    console.log(`🔄 Reconexão ${attemptData.count} para ${sessionId} agendada em ${delay}ms`);
+                    console.log(`🔄 Reconexão ${attemptData.count} para ${sessionId} agendada em ${delay}ms (userId: ${preservedUserId})`);
                     socket.emit('connection-status', {
                         sessionId,
                         message: `Reconectando... (tentativa ${attemptData.count})`,
@@ -465,8 +518,9 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
 
                     setTimeout(async () => {
                         try {
-                            console.log(`🔌 Tentando reconectar ${sessionId} (tentativa ${attemptData.count})...`);
-                            await createSession(sessionId, socket, io, phoneNumber);
+                            console.log(`🔌 Tentando reconectar ${sessionId} (tentativa ${attemptData.count}) com userId: ${preservedUserId}...`);
+                            // ✨ PASSAR userId NA RECONEXÃO para que phoneNumber possa ser atualizado
+                            await createSession(sessionId, socket, io, preservedPhoneNumber, preservedUserId);
                             reconnectionAttempts.delete(sessionId);
                             console.log(`✅ Reconexão bem-sucedida para ${sessionId}`);
                         } catch (error) {
@@ -826,6 +880,10 @@ const forceReconnect = async (sessionId, socket, io) => {
 
     // Limpar sessão existente
     const session = sessions.get(sessionId);
+
+    // ✨ PRESERVAR userId ANTES de deletar a sessão
+    const preservedUserId = session?.userId;
+
     if (session) {
         if (session.keepAliveInterval) {
             clearInterval(session.keepAliveInterval);
@@ -839,8 +897,9 @@ const forceReconnect = async (sessionId, socket, io) => {
     // Limpar contador de reconexão
     reconnectionAttempts.delete(sessionId);
 
-    // Recriar sessão
-    await createSession(sessionId, socket, io);
+    // Recriar sessão com userId preservado
+    console.log(`🔌 Force reconnect com userId: ${preservedUserId}`);
+    await createSession(sessionId, socket, io, null, preservedUserId);
 
     return { success: true, message: 'Reconexão iniciada' };
 };

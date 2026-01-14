@@ -20,7 +20,7 @@ export const useWhatsAppInstances = () => {
     instanceId: null,
     connectionState: 'idle'
   });
-  const { generateQR, logout } = useSocket();
+  const { generateQR, logout, cancelConnection } = useSocket();
   const { user } = useAuth();
 
   // Inicializar conexões
@@ -319,14 +319,26 @@ export const useWhatsAppInstances = () => {
     // Limpar o estado isGeneratingQR ao fechar o modal
     setIsGeneratingQR(null);
 
+    // Verificar se a instância já está conectada
+    const instance = instances[0]; // Usuário tem apenas 1 instância
+    const isInstanceConnected = instance?.isConnected === true;
+
     // Limpar código da conexão se o modal foi fechado sem conectar
     if (modalState.instanceId) {
-      setInstances(prev => prev.map(instance =>
-        instance.id === modalState.instanceId && !instance.isConnected ? {
-          ...instance,
+      setInstances(prev => prev.map(inst =>
+        inst.id === modalState.instanceId && !inst.isConnected ? {
+          ...inst,
           qrCode: undefined
-        } : instance
+        } : inst
       ));
+    }
+
+    // Se o modal foi fechado sem conexão ativa, cancelar a sessão pendente no backend
+    // Isso permite que o usuário gere um novo QR na próxima vez
+    if (!isInstanceConnected && user?.uid) {
+      const sessionId = `user_${user.uid}`;
+      console.log('🚫 Modal fechado sem conexão - cancelando sessão pendente:', sessionId);
+      cancelConnection(sessionId);
     }
 
     // Fechar o modal
@@ -335,7 +347,7 @@ export const useWhatsAppInstances = () => {
       instanceId: null,
       connectionState: 'idle'
     });
-  }, [modalState.instanceId]);
+  }, [modalState.instanceId, instances, user?.uid, cancelConnection]);
 
   return {
     instances,

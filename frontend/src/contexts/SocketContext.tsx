@@ -9,6 +9,7 @@ interface SocketContextData {
   generateQR: (sessionId: string, phoneNumber?: string, userId?: string) => void;
   logout: (sessionId: string) => void;
   forceReconnect: (sessionId: string) => void;
+  cancelConnection: (sessionId: string) => void;
 }
 
 const SocketContext = createContext<SocketContextData>({} as SocketContextData);
@@ -238,8 +239,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
+  const cancelConnection = (sessionId: string) => {
+    if (socket && isConnected) {
+      console.log('🚫 Cancelando conexão pendente:', sessionId);
+      socket.emit('cancel-connection', { sessionId });
+    }
+  };
+
   return (
-    <SocketContext.Provider value={{ socket, isConnected, generateQR, logout, forceReconnect }}>
+    <SocketContext.Provider value={{ socket, isConnected, generateQR, logout, forceReconnect, cancelConnection }}>
       {children}
     </SocketContext.Provider>
   );
