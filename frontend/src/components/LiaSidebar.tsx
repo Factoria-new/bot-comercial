@@ -17,6 +17,8 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
     const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'lia', content: string }[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(400);
+    const [isResizing, setIsResizing] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom when new messages arrive
@@ -89,8 +91,40 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                        className="fixed right-0 top-0 h-full w-full max-w-md bg-gradient-to-bl from-slate-900 via-slate-900 to-emerald-950/50 border-l border-emerald-500/20 shadow-2xl z-50 flex flex-col"
+                        style={{ width: sidebarWidth }}
+                        className="fixed right-0 top-0 h-full bg-gradient-to-bl from-slate-900 via-slate-900 to-emerald-950/50 border-l border-emerald-500/20 shadow-2xl z-50 flex flex-col group"
                     >
+                        {/* Resize Handle */}
+                        <div
+                            className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-emerald-500/50 transition-colors z-50 select-none"
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                const startX = e.clientX;
+                                const startWidth = sidebarWidth;
+
+                                const handleMouseMove = (moveEvent: MouseEvent) => {
+                                    const newWidth = startWidth + (startX - moveEvent.clientX);
+                                    // Min width 300px, Max width 800px or window width - 20px
+                                    if (newWidth >= 300 && newWidth <= Math.min(800, window.innerWidth - 20)) {
+                                        setSidebarWidth(newWidth);
+                                    }
+                                };
+
+                                const handleMouseUp = () => {
+                                    document.removeEventListener('mousemove', handleMouseMove);
+                                    document.removeEventListener('mouseup', handleMouseUp);
+                                    setIsResizing(false);
+                                };
+
+                                setIsResizing(true);
+                                document.addEventListener('mousemove', handleMouseMove);
+                                document.addEventListener('mouseup', handleMouseUp);
+                            }}
+                        >
+                            {/* Visual indicator on hover/active */}
+                            <div className={`absolute inset-y-0 left-[-2px] w-1.5 transition-colors ${isResizing ? 'bg-emerald-500' : 'group-hover:bg-white/20'}`} />
+                        </div>
+
                         {/* Decorative glow */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
 
