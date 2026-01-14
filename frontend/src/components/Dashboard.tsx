@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import AgentCreator from '@/components/AgentCreator';
 import WelcomeScreen from '@/components/WelcomeScreen';
-import FactoriaChatInterface from '@/components/ui/factoria-chat-interface';
+import { DashboardStep } from '@/components/agent-creator/DashboardStep';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import WhatsAppConnectionModal from '@/components/WhatsAppConnectionModal';
 import LiaSidebar from '@/components/LiaSidebar';
@@ -12,35 +14,29 @@ import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { useSocket } from '@/contexts/SocketContext';
 import { AnimatePresence } from 'framer-motion';
 import { Integration } from "@/types/onboarding";
+import { promptService } from '@/services/promptService';
 
 const Dashboard = () => {
-  // Hooks declarations first
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  // Load persisted state from localStorage
-  const getPersistedState = () => {
-    try {
-      const saved = localStorage.getItem('dashboard_state');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Error loading persisted state:', e);
-    }
-    return null;
-  };
+  // =====================
+  // SIMPLIFIED STATE MODEL
+  // =====================
+  // Phase: 'onboarding' = criação do agente | 'app' = uso diário
+  const [phase, setPhase] = useState<'loading' | 'onboarding' | 'app'>('loading');
 
-  const persistedState = getPersistedState();
+  // Onboarding sub-step (only used when phase === 'onboarding')
+  const [showWelcome, setShowWelcome] = useState(true);
 
+  // Prompt stored in memory after loading from DB
+  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
+
+  // UI State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
-  const [showChat, setShowChat] = useState(persistedState?.showChat || false);
-  const [agentCreated, setAgentCreated] = useState(persistedState?.agentCreated || false);
-  const [showWelcome, setShowWelcome] = useState(persistedState?.showWelcome ?? true);
-  const [agentPrompt, setAgentPrompt] = useState<string | null>(persistedState?.agentPrompt || null);
   const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
+  const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
 
   // Socket for metrics
   const { socket } = useSocket();
@@ -49,39 +45,6 @@ const Dashboard = () => {
     newContacts: 0,
     activeChats: 0
   });
-
-  // Listen for metrics from socket
-  useEffect(() => {
-    if (!socket) return;
-    socket.on('metrics-update', (newMetrics: typeof metrics) => {
-      setMetrics(newMetrics);
-    });
-    socket.emit('request-metrics');
-    return () => {
-      socket.off('metrics-update');
-    };
-  }, [socket]);
-
-  // Persist state when it changes
-  useEffect(() => {
-    const stateToSave = { showChat, agentCreated, showWelcome, agentPrompt };
-    localStorage.setItem('dashboard_state', JSON.stringify(stateToSave));
-  }, [showChat, agentCreated, showWelcome, agentPrompt]);
-
-  // Auto-skip wizard if user has a custom prompt
-  const { user } = useAuth();
-  useEffect(() => {
-    if (user?.customPrompt && !agentCreated) {
-      console.log("Found custom prompt, skipping wizard...");
-      setAgentCreated(true);
-      setShowChat(true);
-      setShowWelcome(false);
-      setAgentPrompt(user.customPrompt);
-    }
-  }, [user]);
-
-
-
 
   // WhatsApp Integration Hook
   const {
@@ -100,26 +63,75 @@ const Dashboard = () => {
     { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: false },
   ];
 
-  // Block browser back button when on dashboard
+  // =====================
+  // INITIALIZATION EFFECT
+  // =====================
   useEffect(() => {
-    // Push a new state to prevent going back
-    window.history.pushState(null, '', window.location.href);
+    const initialize = async () => {
+      if (!user) return;
 
-    const handlePopState = () => {
-      // Prevent going back by pushing state again
-      window.history.pushState(null, '', window.location.href);
+      // Check if user has a prompt (completed onboarding)
+      if (user.hasPrompt) {
+        console.log("✅ User has prompt, loading from database...");
+        try {
+          const result = await promptService.getPrompt();
+          if (result.success && result.prompt) {
+            setAgentPrompt(result.prompt);
+            setShowWelcome(false); // Ensure sidebar is visible
+            setPhase('app'); // Skip to main app
+            console.log("✅ Prompt loaded, entering app phase");
+            return;
+          }
+        } catch (error) {
+          console.error("Error loading prompt:", error);
+        }
+      }
+
+      // No prompt = start onboarding
+      console.log("📝 No prompt found, starting onboarding");
+      setPhase('onboarding');
     };
 
-    window.addEventListener('popstate', handlePopState);
+    initialize();
+  }, [user?.hasPrompt, user?.uid]);
 
+  // =====================
+  // SOCKET METRICS
+  // =====================
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('metrics-update', (newMetrics: typeof metrics) => {
+      setMetrics(newMetrics);
+    });
+    socket.emit('request-metrics');
+    return () => {
+      socket.off('metrics-update');
+    };
+  }, [socket]);
+
+  // =====================
+  // PREVENT BACK BUTTON
+  // =====================
+  useEffect(() => {
+    if (phase !== 'app') return;
+
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, []);
+  }, [phase]);
 
+  // =====================
+  // HANDLERS
+  // =====================
   const handleLogout = async () => {
     try {
       logout();
+      localStorage.removeItem('dashboard_state'); // Clear old state
       toast({
         title: "Logout realizado",
         description: "Você saiu do sistema com sucesso.",
@@ -140,55 +152,91 @@ const Dashboard = () => {
     setShouldExpandIntegrations(true);
   };
 
+  const handleOnboardingComplete = (prompt: string) => {
+    console.log("✅ Onboarding complete, entering app phase");
+    setAgentPrompt(prompt);
+    setPhase('app');
+  };
+
+  // =====================
+  // LOADING STATE
+  // =====================
+  if (phase === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="text-white text-lg">Carregando...</div>
+      </div>
+    );
+  }
+
+  // =====================
+  // RENDER
+  // =====================
   return (
     <>
-      {/* Agent Creator or Chat Interface based on state */}
-      {/* Agent Creator or Chat Interface based on state */}
       <AnimatePresence mode="wait">
-        {showWelcome && !agentCreated && !showChat ? (
-          <WelcomeScreen key="welcome" onStart={() => setShowWelcome(false)} />
-        ) : !showChat ? (
-          <AgentCreator
-            key="creator"
-            isExiting={agentCreated} // Use this state to trigger animation
-            onOpenSidebar={() => setIsSidebarOpen(true)}
-            onOpenIntegrations={handleOpenIntegrations}
-            // Pass integrations data if AgentCreator needs it (it shouldn't for flow, but maybe for logic)
-            // For now, AgentCreator handles its own logic but we skipped the integration step.
-            onStartChat={(prompt) => {
-              setAgentCreated(true); // Trigger exit animation
-              setAgentPrompt(prompt);
-              // Delay actual unmount to allow animation to play
-              setTimeout(() => {
-                setShowChat(true);
-              }, 500);
-            }}
-          />
-        ) : (
-          <div key="chat" className="animate-in fade-in slide-in-from-bottom-4 duration-700 h-screen">
-            <FactoriaChatInterface
-              onLogout={handleLogout}
+        {/* PHASE: ONBOARDING */}
+        {phase === 'onboarding' && (
+          showWelcome ? (
+            <WelcomeScreen
+              key="welcome"
+              onStart={() => setShowWelcome(false)}
+            />
+          ) : (
+            <AgentCreator
+              key="creator"
+              isExiting={false}
               onOpenSidebar={() => setIsSidebarOpen(true)}
-              initialMessage={agentPrompt || undefined}
+              onOpenIntegrations={handleOpenIntegrations}
+              onStartChat={handleOnboardingComplete}
+            />
+          )
+        )}
+
+        {/* PHASE: APP (Main Dashboard) */}
+        {phase === 'app' && (
+          <div
+            key="dashboard"
+            className="animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]"
+          >
+            {/* Hamburger Menu Button */}
+            <div className="absolute top-4 left-4 z-50">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarOpen(true)}
+                className="text-white/70 hover:bg-white/10"
+              >
+                <Menu className="w-6 h-6" />
+              </Button>
+            </div>
+
+            {/* Dashboard Content (Metrics) */}
+            <DashboardStep
+              integrations={integrations}
+              onOpenIntegrations={handleOpenIntegrations}
             />
           </div>
         )}
       </AnimatePresence>
 
-      {/* Sidebar - Light mode */}
-      {/* Sidebar - Light mode - Only show in Dashboard/Test Area */}
-      {showChat && (
+      {/* ===================== */}
+      {/* PERSISTENT COMPONENTS */}
+      {/* ===================== */}
+
+      {/* Sidebar - Always available after welcome screen */}
+      {!showWelcome && (
         <DashboardSidebar
           isOpen={isSidebarOpen}
           onClose={() => { setIsSidebarOpen(false); setShouldExpandIntegrations(false); }}
-          onNavigate={() => { }}
-          currentPage="chat"
+          onNavigate={() => { }} // Navigation handled by router
+          currentPage="dashboard"
           integrations={integrations}
           onLogout={handleLogout}
           forceExpandIntegrations={shouldExpandIntegrations}
           onIntegrationDisconnect={(id) => {
             if (id === 'whatsapp' && whatsappInstances.length > 0) {
-              handleDisconnect(whatsappInstances[0].id);
+              handleDisconnect();
             }
           }}
           sessionId={currentSessionId}
@@ -208,21 +256,17 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Global WhatsApp Modal */}
+      {/* WhatsApp Modal */}
       <WhatsAppConnectionModal
         isOpen={whatsappModalState.isOpen}
         onClose={closeWhatsappModal}
         modalState={whatsappModalState}
-        instance={whatsappInstances[0]} // Pass full instance object
+        instance={whatsappInstances[0]}
         onGenerateQR={handleGenerateQR}
         onDisconnect={handleDisconnect}
-      // Note: component expects 'instances' array in my extraction? 
-      // Let's check WhatsAppConnectionModal definition in previous step.
-      // I defined it as `instance: { ... } | undefined` (singular).
-      // And passing whatsappInstances[0] is correct.
       />
 
-      {/* Lia Chat Sidebar */}
+      {/* Lia Chat Sidebar - Always available */}
       <LiaSidebar
         isOpen={isLiaChatOpen}
         onClose={() => setIsLiaChatOpen(false)}

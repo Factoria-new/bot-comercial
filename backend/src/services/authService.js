@@ -156,7 +156,7 @@ export const login = async (email, password) => {
             status: user.status,
             plan: user.plan,
             subscriptionStatus: user.subscriptionStatus,
-            customPrompt: user.customPrompt
+            hasPrompt: !!user.customPrompt
         }
     };
 };

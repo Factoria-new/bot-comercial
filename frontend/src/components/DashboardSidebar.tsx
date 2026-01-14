@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +17,7 @@ import {
     Pause,
     Sparkles,
     Info,
+    LayoutDashboard,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +55,7 @@ interface DashboardSidebarProps {
     onIntegrationDisconnect?: (id: string) => void;
     sessionId?: string;
     onOpenLiaChat?: () => void;
+    onNavigateToPrompt?: () => void;
 }
 
 export default function DashboardSidebar({
@@ -68,11 +71,13 @@ export default function DashboardSidebar({
     onIntegrationClick,
     onIntegrationDisconnect,
     sessionId = '1',
-    onOpenLiaChat
+    onOpenLiaChat,
+    onNavigateToPrompt
 }: DashboardSidebarProps) {
 
     const { user } = useAuth();
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     // Integrations keys are numbers in the array, but we want to know if specific integrations are active
     const activeIntegrationsCount = integrations.filter(i => i.connected).length;
@@ -214,6 +219,16 @@ export default function DashboardSidebar({
 
     const menuItems = [
         {
+            id: "dashboard",
+            label: "Métricas",
+            icon: LayoutDashboard,
+            description: "Visão geral",
+            onClick: () => {
+                navigate('/dashboard');
+                onClose();
+            }
+        },
+        {
             id: "chat",
             label: "Chat",
             icon: MessageSquare,
@@ -229,7 +244,7 @@ export default function DashboardSidebar({
             icon: Sparkles,
             description: "Gerenciar personalidade",
             onClick: () => {
-                onNavigate("my-prompt");
+                navigate('/meu-prompt');
                 onClose();
             }
         },

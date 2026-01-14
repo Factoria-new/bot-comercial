@@ -68,18 +68,7 @@ export const verifyToken = async (req, res) => {
     try {
         const { token } = req.body;
         const decoded = await authService.verifyToken(token);
-
-        // Fetch full user to get customPrompt and other fresh data
-        const user = await authService.getUserById(decoded.uid);
-
-        if (user) {
-            res.json({
-                success: true,
-                decoded: { ...decoded, ...user, uid: user.id } // Merge to ensure compatibility
-            });
-        } else {
-            res.json({ success: true, decoded });
-        }
+        res.json({ success: true, decoded });
     } catch (error) {
         res.status(401).json({ success: false, error: 'Invalid token' });
     }

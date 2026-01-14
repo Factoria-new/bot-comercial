@@ -14,7 +14,7 @@ import CheckEmail from "./pages/CheckEmail";
 import SetupPassword from "./pages/SetupPassword";
 import ForgotPassword from "./pages/ForgotPassword";
 import InstagramCallback from "./pages/InstagramCallback";
-import PromptManager from "./pages/PromptManager";
+import MeuPrompt from "./pages/MeuPrompt";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -34,9 +34,9 @@ const App = () => (
                   <Index />
                 </ProtectedRoute>
               } />
-              <Route path="/my-prompt" element={
+              <Route path="/meu-prompt" element={
                 <ProtectedRoute>
-                  <PromptManager />
+                  <MeuPrompt />
                 </ProtectedRoute>
               } />
               <Route path="/login" element={<Login />} />

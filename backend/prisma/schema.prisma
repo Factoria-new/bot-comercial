@@ -26,12 +26,12 @@ model User {
   caktoCustomerId    String?
   caktoSubscriptionId String?
   
-  // Custom Prompt
-  customPrompt       String?   @db.Text
-  
   // Timestamps
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  
+  // Prompt personalizado do agente
+  customPrompt       String?   @db.Text
   
   // Relação 1:1 com Instance
   instance           Instance?

@@ -8,6 +8,7 @@ import caktoRoutes from './routes/caktoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import internalToolsRoutes from './routes/internalToolsRoutes.js';
+import promptRoutes from './routes/promptRoutes.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
 import { PROMPTS } from './prompts/agentPrompts.js';
 
@@ -139,6 +140,9 @@ app.use('/api/agent', agentRoutes);
 
 // Rotas Internas (Ferramentas para AI Engine)
 app.use('/api/internal', internalToolsRoutes);
+
+// Rotas de Gerenciamento de Prompt do Usuário
+app.use('/api/user', promptRoutes);
 
 // Rotas de Status do WhatsApp
 app.get('/api/whatsapp/status/:sessionId', (req, res) => {

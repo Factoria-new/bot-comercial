@@ -50,8 +50,31 @@ export const IntegrationsStep = ({
         }
 
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const token = localStorage.getItem('token');
 
-        // Configure WhatsApp agent
+        // 1. Save prompt to user's database record
+        if (token) {
+            try {
+                const response = await fetch(`${backendUrl}/api/user/prompt`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ prompt: agentPrompt })
+                });
+
+                if (response.ok) {
+                    console.log('✅ Prompt saved to user database');
+                } else {
+                    console.error('❌ Failed to save prompt to user database');
+                }
+            } catch (error) {
+                console.error('Error saving prompt to database:', error);
+            }
+        }
+
+        // 2. Configure WhatsApp agent (if connected)
         if (isWhatsAppConnected) {
             try {
                 await fetch(`${backendUrl}/api/whatsapp/configure-agent`, {

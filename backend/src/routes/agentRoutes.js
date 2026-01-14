@@ -8,45 +8,6 @@ import mammoth from 'mammoth';
 import { PROMPTS } from '../prompts/agentPrompts.js';
 
 const router = express.Router();
-import prisma from '../config/prisma.js';
-
-// ============================================
-// Prompt Management Endpoints
-// ============================================
-
-// Get User Prompt
-router.get('/prompt/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { customPrompt: true }
-        });
-
-        res.json({ success: true, prompt: user?.customPrompt || '' });
-    } catch (error) {
-        console.error('Error fetching prompt:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch prompt' });
-    }
-});
-
-// Update User Prompt
-router.post('/prompt/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { prompt } = req.body;
-
-        await prisma.user.update({
-            where: { id: userId },
-            data: { customPrompt: prompt }
-        });
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error updating prompt:', error);
-        res.status(500).json({ success: false, error: 'Failed to update prompt' });
-    }
-});
 
 // Check API key at startup
 const API_KEY = process.env.API_GEMINI || process.env.GEMINI_API_KEY || '';
