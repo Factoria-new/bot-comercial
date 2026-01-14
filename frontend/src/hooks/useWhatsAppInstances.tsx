@@ -33,33 +33,54 @@ export const useWhatsAppInstances = () => {
       assistantId: ''
     }));
     setInstances(initialInstances);
+  }, []);
 
-    // Check status on mount to restore connection state
-    const checkInstancesStatus = async () => {
-      // Implement status check logic if not already available in context
-      // Or if using socket events, ensure we request status
-      // Since useSocket might not expose a direct check, we might rely on the socket connection event
-      // But the user says "Ao recarregar a página o 'conectado' com o WhatsApp é perdido"
-      // This implies we need to proactively ask "Am I connected?"
-      // The backend has `GET /api/whatsapp/status/:sessionId`.
-      // Let's implement that fetch here.
+  // Check WhatsApp status from database on mount (for persistence across browser refresh)
+  useEffect(() => {
+    const checkWhatsAppStatus = async () => {
+      if (!user?.uid) return;
+
       try {
-        initialInstances.forEach(async (instance) => {
-          const response = await fetch(`/api/whatsapp/status/instance_${instance.id}`);
-          const data = await response.json();
-          if (data.status === 'connected') {
-            setInstances(prev => prev.map(inst =>
-              inst.id === instance.id ? { ...inst, isConnected: true } : inst
-            ));
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+          console.log('⚠️ No auth token, skipping WhatsApp status check');
+          return;
+        }
+
+        const response = await fetch(`${backendUrl}/api/user/whatsapp-status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         });
+
+        if (!response.ok) {
+          console.error('Failed to check WhatsApp status:', response.status);
+          return;
+        }
+
+        const data = await response.json();
+        console.log('📱 WhatsApp status from API:', data);
+
+        if (data.hasInstance && data.connected) {
+          console.log('✅ WhatsApp status restored from database: connected');
+          setInstances(prev => prev.map((instance, index) =>
+            index === 0 ? {
+              ...instance,
+              isConnected: true,
+              phoneNumber: data.phoneNumber || undefined
+            } : instance
+          ));
+        }
       } catch (error) {
-        console.error("Failed to check WhatsApp status:", error);
+        console.error('Failed to check WhatsApp status:', error);
       }
     };
 
-    checkInstancesStatus();
-  }, []);
+    checkWhatsAppStatus();
+  }, [user?.uid]);
 
   // Listener para eventos do WhatsApp
   useEffect(() => {

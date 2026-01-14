@@ -1280,3 +1280,19 @@ export const cleanup = async () => {
         console.error('❌ Error cleaning up WhatsApp service:', error);
     }
 };
+
+/**
+ * Check if a session is connected (WebSocket open AND user authenticated)
+ * @param {string} sessionId - Session identifier (e.g., 'user_abc123')
+ * @returns {boolean} - True if session is active and connected
+ */
+export const isSessionConnected = (sessionId) => {
+    const session = sessions.get(sessionId);
+    if (!session) return false;
+
+    const wsIsOpen = session.sock?.ws?.isOpen === true;
+    const hasUser = !!session.user?.id;
+
+    console.log(`🔍 Checking session ${sessionId}: wsIsOpen=${wsIsOpen}, hasUser=${hasUser}`);
+    return wsIsOpen && hasUser;
+};
