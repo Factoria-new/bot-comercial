@@ -12,6 +12,7 @@ import LiaSidebar from "@/components/LiaSidebar";
 import WhatsAppConnectionModal from "@/components/WhatsAppConnectionModal";
 import { Integration } from "@/types/onboarding";
 import { motion } from "framer-motion";
+import { PromptEditChat } from "@/components/PromptEditChat";
 
 interface Metrics {
     totalMessages: number;
@@ -224,37 +225,35 @@ const MeuPrompt = () => {
                 </div>
 
                 {/* Header */}
-                <header className="sticky top-0 z-10 bg-black/50 backdrop-blur-xl border-b border-white/10">
-                    <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                                    <Sparkles className="w-5 h-5 text-purple-400" />
-                                </div>
-                                <div>
-                                    <h1 className="text-xl font-bold text-white">Meu Prompt</h1>
-                                    <p className="text-xs text-white/50">Gerencie a personalidade do seu agente</p>
-                                </div>
+                <header className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                                <Sparkles className="w-5 h-5 text-purple-400" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold text-white">Meu Prompt</h1>
+                                <p className="text-xs text-white/50">Gerencie a personalidade do seu agente</p>
                             </div>
                         </div>
-
-                        {hasChanges && (
-                            <Button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                            >
-                                {isSaving ? (
-                                    <>Salvando...</>
-                                ) : (
-                                    <>
-                                        <Save className="w-4 h-4 mr-2" />
-                                        Salvar Alterações
-                                    </>
-                                )}
-                            </Button>
-                        )}
                     </div>
+
+                    {hasChanges && (
+                        <Button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                        >
+                            {isSaving ? (
+                                <>Salvando...</>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4 mr-2" />
+                                    Salvar Alterações
+                                </>
+                            )}
+                        </Button>
+                    )}
                 </header>
 
                 {/* Main Content */}
@@ -348,6 +347,15 @@ const MeuPrompt = () => {
                         <Check className="w-3.5 h-3.5 text-emerald-400" />
                         <span>Alterações são aplicadas automaticamente ao seu agente após salvar</span>
                     </div>
+
+                    {/* Lia Prompt Editor Chat */}
+                    <PromptEditChat
+                        currentPrompt={prompt}
+                        onPromptUpdate={(newPrompt) => {
+                            setPrompt(newPrompt);
+                            setIsEditing(true);
+                        }}
+                    />
                 </main>
             </div>
 

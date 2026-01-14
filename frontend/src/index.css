@@ -472,7 +472,8 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(117, 211, 175, 0.1);
+  background: transparent;
+  margin-block: 10px;
 }
 
 ::-webkit-scrollbar-thumb {

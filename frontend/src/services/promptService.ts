@@ -66,7 +66,31 @@ export const savePrompt = async (prompt: string): Promise<PromptResponse> => {
 
 export const promptService = {
     getPrompt,
-    savePrompt
+    savePrompt,
+    architectChat: async (message: string, history: any[], currentSystemPrompt: string) => {
+        const token = getAuthToken();
+        if (!token) return { success: false, error: 'Não autenticado' };
+
+        try {
+            const response = await fetch(`${API_CONFIG.BASE_URL}/api/agent/architect`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    message,
+                    history,
+                    currentSystemPrompt,
+                    userId: 'user' // Backend expects this?
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro no chat com a Lia:', error);
+            return { success: false, error: 'Erro de conexão' };
+        }
+    }
 };
 
 export default promptService;
