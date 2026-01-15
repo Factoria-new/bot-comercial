@@ -30,7 +30,7 @@ def format_history(history: Optional[List[HistoryItem]]) -> str:
     
     formatted = []
     for item in history:
-        role_pt = "Atendente" if item.role == "assistant" else "Cliente"
+        role_pt = "Atendente" if item.role in ["assistant", "model"] else "Cliente"
         formatted.append(f"{role_pt}: {item.content}")
     
     # Pegar apenas as últimas 10 mensagens para não estourar contexto

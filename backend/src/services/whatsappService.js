@@ -48,6 +48,44 @@ const reconnectionAttempts = new Map(); // sessionId -> { count, lastAttempt }
 // --- MESSAGE BUFFER (Debounce de 10 segundos) ---
 // Buffer para acumular mensagens do mesmo contato
 const messageBuffer = new Map(); // contactId -> { messages: [], lastIncomingType: 'text', sessionId: '', sock: null, socket: null }
+
+/**
+ * Extract URLs from text and replace them with a spoken phrase for TTS.
+ * This prevents TTS from dictating URLs character by character.
+ * @param {string} text - Original message text
+ * @returns {{ cleanText: string, links: string[] }} - Text with links replaced + extracted links
+ */
+const extractAndReplaceLinks = (text) => {
+    // Regex to match URLs (http, https)
+    const urlRegex = /(https?:\/\/[^\s]+)/gi;
+    const links = text.match(urlRegex) || [];
+
+    if (links.length === 0) {
+        return { cleanText: text, links: [] };
+    }
+
+    let cleanText = text;
+
+    // Replace each link with appropriate phrase
+    if (links.length === 1) {
+        // Single link: "segue abaixo o link"
+        cleanText = cleanText.replace(urlRegex, ', e segue abaixo o link');
+    } else {
+        // Multiple links: use counter
+        let counter = 0;
+        cleanText = cleanText.replace(urlRegex, () => {
+            counter++;
+            return `, e segue abaixo o link ${counter}`;
+        });
+    }
+
+    // Clean up any double spaces or awkward punctuation
+    cleanText = cleanText.replace(/\s+/g, ' ').trim();
+
+    console.log(`🔗 Extracted ${links.length} link(s) from message for TTS`);
+
+    return { cleanText, links };
+};
 // Timers de debounce por contato
 const bufferTimers = new Map(); // contactId -> timeoutId
 // Tempo de espera em ms (10 segundos)
@@ -1174,12 +1212,16 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
         if (shouldSendAudio) {
             // Generate and send audio
             try {
+                // Extract links to send as separate text message (prevents TTS from dictating URLs)
+                const { cleanText, links } = extractAndReplaceLinks(message);
+                const textForTts = links.length > 0 ? cleanText : message;
+
                 // Indicate "recording audio" state
                 await sock.sendPresenceUpdate('recording', remoteJid);
 
                 const voice = options.voice || config.ttsVoice || 'Kore';
                 console.log(`🎤 Generating audio with voice: ${voice}`);
-                const ttsResult = await generateAudio(message, voice, config.apiKey || process.env.GEMINI_API_KEY);
+                const ttsResult = await generateAudio(textForTts, voice, config.apiKey || process.env.GEMINI_API_KEY);
 
                 // Convert WAV to OGG for WhatsApp
                 const wavBuffer = Buffer.from(ttsResult.audioContent, 'base64');
@@ -1196,6 +1238,19 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
                 await sock.sendPresenceUpdate('paused', remoteJid);
 
                 console.log(`🎤 Audio message sent to ${remoteJid}`);
+
+                // If there were links, send them as text messages right after the audio
+                if (links.length > 0) {
+                    console.log(`🔗 Sending ${links.length} extracted link(s) as text...`);
+                    await delay(500); // Small delay between audio and links
+
+                    for (const link of links) {
+                        await sock.sendMessage(remoteJid, { text: link });
+                        await delay(300); // Small delay between multiple links
+                    }
+
+                    console.log(`✅ Links sent as text to ${remoteJid}`);
+                }
             } catch (ttsError) {
                 console.error('⚠️ TTS failed, falling back to text:', ttsError.message);
 

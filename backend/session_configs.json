@@ -10,8 +10,8 @@
     "ttsVoice": "Kore",
     "ttsRules": {
       "audioOnRequest": false,
-      "audioOnAudioReceived": true,
-      "audioOnly": false
+      "audioOnAudioReceived": false,
+      "audioOnly": true
     },
     "enabled": true
   },
@@ -26,8 +26,8 @@
     "ttsVoice": "Kore",
     "ttsRules": {
       "audioOnRequest": false,
-      "audioOnAudioReceived": true,
-      "audioOnly": false
+      "audioOnAudioReceived": false,
+      "audioOnly": true
     },
     "enabled": true
   }
