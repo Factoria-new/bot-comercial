@@ -31,6 +31,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import Lottie from "lottie-react";
 
 const VOICE_OPTIONS = [
     { value: 'Kore', label: 'Kore', gender: 'Feminino', audioSrc: '/voices/kore.wav' },
@@ -97,6 +98,15 @@ export default function DashboardSidebar({
     });
     const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
     const [isSavingTts, setIsSavingTts] = useState(false);
+    const [successAnimationData, setSuccessAnimationData] = useState<any>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    useEffect(() => {
+        fetch('/lotties/success.json')
+            .then(res => res.json())
+            .then(data => setSuccessAnimationData(data))
+            .catch(err => console.error("Failed to load Lottie:", err));
+    }, []);
 
     // Audio Player Logic
     const [playingAudio, setPlayingAudio] = useState<string | null>(null);
@@ -188,6 +198,8 @@ export default function DashboardSidebar({
                     description: "As preferências de voz foram atualizadas.",
                     className: "bg-emerald-500 text-white border-0"
                 });
+                // Minimizar a aba após salvar com sucesso
+                setTtsExpanded(false);
             } else {
                 throw new Error('Falha ao salvar');
             }
@@ -706,14 +718,53 @@ export default function DashboardSidebar({
 
                                         {/* Save */}
                                         <div className="px-3">
-                                            <Button
-                                                onClick={handleSaveTts}
-                                                disabled={isSavingTts}
-                                                size="sm"
-                                                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs py-2"
-                                            >
-                                                {isSavingTts ? "Salvando..." : "Salvar"}
-                                            </Button>
+                                            {showSuccess && successAnimationData ? (
+                                                <div className="w-full flex justify-center items-center py-1 bg-emerald-500/10 rounded-md border border-emerald-500/20">
+                                                    <Lottie animationData={successAnimationData} loop={false} className="h-8 w-8" />
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    onClick={async () => {
+                                                        const handleSaveTts = async () => {
+                                                            setIsSavingTts(true);
+                                                            try {
+                                                                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+                                                                const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`, {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({
+                                                                        ttsEnabled,
+                                                                        ttsVoice,
+                                                                        ttsRules
+                                                                    })
+                                                                });
+
+                                                                if (response.ok) {
+                                                                    setShowSuccess(true);
+                                                                    setTimeout(() => setShowSuccess(false), 2500);
+                                                                } else {
+                                                                    throw new Error('Falha ao salvar');
+                                                                }
+                                                            } catch (error) {
+                                                                console.error("Erro ao salvar config:", error);
+                                                                toast({
+                                                                    title: "Erro",
+                                                                    description: "Não foi possível salvar as configurações.",
+                                                                    variant: "destructive"
+                                                                });
+                                                            } finally {
+                                                                setIsSavingTts(false);
+                                                            }
+                                                        };
+                                                        await handleSaveTts();
+                                                    }}
+                                                    disabled={isSavingTts}
+                                                    size="sm"
+                                                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs py-2"
+                                                >
+                                                    {isSavingTts ? "Salvando..." : "Salvar"}
+                                                </Button>
+                                            )}
                                         </div>
                                     </>
                                 )}

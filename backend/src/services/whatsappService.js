@@ -97,8 +97,36 @@ async function transcribeAudio(audioBuffer, mimeType = 'audio/ogg') {
 }
 
 // Initialize WhatsApp service with Socket.IO
-export const initWhatsAppService = (io) => {
+export const initWhatsAppService = async (io) => {
     console.log('📱 WhatsApp Service initialized (Baileys v7)');
+
+    // Restore sessions from disk
+    try {
+        const authInfoPath = path.join(process.cwd(), 'auth_info');
+        if (fs.existsSync(authInfoPath)) {
+            const folders = fs.readdirSync(authInfoPath).filter(f => fs.statSync(path.join(authInfoPath, f)).isDirectory());
+
+            if (folders.length > 0) {
+                console.log(`🔄 Found ${folders.length} saved sessions to restore:`, folders);
+
+                // Wait small delay to ensure DB connection is ready
+                setTimeout(async () => {
+                    for (const sessionId of folders) {
+                        try {
+                            console.log(`🔄 Restoring session: ${sessionId}`);
+                            // Pass null as socket since no client is connected yet during boot
+                            // Pass null as userId/phone - let it recover from session data
+                            await createSession(sessionId, null, io);
+                        } catch (err) {
+                            console.error(`❌ Failed to restore session ${sessionId}:`, err.message);
+                        }
+                    }
+                }, 2000);
+            }
+        }
+    } catch (restoreError) {
+        console.error('❌ Error restoring sessions:', restoreError);
+    }
 
     // Listen for socket connections
     io.on('connection', (socket) => {
@@ -119,18 +147,27 @@ export const initWhatsAppService = (io) => {
 
             try {
                 // Criar ou atualizar instância vinculada ao usuário
-                // Como é 1:1, usamos upsert com userId como chave
+                // Usamos findFirst + create/update pois Prisma não aceita userId no where do upsert
                 // phoneNumber temporário usa o userId para garantir unicidade
                 const tempPhoneNumber = phoneNumber || `pending_${userId}`;
-                const instance = await prisma.instance.upsert({
-                    where: { userId },
-                    update: {}, // Não atualizar nada se já existe
-                    create: {
-                        userId,
-                        phoneNumber: tempPhoneNumber
-                    }
+
+                // Buscar instância existente para este usuário
+                let instance = await prisma.instance.findFirst({
+                    where: { userId }
                 });
-                console.log(`📱 Instance found/created: ${instance.id} for user ${userId}`);
+
+                if (!instance) {
+                    // Criar nova instância se não existir
+                    instance = await prisma.instance.create({
+                        data: {
+                            userId,
+                            phoneNumber: tempPhoneNumber
+                        }
+                    });
+                    console.log(`📱 Instance created: ${instance.id} for user ${userId}`);
+                } else {
+                    console.log(`📱 Instance found: ${instance.id} for user ${userId}`);
+                }
 
                 // Usar o sessionId original do frontend para manter compatibilidade
                 await createSession(sessionId, socket, io, phoneNumber, userId);
@@ -211,6 +248,20 @@ export const initWhatsAppService = (io) => {
 
 // Create a new WhatsApp session
 const createSession = async (sessionId, socket, io, phoneNumber = null, userId = null) => {
+    // Handle background restoration where socket is null
+    const isRestoring = !socket;
+    if (!socket) {
+        // Create dummy socket to prevent crashes on emit
+        socket = {
+            emit: (event, data) => {
+                // If checking connection status during restore, we can log it
+                if (event === 'connection-status') {
+                    // console.log(`[Background Restore ${sessionId}] Status: ${data.message}`);
+                }
+            },
+            on: () => { }
+        };
+    }
     // Check if session already exists and is connected
     const existingSession = sessions.get(sessionId);
 
@@ -337,7 +388,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         const connectedPhoneNumber = sock.user.id.split(':')[0];
                         console.log(`📱 Updating phoneNumber to ${connectedPhoneNumber} for userId ${sessionData.userId}`);
                         try {
-                            await prisma.instance.update({
+                            // Usamos updateMany pois Prisma não aceita userId no where do update
+                            await prisma.instance.updateMany({
                                 where: { userId: sessionData.userId },
                                 data: { phoneNumber: connectedPhoneNumber }
                             });
@@ -704,10 +756,49 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                 console.log(`📩 WhatsApp [${sessionId}] Message from ${remoteJid}: ${messageText.substring(0, 50)}...`);
 
                 // Get agent prompt for this session
-                const agentPrompt = agentPrompts.get(sessionId);
+                let agentPrompt = agentPrompts.get(sessionId);
+
+                // If not in memory, try to fetch from Database
+                if (!agentPrompt) {
+                    try {
+                        console.log(`🔍 Prompt not in memory, fetching from DB for session ${sessionId}...`);
+
+                        // Try to find user by ID (sessionId)
+                        // If sessionId starts with 'user_', we might need to strip prefix if your logic adds it everywhere. 
+                        // But usually sessionId IS the userId or instanceId.
+
+                        // Try finding user by ID (if sessionId is a User ID)
+                        let user = await prisma.user.findUnique({
+                            where: { id: sessionId }
+                        });
+
+                        // If not found, try stripping 'user_' prefix if present
+                        if (!user && sessionId.startsWith('user_')) {
+                            const cleanId = sessionId.replace('user_', '');
+                            console.log(`🔄 Trying again with clean ID: ${cleanId}`);
+                            user = await prisma.user.findUnique({
+                                where: { id: cleanId }
+                            });
+                        }
+
+                        // If not found, and sessionId is like 'instance_1', we might need another strategy.
+                        // But user said prompt is in 'users' table 'customPrompt'.
+
+                        if (user && user.customPrompt) {
+                            agentPrompt = user.customPrompt;
+                            agentPrompts.set(sessionId, agentPrompt); // Cache it
+                            console.log(`✅ Prompt loaded from DB for ${sessionId}`);
+                        } else {
+                            console.log(`⚠️ Prompt not found in DB for ${sessionId}`);
+                        }
+
+                    } catch (dbError) {
+                        console.error(`❌ Error fetching prompt from DB: ${dbError.message}`);
+                    }
+                }
 
                 if (!agentPrompt) {
-                    console.log(`⚠️ No agent prompt configured for session ${sessionId}`);
+                    console.log(`⚠️ No agent prompt configured for session ${sessionId} (Memory + DB check failed)`);
                     continue;
                 }
 
@@ -1077,9 +1168,15 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
             console.log(`🎤 TTS enabled. Rules evaluation result: ${shouldSendAudio ? 'SEND AUDIO' : 'SEND TEXT'}`);
         }
 
+        // Helper to simulate delay
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
         if (shouldSendAudio) {
             // Generate and send audio
             try {
+                // Indicate "recording audio" state
+                await sock.sendPresenceUpdate('recording', remoteJid);
+
                 const voice = options.voice || config.ttsVoice || 'Kore';
                 console.log(`🎤 Generating audio with voice: ${voice}`);
                 const ttsResult = await generateAudio(message, voice, config.apiKey || process.env.GEMINI_API_KEY);
@@ -1095,15 +1192,34 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
                     ptt: true
                 });
 
+                // Indicate "paused" state (finished recording)
+                await sock.sendPresenceUpdate('paused', remoteJid);
+
                 console.log(`🎤 Audio message sent to ${remoteJid}`);
             } catch (ttsError) {
                 console.error('⚠️ TTS failed, falling back to text:', ttsError.message);
-                // Fallback to text message
+
+                // Indicate "paused" before falling back
+                await sock.sendPresenceUpdate('paused', remoteJid);
+
+                // Fallback to text message with composing state
+                await sock.sendPresenceUpdate('composing', remoteJid);
+                await delay(1000);
                 await sock.sendMessage(remoteJid, { text: message });
+                await sock.sendPresenceUpdate('paused', remoteJid);
             }
         } else {
+            // Indicate "typing" state
+            await sock.sendPresenceUpdate('composing', remoteJid);
+
+            // Add a small delay for realism
+            await delay(1500);
+
             // Send text message
             await sock.sendMessage(remoteJid, { text: message });
+
+            // Indicate "paused" state
+            await sock.sendPresenceUpdate('paused', remoteJid);
         }
 
         // Salvar resposta da IA no banco de dados

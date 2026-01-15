@@ -1,5 +1,5 @@
 from crewai import Agent, LLM
-from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool
+from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool, GoogleCalendarTool
 import os
 
 def get_agents(user_id, custom_prompt=None):
@@ -24,6 +24,10 @@ def get_agents(user_id, custom_prompt=None):
     # WhatsApp Tool with correct session_id
     whats_tool = WhatsAppSendTool(session_id=user_id)
     whats_audio_tool = WhatsAppSendAudioTool(session_id=user_id)
+    
+    # Google Calendar Tool (uses user_id which might be session_id or email depending on context)
+    # Ideally, we should resolve session_id to email if needed, but assuming user_id works for now
+    calendar_tool = GoogleCalendarTool(user_id=user_id)
 
     # Define dynamic backstory based on user prompt
     comercial_backstory = 'Vendedor experiente, empático e focado em fechamento.'
@@ -33,12 +37,12 @@ def get_agents(user_id, custom_prompt=None):
         comercial_backstory = f"Você é um agente comercial operando no WhatsApp. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo."
         comercial_goal = f"Atender o cliente seguindo estritamente as instruções fornecidas, sem usar formatação markdown."
 
-    # Commercial Agent (Uses WhatsApp)
+    # Commercial Agent (Uses WhatsApp + Calendar)
     comercial = Agent(
         role='Gerente Comercial / Atendente',
         goal=comercial_goal,
         backstory=comercial_backstory,
-        tools=[whats_tool, whats_audio_tool],
+        tools=[whats_tool, whats_audio_tool, calendar_tool],
         llm=gemini_llm,
         verbose=True
     )
@@ -78,6 +82,7 @@ def get_instagram_agent(user_id, custom_prompt=None):
     )
 
     instagram_tool = InstagramSendTool(user_id=user_id)
+    calendar_tool = GoogleCalendarTool(user_id=user_id) # Instagram uses email as user_id, so this matches perfectly
 
     backstory = 'Atendente experiente, empático e focado em ajudar o cliente.'
     goal = 'Atender clientes do Instagram DM com excelência.'
@@ -90,7 +95,7 @@ def get_instagram_agent(user_id, custom_prompt=None):
         role='Atendente Instagram',
         goal=goal,
         backstory=backstory,
-        tools=[instagram_tool],
+        tools=[instagram_tool, calendar_tool],
         llm=gemini_llm,
         verbose=True
     )

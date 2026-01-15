@@ -14,6 +14,7 @@ import CheckEmail from "./pages/CheckEmail";
 import SetupPassword from "./pages/SetupPassword";
 import ForgotPassword from "./pages/ForgotPassword";
 import InstagramCallback from "./pages/InstagramCallback";
+import GoogleCalendarCallback from "./pages/GoogleCalendarCallback";
 import MeuPrompt from "./pages/MeuPrompt";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/setup-password" element={<SetupPassword />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/instagram-callback" element={<InstagramCallback />} />
+              <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

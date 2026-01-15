@@ -60,8 +60,7 @@ export interface OnboardingState {
 
 export const DEFAULT_INTEGRATIONS: Integration[] = [
     { id: 'whatsapp', name: 'WhatsApp', icon: 'whatsapp', color: '#25D366', connected: false },
-    { id: 'instagram', name: 'Instagram', icon: 'instagram', color: '#E4405F', connected: false },
-    { id: 'facebook', name: 'Facebook', icon: 'facebook', color: '#1877F2', connected: false },
+    { id: 'google_calendar', name: 'Google Calendar', icon: 'google_calendar', color: '#4285F4', connected: false },
 ];
 
 export const INITIAL_ONBOARDING_STATE: OnboardingState = {

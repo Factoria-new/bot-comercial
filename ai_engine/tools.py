@@ -2,6 +2,7 @@ from crewai.tools import BaseTool
 from pydantic import Field
 import requests
 import os
+import json
 
 class WhatsAppSendTool(BaseTool):
     name: str = "Enviar Mensagem WhatsApp"
@@ -94,3 +95,49 @@ class WhatsAppSendAudioTool(BaseTool):
                 return f"Falha ao enviar áudio: {response.text}"
         except Exception as e:
             return f"Erro de conexão com o WhatsApp: {str(e)}"
+
+class GoogleCalendarTool(BaseTool):
+    name: str = "Google Calendar"
+    description: str = """
+    Ferramenta para interagir com o Google Calendar. Use esta ferramenta para:
+    1. Listar eventos ('list_calendar_events')
+    2. Criar eventos/reuniões ('create_calendar_event')
+    3. Encontrar horários livres ('find_available_slots')
+    
+    Você deve fornecer o nome da função e os argumentos necessários em formato JSON.
+    """
+    
+    user_id: str = Field(default="", description="Email do usuário dono do calendário")
+
+    def _run(self, function_name: str, arguments_json: str):
+        """
+        Executa uma ação no Google Calendar.
+        
+        Args:
+            function_name: Nome da função a executar (list_calendar_events, create_calendar_event, find_available_slots)
+            arguments_json: String JSON contendo os argumentos para a função
+        """
+        node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
+        
+        try:
+            args = json.loads(arguments_json)
+        except:
+            return "Erro: arguments_json deve ser um JSON válido."
+
+        try:
+            response = requests.post(f"{node_api_url}/api/google-calendar/execute-function", json={
+                "userId": self.user_id,
+                "functionName": function_name,
+                "args": args
+            })
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    return json.dumps(result, ensure_ascii=False)
+                else:
+                    return f"Erro na execução da função: {result.get('error')}"
+            else:
+                return f"Falha ao conectar com calendário: {response.text}"
+        except Exception as e:
+            return f"Erro de conexão com o Calendar Service: {str(e)}"

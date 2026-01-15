@@ -13,6 +13,7 @@ import WhatsAppConnectionModal from "@/components/WhatsAppConnectionModal";
 import { Integration } from "@/types/onboarding";
 import { motion } from "framer-motion";
 import { PromptEditChat } from "@/components/PromptEditChat";
+import Lottie from "lottie-react";
 
 interface Metrics {
     totalMessages: number;
@@ -39,6 +40,15 @@ const MeuPrompt = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasChanges, setHasChanges] = useState(false);
+    const [successAnimationData, setSuccessAnimationData] = useState<any>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    useEffect(() => {
+        fetch('/lotties/success.json')
+            .then(res => res.json())
+            .then(data => setSuccessAnimationData(data))
+            .catch(err => console.error("Failed to load Lottie:", err));
+    }, []);
 
     // Metrics for Lia sidebar
     const [metrics, setMetrics] = useState<Metrics>({
@@ -62,7 +72,6 @@ const MeuPrompt = () => {
     const integrations: Integration[] = [
         { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
         { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: false },
-        { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: false },
     ];
 
     // Socket metrics listener
@@ -133,6 +142,9 @@ const MeuPrompt = () => {
                 setOriginalPrompt(prompt);
                 setIsEditing(false);
                 setHasChanges(false);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 2500);
+
                 toast({
                     title: "Prompt salvo!",
                     description: "Suas alterações foram salvas com sucesso.",
@@ -238,21 +250,27 @@ const MeuPrompt = () => {
                         </div>
                     </div>
 
-                    {hasChanges && (
-                        <Button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                        >
-                            {isSaving ? (
-                                <>Salvando...</>
-                            ) : (
-                                <>
-                                    <Save className="w-4 h-4 mr-2" />
-                                    Salvar Alterações
-                                </>
-                            )}
-                        </Button>
+                    {(hasChanges || showSuccess) && (
+                        showSuccess && successAnimationData ? (
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-md px-6 py-2 flex items-center justify-center min-w-[140px] h-10">
+                                <Lottie animationData={successAnimationData} loop={false} className="h-8 w-8" />
+                            </div>
+                        ) : (
+                            <Button
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                            >
+                                {isSaving ? (
+                                    <>Salvando...</>
+                                ) : (
+                                    <>
+                                        <Save className="w-4 h-4 mr-2" />
+                                        Salvar Alterações
+                                    </>
+                                )}
+                            </Button>
+                        )
                     )}
                 </header>
 
@@ -378,6 +396,55 @@ const MeuPrompt = () => {
                     if (id === 'whatsapp') {
                         if (!isWhatsAppConnected) {
                             handleGenerateQR(1);
+                        }
+                    } else if (id === 'google_calendar') {
+                        // Conectar Google Calendar via OAuth popup
+                        try {
+                            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+                            const userEmail = localStorage.getItem('userEmail') || '';
+
+                            const response = await fetch(`${backendUrl}/api/google-calendar/auth-url?userId=${encodeURIComponent(userEmail)}`);
+                            const data = await response.json();
+
+                            if (data.success && data.authUrl) {
+                                // Abrir popup OAuth
+                                const popup = window.open(
+                                    data.authUrl,
+                                    'Google Calendar Auth',
+                                    'width=600,height=700,scrollbars=yes'
+                                );
+
+                                // Listener para quando o popup fechar
+                                const handleMessage = (event: MessageEvent) => {
+                                    if (event.data?.type === 'google-calendar-connected' && event.data?.success) {
+                                        toast({
+                                            title: "Google Calendar Conectado!",
+                                            description: "Seu agente agora pode gerenciar sua agenda.",
+                                            className: "bg-emerald-500 text-white border-0"
+                                        });
+                                        window.removeEventListener('message', handleMessage);
+                                    }
+                                };
+
+                                window.addEventListener('message', handleMessage);
+
+                                // Fallback: verificar periodicamente se o popup fechou
+                                const checkPopup = setInterval(() => {
+                                    if (popup?.closed) {
+                                        clearInterval(checkPopup);
+                                        window.removeEventListener('message', handleMessage);
+                                    }
+                                }, 1000);
+                            } else {
+                                throw new Error(data.error || 'Erro ao obter URL de autenticação');
+                            }
+                        } catch (error) {
+                            console.error('Google Calendar auth error:', error);
+                            toast({
+                                title: "Erro",
+                                description: error instanceof Error ? error.message : "Não foi possível conectar ao Google Calendar.",
+                                variant: "destructive"
+                            });
                         }
                     } else {
                         toast({

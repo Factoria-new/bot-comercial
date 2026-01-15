@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
+import Lottie from "lottie-react";
 
 interface LiaSidebarProps {
     isOpen: boolean;
@@ -20,6 +21,14 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
     const [sidebarWidth, setSidebarWidth] = useState(400);
     const [isResizing, setIsResizing] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const [shimmerData, setShimmerData] = useState<any>(null);
+
+    useEffect(() => {
+        fetch('/lotties/Chat%20Shimmer.json')
+            .then(res => res.json())
+            .then(data => setShimmerData(data))
+            .catch(err => console.error("Failed to load Shimmer Lottie:", err));
+    }, []);
 
     // Scroll to bottom when new messages arrive
     useEffect(() => {
@@ -94,9 +103,9 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                         style={{ width: sidebarWidth }}
                         className="fixed right-0 top-0 h-full bg-gradient-to-bl from-slate-900 via-slate-900 to-emerald-950/50 border-l border-emerald-500/20 shadow-2xl z-50 flex flex-col group"
                     >
-                        {/* Resize Handle */}
+                        {/* Resize Handle - Improved Design */}
                         <div
-                            className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-emerald-500/50 transition-colors z-50 select-none"
+                            className="absolute left-0 top-0 bottom-0 w-6 -translate-x-1/2 cursor-ew-resize z-50 flex items-center justify-center group/resize touch-none select-none"
                             onMouseDown={(e) => {
                                 e.preventDefault();
                                 const startX = e.clientX;
@@ -104,8 +113,8 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
 
                                 const handleMouseMove = (moveEvent: MouseEvent) => {
                                     const newWidth = startWidth + (startX - moveEvent.clientX);
-                                    // Min width 300px, Max width 800px or window width - 20px
-                                    if (newWidth >= 300 && newWidth <= Math.min(800, window.innerWidth - 20)) {
+                                    // Min width 320px, Max width 800px or window width - 20px
+                                    if (newWidth >= 320 && newWidth <= Math.min(800, window.innerWidth - 20)) {
                                         setSidebarWidth(newWidth);
                                     }
                                 };
@@ -114,15 +123,28 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                                     document.removeEventListener('mousemove', handleMouseMove);
                                     document.removeEventListener('mouseup', handleMouseUp);
                                     setIsResizing(false);
+                                    document.body.style.cursor = 'default';
+                                    document.body.style.userSelect = 'auto';
                                 };
 
                                 setIsResizing(true);
+                                document.body.style.cursor = 'ew-resize';
+                                document.body.style.userSelect = 'none';
                                 document.addEventListener('mousemove', handleMouseMove);
                                 document.addEventListener('mouseup', handleMouseUp);
                             }}
                         >
-                            {/* Visual indicator on hover/active */}
-                            <div className={`absolute inset-y-0 left-[-2px] w-1.5 transition-colors ${isResizing ? 'bg-emerald-500' : 'group-hover:bg-white/20'}`} />
+                            {/* Visual Line (Hidden by default, visible on interaction) */}
+                            <div className={`w-[2px] h-full transition-all duration-300 ${isResizing
+                                    ? 'bg-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.5)]'
+                                    : 'bg-transparent group-hover/resize:bg-white/10'
+                                }`} />
+
+                            {/* Center Handle Pill */}
+                            <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 rounded-full transition-all duration-300 ease-out border border-transparent ${isResizing
+                                    ? 'h-24 bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)] border-emerald-400/50'
+                                    : 'h-12 bg-white/20 backdrop-blur-sm group-hover/resize:bg-emerald-500/60 group-hover/resize:h-16 group-hover/resize:shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                                }`} />
                         </div>
 
                         {/* Decorative glow */}
@@ -201,16 +223,24 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
 
                             {/* Typing Indicator */}
                             {isTyping && (
-                                <div className="flex gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs">L</div>
-                                    <div className="bg-white/10 rounded-2xl rounded-tl-none px-4 py-3 border border-white/5">
-                                        <div className="flex gap-1">
-                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                            <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                shimmerData ? (
+                                    <div className="w-full flex justify-center py-2">
+                                        <div className="w-32 h-24 opacity-90">
+                                            <Lottie animationData={shimmerData} loop={true} className="w-full h-full" />
                                         </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="flex gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs shrink-0">L</div>
+                                        <div className="bg-white/10 rounded-2xl rounded-tl-none px-4 py-3 border border-white/5">
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
                             )}
 
                             <div ref={chatEndRef} />

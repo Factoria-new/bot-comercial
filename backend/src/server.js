@@ -9,6 +9,8 @@ import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import internalToolsRoutes from './routes/internalToolsRoutes.js';
 import promptRoutes from './routes/promptRoutes.js';
+import googleCalendarRoutes from './routes/googleCalendarRoutes.js';
+import { initGoogleCalendarService } from './services/googleCalendarService.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
 import { PROMPTS } from './prompts/agentPrompts.js';
 
@@ -51,6 +53,9 @@ export { io };
 
 // Initialize WhatsApp service with Socket.IO
 initWhatsAppService(io);
+
+// Initialize Google Calendar service with Socket.IO
+initGoogleCalendarService(io);
 
 // Import session config service (separated to avoid circular dependencies)
 import { getSessionConfig, setSessionConfig } from './services/sessionConfigService.js';
@@ -143,6 +148,9 @@ app.use('/api/internal', internalToolsRoutes);
 
 // Rotas de Gerenciamento de Prompt do Usuário
 app.use('/api/user', promptRoutes);
+
+// Rotas do Google Calendar
+app.use('/api/google-calendar', googleCalendarRoutes);
 
 // Rotas de Status do WhatsApp
 app.get('/api/whatsapp/status/:sessionId', (req, res) => {
