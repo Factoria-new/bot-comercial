@@ -1,125 +1,160 @@
 /**
- * Session Configuration Service
+ * Session Configuration Service - DB VERSION
  * 
  * Manages configuration for WhatsApp sessions including TTS settings.
- * Separated from server.js to avoid circular dependencies.
+ * Persists data to Postgres via Prisma instead of local JSON file.
  */
 
 import logger from '../config/logger.js';
-
-import fs from 'fs';
-import path from 'path';
-
-const CONFIG_FILE = path.join(process.cwd(), 'session_configs.json');
-
-// Load configs from file on startup
-let sessionConfigs = new Map();
-try {
-    if (fs.existsSync(CONFIG_FILE)) {
-        const data = fs.readFileSync(CONFIG_FILE, 'utf8');
-        const json = JSON.parse(data);
-        sessionConfigs = new Map(Object.entries(json));
-        logger.info(`Loaded ${sessionConfigs.size} session configs from disk`);
-    }
-} catch (error) {
-    logger.error('Error loading session configs:', error);
-}
-
-function saveConfigsToDisk() {
-    try {
-        const obj = Object.fromEntries(sessionConfigs);
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(obj, null, 2));
-    } catch (error) {
-        logger.error('Error saving session configs:', error);
-    }
-}
+import prisma from '../config/prisma.js';
 
 // Default configuration template
 const DEFAULT_CONFIG = {
     name: '',
     aiProvider: 'gemini',
-    apiKey: '',
+    apiKey: process.env.GEMINI_API_KEY || '',
     model: 'gemini-2.0-flash-exp',
     systemPrompt: '',
     temperature: 1.0,
     ttsEnabled: false,
     ttsVoice: 'Kore',
-    ttsRules: '', // Natural language rules for when to send audio
+    ttsRules: {
+        audioOnRequest: false,
+        audioOnAudioReceived: false,
+        audioOnly: false
+    },
     enabled: true
 };
 
 /**
- * Get configuration for a session with fallback logic
+ * Find a user by various ID formats (userId, user_ID, instanceID)
  * @param {string} sessionId 
- * @returns {Object} Session configuration
+ * @returns {Promise<Object|null>}
  */
-export function getSessionConfig(sessionId) {
-    // 1. Exact match
-    if (sessionConfigs.has(sessionId)) return sessionConfigs.get(sessionId);
+async function findUserBySessionId(sessionId) {
+    try {
+        if (!sessionId) return null;
 
-    // 2. Strip 'user_' prefix
-    if (sessionId.startsWith('user_')) {
-        const cleanId = sessionId.replace('user_', '');
-        if (sessionConfigs.has(cleanId)) return sessionConfigs.get(cleanId);
+        // 1. Try directly as User ID
+        let user = await prisma.user.findUnique({ where: { id: sessionId } });
+        if (user) return user;
+
+        // 2. Try stripping 'user_' prefix
+        if (sessionId.startsWith('user_')) {
+            const cleanId = sessionId.replace('user_', '');
+            user = await prisma.user.findUnique({ where: { id: cleanId } });
+            if (user) return user;
+        }
+
+        // 3. Try as Instance ID
+        const instance = await prisma.instance.findUnique({
+            where: { id: sessionId },
+            include: { user: true }
+        });
+        if (instance?.user) return instance.user;
+
+        // 4. Special Fallback for "1" or "instance_1" (Dev/Single User)
+        if (sessionId === '1' || sessionId === 'instance_1') {
+            // Get the first user in the system as fallback for local dev
+            user = await prisma.user.findFirst();
+            return user;
+        }
+
+        return null;
+    } catch (error) {
+        logger.error(`Error finding user for session ${sessionId}:`, error);
+        return null;
     }
-
-    // 3. Fallbacks for dev/single user mode
-    if (sessionConfigs.has('1')) return sessionConfigs.get('1');
-    if (sessionConfigs.has('instance_1')) return sessionConfigs.get('instance_1');
-
-    // 4. Try looking for any config that seems valid (last resort for single user)
-    if (sessionConfigs.size > 0) {
-        // Return the first config found
-        return sessionConfigs.values().next().value;
-    }
-
-    return { ...DEFAULT_CONFIG };
 }
 
 /**
- * Set configuration for a session
+ * Get configuration for a session from Database
+ * @param {string} sessionId 
+ * @returns {Promise<Object>} Session configuration
+ */
+export async function getSessionConfig(sessionId) {
+    const user = await findUserBySessionId(sessionId);
+
+    if (!user) {
+        logger.warn(`⚠️ No user found for session ${sessionId}, returning defaults`);
+        return { ...DEFAULT_CONFIG };
+    }
+
+    // Map DB fields to the expected config object format
+    return {
+        ...DEFAULT_CONFIG,
+        name: user.displayName || '',
+        ttsEnabled: user.ttsEnabled,
+        ttsVoice: user.ttsVoice,
+        ttsRules: user.ttsRules || DEFAULT_CONFIG.ttsRules,
+        model: user.aiModel || DEFAULT_CONFIG.model,
+        temperature: user.aiTemperature || DEFAULT_CONFIG.temperature,
+        systemPrompt: user.customPrompt || ''
+    };
+}
+
+/**
+ * Save configuration for a session to Database
  * @param {string} sessionId 
  * @param {Object} config 
  */
-export function setSessionConfig(sessionId, config) {
-    const existing = getSessionConfig(sessionId);
-    sessionConfigs.set(sessionId, { ...existing, ...config });
+export async function setSessionConfig(sessionId, config) {
+    try {
+        const user = await findUserBySessionId(sessionId);
 
-    // Also save for variants to ensure consistency
-    if (sessionId === '1') sessionConfigs.set('instance_1', { ...existing, ...config });
-    if (sessionId === 'instance_1') sessionConfigs.set('1', { ...existing, ...config });
+        if (!user) {
+            throw new Error(`User not found for session ${sessionId}`);
+        }
 
-    saveConfigsToDisk();
-    logger.info(`📝 Session config updated and saved for ${sessionId}`);
+        // Prepare update data
+        const updateData = {};
+        if (config.ttsEnabled !== undefined) updateData.ttsEnabled = config.ttsEnabled;
+        if (config.ttsVoice !== undefined) updateData.ttsVoice = config.ttsVoice;
+        if (config.ttsRules !== undefined) updateData.ttsRules = config.ttsRules;
+        if (config.model !== undefined) updateData.aiModel = config.model;
+        if (config.temperature !== undefined) updateData.aiTemperature = config.temperature;
+        if (config.systemPrompt !== undefined) updateData.customPrompt = config.systemPrompt;
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: updateData
+        });
+
+        logger.info(`✅ Session config updated in DB for user ${user.id} (${sessionId})`);
+        return true;
+    } catch (error) {
+        logger.error(`❌ Error updating session config for ${sessionId}:`, error.message);
+        return false;
+    }
 }
 
 /**
  * Check if a session has TTS enabled
  * @param {string} sessionId 
- * @returns {boolean}
+ * @returns {Promise<boolean>}
  */
-export function isTtsEnabled(sessionId) {
-    const config = getSessionConfig(sessionId);
+export async function isTtsEnabled(sessionId) {
+    const config = await getSessionConfig(sessionId);
     return config.ttsEnabled === true;
 }
 
 /**
  * Get TTS voice for a session
  * @param {string} sessionId 
- * @returns {string}
+ * @returns {Promise<string>}
  */
-export function getTtsVoice(sessionId) {
-    const config = getSessionConfig(sessionId);
+export async function getTtsVoice(sessionId) {
+    const config = await getSessionConfig(sessionId);
     return config.ttsVoice || 'Kore';
 }
 
 /**
  * Get TTS rules for a session
  * @param {string} sessionId 
- * @returns {string}
+ * @returns {Promise<Object|string>}
  */
-export function getTtsRules(sessionId) {
-    const config = getSessionConfig(sessionId);
+export async function getTtsRules(sessionId) {
+    const config = await getSessionConfig(sessionId);
     return config.ttsRules || '';
 }
 

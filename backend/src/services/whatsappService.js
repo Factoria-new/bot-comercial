@@ -1167,7 +1167,7 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
 
     try {
         // Check if TTS is enabled for this session
-        const config = getSessionConfig(sessionId);
+        const config = await getSessionConfig(sessionId);
         console.log(`📋 TTS Config for ${sessionId}:`, JSON.stringify(config));
         let shouldSendAudio = false;
 

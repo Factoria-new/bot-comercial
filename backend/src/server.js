@@ -161,37 +161,30 @@ app.get('/api/whatsapp/status/:sessionId', (req, res) => {
 
 // --- Session Configuration Endpoints ---
 // GET - Retrieve session configuration
-app.get('/api/whatsapp/config/:sessionId', (req, res) => {
+app.get('/api/whatsapp/config/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
-  const config = getSessionConfig(sessionId);
+  const config = await getSessionConfig(sessionId);
   res.json({ success: true, config });
 });
 
 // POST - Save session configuration
-app.post('/api/whatsapp/config/:sessionId', (req, res) => {
+app.post('/api/whatsapp/config/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
   const config = req.body;
 
   try {
-    setSessionConfig(sessionId, config);
-
-    // Backward compatibility: sync between "1" and "instance_1"
-    // Frontend uses "1", WhatsApp service uses "instance_1"
-    if (sessionId === '1') {
-      setSessionConfig('instance_1', config);
-    } else if (sessionId === 'instance_1') {
-      setSessionConfig('1', config);
-    }
+    await setSessionConfig(sessionId, config);
 
     // Also update the agent prompt if systemPrompt is provided
     if (config.systemPrompt) {
       setAgentPrompt(sessionId, config.systemPrompt);
     }
 
+    const updatedConfig = await getSessionConfig(sessionId);
     res.json({
       success: true,
       message: 'Configuração salva com sucesso',
-      config: getSessionConfig(sessionId)
+      config: updatedConfig
     });
   } catch (error) {
     logger.error('Error saving session config:', error);

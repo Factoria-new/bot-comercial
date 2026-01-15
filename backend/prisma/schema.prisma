@@ -38,6 +38,13 @@ model User {
   serviceType        String?   // "online" | "presencial"
   businessAddress    String?   // Endereço físico (apenas se presencial)
   
+  // Configurações de TTS e IA
+  ttsEnabled         Boolean   @default(false)
+  ttsVoice           String    @default("Kore")
+  ttsRules           Json?     // Objeto com regras (audioOnRequest, etc)
+  aiModel            String    @default("gemini-2.0-flash-exp")
+  aiTemperature      Float     @default(1.0)
+  
   // Relação 1:1 com Instance
   instance           Instance?
   
