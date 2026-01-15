@@ -19,6 +19,7 @@ export type AudioTriggerType =
     | 'upload_success'
     | 'integrations_success'
     | 'step_operations' // NEW
+    | 'step_operations_modal' // NEW (Specific for BusinessInfoModal)
     | 'dashboard_suggestion' // NEW
     | 'step_details'; // NEW
 
@@ -88,10 +89,10 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Excelente! Seu assistente está configurado. Vamos ativá-lo nos seus canais de comunicação? Escolha abaixo onde você quer que ele atenda seus clientes.",
         "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático nos seus canais."
     ]),
-    'upload_success': defineVariations('upload_success', 3, [
-        "Seu arquivo foi analisado com sucesso! Essa é a área de teste, onde você pode conversar com seu assistente para verificar como ele ficou.",
-        "Análise concluída! Já configurei seu assistente com base no arquivo. Aproveite este ambiente para testar as respostas dele.",
-        "Arquivo processado com sucesso! Seu assistente está pronto para testes. Ajuste o que for necessário."
+    'upload_success': defineVariations('intro_wizard', 3, [
+        "Olá! Sou a Lia. Vamos configurar seu assistente juntos.",
+        "Oi! Que bom te ver. Vamos criar um assistente incrível para você.",
+        "Bem-vindo! Eu sou a Lia. Vou te guiar nesse processo rápido."
     ]),
     'integrations_success': defineVariations('integrations_success', 3, [
         "Integração realizada com sucesso! Seu assistente já está conectado e pronto para atender.",
@@ -102,6 +103,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu contato ou agendamento.",
         "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento.",
         "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar."
+    ]),
+    'step_operations_modal': defineVariations('step_operations_modal', 3, [
+        "Agora, defina os horários de atendimento do seu negócio.",
+        "Estamos quase lá! Configure os dias e horários em que você trabalha.",
+        "Preciso saber seus horários de funcionamento para informar corretamente os clientes."
     ]),
     'dashboard_suggestion': defineVariations('dashboard_suggestion', 3, [
         "Seu painel está ativo! Dica rápida: que tal conectar também outros canais para centralizar todo o seu atendimento aqui?",

@@ -57,7 +57,12 @@ const AUDIO_DATA = [
     // COMPLETE
     { id: 'wizard_complete_v1', text: "Pronto! Seu agente foi criado. Aqui nesta tela você pode testá-lo e, se precisar de ajustes, é só me pedir no chat ao lado." },
     { id: 'wizard_complete_v2', text: "Terminamos! Agora você está no ambiente de teste. Converse com seu agente para ver como ele responde, e me chame se quiser mudar alguma coisa." },
-    { id: 'wizard_complete_v3', text: "Agente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho." }
+    { id: 'wizard_complete_v3', text: "Agente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho." },
+
+    // STEP OPERATIONS MODAL (Specific for BusinessInfoModal)
+    { id: 'step_operations_modal_v1', text: "Agora, defina os horários de atendimento do seu negócio." },
+    { id: 'step_operations_modal_v2', text: "Estamos quase lá! Configure os dias e horários em que você trabalha." },
+    { id: 'step_operations_modal_v3', text: "Preciso saber seus horários de funcionamento para informar corretamente os clientes." }
 ];
 
 async function generateAudioItem(item) {

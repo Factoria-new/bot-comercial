@@ -18,6 +18,7 @@ interface LiaChatProps {
     setChatMode: (mode: 'lia' | 'agent') => void;
     chatMode: 'lia' | 'agent';
     speak: (text: string, voice?: string, options?: any) => Promise<any>; // NEW: receive speak from parent
+    onPromptUploaded?: (prompt: string) => void; // NEW: callback when prompt is uploaded (to show BusinessInfoModal)
 }
 
 export const useLiaChat = ({
@@ -36,7 +37,8 @@ export const useLiaChat = ({
     setIsWizardOpen,
     setChatMode,
     chatMode,
-    speak // NEW: receive from parent
+    speak, // NEW: receive from parent
+    onPromptUploaded // NEW: callback for BusinessInfoModal
 }: LiaChatProps) => {
 
     const [displayText, setDisplayText] = useState("");
@@ -171,27 +173,37 @@ export const useLiaChat = ({
                 const promptText = data.text;
                 const audioVariation = getRandomAudio('upload_success');
 
-                setAgentPrompt(promptText);
+                // Play success audio and show message
+                if (audioVariation.path) {
+                    playIntegrationAudio(audioVariation.path);
+                }
+                setDisplayText(audioVariation.text);
+                setIsVisible(true);
 
-                setTimeout(async () => {
-                    if (audioVariation.path) {
-                        playIntegrationAudio(audioVariation.path);
-                    }
-
-                    setDisplayText(audioVariation.text);
-                    setIsVisible(true);
-
+                // Check if we have a callback for the BusinessInfoModal flow
+                if (onPromptUploaded) {
+                    // New flow: Show BusinessInfoModal before proceeding
+                    console.log("📋 Prompt uploaded, opening BusinessInfoModal...");
                     setTimeout(() => {
-                        if (chatState.agentConfig?.prompt) {
-                            console.log("✅ Automatic prompt detection from hook!");
-                            setChatMode('agent');
+                        onPromptUploaded(promptText);
+                    }, 1200);
+                } else {
+                    // Legacy flow: Go directly to test mode
+                    setAgentPrompt(promptText);
 
-                            if (chatState.testMessages.length === 0) {
-                                startTesting();
+                    setTimeout(async () => {
+                        setTimeout(() => {
+                            if (chatState.agentConfig?.prompt) {
+                                console.log("✅ Automatic prompt detection from hook!");
+                                setChatMode('agent');
+
+                                if (chatState.testMessages.length === 0) {
+                                    startTesting();
+                                }
                             }
-                        }
-                    }, 1500);
-                }, 1200);
+                        }, 1500);
+                    }, 1200);
+                }
 
             } else {
                 setDisplayText("Erro ao ler arquivo. Tente novamente.");

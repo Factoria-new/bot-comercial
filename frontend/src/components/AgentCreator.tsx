@@ -25,6 +25,8 @@ import { AgentTestPanel } from "./agent-creator/AgentTestPanel";
 import { IntegrationsStep } from "./agent-creator/IntegrationsStep";
 import { DashboardStep } from "./agent-creator/DashboardStep";
 import { LoadingOverlay } from "./agent-creator/LoadingOverlay";
+import BusinessInfoModal, { BusinessInfoData } from "./BusinessInfoModal";
+import { DaySchedule, WeekDay, WEEKDAYS_MAP } from "@/lib/scheduleTypes";
 
 export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat }: AgentCreatorProps) {
 
@@ -43,6 +45,10 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     const [testMode, setTestMode] = useState(false);
     const [testMessages, setTestMessages] = useState<AgentMessage[]>([]);
     const [isTestTyping, setIsTestTyping] = useState(false);
+
+    // Business Info Modal State (for prompt upload flow)
+    const [isBusinessInfoModalOpen, setIsBusinessInfoModalOpen] = useState(false);
+    const [uploadedPrompt, setUploadedPrompt] = useState<string | null>(null);
 
 
     // Transitions
@@ -115,7 +121,12 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         setIsWizardOpen,
         setChatMode,
         chatMode,
-        speak // Pass the speak from useTTS to share voiceLevel
+        speak, // Pass the speak from useTTS to share voiceLevel
+        onPromptUploaded: (prompt: string) => {
+            // Store the prompt temporarily and open BusinessInfoModal
+            setUploadedPrompt(prompt);
+            setIsBusinessInfoModalOpen(true);
+        }
     });
 
     const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
@@ -290,6 +301,67 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         }
     };
 
+    // Handler for BusinessInfoModal completion (after prompt upload)
+    const handleBusinessInfoComplete = (businessInfo: BusinessInfoData) => {
+        setIsBusinessInfoModalOpen(false);
+
+        if (!uploadedPrompt) {
+            console.error('❌ No uploaded prompt found');
+            return;
+        }
+
+        // Format opening hours into a readable string
+        const formatSchedule = (schedule: Record<WeekDay, DaySchedule>): string => {
+            const lines: string[] = [];
+            (Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).forEach(([key, label]) => {
+                const day = schedule[key];
+                if (day?.enabled && day.slots.length > 0) {
+                    const slots = day.slots.map(s => `${s.start}-${s.end}`).join(', ');
+                    lines.push(`${label}: ${slots}`);
+                }
+            });
+            return lines.join('\n');
+        };
+
+        const scheduleStr = formatSchedule(businessInfo.openingHours);
+        const serviceTypeStr = businessInfo.serviceType === 'online'
+            ? 'Atendimento 100% Online'
+            : `Atendimento Presencial - Endereço: ${businessInfo.address || 'Não informado'}`;
+
+        // Inject business info into the prompt
+        const enrichedPrompt = `${uploadedPrompt}
+
+# INFORMAÇÕES DE FUNCIONAMENTO
+Tipo de Atendimento: ${serviceTypeStr}
+
+Horários de Funcionamento:
+${scheduleStr}
+
+**IMPORTANTE para Agendamentos**: Ao utilizar o Google Calendar para criar eventos ou verificar disponibilidade, respeite estritamente os horários de funcionamento acima. NÃO agende nada fora desses horários.`;
+
+        console.log('✅ Prompt enriched with business info:', enrichedPrompt.substring(0, 200) + '...');
+
+        // Set the enriched prompt and proceed to test mode
+        setAgentPrompt(enrichedPrompt);
+        setIsSwitchingToTest(true);
+
+        // Play completion audio
+        const audioVariation = getRandomAudio('complete');
+        if (audioVariation.path) {
+            playIntegrationAudio(audioVariation.path, 500);
+        }
+
+        // Transition to test mode
+        setTimeout(() => {
+            setChatMode('agent');
+            setIsSwitchingToTest(false);
+            startTesting();
+        }, 4000);
+
+        // Clear temporary state
+        setUploadedPrompt(null);
+    };
+
 
     return (
         <div className="min-h-screen relative flex flex-col p-4 overflow-hidden text-white font-outfit bg-[#020617]">
@@ -336,7 +408,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
                     {/* 1. LIA'S PRESENCE (Initial Screen) */}
                     <AnimatePresence>
-                        {(!isWizardOpen && !testMode && !isSwitchingToTest) && (
+                        {(!isWizardOpen && !testMode && !isSwitchingToTest && !isBusinessInfoModalOpen) && (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -396,6 +468,28 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                         onPlayAudio={playIntegrationAudio}
                         onClose={() => setIsWizardOpen(false)}
                     />
+
+                    {/* 2.5 BUSINESS INFO MODAL (after prompt upload) */}
+                    <AnimatePresence>
+                        {isBusinessInfoModalOpen && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex items-center justify-center"
+                            >
+                                <BusinessInfoModal
+                                    open={isBusinessInfoModalOpen}
+                                    onComplete={handleBusinessInfoComplete}
+                                    onPlayAudio={playIntegrationAudio}
+                                    onClose={() => {
+                                        setIsBusinessInfoModalOpen(false);
+                                        setUploadedPrompt(null);
+                                    }}
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {/* 3. UNIFIED CHAT MODE (Lia or Agent) */}
                     <AnimatePresence>

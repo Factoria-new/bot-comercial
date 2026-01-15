@@ -11,9 +11,10 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import LiaSidebar from "@/components/LiaSidebar";
 import WhatsAppConnectionModal from "@/components/WhatsAppConnectionModal";
 import { Integration } from "@/types/onboarding";
-import { motion } from "framer-motion";
+
 import { PromptEditChat } from "@/components/PromptEditChat";
 import Lottie from "lottie-react";
+import { LiaFloatingButton } from "@/components/LiaFloatingButton";
 
 interface Metrics {
     totalMessages: number;
@@ -474,24 +475,12 @@ const MeuPrompt = () => {
             />
 
             {/* Floating Lia Button */}
-            <motion.button
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
-                onClick={() => setIsLiaChatOpen(true)}
-                className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full shadow-2xl shadow-emerald-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform z-30 group"
-            >
-                {/* Pulse ring */}
-                <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-25" />
-
-                {/* Avatar */}
-                <span className="relative z-10 font-bold text-2xl">L</span>
-
-                {/* Tooltip */}
-                <div className="absolute right-20 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg border border-white/10">
-                    Falar com a Lia
-                </div>
-            </motion.button>
+            {/* Floating Lia Button */}
+            {!isLiaChatOpen && (
+                <LiaFloatingButton
+                    onClick={() => setIsLiaChatOpen(true)}
+                />
+            )}
         </>
     );
 };
