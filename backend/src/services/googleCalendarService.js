@@ -288,11 +288,137 @@ export const findAvailableSlots = async (userId, date, durationMinutes = 60) => 
     }
 };
 
+// ============================================
+// BUSINESS HOURS VALIDATION HELPERS
+// ============================================
+
+/**
+ * Map day of week (0-6, Sunday=0) to Portuguese day key
+ */
+const DAY_MAP = {
+    0: 'dom',
+    1: 'seg',
+    2: 'ter',
+    3: 'qua',
+    4: 'qui',
+    5: 'sex',
+    6: 'sab'
+};
+
+const DAY_NAMES = {
+    'seg': 'Segunda-feira',
+    'ter': 'Terça-feira',
+    'qua': 'Quarta-feira',
+    'qui': 'Quinta-feira',
+    'sex': 'Sexta-feira',
+    'sab': 'Sábado',
+    'dom': 'Domingo'
+};
+
+/**
+ * Format business hours for display in function descriptions
+ */
+const formatBusinessHoursForDescription = (businessHours) => {
+    if (!businessHours) return null;
+
+    const lines = [];
+    Object.entries(DAY_NAMES).forEach(([key, name]) => {
+        const day = businessHours[key];
+        if (day?.enabled && day.slots?.length > 0) {
+            const slots = day.slots.map(s => `${s.start}-${s.end}`).join(', ');
+            lines.push(`- ${name}: ${slots}`);
+        }
+    });
+
+    return lines.length > 0 ? lines.join('\n') : null;
+};
+
+/**
+ * Get time string (HH:MM) from Date object
+ */
+const getTimeString = (date) => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+};
+
+/**
+ * Validate if an event falls within business hours
+ * @param {string} startDateTime - ISO datetime string
+ * @param {string} endDateTime - ISO datetime string  
+ * @param {object} businessHours - Business hours JSON
+ * @returns {{valid: boolean, message?: string, availableSlots?: string}}
+ */
+const validateEventAgainstBusinessHours = (startDateTime, endDateTime, businessHours) => {
+    if (!businessHours) {
+        return { valid: true }; // No restrictions if no business hours set
+    }
+
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    const dayKey = DAY_MAP[start.getDay()];
+    const daySchedule = businessHours[dayKey];
+    const dayName = DAY_NAMES[dayKey];
+
+    // Check if day is enabled
+    if (!daySchedule?.enabled) {
+        // Find next available day
+        const availableDays = Object.entries(businessHours)
+            .filter(([_, day]) => day?.enabled && day.slots?.length > 0)
+            .map(([key, _]) => DAY_NAMES[key])
+            .join(', ');
+
+        return {
+            valid: false,
+            message: `❌ Não é possível agendar: O estabelecimento não funciona em ${dayName}.`,
+            availableSlots: `Dias disponíveis: ${availableDays || 'Nenhum dia configurado'}`
+        };
+    }
+
+    // Check if time is within any slot
+    const startTime = getTimeString(start);
+    const endTime = getTimeString(end);
+
+    const isWithinSlots = daySchedule.slots.some(slot => {
+        return startTime >= slot.start && endTime <= slot.end;
+    });
+
+    if (!isWithinSlots) {
+        const availableSlots = daySchedule.slots
+            .map(s => `${s.start}-${s.end}`)
+            .join(', ');
+
+        return {
+            valid: false,
+            message: `❌ Horário fora do funcionamento. Em ${dayName}, o horário solicitado (${startTime}-${endTime}) não está dentro dos horários disponíveis.`,
+            availableSlots: `Horários disponíveis em ${dayName}: ${availableSlots}`
+        };
+    }
+
+    return { valid: true };
+};
+
 /**
  * Get function declarations for Gemini Function Calling
  * These are the tools the AI agent can use when Google Calendar is connected
+ * @param {object|null} businessContext - Optional business context with hours, serviceType, address
  */
-export const getCalendarFunctionDeclarations = () => {
+export const getCalendarFunctionDeclarations = (businessContext = null) => {
+    // Format business hours for injection into descriptions
+    const hoursDescription = businessContext?.businessHours
+        ? formatBusinessHoursForDescription(businessContext.businessHours)
+        : null;
+
+    const serviceTypeInfo = businessContext?.serviceType === 'presencial' && businessContext?.businessAddress
+        ? `\nLocal: ${businessContext.businessAddress}`
+        : businessContext?.serviceType === 'online'
+            ? '\nAtendimento 100% Online'
+            : '';
+
+    const hoursRestriction = hoursDescription
+        ? `\n\n⚠️ RESTRIÇÃO OBRIGATÓRIA - Horários de Funcionamento:\n${hoursDescription}${serviceTypeInfo}\n\nNÃO agende eventos fora destes horários. O sistema irá rejeitar automaticamente.`
+        : '';
+
     return [
         {
             name: 'list_calendar_events',
@@ -310,7 +436,7 @@ export const getCalendarFunctionDeclarations = () => {
         },
         {
             name: 'create_calendar_event',
-            description: 'Cria um novo evento/compromisso no calendário. Use quando o cliente quiser agendar uma reunião, consulta ou compromisso.',
+            description: `Cria um novo evento/compromisso no calendário. Use quando o cliente quiser agendar uma reunião, consulta ou compromisso.${hoursRestriction}`,
             parameters: {
                 type: 'OBJECT',
                 properties: {
@@ -345,7 +471,7 @@ export const getCalendarFunctionDeclarations = () => {
         },
         {
             name: 'find_available_slots',
-            description: 'Encontra horários disponíveis no calendário para agendamento. Use quando o cliente perguntar sobre disponibilidade.',
+            description: `Encontra horários disponíveis no calendário para agendamento. Use quando o cliente perguntar sobre disponibilidade.${hoursRestriction ? '\n\nConsidere APENAS os horários de funcionamento ao sugerir disponibilidade.' : ''}`,
             parameters: {
                 type: 'OBJECT',
                 properties: {
@@ -369,9 +495,10 @@ export const getCalendarFunctionDeclarations = () => {
  * @param {string} functionName - Name of the function to execute
  * @param {object} args - Arguments passed by Gemini
  * @param {string} userId - User's email
+ * @param {object|null} businessContext - Optional business context for validation
  * @returns {Promise<{success: boolean, result?: any, error?: string}>}
  */
-export const executeCalendarFunction = async (functionName, args, userId) => {
+export const executeCalendarFunction = async (functionName, args, userId, businessContext = null) => {
     console.log(`📅 Executing calendar function: ${functionName}`, args);
 
     switch (functionName) {
@@ -379,6 +506,25 @@ export const executeCalendarFunction = async (functionName, args, userId) => {
             return await listEvents(userId, args.max_results || 10);
 
         case 'create_calendar_event':
+            // Validate against business hours BEFORE creating event
+            if (businessContext?.businessHours) {
+                const validation = validateEventAgainstBusinessHours(
+                    args.start_datetime,
+                    args.end_datetime,
+                    businessContext.businessHours
+                );
+
+                if (!validation.valid) {
+                    console.log(`⛔ Event rejected - outside business hours:`, validation);
+                    return {
+                        success: false,
+                        error: validation.message,
+                        suggestion: validation.availableSlots,
+                        rejectedByBusinessHours: true
+                    };
+                }
+            }
+
             return await createEvent(userId, {
                 summary: args.summary,
                 description: args.description,
@@ -408,3 +554,4 @@ export default {
     getCalendarFunctionDeclarations,
     executeCalendarFunction
 };
+

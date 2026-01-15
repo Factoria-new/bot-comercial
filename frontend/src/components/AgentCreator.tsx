@@ -302,7 +302,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     };
 
     // Handler for BusinessInfoModal completion (after prompt upload)
-    const handleBusinessInfoComplete = (businessInfo: BusinessInfoData) => {
+    const handleBusinessInfoComplete = async (businessInfo: BusinessInfoData) => {
         setIsBusinessInfoModalOpen(false);
 
         if (!uploadedPrompt) {
@@ -340,6 +340,34 @@ ${scheduleStr}
 **IMPORTANTE para Agendamentos**: Ao utilizar o Google Calendar para criar eventos ou verificar disponibilidade, respeite estritamente os horários de funcionamento acima. NÃO agende nada fora desses horários.`;
 
         console.log('✅ Prompt enriched with business info:', enrichedPrompt.substring(0, 200) + '...');
+
+        // Persist business info to database
+        try {
+            const token = localStorage.getItem('token');
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+
+            const response = await fetch(`${backendUrl}/api/user/business-info`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    businessHours: businessInfo.openingHours,
+                    serviceType: businessInfo.serviceType,
+                    businessAddress: businessInfo.address || null
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                console.log('✅ Business info saved to database');
+            } else {
+                console.error('❌ Failed to save business info:', result.error);
+            }
+        } catch (error) {
+            console.error('❌ Error saving business info:', error);
+        }
 
         // Set the enriched prompt and proceed to test mode
         setAgentPrompt(enrichedPrompt);

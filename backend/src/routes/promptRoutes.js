@@ -131,4 +131,80 @@ router.get('/whatsapp-status', extractUserId, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/user/business-info - Buscar informações de funcionamento
+ */
+router.get('/business-info', extractUserId, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId },
+            select: {
+                businessHours: true,
+                serviceType: true,
+                businessAddress: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+        }
+
+        res.json({
+            success: true,
+            businessHours: user.businessHours,
+            serviceType: user.serviceType,
+            businessAddress: user.businessAddress,
+            hasBusinessInfo: !!(user.businessHours || user.serviceType)
+        });
+    } catch (error) {
+        logger.error('Erro ao buscar business info:', error);
+        res.status(500).json({ success: false, error: 'Erro ao buscar informações de funcionamento' });
+    }
+});
+
+/**
+ * PUT /api/user/business-info - Salvar/atualizar informações de funcionamento
+ */
+router.put('/business-info', extractUserId, async (req, res) => {
+    try {
+        const { businessHours, serviceType, businessAddress } = req.body;
+
+        // Validação básica
+        if (serviceType && !['online', 'presencial'].includes(serviceType)) {
+            return res.status(400).json({
+                success: false,
+                error: 'serviceType deve ser "online" ou "presencial"'
+            });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: req.userId },
+            data: {
+                businessHours: businessHours || undefined,
+                serviceType: serviceType || undefined,
+                businessAddress: businessAddress || undefined,
+                updatedAt: new Date()
+            },
+            select: {
+                id: true,
+                businessHours: true,
+                serviceType: true,
+                businessAddress: true
+            }
+        });
+
+        logger.info(`✅ Business info salvo para usuário ${req.userId}`);
+
+        res.json({
+            success: true,
+            message: 'Informações de funcionamento salvas com sucesso',
+            data: updatedUser
+        });
+    } catch (error) {
+        logger.error('Erro ao salvar business info:', error);
+        res.status(500).json({ success: false, error: 'Erro ao salvar informações de funcionamento' });
+    }
+});
+
 export default router;
+

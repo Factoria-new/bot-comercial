@@ -33,6 +33,11 @@ model User {
   // Prompt personalizado do agente
   customPrompt       String?   @db.Text
   
+  // Informações de funcionamento do negócio
+  businessHours      Json?     // Estrutura JSON com horários por dia da semana
+  serviceType        String?   // "online" | "presencial"
+  businessAddress    String?   // Endereço físico (apenas se presencial)
+  
   // Relação 1:1 com Instance
   instance           Instance?
   

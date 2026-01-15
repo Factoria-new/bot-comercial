@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Edit3, Upload, Save, RotateCcw, FileText, Check, Sparkles, Menu } from "lucide-react";
+import { Edit3, Upload, Save, RotateCcw, FileText, Check, Sparkles, Menu, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { promptService } from "@/services/promptService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ import { Integration } from "@/types/onboarding";
 import { PromptEditChat } from "@/components/PromptEditChat";
 import Lottie from "lottie-react";
 import { LiaFloatingButton } from "@/components/LiaFloatingButton";
+import { BusinessSettingsModal } from "@/components/BusinessSettingsModal";
 
 interface Metrics {
     totalMessages: number;
@@ -43,6 +44,7 @@ const MeuPrompt = () => {
     const [hasChanges, setHasChanges] = useState(false);
     const [successAnimationData, setSuccessAnimationData] = useState<any>(null);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isBusinessSettingsOpen, setIsBusinessSettingsOpen] = useState(false);
 
     useEffect(() => {
         fetch('/lotties/success.json')
@@ -308,6 +310,15 @@ const MeuPrompt = () => {
                             Substituir Prompt
                         </Button>
 
+                        <Button
+                            onClick={() => setIsBusinessSettingsOpen(true)}
+                            variant="outline"
+                            className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                        >
+                            <Settings className="w-4 h-4 mr-2" />
+                            Configurações
+                        </Button>
+
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -475,12 +486,23 @@ const MeuPrompt = () => {
             />
 
             {/* Floating Lia Button */}
-            {/* Floating Lia Button */}
             {!isLiaChatOpen && (
                 <LiaFloatingButton
                     onClick={() => setIsLiaChatOpen(true)}
                 />
             )}
+
+            {/* Business Settings Modal */}
+            <BusinessSettingsModal
+                open={isBusinessSettingsOpen}
+                onClose={() => setIsBusinessSettingsOpen(false)}
+                currentPrompt={prompt}
+                onPromptUpdate={(newPrompt) => {
+                    setPrompt(newPrompt);
+                    setOriginalPrompt(newPrompt);
+                    setHasChanges(false);
+                }}
+            />
         </>
     );
 };

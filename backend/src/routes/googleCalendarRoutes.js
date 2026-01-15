@@ -197,6 +197,53 @@ router.get('/function-declarations', (req, res) => {
 });
 
 /**
+ * POST /api/google-calendar/function-declarations-with-context
+ * Get function declarations with business hours context injected
+ * Body: { userId } - User's email to fetch business context
+ */
+router.post('/function-declarations-with-context', async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId is required'
+            });
+        }
+
+        // Fetch user's business context from database
+        const { PrismaClient } = await import('@prisma/client');
+        const prisma = new PrismaClient();
+
+        const user = await prisma.user.findFirst({
+            where: { email: userId },
+            select: {
+                businessHours: true,
+                serviceType: true,
+                businessAddress: true
+            }
+        });
+
+        const businessContext = user ? {
+            businessHours: user.businessHours,
+            serviceType: user.serviceType,
+            businessAddress: user.businessAddress
+        } : null;
+
+        const declarations = getCalendarFunctionDeclarations(businessContext);
+
+        res.json({
+            success: true,
+            declarations,
+            hasBusinessContext: !!businessContext?.businessHours
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
  * POST /api/google-calendar/execute-function
  * Execute a calendar function (called by AI engine)
  * Body: { userId, functionName, args }
@@ -212,7 +259,28 @@ router.post('/execute-function', async (req, res) => {
             });
         }
 
-        const result = await executeCalendarFunction(functionName, args || {}, userId);
+        // Fetch user's business context from database
+        const { PrismaClient } = await import('@prisma/client');
+        const prisma = new PrismaClient();
+
+        const user = await prisma.user.findFirst({
+            where: { email: userId },
+            select: {
+                businessHours: true,
+                serviceType: true,
+                businessAddress: true
+            }
+        });
+
+        const businessContext = user ? {
+            businessHours: user.businessHours,
+            serviceType: user.serviceType,
+            businessAddress: user.businessAddress
+        } : null;
+
+        console.log(`📅 Executing function with business context:`, businessContext ? 'present' : 'none');
+
+        const result = await executeCalendarFunction(functionName, args || {}, userId, businessContext);
         res.json(result);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -220,3 +288,4 @@ router.post('/execute-function', async (req, res) => {
 });
 
 export default router;
+
