@@ -15,6 +15,7 @@ class MessageInput(BaseModel):
     message: str
     agentPrompt: Optional[str] = None
     history: Optional[List[HistoryItem]] = None
+    userEmail: Optional[str] = None  # Email do usuário para Google Calendar
 
 class InstagramMessageInput(BaseModel):
     userId: str  # User's email
@@ -46,8 +47,11 @@ async def handle_whatsapp_message(data: MessageInput):
         # Se vier um prompt do Node.js, usamos ele. Se não, usa o default.
         custom_prompt = data.agentPrompt
         
-        # userId is the session_id (instance_1, etc)
-        comercial, social, trafego = get_agents(data.userId, custom_prompt)
+        # Get user email for Google Calendar (falls back to userId if not provided)
+        user_email = data.userEmail or data.userId
+        
+        # userId is the session_id (instance_1, etc), userEmail is for Google Calendar
+        comercial, social, trafego = get_agents(data.userId, custom_prompt, user_email)
 
         # Include remoteJid in task so agent knows where to send response
         task_atendimento = Task(
@@ -57,13 +61,15 @@ O cliente com ID '{data.remoteJid}' enviou a seguinte mensagem: '{data.message}'
 Histórico da Conversa:
 {format_history(data.history)}
 
-IMPORTANTE: Para responder, use a ferramenta 'Enviar Mensagem WhatsApp' com:
-- remote_jid: {data.remoteJid}
-- message: sua resposta
+FERRAMENTAS DISPONÍVEIS:
+1. 'Enviar Mensagem WhatsApp' - use com remote_jid: {data.remoteJid} e message: sua resposta
+2. 'Agendar Compromisso' - use quando o cliente quiser agendar algo (requer nome, email, data/hora)
 
 Analise a mensagem e responda de forma adequada seguindo suas instruções, LEVANDO EM CONTA O HISTÓRICO ACIMA. Se o histórico mostrar que você acabou de fazer uma pergunta, a mensagem atual é provavelmente a resposta para ela.
+
+Se o cliente quiser agendar, use a ferramenta 'Agendar Compromisso' com os dados coletados.
             """.strip(),
-            expected_output="Mensagem enviada com sucesso ao cliente.",
+            expected_output="Mensagem enviada com sucesso ao cliente ou agendamento realizado.",
             agent=comercial
         )
 

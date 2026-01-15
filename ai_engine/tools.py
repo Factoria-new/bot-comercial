@@ -97,47 +97,89 @@ class WhatsAppSendAudioTool(BaseTool):
             return f"Erro de conexão com o WhatsApp: {str(e)}"
 
 class GoogleCalendarTool(BaseTool):
-    name: str = "Google Calendar"
+    name: str = "Agendar Compromisso"
     description: str = """
-    Ferramenta para interagir com o Google Calendar. Use esta ferramenta para:
-    1. Listar eventos ('list_calendar_events')
-    2. Criar eventos/reuniões ('create_calendar_event')
-    3. Encontrar horários livres ('find_available_slots')
+    Ferramenta para agendar compromissos no calendário. Use esta ferramenta quando o cliente 
+    quiser marcar uma reunião, consulta, atendimento ou qualquer compromisso.
     
-    Você deve fornecer o nome da função e os argumentos necessários em formato JSON.
+    ANTES de usar esta ferramenta, você DEVE coletar:
+    - Nome do cliente
+    - E-mail do cliente
+    - Data e hora desejada
+    
+    A ferramenta irá automaticamente:
+    1. Verificar se o horário está dentro do funcionamento do estabelecimento
+    2. Verificar se o horário está livre no calendário
+    3. Criar a reunião com link do Google Meet (se online) ou enviar endereço (se presencial)
+    4. Sugerir 3 horários alternativos próximos à data solicitada se o horário não estiver disponível
+    
+    Parâmetros necessários:
+    - customer_name: Nome do cliente
+    - customer_email: E-mail do cliente (será adicionado como participante do evento)
+    - start_datetime: Data e hora de início (formato ISO: 2026-01-20T14:00:00)
+    - end_datetime: Data e hora de fim (formato ISO: 2026-01-20T15:00:00)
+    - description: Descrição do compromisso (opcional)
     """
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
 
-    def _run(self, function_name: str, arguments_json: str):
+    def _run(self, customer_name: str, customer_email: str, start_datetime: str, 
+             end_datetime: str, description: str = ""):
         """
-        Executa uma ação no Google Calendar.
+        Agenda um compromisso validando horário de funcionamento e disponibilidade.
         
         Args:
-            function_name: Nome da função a executar (list_calendar_events, create_calendar_event, find_available_slots)
-            arguments_json: String JSON contendo os argumentos para a função
+            customer_name: Nome do cliente
+            customer_email: E-mail do cliente
+            start_datetime: Data e hora de início (formato ISO)
+            end_datetime: Data e hora de fim (formato ISO)
+            description: Descrição opcional do compromisso
         """
         node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
         
         try:
-            args = json.loads(arguments_json)
-        except:
-            return "Erro: arguments_json deve ser um JSON válido."
-
-        try:
-            response = requests.post(f"{node_api_url}/api/google-calendar/execute-function", json={
-                "userId": self.user_id,
-                "functionName": function_name,
-                "args": args
-            })
+            response = requests.post(
+                f"{node_api_url}/api/google-calendar/schedule-appointment",
+                json={
+                    "userId": self.user_id,
+                    "customerName": customer_name,
+                    "customerEmail": customer_email,
+                    "requestedStart": start_datetime,
+                    "requestedEnd": end_datetime,
+                    "description": description
+                }
+            )
             
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("success"):
-                    return json.dumps(result, ensure_ascii=False)
+            result = response.json()
+            
+            if result.get("success"):
+                # Agendamento bem-sucedido
+                if result.get("meetLink"):
+                    return f"✅ Agendamento confirmado para {customer_name}! Link da reunião online: {result['meetLink']}"
+                elif result.get("address"):
+                    return f"✅ Agendamento confirmado para {customer_name}! Endereço do atendimento: {result['address']}"
                 else:
-                    return f"Erro na execução da função: {result.get('error')}"
+                    return f"✅ Agendamento confirmado para {customer_name}!"
+            
+            elif result.get("reason") == "outside_business_hours":
+                # Fora do horário de funcionamento
+                formatted_hours = result.get('formattedHours', 'Horários não disponíveis')
+                return f"❌ {result.get('message', 'Horário fora do funcionamento')}\n\nHorário de funcionamento:\n{formatted_hours}"
+            
+            elif result.get("reason") == "calendar_conflict":
+                # Conflito no calendário - sugerir alternativas
+                suggestions = result.get("suggestions", [])
+                if suggestions:
+                    suggestion_text = "\n".join([
+                        f"  • {s['formatted']}" for s in suggestions
+                    ])
+                    return f"❌ O horário solicitado não está disponível.\n\nSugestões de horários próximos:\n{suggestion_text}"
+                else:
+                    return "❌ O horário solicitado não está disponível e não encontramos alternativas próximas."
+            
             else:
-                return f"Falha ao conectar com calendário: {response.text}"
+                return f"Erro ao agendar: {result.get('error', result.get('message', 'Erro desconhecido'))}"
+                
         except Exception as e:
-            return f"Erro de conexão com o Calendar Service: {str(e)}"
+            return f"Erro de conexão com o serviço de calendário: {str(e)}"
+

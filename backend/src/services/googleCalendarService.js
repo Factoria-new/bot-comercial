@@ -555,3 +555,331 @@ export default {
     executeCalendarFunction
 };
 
+// ============================================
+// SCHEDULING APPOINTMENT FUNCTIONS
+// ============================================
+
+/**
+ * Check if a specific time slot is available in the calendar
+ * @param {string} userId - User's email
+ * @param {string} startDateTime - ISO datetime string
+ * @param {string} endDateTime - ISO datetime string
+ * @returns {Promise<{available: boolean, conflictingEvents?: Array}>}
+ */
+export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTime) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { available: false, error: 'Google Calendar not connected' };
+    }
+
+    try {
+        // List events in the requested time range
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_LIST_EVENTS',
+            {
+                time_min: startDateTime,
+                time_max: endDateTime,
+                max_results: 10
+            },
+            { connectedAccountId: status.connectionId }
+        );
+
+        if (!result.successful) {
+            return { available: false, error: result.error || 'Failed to check availability' };
+        }
+
+        const events = result.data?.items || result.data || [];
+
+        // Filter out transparent (free) events and check for actual conflicts
+        const conflictingEvents = events.filter(event => {
+            // Skip if event shows as "free" (transparent)
+            if (event.transparency === 'transparent') return false;
+
+            // Check if the event actually overlaps with requested slot
+            const eventStart = new Date(event.start?.dateTime || event.start?.date);
+            const eventEnd = new Date(event.end?.dateTime || event.end?.date);
+            const reqStart = new Date(startDateTime);
+            const reqEnd = new Date(endDateTime);
+
+            return reqStart < eventEnd && reqEnd > eventStart;
+        });
+
+        return {
+            available: conflictingEvents.length === 0,
+            conflictingEvents: conflictingEvents
+        };
+    } catch (error) {
+        console.error('Calendar availability check error:', error.message);
+        return { available: false, error: error.message };
+    }
+};
+
+/**
+ * Find up to 3 alternative time slots closest to the requested time
+ * @param {string} userId - User's email
+ * @param {string} requestedDateTime - ISO datetime that was unavailable
+ * @param {object} businessHours - User's business hours configuration
+ * @param {number} durationMinutes - Duration of appointment in minutes
+ * @returns {Promise<{success: boolean, suggestions: Array}>}
+ */
+export const findAlternativeSlots = async (userId, requestedDateTime, businessHours, durationMinutes = 60) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Google Calendar not connected', suggestions: [] };
+    }
+
+    try {
+        const requestedDate = new Date(requestedDateTime);
+        const suggestions = [];
+
+        // Search for slots in the next 7 days
+        for (let dayOffset = 0; dayOffset < 7 && suggestions.length < 3; dayOffset++) {
+            const searchDate = new Date(requestedDate);
+            searchDate.setDate(searchDate.getDate() + dayOffset);
+
+            const dayKey = DAY_MAP[searchDate.getDay()];
+            const daySchedule = businessHours?.[dayKey];
+
+            // Skip if day is not enabled in business hours
+            if (!daySchedule?.enabled || !daySchedule.slots?.length) continue;
+
+            // For each slot in the day's schedule
+            for (const slot of daySchedule.slots) {
+                if (suggestions.length >= 3) break;
+
+                // Parse slot times
+                const [startHour, startMin] = slot.start.split(':').map(Number);
+                const [endHour, endMin] = slot.end.split(':').map(Number);
+
+                // Create potential start times every 30 minutes within this slot
+                let currentStart = new Date(searchDate);
+                currentStart.setHours(startHour, startMin, 0, 0);
+
+                const slotEnd = new Date(searchDate);
+                slotEnd.setHours(endHour, endMin, 0, 0);
+
+                while (currentStart.getTime() + (durationMinutes * 60 * 1000) <= slotEnd.getTime()) {
+                    if (suggestions.length >= 3) break;
+
+                    const potentialStart = currentStart.toISOString();
+                    const potentialEnd = new Date(currentStart.getTime() + (durationMinutes * 60 * 1000)).toISOString();
+
+                    // Skip if this is the same time as the original request (on day 0)
+                    if (dayOffset === 0) {
+                        const reqTime = new Date(requestedDateTime);
+                        if (currentStart.getHours() === reqTime.getHours() &&
+                            currentStart.getMinutes() === reqTime.getMinutes()) {
+                            currentStart.setMinutes(currentStart.getMinutes() + 30);
+                            continue;
+                        }
+                    }
+
+                    // Skip past times
+                    if (currentStart < new Date()) {
+                        currentStart.setMinutes(currentStart.getMinutes() + 30);
+                        continue;
+                    }
+
+                    // Check if this slot is available
+                    const availability = await checkTimeSlotAvailability(userId, potentialStart, potentialEnd);
+
+                    if (availability.available) {
+                        const dayName = DAY_NAMES[dayKey];
+                        const formattedDate = currentStart.toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit'
+                        });
+                        const formattedTime = currentStart.toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+
+                        suggestions.push({
+                            start: potentialStart,
+                            end: potentialEnd,
+                            formatted: `${dayName}, ${formattedDate} às ${formattedTime}`
+                        });
+                    }
+
+                    currentStart.setMinutes(currentStart.getMinutes() + 30);
+                }
+            }
+        }
+
+        return { success: true, suggestions };
+    } catch (error) {
+        console.error('Find alternative slots error:', error.message);
+        return { success: false, error: error.message, suggestions: [] };
+    }
+};
+
+/**
+ * Create a calendar event with optional Google Meet link
+ * @param {string} userId - User's email
+ * @param {object} eventData - Event details
+ * @param {boolean} createMeetLink - Whether to create a Google Meet link
+ * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string}>}
+ */
+export const createEventWithMeet = async (userId, eventData, createMeetLink = false) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Google Calendar not connected' };
+    }
+
+    try {
+        const params = {
+            summary: eventData.summary || eventData.title,
+            description: eventData.description || '',
+            start_datetime: eventData.start || eventData.startDateTime,
+            end_datetime: eventData.end || eventData.endDateTime,
+            attendees: eventData.attendees || [],
+            location: eventData.location || ''
+        };
+
+        // Add conference data for Google Meet if requested
+        if (createMeetLink) {
+            params.conference_data_version = 1;
+            params.create_video_conference = true;
+        }
+
+        console.log(`📅 Creating event: "${params.summary}" for ${userId} (Meet: ${createMeetLink})`);
+
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_CREATE_EVENT',
+            params,
+            { connectedAccountId: status.connectionId }
+        );
+
+        if (result.successful) {
+            const eventData = result.data;
+            const meetLink = eventData?.hangoutLink || eventData?.conferenceData?.entryPoints?.[0]?.uri;
+
+            console.log(`✅ Event created: ${eventData?.id || 'success'}${meetLink ? ` with Meet: ${meetLink}` : ''}`);
+
+            return {
+                success: true,
+                event: eventData,
+                meetLink: meetLink || null
+            };
+        } else {
+            return { success: false, error: result.error || 'Failed to create event' };
+        }
+    } catch (error) {
+        console.error('Create event with Meet error:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Main function to schedule an appointment with full validation
+ * This is the unified endpoint that:
+ * 1. Validates against business hours
+ * 2. Checks calendar availability
+ * 3. Suggests alternatives if unavailable
+ * 4. Creates the event with Meet link or returns address
+ * 
+ * @param {string} userId - User's email (calendar owner)
+ * @param {object} appointmentData - Appointment details
+ * @param {string} appointmentData.customerName - Customer's name
+ * @param {string} appointmentData.customerEmail - Customer's email
+ * @param {string} appointmentData.requestedStart - ISO datetime start
+ * @param {string} appointmentData.requestedEnd - ISO datetime end
+ * @param {string} appointmentData.description - Optional description
+ * @param {object} businessContext - Business context (hours, type, address)
+ * @returns {Promise<object>} - Result with success, meetLink/address, or suggestions
+ */
+export const scheduleAppointment = async (userId, appointmentData, businessContext) => {
+    console.log(`📅 Scheduling appointment for ${appointmentData.customerName} (${appointmentData.customerEmail})`);
+
+    const { customerName, customerEmail, requestedStart, requestedEnd, description } = appointmentData;
+    const { businessHours, serviceType, businessAddress } = businessContext || {};
+
+    // Calculate duration in minutes
+    const startDate = new Date(requestedStart);
+    const endDate = new Date(requestedEnd);
+    const durationMinutes = Math.round((endDate - startDate) / (1000 * 60));
+
+    // Step 1: Validate against business hours
+    if (businessHours) {
+        const validation = validateEventAgainstBusinessHours(requestedStart, requestedEnd, businessHours);
+
+        if (!validation.valid) {
+            console.log(`⛔ Appointment rejected - outside business hours`);
+
+            // Format business hours for display
+            const formattedHours = formatBusinessHoursForDescription(businessHours);
+
+            return {
+                success: false,
+                reason: 'outside_business_hours',
+                message: validation.message,
+                formattedHours: formattedHours,
+                businessHours: businessHours
+            };
+        }
+    }
+
+    // Step 2: Check calendar availability
+    const availability = await checkTimeSlotAvailability(userId, requestedStart, requestedEnd);
+
+    if (!availability.available) {
+        if (availability.error) {
+            return {
+                success: false,
+                reason: 'calendar_error',
+                message: availability.error
+            };
+        }
+
+        console.log(`⛔ Appointment rejected - calendar conflict`);
+
+        // Find 3 alternative slots
+        const alternatives = await findAlternativeSlots(userId, requestedStart, businessHours, durationMinutes);
+
+        return {
+            success: false,
+            reason: 'calendar_conflict',
+            message: 'O horário solicitado não está disponível.',
+            suggestions: alternatives.suggestions
+        };
+    }
+
+    // Step 3: Create the event
+    const isOnline = serviceType === 'online';
+    const eventResult = await createEventWithMeet(userId, {
+        summary: `Agendamento - ${customerName}`,
+        description: description || `Agendamento com ${customerName} (${customerEmail})`,
+        start: requestedStart,
+        end: requestedEnd,
+        attendees: [customerEmail],
+        location: isOnline ? '' : (businessAddress || '')
+    }, isOnline);
+
+    if (!eventResult.success) {
+        return {
+            success: false,
+            reason: 'creation_error',
+            message: eventResult.error
+        };
+    }
+
+    console.log(`✅ Appointment scheduled successfully`);
+
+    // Return success with appropriate link/address
+    const result = {
+        success: true,
+        event: eventResult.event,
+        customerName,
+        customerEmail,
+        startTime: requestedStart,
+        endTime: requestedEnd
+    };
+
+    if (isOnline && eventResult.meetLink) {
+        result.meetLink = eventResult.meetLink;
+    } else if (!isOnline && businessAddress) {
+        result.address = businessAddress;
+    }
+
+    return result;
+};

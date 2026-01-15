@@ -2,10 +2,11 @@ from crewai import Agent, LLM
 from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool, GoogleCalendarTool
 import os
 
-def get_agents(user_id, custom_prompt=None):
+def get_agents(user_id, custom_prompt=None, user_email=None):
     """
     Create CrewAI agents with Gemini LLM.
     user_id is actually the session_id (instance_1, instance_2, etc)
+    user_email is the user's email for Google Calendar integration
     """
     
     # Configure Gemini LLM using CrewAI's native format
@@ -25,16 +26,28 @@ def get_agents(user_id, custom_prompt=None):
     whats_tool = WhatsAppSendTool(session_id=user_id)
     whats_audio_tool = WhatsAppSendAudioTool(session_id=user_id)
     
-    # Google Calendar Tool (uses user_id which might be session_id or email depending on context)
-    # Ideally, we should resolve session_id to email if needed, but assuming user_id works for now
-    calendar_tool = GoogleCalendarTool(user_id=user_id)
+    # Google Calendar Tool - uses user's email for Composio connection
+    calendar_tool = GoogleCalendarTool(user_id=user_email or user_id)
 
     # Define dynamic backstory based on user prompt
     comercial_backstory = 'Vendedor experiente, empático e focado em fechamento.'
     comercial_goal = 'Converter leads do WhatsApp em vendas.'
     
+    # Scheduling instructions to append to backstory
+    scheduling_instructions = """
+
+REGRAS DE AGENDAMENTO:
+Quando o cliente quiser agendar algo, siga este fluxo:
+1. Pergunte qual data e horário ele prefere
+2. Pergunte o nome completo e e-mail dele
+3. Use a ferramenta 'Agendar Compromisso' com todas as informações
+4. Se o horário não estiver disponível, apresente as 3 sugestões próximas de forma amigável
+5. Se estiver fora do horário de funcionamento, mostre os horários de funcionamento do estabelecimento
+6. Quando o agendamento for confirmado, envie o link do Google Meet ou o endereço conforme apropriado
+"""
+    
     if custom_prompt:
-        comercial_backstory = f"Você é um agente comercial operando no WhatsApp. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo."
+        comercial_backstory = f"Você é um agente comercial operando no WhatsApp. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo.{scheduling_instructions}"
         comercial_goal = f"Atender o cliente seguindo estritamente as instruções fornecidas, sem usar formatação markdown."
 
     # Commercial Agent (Uses WhatsApp + Calendar)
@@ -87,8 +100,21 @@ def get_instagram_agent(user_id, custom_prompt=None):
     backstory = 'Atendente experiente, empático e focado em ajudar o cliente.'
     goal = 'Atender clientes do Instagram DM com excelência.'
     
+    # Scheduling instructions to append to backstory
+    scheduling_instructions = """
+
+REGRAS DE AGENDAMENTO:
+Quando o cliente quiser agendar algo, siga este fluxo:
+1. Pergunte qual data e horário ele prefere
+2. Pergunte o nome completo e e-mail dele
+3. Use a ferramenta 'Agendar Compromisso' com todas as informações
+4. Se o horário não estiver disponível, apresente as 3 sugestões próximas de forma amigável
+5. Se estiver fora do horário de funcionamento, mostre os horários de funcionamento do estabelecimento
+6. Quando o agendamento for confirmado, envie o link do Google Meet ou o endereço conforme apropriado
+"""
+    
     if custom_prompt:
-        backstory = f"Você é um agente de atendimento operando no Instagram DM. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo."
+        backstory = f"Você é um agente de atendimento operando no Instagram DM. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo.{scheduling_instructions}"
         goal = "Atender o cliente seguindo estritamente as instruções fornecidas, sem usar formatação markdown."
 
     return Agent(

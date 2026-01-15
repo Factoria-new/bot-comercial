@@ -8,7 +8,8 @@ import {
     createEvent,
     findAvailableSlots,
     getCalendarFunctionDeclarations,
-    executeCalendarFunction
+    executeCalendarFunction,
+    scheduleAppointment
 } from '../services/googleCalendarService.js';
 
 const router = express.Router();
@@ -287,5 +288,85 @@ router.post('/execute-function', async (req, res) => {
     }
 });
 
-export default router;
+/**
+ * POST /api/google-calendar/schedule-appointment
+ * Unified endpoint for scheduling appointments with full validation
+ * - Validates against business hours
+ * - Checks calendar availability
+ * - Suggests alternatives if unavailable
+ * - Creates event with Google Meet (if online) or returns address (if presencial)
+ * 
+ * Body: {
+ *   userId: string,         // Email of calendar owner
+ *   customerName: string,   // Customer's name
+ *   customerEmail: string,  // Customer's email (added as attendee)
+ *   requestedStart: string, // ISO datetime
+ *   requestedEnd: string,   // ISO datetime
+ *   description?: string    // Optional description
+ * }
+ */
+router.post('/schedule-appointment', async (req, res) => {
+    try {
+        const { userId, customerName, customerEmail, requestedStart, requestedEnd, description } = req.body;
 
+        // Validate required fields
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId (email) is required'
+            });
+        }
+
+        if (!customerName || !customerEmail) {
+            return res.status(400).json({
+                success: false,
+                error: 'customerName and customerEmail are required'
+            });
+        }
+
+        if (!requestedStart || !requestedEnd) {
+            return res.status(400).json({
+                success: false,
+                error: 'requestedStart and requestedEnd are required'
+            });
+        }
+
+        // Fetch user's business context from database
+        const { PrismaClient } = await import('@prisma/client');
+        const prisma = new PrismaClient();
+
+        const user = await prisma.user.findFirst({
+            where: { email: userId },
+            select: {
+                businessHours: true,
+                serviceType: true,
+                businessAddress: true
+            }
+        });
+
+        const businessContext = user ? {
+            businessHours: user.businessHours,
+            serviceType: user.serviceType,
+            businessAddress: user.businessAddress
+        } : {};
+
+        console.log(`📅 Schedule appointment request for ${customerName} (${customerEmail})`);
+        console.log(`   Requested: ${requestedStart} to ${requestedEnd}`);
+        console.log(`   Business context:`, businessContext ? 'present' : 'none');
+
+        const result = await scheduleAppointment(userId, {
+            customerName,
+            customerEmail,
+            requestedStart,
+            requestedEnd,
+            description
+        }, businessContext);
+
+        res.json(result);
+    } catch (error) {
+        console.error('Schedule appointment error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+export default router;

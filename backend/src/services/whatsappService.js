@@ -32,6 +32,9 @@ const lastIncomingMessageType = new Map();
 // When true, bot responds with audio until user explicitly asks to stop
 const audioModeEnabled = new Map(); // contactId -> boolean
 
+// Store user emails for Google Calendar integration (sessionId -> email)
+const userEmails = new Map();
+
 // --- METRICS STATE ---
 let metrics = {
     totalMessages: 0,
@@ -807,7 +810,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
 
                         // Try finding user by ID (if sessionId is a User ID)
                         let user = await prisma.user.findUnique({
-                            where: { id: sessionId }
+                            where: { id: sessionId },
+                            select: { customPrompt: true, email: true }
                         });
 
                         // If not found, try stripping 'user_' prefix if present
@@ -815,7 +819,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                             const cleanId = sessionId.replace('user_', '');
                             console.log(`🔄 Trying again with clean ID: ${cleanId}`);
                             user = await prisma.user.findUnique({
-                                where: { id: cleanId }
+                                where: { id: cleanId },
+                                select: { customPrompt: true, email: true }
                             });
                         }
 
@@ -826,6 +831,12 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                             agentPrompt = user.customPrompt;
                             agentPrompts.set(sessionId, agentPrompt); // Cache it
                             console.log(`✅ Prompt loaded from DB for ${sessionId}`);
+
+                            // Store user email for Google Calendar integration
+                            if (user.email) {
+                                userEmails.set(sessionId, user.email);
+                                console.log(`📧 User email cached: ${user.email}`);
+                            }
                         } else {
                             console.log(`⚠️ Prompt not found in DB for ${sessionId}`);
                         }
@@ -852,7 +863,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         sock: sock,
                         socket: socket,
                         agentPrompt: agentPrompt,
-                        remoteJid: remoteJid
+                        remoteJid: remoteJid,
+                        userEmail: userEmails.get(sessionId) || null
                     });
                 }
 
@@ -905,7 +917,7 @@ const processBufferedMessages = async (contactId, io) => {
         return;
     }
 
-    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid } = buffer;
+    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid, userEmail } = buffer;
 
     // Concatenar todas as mensagens em uma só, separadas por quebra de linha
     const combinedMessage = messages.join('\n');
@@ -962,7 +974,8 @@ const processBufferedMessages = async (contactId, io) => {
             agentPrompt: agentPrompt,
             incomingMessageType: lastIncomingType,
             instancePhone: instancePhone,
-            customerPhone: customerPhone
+            customerPhone: customerPhone,
+            userEmail: userEmail  // Email do usuário para Google Calendar
         });
 
         console.log(`✅ Buffered messages forwarded to AI Engine for ${remoteJid}`);
