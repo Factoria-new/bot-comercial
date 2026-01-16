@@ -12,6 +12,25 @@ const composio = new Composio({
 // Socket.IO instance reference
 let socketIO = null;
 
+// Default timezone for Brazil (São Paulo)
+const DEFAULT_TIMEZONE = 'America/Sao_Paulo';
+const TIMEZONE_OFFSET = '-03:00';
+
+/**
+ * Ensure datetime has timezone offset appended
+ * If already has timezone (ends with Z or +/-HH:MM), return as-is
+ * Otherwise append the default Brazil timezone offset
+ * @param {string} datetime - ISO datetime string
+ * @returns {string} - ISO datetime with timezone
+ */
+const ensureTimezone = (datetime) => {
+    if (!datetime) return datetime;
+    // Already has timezone (Z for UTC or +/- offset)
+    if (/Z$|[+-]\d{2}:\d{2}$/.test(datetime)) return datetime;
+    // Append Brazil timezone
+    return datetime + TIMEZONE_OFFSET;
+};
+
 /**
  * Initialize Google Calendar service with Socket.IO
  * @param {object} io - Socket.IO instance
@@ -188,9 +207,15 @@ export const listEvents = async (userId, maxResults = 10, timeMin = null) => {
     }
 
     try {
+        const normalizedTimeMin = timeMin ? ensureTimezone(timeMin) : new Date().toISOString();
+
         const params = {
             max_results: maxResults,
-            time_min: timeMin || new Date().toISOString()
+            time_min: normalizedTimeMin,
+            single_events: true,
+            order_by: 'startTime',
+            time_zone: DEFAULT_TIMEZONE,
+            timezone: DEFAULT_TIMEZONE
         };
 
         const result = await composio.tools.execute(
@@ -228,10 +253,12 @@ export const createEvent = async (userId, eventData) => {
         const params = {
             summary: eventData.summary || eventData.title,
             description: eventData.description || '',
-            start_datetime: eventData.start || eventData.startDateTime,
-            end_datetime: eventData.end || eventData.endDateTime,
+            start_datetime: ensureTimezone(eventData.start || eventData.startDateTime),
+            end_datetime: ensureTimezone(eventData.end || eventData.endDateTime),
             attendees: eventData.attendees || [],
-            location: eventData.location || ''
+            location: eventData.location || '',
+            time_zone: DEFAULT_TIMEZONE,
+            timezone: DEFAULT_TIMEZONE
         };
 
         console.log(`📅 Creating event: "${params.summary}" for ${userId}`);
@@ -585,6 +612,12 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
         return { available: false, error: 'Google Calendar not connected' };
     }
 
+    // Ensure timezone on input datetimes
+    const normalizedStart = ensureTimezone(startDateTime);
+    const normalizedEnd = ensureTimezone(endDateTime);
+
+    console.log(`🔍 Checking availability: ${normalizedStart} to ${normalizedEnd}`);
+
     try {
         // List events in the requested time range
         const result = await composio.tools.execute(
@@ -594,34 +627,52 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
                 userId: userId,
                 dangerouslySkipVersionCheck: true,
                 arguments: {
-                    time_min: startDateTime,
-                    time_max: endDateTime,
+                    time_min: normalizedStart,
+                    time_max: normalizedEnd,
                     max_results: 10,
                     single_events: true,
-                    order_by: 'startTime'
+                    order_by: 'startTime',
+                    time_zone: DEFAULT_TIMEZONE,
+                    timezone: DEFAULT_TIMEZONE
                 }
             }
         );
 
         if (!result.successful) {
+            console.error('❌ Failed to list events:', result.error);
             return { available: false, error: result.error || 'Failed to check availability' };
         }
 
         const events = result.data?.items || result.data || [];
+        console.log(`📅 Found ${events.length} events in time range`);
+
+        // Log each event found for debugging
+        events.forEach((event, idx) => {
+            console.log(`   Event ${idx + 1}: "${event.summary}" from ${event.start?.dateTime || event.start?.date} to ${event.end?.dateTime || event.end?.date}`);
+        });
 
         // Filter out transparent (free) events and check for actual conflicts
         const conflictingEvents = events.filter(event => {
             // Skip if event shows as "free" (transparent)
-            if (event.transparency === 'transparent') return false;
+            if (event.transparency === 'transparent') {
+                console.log(`   ↳ Skipping "${event.summary}" - marked as free`);
+                return false;
+            }
 
             // Check if the event actually overlaps with requested slot
             const eventStart = new Date(event.start?.dateTime || event.start?.date);
             const eventEnd = new Date(event.end?.dateTime || event.end?.date);
-            const reqStart = new Date(startDateTime);
-            const reqEnd = new Date(endDateTime);
+            const reqStart = new Date(normalizedStart);
+            const reqEnd = new Date(normalizedEnd);
 
-            return reqStart < eventEnd && reqEnd > eventStart;
+            const overlaps = reqStart < eventEnd && reqEnd > eventStart;
+            if (overlaps) {
+                console.log(`   ⚠️ CONFLICT: "${event.summary}" overlaps with requested slot`);
+            }
+            return overlaps;
         });
+
+        console.log(`🔍 Availability result: ${conflictingEvents.length === 0 ? '✅ AVAILABLE' : '❌ CONFLICT DETECTED'}`);
 
         return {
             available: conflictingEvents.length === 0,
@@ -753,7 +804,9 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
             start_datetime: eventData.start || eventData.startDateTime,
             end_datetime: eventData.end || eventData.endDateTime,
             attendees: eventData.attendees || [],
-            location: eventData.location || ''
+            location: eventData.location || '',
+            time_zone: DEFAULT_TIMEZONE,
+            timezone: DEFAULT_TIMEZONE
         };
 
         // Add conference data for Google Meet if requested
@@ -776,9 +829,13 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
 
         if (result.successful) {
             const eventData = result.data;
-            const meetLink = eventData?.hangoutLink || eventData?.conferenceData?.entryPoints?.[0]?.uri;
+            // Google Calendar returns hangoutLink or conferenceData
+            const meetLink = eventData?.hangoutLink || eventData?.conferenceData?.entryPoints?.[0]?.uri || eventData?.htmlLink;
 
-            console.log(`✅ Event created: ${eventData?.id || 'success'}${meetLink ? ` with Meet: ${meetLink}` : ''}`);
+            console.log(`✅ Event created: ${eventData?.id || 'success'}. Meet Link: ${meetLink}`);
+
+            // Log full data in case field names are different
+            console.log('Event Result Data Keys:', Object.keys(eventData || {}));
 
             return {
                 success: true,
@@ -815,8 +872,14 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
 export const scheduleAppointment = async (userId, appointmentData, businessContext) => {
     console.log(`📅 Scheduling appointment for ${appointmentData.customerName} (${appointmentData.customerEmail})`);
 
-    const { customerName, customerEmail, requestedStart, requestedEnd, description } = appointmentData;
+    const { customerName, customerEmail, description } = appointmentData;
     const { businessHours, serviceType, businessAddress } = businessContext || {};
+
+    // Ensure datetimes have timezone offset (Brazil -03:00)
+    const requestedStart = ensureTimezone(appointmentData.requestedStart);
+    const requestedEnd = ensureTimezone(appointmentData.requestedEnd);
+
+    console.log(`   Normalized times: ${requestedStart} to ${requestedEnd}`);
 
     // Calculate duration in minutes
     const startDate = new Date(requestedStart);
@@ -887,23 +950,21 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
         };
     }
 
-    console.log(`✅ Appointment scheduled successfully`);
+    console.log(`✅ Appointment scheduled successfully. Link: ${eventResult.meetLink}`);
 
     // Return success with appropriate link/address
+    // ALWAYS return meetLink if it exists, regardless of serviceType
+    // The Agent/Front-end can decide how to present it
     const result = {
         success: true,
         event: eventResult.event,
         customerName,
         customerEmail,
         startTime: requestedStart,
-        endTime: requestedEnd
+        endTime: requestedEnd,
+        meetLink: eventResult.meetLink || null,
+        address: businessAddress || null
     };
-
-    if (isOnline && eventResult.meetLink) {
-        result.meetLink = eventResult.meetLink;
-    } else if (!isOnline && businessAddress) {
-        result.address = businessAddress;
-    }
 
     return result;
 };
