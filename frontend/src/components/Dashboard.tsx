@@ -1,88 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import AgentCreator from '@/components/AgentCreator';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { DashboardStep } from '@/components/agent-creator/DashboardStep';
-import DashboardSidebar from '@/components/DashboardSidebar';
-import WhatsAppConnectionModal from '@/components/WhatsAppConnectionModal';
-import LiaSidebar from '@/components/LiaSidebar';
-import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
-import { useSocket } from '@/contexts/SocketContext';
-import { AnimatePresence } from 'framer-motion';
-import { Integration } from "@/types/onboarding";
-
+import { useIntegrations } from '@/hooks/useIntegrations';
 import { promptService } from '@/services/promptService';
-import { LiaFloatingButton } from './LiaFloatingButton';
+import { AnimatePresence } from 'framer-motion';
+import Layout from '@/components/Layout';
 
 const Dashboard = () => {
-  const { toast } = useToast();
-  const { logout, user } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  // =====================
-  // SIMPLIFIED STATE MODEL
-  // =====================
   // Phase: 'onboarding' = criação do agente | 'app' = uso diário
   const [phase, setPhase] = useState<'loading' | 'onboarding' | 'app'>('loading');
 
   // Onboarding sub-step (only used when phase === 'onboarding')
   const [showWelcome, setShowWelcome] = useState(true);
 
-  // Prompt stored in memory after loading from DB
-  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
-
-  // UI State
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
-  const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
-
-  // Socket for metrics
-  const { socket } = useSocket();
-  const [metrics, setMetrics] = useState({
-    totalMessages: 0,
-    newContacts: 0,
-    activeChats: 0
-  });
-
-  // WhatsApp Integration Hook
-  const {
-    instances: whatsappInstances,
-    handleGenerateQR,
-    modalState: whatsappModalState,
-    closeModal: closeWhatsappModal,
-    handleDisconnect
-  } = useWhatsAppInstances();
-
-  const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
-  const currentSessionId = String(whatsappInstances[0]?.id || '1');
-  const googleCalendarUserId = localStorage.getItem('userEmail') || user?.email || currentSessionId || 'default-user';
-
-  const [isGoogleCalendarConnected, setIsGoogleCalendarConnected] = useState(false);
-
-  useEffect(() => {
-    const checkGoogleCalendarStatus = async () => {
-      try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-        const response = await fetch(`${backendUrl}/api/google-calendar/status?userId=${encodeURIComponent(googleCalendarUserId)}`);
-        const data = await response.json();
-        if (data.success && data.isConnected) {
-          setIsGoogleCalendarConnected(true);
-        }
-      } catch (e) {
-        console.error("Failed to check Google Calendar status", e);
-      }
-    };
-    checkGoogleCalendarStatus();
-  }, [googleCalendarUserId]);
-
-  const integrations: Integration[] = [
-    { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
-    { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: isGoogleCalendarConnected },
-  ];
+  // Integrations state for DashboardStep
+  const { integrations, handleIntegrationClick } = useIntegrations();
 
   // =====================
   // INITIALIZATION EFFECT
@@ -97,7 +33,6 @@ const Dashboard = () => {
         try {
           const result = await promptService.getPrompt();
           if (result.success && result.prompt) {
-            setAgentPrompt(result.prompt);
             setShowWelcome(false); // Ensure sidebar is visible
             setPhase('app'); // Skip to main app
             console.log("✅ Prompt loaded, entering app phase");
@@ -117,69 +52,6 @@ const Dashboard = () => {
   }, [user?.hasPrompt, user?.uid]);
 
   // =====================
-  // SOCKET METRICS
-  // =====================
-  useEffect(() => {
-    if (!socket) return;
-    socket.on('metrics-update', (newMetrics: typeof metrics) => {
-      setMetrics(newMetrics);
-    });
-    socket.emit('request-metrics');
-    return () => {
-      socket.off('metrics-update');
-    };
-  }, [socket]);
-
-  // =====================
-  // PREVENT BACK BUTTON
-  // =====================
-  useEffect(() => {
-    if (phase !== 'app') return;
-
-    window.history.pushState(null, '', window.location.href);
-    const handlePopState = () => {
-      window.history.pushState(null, '', window.location.href);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [phase]);
-
-  // =====================
-  // HANDLERS
-  // =====================
-  const handleLogout = async () => {
-    try {
-      logout();
-      localStorage.removeItem('dashboard_state'); // Clear old state
-      toast({
-        title: "Logout realizado",
-        description: "Você saiu do sistema com sucesso.",
-      });
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-      toast({
-        title: "Erro ao sair",
-        description: "Não foi possível realizar o logout.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleOpenIntegrations = () => {
-    setIsSidebarOpen(true);
-    setShouldExpandIntegrations(true);
-  };
-
-  const handleOnboardingComplete = (prompt: string) => {
-    console.log("✅ Onboarding complete, entering app phase");
-    setAgentPrompt(prompt);
-    setPhase('app');
-  };
-
-  // =====================
   // LOADING STATE
   // =====================
   if (phase === 'loading') {
@@ -194,222 +66,36 @@ const Dashboard = () => {
   // RENDER
   // =====================
   return (
-    <>
-      <AnimatePresence mode="wait">
-        {/* PHASE: ONBOARDING */}
-        {phase === 'onboarding' && (
-          showWelcome ? (
-            <WelcomeScreen
-              key="welcome"
-              onStart={() => setShowWelcome(false)}
-            />
-          ) : (
+    <AnimatePresence mode="wait">
+      {phase === 'onboarding' ? (
+        showWelcome ? (
+          <WelcomeScreen
+            key="welcome"
+            onStart={() => setShowWelcome(false)}
+          />
+        ) : (
+          <Layout key="creator-layout" currentPage="dashboard" showLiaButton={false}>
             <AgentCreator
               key="creator"
               isExiting={false}
-              onOpenSidebar={() => setIsSidebarOpen(true)}
-              onOpenIntegrations={handleOpenIntegrations}
-              onStartChat={handleOnboardingComplete}
+              onOpenSidebar={() => { }} // Layout handled
+              onOpenIntegrations={() => { }} // Layout handled
+              onStartChat={() => setPhase('app')}
             />
-          )
-        )}
-
-        {/* PHASE: APP (Main Dashboard) */}
-        {phase === 'app' && (
-          <div
-            key="dashboard"
-            className="animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]"
-          >
-            {/* Hamburger Menu Button */}
-            <div className="fixed top-4 left-4 z-50">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSidebarOpen(true)}
-                className="text-white/70 hover:bg-white/10"
-              >
-                <Menu className="w-6 h-6" />
-              </Button>
-            </div>
-
+          </Layout>
+        )
+      ) : (
+        <Layout key="dashboard-layout" currentPage="dashboard">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]">
             {/* Dashboard Content (Metrics) */}
             <DashboardStep
               integrations={integrations}
-              onOpenIntegrations={handleOpenIntegrations}
+              onOpenIntegrations={(id) => handleIntegrationClick(id)}
             />
           </div>
-        )}
-      </AnimatePresence>
-
-      {/* ===================== */}
-      {/* PERSISTENT COMPONENTS */}
-      {/* ===================== */}
-
-      {/* Sidebar - Always available after welcome screen */}
-      {!showWelcome && (
-        <DashboardSidebar
-          isOpen={isSidebarOpen}
-          onClose={() => { setIsSidebarOpen(false); setShouldExpandIntegrations(false); }}
-          onNavigate={() => { }} // Navigation handled by router
-          currentPage="dashboard"
-          integrations={integrations}
-          onLogout={handleLogout}
-          forceExpandIntegrations={shouldExpandIntegrations}
-          onIntegrationDisconnect={async (id) => {
-            if (id === 'whatsapp' && whatsappInstances.length > 0) {
-              handleDisconnect();
-            } else if (id === 'google_calendar') {
-              try {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-                const response = await fetch(`${backendUrl}/api/google-calendar/disconnect`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ userId: googleCalendarUserId })
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                  setIsGoogleCalendarConnected(false);
-                  toast({
-                    title: "Desconectado",
-                    description: "Google Calendar desconectado com sucesso.",
-                  });
-                } else {
-                  throw new Error(data.error || 'Erro ao desconectar');
-                }
-              } catch (error) {
-                console.error('Falha ao desconectar Google Calendar:', error);
-                toast({
-                  title: "Erro",
-                  description: "Não foi possível desconectar o Google Calendar.",
-                  variant: "destructive"
-                });
-              }
-            }
-          }}
-          sessionId={currentSessionId}
-          onIntegrationClick={async (id) => {
-            if (id === 'whatsapp') {
-              if (!isWhatsAppConnected) {
-                handleGenerateQR(1);
-              }
-            } else if (id === 'google_calendar') {
-              // Conectar Google Calendar via OAuth popup
-              try {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-                // Try to get identifier from multiple sources: localStorage, auth context, or session ID
-                const userEmail = localStorage.getItem('userEmail') || user?.email || currentSessionId || 'user_' + Math.random().toString(36).substring(7);
-
-                if (!userEmail) {
-                  throw new Error('User identifier not found');
-                }
-
-                console.log('🔗 Initiating Google Calendar auth for:', userEmail);
-
-                const response = await fetch(`${backendUrl}/api/google-calendar/auth-url?userId=${encodeURIComponent(userEmail)}`);
-                const data = await response.json();
-
-                if (data.success && data.authUrl) {
-                  // Abrir popup OAuth
-                  const popup = window.open(
-                    data.authUrl,
-                    'Google Calendar Auth',
-                    'width=600,height=700,scrollbars=yes'
-                  );
-
-                  // Listener para quando o popup fechar
-                  const handleMessage = (event: MessageEvent) => {
-                    if (event.data?.type === 'google-calendar-connected' && event.data?.success) {
-                      toast({
-                        title: "Google Calendar Conectado!",
-                        description: "Seu agente agora pode gerenciar sua agenda.",
-                        className: "bg-emerald-500 text-white border-0"
-                      });
-                      window.removeEventListener('message', handleMessage);
-                      clearInterval(checkPopup);
-                    }
-                  };
-
-                  window.addEventListener('message', handleMessage);
-
-                  // Polling mais robusto: verificar se o popup fechou OU se a conexão já foi ativada backend-side
-                  const checkPopup = setInterval(async () => {
-                    // 1. Verificar se fechou manualmente
-                    if (popup?.closed) {
-                      clearInterval(checkPopup);
-                      window.removeEventListener('message', handleMessage);
-                      return;
-                    }
-
-                    // 2. Verificar no backend se já conectou
-                    try {
-                      const statusRes = await fetch(`${backendUrl}/api/google-calendar/status?userId=${encodeURIComponent(userEmail)}`);
-                      const statusData = await statusRes.json();
-
-                      if (statusData.success && statusData.isConnected) {
-                        console.log("✅ Conexão detectada via polling!");
-                        setIsGoogleCalendarConnected(true); // Atualiza estado visual
-                        popup?.close();
-                        clearInterval(checkPopup);
-                        window.removeEventListener('message', handleMessage);
-
-                        toast({
-                          title: "Google Calendar Conectado!",
-                          description: "Integração realizada com sucesso.",
-                          className: "bg-emerald-500 text-white border-0"
-                        });
-                      }
-                    } catch (e) {
-                      // Silenciar erros de rede durante polling
-                    }
-                  }, 2000);
-                } else {
-                  throw new Error(data.error || 'Erro ao obter URL de autenticação');
-                }
-              } catch (error) {
-                console.error('Google Calendar auth error:', error);
-                toast({
-                  title: "Erro",
-                  description: error instanceof Error ? error.message : "Não foi possível conectar ao Google Calendar.",
-                  variant: "destructive"
-                });
-              }
-            } else {
-              toast({
-                title: "Em breve",
-                description: "Integração disponível em breve.",
-              });
-            }
-          }}
-          onOpenLiaChat={() => setIsLiaChatOpen(true)}
-        />
+        </Layout>
       )}
-
-      {/* WhatsApp Modal */}
-      <WhatsAppConnectionModal
-        isOpen={whatsappModalState.isOpen}
-        onClose={closeWhatsappModal}
-        modalState={whatsappModalState}
-        instance={whatsappInstances[0]}
-        onGenerateQR={handleGenerateQR}
-        onDisconnect={handleDisconnect}
-      />
-
-      {/* Lia Chat Sidebar - Always available */}
-      <LiaSidebar
-        isOpen={isLiaChatOpen}
-        onClose={() => setIsLiaChatOpen(false)}
-        metrics={metrics}
-      />
-
-      {/* Floating Lia Button - Always visible after onboarding, hides when chat is open */}
-      {!showWelcome && phase === 'app' && !isLiaChatOpen && (
-        <LiaFloatingButton
-          onClick={() => setIsLiaChatOpen(true)}
-          message="Psiu! Caso queira saber mais métricas, me chame aqui e eu te conto tudo..."
-        />
-      )}
-    </>
+    </AnimatePresence>
   );
 };
 

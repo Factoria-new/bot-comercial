@@ -1,39 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Edit3, Upload, Save, RotateCcw, FileText, Check, Sparkles, Menu, Settings } from "lucide-react";
+import { Edit3, Upload, Save, RotateCcw, FileText, Check, Sparkles, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { promptService } from "@/services/promptService";
-import { useAuth } from "@/contexts/AuthContext";
-import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
-import { useSocket } from "@/contexts/SocketContext";
-import DashboardSidebar from "@/components/DashboardSidebar";
-import LiaSidebar from "@/components/LiaSidebar";
-import WhatsAppConnectionModal from "@/components/WhatsAppConnectionModal";
-import { Integration } from "@/types/onboarding";
-
 import { PromptEditChat } from "@/components/PromptEditChat";
 import Lottie from "lottie-react";
-import { LiaFloatingButton } from "@/components/LiaFloatingButton";
 import { BusinessSettingsModal } from "@/components/BusinessSettingsModal";
-
-interface Metrics {
-    totalMessages: number;
-    newContacts: number;
-    activeChats: number;
-}
+import Layout from "@/components/Layout";
 
 const MeuPrompt = () => {
-    const navigate = useNavigate();
     const { toast } = useToast();
-    const { logout } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { socket } = useSocket();
-
-    // Sidebar and Lia state
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
-    const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
 
     // Prompt state
     const [prompt, setPrompt] = useState<string>('');
@@ -52,43 +29,6 @@ const MeuPrompt = () => {
             .then(data => setSuccessAnimationData(data))
             .catch(err => console.error("Failed to load Lottie:", err));
     }, []);
-
-    // Metrics for Lia sidebar
-    const [metrics, setMetrics] = useState<Metrics>({
-        totalMessages: 0,
-        newContacts: 0,
-        activeChats: 0
-    });
-
-    // WhatsApp Integration Hook
-    const {
-        instances: whatsappInstances,
-        handleGenerateQR,
-        modalState: whatsappModalState,
-        closeModal: closeWhatsappModal,
-        handleDisconnect
-    } = useWhatsAppInstances();
-
-    const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
-    const currentSessionId = String(whatsappInstances[0]?.id || '1');
-
-    const integrations: Integration[] = [
-        { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
-        { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: false },
-    ];
-
-    // Socket metrics listener
-    useEffect(() => {
-        if (!socket) return;
-
-        socket.on('metrics-update', (newMetrics: Metrics) => {
-            setMetrics(newMetrics);
-        });
-
-        return () => {
-            socket.off('metrics-update');
-        };
-    }, [socket]);
 
     // Load prompt on mount
     useEffect(() => {
@@ -119,13 +59,6 @@ const MeuPrompt = () => {
     useEffect(() => {
         setHasChanges(prompt !== originalPrompt);
     }, [prompt, originalPrompt]);
-
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
-
-
 
     const handleSave = async () => {
         if (!prompt.trim()) {
@@ -210,7 +143,6 @@ const MeuPrompt = () => {
             });
         }
 
-        // Reset file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -225,20 +157,8 @@ const MeuPrompt = () => {
     }
 
     return (
-        <>
+        <Layout currentPage="my-prompt">
             <div className="min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]">
-                {/* Hamburger Menu - Always visible */}
-                <div className="fixed top-4 left-4 z-50">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsSidebarOpen(true)}
-                        className="text-white/70 hover:bg-white/10"
-                    >
-                        <Menu className="w-6 h-6" />
-                    </Button>
-                </div>
-
                 {/* Header */}
                 <header className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -387,123 +307,20 @@ const MeuPrompt = () => {
                         }}
                     />
                 </main>
-            </div>
 
-            {/* Dashboard Sidebar */}
-            <DashboardSidebar
-                isOpen={isSidebarOpen}
-                onClose={() => { setIsSidebarOpen(false); setShouldExpandIntegrations(false); }}
-                onNavigate={() => { }}
-                currentPage="my-prompt"
-                integrations={integrations}
-                onLogout={handleLogout}
-                forceExpandIntegrations={shouldExpandIntegrations}
-                onIntegrationDisconnect={(id) => {
-                    if (id === 'whatsapp' && whatsappInstances.length > 0) {
-                        handleDisconnect();
-                    }
-                }}
-                sessionId={currentSessionId}
-                onIntegrationClick={async (id) => {
-                    if (id === 'whatsapp') {
-                        if (!isWhatsAppConnected) {
-                            handleGenerateQR(1);
-                        }
-                    } else if (id === 'google_calendar') {
-                        // Conectar Google Calendar via OAuth popup
-                        try {
-                            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-                            const userEmail = localStorage.getItem('userEmail') || '';
-
-                            const response = await fetch(`${backendUrl}/api/google-calendar/auth-url?userId=${encodeURIComponent(userEmail)}`);
-                            const data = await response.json();
-
-                            if (data.success && data.authUrl) {
-                                // Abrir popup OAuth
-                                const popup = window.open(
-                                    data.authUrl,
-                                    'Google Calendar Auth',
-                                    'width=600,height=700,scrollbars=yes'
-                                );
-
-                                // Listener para quando o popup fechar
-                                const handleMessage = (event: MessageEvent) => {
-                                    if (event.data?.type === 'google-calendar-connected' && event.data?.success) {
-                                        toast({
-                                            title: "Google Calendar Conectado!",
-                                            description: "Seu agente agora pode gerenciar sua agenda.",
-                                            className: "bg-emerald-500 text-white border-0"
-                                        });
-                                        window.removeEventListener('message', handleMessage);
-                                    }
-                                };
-
-                                window.addEventListener('message', handleMessage);
-
-                                // Fallback: verificar periodicamente se o popup fechou
-                                const checkPopup = setInterval(() => {
-                                    if (popup?.closed) {
-                                        clearInterval(checkPopup);
-                                        window.removeEventListener('message', handleMessage);
-                                    }
-                                }, 1000);
-                            } else {
-                                throw new Error(data.error || 'Erro ao obter URL de autenticação');
-                            }
-                        } catch (error) {
-                            console.error('Google Calendar auth error:', error);
-                            toast({
-                                title: "Erro",
-                                description: error instanceof Error ? error.message : "Não foi possível conectar ao Google Calendar.",
-                                variant: "destructive"
-                            });
-                        }
-                    } else {
-                        toast({
-                            title: "Em breve",
-                            description: "Integração disponível em breve.",
-                        });
-                    }
-                }}
-                onOpenLiaChat={() => setIsLiaChatOpen(true)}
-            />
-
-            {/* WhatsApp Modal */}
-            <WhatsAppConnectionModal
-                isOpen={whatsappModalState.isOpen}
-                onClose={closeWhatsappModal}
-                modalState={whatsappModalState}
-                instance={whatsappInstances[0]}
-                onGenerateQR={handleGenerateQR}
-                onDisconnect={handleDisconnect}
-            />
-
-            {/* Lia Chat Sidebar */}
-            <LiaSidebar
-                isOpen={isLiaChatOpen}
-                onClose={() => setIsLiaChatOpen(false)}
-                metrics={metrics}
-            />
-
-            {/* Floating Lia Button */}
-            {!isLiaChatOpen && (
-                <LiaFloatingButton
-                    onClick={() => setIsLiaChatOpen(true)}
+                {/* Business Settings Modal */}
+                <BusinessSettingsModal
+                    open={isBusinessSettingsOpen}
+                    onClose={() => setIsBusinessSettingsOpen(false)}
+                    currentPrompt={prompt}
+                    onPromptUpdate={(newPrompt) => {
+                        setPrompt(newPrompt);
+                        setOriginalPrompt(newPrompt);
+                        setHasChanges(false);
+                    }}
                 />
-            )}
-
-            {/* Business Settings Modal */}
-            <BusinessSettingsModal
-                open={isBusinessSettingsOpen}
-                onClose={() => setIsBusinessSettingsOpen(false)}
-                currentPrompt={prompt}
-                onPromptUpdate={(newPrompt) => {
-                    setPrompt(newPrompt);
-                    setOriginalPrompt(newPrompt);
-                    setHasChanges(false);
-                }}
-            />
-        </>
+            </div>
+        </Layout>
     );
 };
 
