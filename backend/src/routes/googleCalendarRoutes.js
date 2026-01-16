@@ -11,6 +11,7 @@ import {
     executeCalendarFunction,
     scheduleAppointment
 } from '../services/googleCalendarService.js';
+import prisma from '../config/prisma.js';
 
 const router = express.Router();
 
@@ -214,8 +215,6 @@ router.post('/function-declarations-with-context', async (req, res) => {
         }
 
         // Fetch user's business context from database
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
 
         const user = await prisma.user.findFirst({
             where: { email: userId },
@@ -261,8 +260,6 @@ router.post('/execute-function', async (req, res) => {
         }
 
         // Fetch user's business context from database
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
 
         const user = await prisma.user.findFirst({
             where: { email: userId },
@@ -332,8 +329,6 @@ router.post('/schedule-appointment', async (req, res) => {
         }
 
         // Fetch user's business context from database
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
 
         const user = await prisma.user.findFirst({
             where: { email: userId },

@@ -193,9 +193,13 @@ export const listEvents = async (userId, maxResults = 10, timeMin = null) => {
         };
 
         const result = await composio.tools.execute(
-            'GOOGLECALENDAR_LIST_EVENTS',
+            'GOOGLECALENDAR_EVENTS_LIST',
             params,
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                version: 'latest',
+                dangerouslySkipVersionCheck: true
+            }
         );
 
         return result.successful
@@ -234,7 +238,11 @@ export const createEvent = async (userId, eventData) => {
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_CREATE_EVENT',
             params,
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                version: 'latest',
+                dangerouslySkipVersionCheck: true
+            }
         );
 
         if (result.successful) {
@@ -276,7 +284,11 @@ export const findAvailableSlots = async (userId, date, durationMinutes = 60) => 
                 time_max: endOfDay.toISOString(),
                 duration_minutes: durationMinutes
             },
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                version: 'latest',
+                dangerouslySkipVersionCheck: true
+            }
         );
 
         return result.successful
@@ -575,13 +587,19 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
     try {
         // List events in the requested time range
         const result = await composio.tools.execute(
-            'GOOGLECALENDAR_LIST_EVENTS',
+            'GOOGLECALENDAR_EVENTS_LIST',
             {
                 time_min: startDateTime,
                 time_max: endDateTime,
-                max_results: 10
+                max_results: 10,
+                single_events: true,
+                order_by: 'startTime'
             },
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                version: 'latest',
+                dangerouslySkipVersionCheck: true
+            }
         );
 
         if (!result.successful) {
@@ -747,7 +765,11 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_CREATE_EVENT',
             params,
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                version: 'latest',
+                dangerouslySkipVersionCheck: true
+            }
         );
 
         if (result.successful) {

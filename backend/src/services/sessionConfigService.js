@@ -18,11 +18,7 @@ const DEFAULT_CONFIG = {
     temperature: 1.0,
     ttsEnabled: false,
     ttsVoice: 'Kore',
-    ttsRules: {
-        audioOnRequest: false,
-        audioOnAudioReceived: false,
-        audioOnly: false
-    },
+    ttsRules: '', // Regras em linguagem natural (string)
     enabled: true
 };
 
@@ -123,7 +119,7 @@ export async function setSessionConfig(sessionId, config) {
         logger.info(`✅ Session config updated in DB for user ${user.id} (${sessionId})`);
         return true;
     } catch (error) {
-        logger.error(`❌ Error updating session config for ${sessionId}:`, error.message);
+        logger.error(`❌ Error updating session config for ${sessionId}: ${error.message}`, error);
         return false;
     }
 }

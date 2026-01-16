@@ -161,9 +161,18 @@ export default function DashboardSidebar({
                 if (data.success && data.config) {
                     setTtsEnabled(data.config.ttsEnabled || false);
                     setTtsVoice(data.config.ttsVoice || 'Kore');
-                    // Handle both old string format and new object format
+                    // Handle both string format (from DB) and object format (legacy)
                     const rules = data.config.ttsRules;
-                    if (typeof rules === 'object' && rules !== null) {
+                    if (typeof rules === 'string' && rules) {
+                        try {
+                            const parsed = JSON.parse(rules);
+                            setTtsRules({
+                                audioOnRequest: parsed.audioOnRequest || false,
+                                audioOnAudioReceived: parsed.audioOnAudioReceived || false,
+                                audioOnly: parsed.audioOnly || false
+                            });
+                        } catch { /* ignore parse errors */ }
+                    } else if (typeof rules === 'object' && rules !== null) {
                         setTtsRules({
                             audioOnRequest: rules.audioOnRequest || false,
                             audioOnAudioReceived: rules.audioOnAudioReceived || false,
@@ -188,7 +197,7 @@ export default function DashboardSidebar({
                 body: JSON.stringify({
                     ttsEnabled,
                     ttsVoice,
-                    ttsRules
+                    ttsRules: JSON.stringify(ttsRules) // Serialize object to string for DB
                 })
             });
 
@@ -735,7 +744,7 @@ export default function DashboardSidebar({
                                                                     body: JSON.stringify({
                                                                         ttsEnabled,
                                                                         ttsVoice,
-                                                                        ttsRules
+                                                                        ttsRules: JSON.stringify(ttsRules) // Serialize object to string for DB
                                                                     })
                                                                 });
 

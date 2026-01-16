@@ -74,6 +74,7 @@ const WhatsAppInstanceCard = ({
             assistantId: data.config.assistantId,
             ttsEnabled: data.config.ttsEnabled || false,
             ttsVoice: data.config.ttsVoice || 'Aoede',
+            ttsRules: data.config.ttsRules || '',
           });
         }
       }
@@ -94,6 +95,7 @@ const WhatsAppInstanceCard = ({
         assistantId: newConfig.assistantId || undefined,
         ttsEnabled: newConfig.ttsEnabled || false,
         ttsVoice: newConfig.ttsVoice || 'Aoede',
+        ttsRules: newConfig.ttsRules || '',
         enabled: true
       };
 

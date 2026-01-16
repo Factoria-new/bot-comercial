@@ -41,7 +41,7 @@ model User {
   // Configurações de TTS e IA
   ttsEnabled         Boolean   @default(false)
   ttsVoice           String    @default("Kore")
-  ttsRules           Json?     // Objeto com regras (audioOnRequest, etc)
+  ttsRules           String?   @db.Text // Regras em linguagem natural (ex: "Enviar apenas áudio")
   aiModel            String    @default("gemini-2.0-flash-exp")
   aiTemperature      Float     @default(1.0)
   

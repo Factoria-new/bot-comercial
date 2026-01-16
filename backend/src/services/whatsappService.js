@@ -1328,11 +1328,23 @@ export const sendMessageToUser = async (sessionId, phoneNumber, message, incomin
  * @returns {Promise<boolean>}
  */
 async function evaluateTtsRules(rules, incomingType, responseText, lastUserMessage = '', contactId = '') {
-    // Handle case where rules is null/undefined or old string format
-    if (!rules || typeof rules === 'string') {
-        // Legacy string format or no rules = always send audio when TTS is enabled
-        console.log('📋 TTS Rules: No rules or legacy format - defaulting to audio');
+    // Handle case where rules is null/undefined
+    if (!rules) {
+        // No rules = always send audio when TTS is enabled
+        console.log('📋 TTS Rules: No rules defined - defaulting to audio');
         return true;
+    }
+
+    // Parse JSON string to object if necessary
+    if (typeof rules === 'string') {
+        try {
+            rules = JSON.parse(rules);
+            console.log('📋 TTS Rules: Parsed JSON string to object');
+        } catch {
+            // Invalid JSON string = legacy format or empty, default to audio
+            console.log('📋 TTS Rules: Could not parse string, defaulting to audio');
+            return true;
+        }
     }
 
     console.log(`📋 TTS Rules evaluation:`, JSON.stringify(rules));
