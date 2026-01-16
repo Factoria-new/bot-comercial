@@ -5,7 +5,8 @@ dotenv.config();
 
 // Initialize Composio client for Google Calendar
 const composio = new Composio({
-    apiKey: process.env.COMPOSIO_API_KEY
+    apiKey: process.env.COMPOSIO_API_KEY,
+    toolkitVersions: { googlecalendar: 'latest' }
 });
 
 // Socket.IO instance reference
@@ -194,11 +195,11 @@ export const listEvents = async (userId, maxResults = 10, timeMin = null) => {
 
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_EVENTS_LIST',
-            params,
             {
                 connectedAccountId: status.connectionId,
-                version: 'latest',
-                dangerouslySkipVersionCheck: true
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: params
             }
         );
 
@@ -237,11 +238,11 @@ export const createEvent = async (userId, eventData) => {
 
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_CREATE_EVENT',
-            params,
             {
                 connectedAccountId: status.connectionId,
-                version: 'latest',
-                dangerouslySkipVersionCheck: true
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: params
             }
         );
 
@@ -280,14 +281,14 @@ export const findAvailableSlots = async (userId, date, durationMinutes = 60) => 
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_FIND_FREE_SLOTS',
             {
-                time_min: startOfDay.toISOString(),
-                time_max: endOfDay.toISOString(),
-                duration_minutes: durationMinutes
-            },
-            {
                 connectedAccountId: status.connectionId,
-                version: 'latest',
-                dangerouslySkipVersionCheck: true
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: {
+                    time_min: startOfDay.toISOString(),
+                    time_max: endOfDay.toISOString(),
+                    duration_minutes: durationMinutes
+                }
             }
         );
 
@@ -589,16 +590,16 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_EVENTS_LIST',
             {
-                time_min: startDateTime,
-                time_max: endDateTime,
-                max_results: 10,
-                single_events: true,
-                order_by: 'startTime'
-            },
-            {
                 connectedAccountId: status.connectionId,
-                version: 'latest',
-                dangerouslySkipVersionCheck: true
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: {
+                    time_min: startDateTime,
+                    time_max: endDateTime,
+                    max_results: 10,
+                    single_events: true,
+                    order_by: 'startTime'
+                }
             }
         );
 
@@ -628,6 +629,7 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
         };
     } catch (error) {
         console.error('Calendar availability check error:', error.message);
+        console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
         return { available: false, error: error.message };
     }
 };
@@ -764,11 +766,11 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
 
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_CREATE_EVENT',
-            params,
             {
                 connectedAccountId: status.connectionId,
-                version: 'latest',
-                dangerouslySkipVersionCheck: true
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: params
             }
         );
 
