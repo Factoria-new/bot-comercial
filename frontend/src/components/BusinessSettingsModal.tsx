@@ -43,6 +43,7 @@ export interface BusinessSettingsData {
     serviceType: 'online' | 'presencial' | null;
     address?: string | null;
     openingHours: Record<WeekDay, DaySchedule> | null;
+    appointmentDuration: number; // Duration in minutes
 }
 
 // --- SCHEDULE PICKER SUB-COMPONENT ---
@@ -268,6 +269,7 @@ export function BusinessSettingsModal({
     const [openingHours, setOpeningHours] = useState<Record<WeekDay, DaySchedule>>(
         JSON.parse(JSON.stringify(DEFAULT_SCHEDULE))
     );
+    const [appointmentDuration, setAppointmentDuration] = useState<number>(60);
 
     // Load existing data when modal opens
     useEffect(() => {
@@ -299,6 +301,9 @@ export function BusinessSettingsModal({
                 }
                 if (data.businessHours) {
                     setOpeningHours(data.businessHours);
+                }
+                if (data.appointmentDuration) {
+                    setAppointmentDuration(data.appointmentDuration);
                 }
             }
         } catch (error) {
@@ -362,7 +367,8 @@ ${scheduleStr}
                 body: JSON.stringify({
                     businessHours: openingHours,
                     serviceType: serviceType,
-                    businessAddress: serviceType === 'presencial' ? address : null
+                    businessAddress: serviceType === 'presencial' ? address : null,
+                    appointmentDuration: appointmentDuration
                 })
             });
 
@@ -567,6 +573,33 @@ ${scheduleStr}
                                         value={openingHours}
                                         onChange={setOpeningHours}
                                     />
+
+                                    {/* Duration Selector */}
+                                    <div className="mt-4 p-4 bg-black/20 rounded-xl border border-white/10">
+                                        <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider flex items-center gap-2 mb-3">
+                                            <Clock className="h-3 w-3 text-purple-400" />
+                                            Duração Padrão dos Agendamentos
+                                        </Label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[30, 45, 60, 90, 120].map((duration) => (
+                                                <button
+                                                    key={duration}
+                                                    onClick={() => setAppointmentDuration(duration)}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                                                        appointmentDuration === duration
+                                                            ? "bg-purple-600 text-white shadow-lg shadow-purple-900/50"
+                                                            : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    {duration < 60 ? `${duration} min` : duration === 60 ? '1 hora' : `${duration / 60}h${duration % 60 ? (duration % 60) + 'min' : ''}`}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-white/40 mt-2">
+                                            Tempo padrão de cada compromisso agendado.
+                                        </p>
+                                    </div>
                                 </div>
                             </>
                         )}

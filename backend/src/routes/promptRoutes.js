@@ -141,7 +141,8 @@ router.get('/business-info', extractUserId, async (req, res) => {
             select: {
                 businessHours: true,
                 serviceType: true,
-                businessAddress: true
+                businessAddress: true,
+                appointmentDuration: true
             }
         });
 
@@ -154,6 +155,7 @@ router.get('/business-info', extractUserId, async (req, res) => {
             businessHours: user.businessHours,
             serviceType: user.serviceType,
             businessAddress: user.businessAddress,
+            appointmentDuration: user.appointmentDuration,
             hasBusinessInfo: !!(user.businessHours || user.serviceType)
         });
     } catch (error) {
@@ -167,7 +169,7 @@ router.get('/business-info', extractUserId, async (req, res) => {
  */
 router.put('/business-info', extractUserId, async (req, res) => {
     try {
-        const { businessHours, serviceType, businessAddress } = req.body;
+        const { businessHours, serviceType, businessAddress, appointmentDuration } = req.body;
 
         // Validação básica
         if (serviceType && !['online', 'presencial'].includes(serviceType)) {
@@ -177,19 +179,29 @@ router.put('/business-info', extractUserId, async (req, res) => {
             });
         }
 
+        // Validar duração se fornecida
+        if (appointmentDuration && ![30, 45, 60, 90, 120].includes(appointmentDuration)) {
+            return res.status(400).json({
+                success: false,
+                error: 'appointmentDuration deve ser 30, 45, 60, 90 ou 120 minutos'
+            });
+        }
+
         const updatedUser = await prisma.user.update({
             where: { id: req.userId },
             data: {
                 businessHours: businessHours || undefined,
                 serviceType: serviceType || undefined,
                 businessAddress: businessAddress || undefined,
+                appointmentDuration: appointmentDuration || undefined,
                 updatedAt: new Date()
             },
             select: {
                 id: true,
                 businessHours: true,
                 serviceType: true,
-                businessAddress: true
+                businessAddress: true,
+                appointmentDuration: true
             }
         });
 

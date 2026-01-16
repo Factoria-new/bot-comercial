@@ -886,6 +886,24 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
     const endDate = new Date(requestedEnd);
     const durationMinutes = Math.round((endDate - startDate) / (1000 * 60));
 
+    // Step 0: Validate minimum advance time (2 hours)
+    const now = new Date();
+    const minAdvanceMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+    const minValidTime = new Date(now.getTime() + minAdvanceMs);
+
+    if (startDate < minValidTime) {
+        const minTimeFormatted = minValidTime.toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+        console.log(`⛔ Appointment rejected - less than 2 hours advance`);
+        return {
+            success: false,
+            reason: 'insufficient_advance_time',
+            message: `O horário solicitado é muito próximo. É necessário agendar com pelo menos 2 horas de antecedência. O horário mínimo disponível agora é ${minTimeFormatted}.`
+        };
+    }
+
     // Step 1: Validate against business hours
     if (businessHours) {
         const validation = validateEventAgainstBusinessHours(requestedStart, requestedEnd, businessHours);
@@ -968,3 +986,400 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
 
     return result;
 };
+
+/**
+ * Find events by customer email (attendee)
+ * @param {string} userId - User's email (calendar owner)
+ * @param {string} customerEmail - Customer email to search for
+ * @param {string} [fromDate] - Optional start date to search from (defaults to today)
+ * @returns {Promise<{success: boolean, events?: Array, error?: string}>}
+ */
+export const findEventsByCustomerEmail = async (userId, customerEmail, fromDate = null) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Google Calendar not connected' };
+    }
+
+    try {
+        const searchFrom = fromDate
+            ? ensureTimezone(fromDate)
+            : new Date().toISOString();
+
+        // Get events from now onwards
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_EVENTS_LIST',
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: {
+                    time_min: searchFrom,
+                    max_results: 50,
+                    single_events: true,
+                    order_by: 'startTime',
+                    time_zone: DEFAULT_TIMEZONE,
+                    timezone: DEFAULT_TIMEZONE
+                }
+            }
+        );
+
+        if (!result.successful) {
+            return { success: false, error: result.error || 'Failed to list events' };
+        }
+
+        const allEvents = result.data?.items || result.data || [];
+
+        // Filter events that have the customer email as an attendee
+        const customerEvents = allEvents.filter(event => {
+            const attendees = event.attendees || [];
+            return attendees.some(att =>
+                att.email?.toLowerCase() === customerEmail.toLowerCase()
+            );
+        });
+
+        console.log(`📅 Found ${customerEvents.length} events for customer ${customerEmail}`);
+
+        return {
+            success: true,
+            events: customerEvents.map(e => ({
+                id: e.id,
+                summary: e.summary,
+                start: e.start?.dateTime || e.start?.date,
+                end: e.end?.dateTime || e.end?.date,
+                status: e.status,
+                meetLink: e.hangoutLink || e.conferenceData?.entryPoints?.[0]?.uri
+            }))
+        };
+    } catch (error) {
+        console.error('Find events by customer error:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Update an existing calendar event
+ * @param {string} userId - User's email (calendar owner)
+ * @param {string} eventId - ID of the event to update
+ * @param {object} updateData - New data for the event
+ * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string}>}
+ */
+export const updateEvent = async (userId, eventId, updateData) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Google Calendar not connected' };
+    }
+
+    try {
+        const params = {
+            event_id: eventId
+        };
+
+        // Only include fields that are provided
+        if (updateData.summary) params.summary = updateData.summary;
+        if (updateData.description) params.description = updateData.description;
+        if (updateData.start) params.start_datetime = ensureTimezone(updateData.start);
+        if (updateData.end) params.end_datetime = ensureTimezone(updateData.end);
+        if (updateData.location !== undefined) params.location = updateData.location;
+
+        // Add timezone
+        params.time_zone = DEFAULT_TIMEZONE;
+        params.timezone = DEFAULT_TIMEZONE;
+
+        console.log(`📅 Updating event ${eventId} for ${userId}`);
+
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_UPDATE_EVENT',
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: params
+            }
+        );
+
+        if (result.successful) {
+            const eventData = result.data;
+            const meetLink = eventData?.hangoutLink || eventData?.conferenceData?.entryPoints?.[0]?.uri;
+
+            console.log(`✅ Event updated: ${eventId}. Meet Link: ${meetLink}`);
+
+            return {
+                success: true,
+                event: eventData,
+                meetLink: meetLink || null
+            };
+        } else {
+            return { success: false, error: result.error || 'Failed to update event' };
+        }
+    } catch (error) {
+        console.error('Update event error:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Reschedule an existing appointment
+ * @param {string} userId - User's email (calendar owner)
+ * @param {string} eventId - ID of the event to reschedule
+ * @param {string} newStart - New start datetime (ISO format)
+ * @param {string} newEnd - New end datetime (ISO format)
+ * @param {object} businessHours - User's business hours
+ * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string, reason?: string}>}
+ */
+export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, businessHours) => {
+    // Normalize timezone
+    const normalizedStart = ensureTimezone(newStart);
+    const normalizedEnd = ensureTimezone(newEnd);
+
+    // 0. Validate minimum advance time (2 hours)
+    const startDate = new Date(normalizedStart);
+    const now = new Date();
+    const minAdvanceMs = 2 * 60 * 60 * 1000; // 2 hours
+    const minValidTime = new Date(now.getTime() + minAdvanceMs);
+
+    if (startDate < minValidTime) {
+        const minTimeFormatted = minValidTime.toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+        console.log(`⛔ Reschedule rejected - less than 2 hours advance`);
+        return {
+            success: false,
+            reason: 'insufficient_advance_time',
+            message: `O horário solicitado é muito próximo. É necessário reagendar com pelo menos 2 horas de antecedência. O horário mínimo disponível agora é ${minTimeFormatted}.`
+        };
+    }
+
+    // 1. Validate business hours
+    const isWithinHours = isWithinBusinessHours(normalizedStart, normalizedEnd, businessHours);
+    if (!isWithinHours.valid) {
+        const formattedHours = formatBusinessHoursForDisplay(businessHours);
+        return {
+            success: false,
+            reason: 'outside_business_hours',
+            message: `O horário solicitado (${new Date(normalizedStart).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}) está fora do horário de funcionamento.`,
+            formattedHours
+        };
+    }
+
+    // 2. Check if new time slot is available (excluding the event being rescheduled)
+    const availability = await checkTimeSlotAvailability(userId, normalizedStart, normalizedEnd);
+
+    // Filter out the event being rescheduled from conflicts
+    const realConflicts = (availability.conflictingEvents || []).filter(e => e.id !== eventId);
+
+    if (realConflicts.length > 0) {
+        // Find alternatives
+        const alternatives = await findAlternativeSlots(
+            userId,
+            normalizedStart,
+            businessHours,
+            Math.round((new Date(normalizedEnd) - new Date(normalizedStart)) / 60000)
+        );
+
+        return {
+            success: false,
+            reason: 'calendar_conflict',
+            message: 'O novo horário solicitado não está disponível.',
+            suggestions: alternatives.suggestions || []
+        };
+    }
+
+    // 3. Update the event
+    const updateResult = await updateEvent(userId, eventId, {
+        start: normalizedStart,
+        end: normalizedEnd
+    });
+
+    if (!updateResult.success) {
+        return {
+            success: false,
+            reason: 'update_error',
+            message: updateResult.error
+        };
+    }
+
+    console.log(`✅ Appointment rescheduled: ${eventId}`);
+
+    return {
+        success: true,
+        event: updateResult.event,
+        meetLink: updateResult.meetLink,
+        newStart: normalizedStart,
+        newEnd: normalizedEnd
+    };
+};
+
+/**
+ * Check availability for a specific time and duration
+ * Used by the AI Agent to validate before suggesting or confirming
+ * @param {string} userId
+ * @param {string} requestedDate - ISO format or just Date
+ * @param {string} requestedTime - HH:mm
+ * @param {number} durationMinutes
+ * @param {object} businessHours
+ * @returns {Promise<{available: boolean, reason?: string, message?: string, suggestions?: any[]}>}
+ */
+export const checkAvailability = async (userId, requestedDate, requestedTime, durationMinutes, businessHours) => {
+    // Construct datetime objects
+    let startDateTime;
+
+    // If we received a full ISO string in requestedDate
+    if (requestedDate.includes('T')) {
+        startDateTime = ensureTimezone(requestedDate);
+    } else {
+        // Construct from date + time
+        // Need to be careful with timezone here since we're constructing manual string
+        // Assuming requestedDate is YYYY-MM-DD
+        startDateTime = ensureTimezone(`${requestedDate}T${requestedTime}:00`);
+    }
+
+    const startDt = new Date(startDateTime);
+    const endDt = new Date(startDt.getTime() + durationMinutes * 60000);
+    const endDateTime = endDt.toISOString();
+
+    // 0. Validate minimum advance time (2 hours)
+    const now = new Date();
+    const minAdvanceMs = 2 * 60 * 60 * 1000;
+    const minValidTime = new Date(now.getTime() + minAdvanceMs);
+
+    if (startDt < minValidTime) {
+        return {
+            available: false,
+            reason: 'insufficient_advance_time',
+            message: `Horário muito próximo (${startDateTime}). Necessário 2h de antecedência.`
+        };
+    }
+
+    // 1. Validate Business Hours
+    const isWithinHours = isWithinBusinessHours(startDateTime, endDateTime, businessHours);
+    if (!isWithinHours.valid) {
+        return {
+            available: false,
+            reason: 'outside_business_hours',
+            message: 'Fora do horário de funcionamento.',
+            formattedHours: formatBusinessHoursForDisplay(businessHours)
+        };
+    }
+
+    // 2. Check Conflicts
+    const availability = await checkTimeSlotAvailability(userId, startDateTime, endDateTime);
+
+    if (!availability.available) {
+        // Find alternatives
+        const alternatives = await findAlternativeSlots(
+            userId,
+            startDateTime,
+            businessHours,
+            durationMinutes
+        );
+
+        return {
+            available: false,
+            reason: 'calendar_conflict',
+            message: 'Horário indisponível devido a conflito.',
+            suggestions: alternatives.suggestions || []
+        };
+    }
+
+    return {
+        available: true,
+        message: 'Disponível'
+    };
+};
+
+// ==========================================
+// Helper Functions
+// ==========================================
+
+/**
+ * Check if a time range is within business hours
+ * @param {string} startDateTime - ISO string
+ * @param {string} endDateTime - ISO string
+ * @param {object} businessHours - { monday: { start: '09:00', end: '18:00', isOpen: true }, ... }
+ * @returns {{ valid: boolean, reason?: string }}
+ */
+function isWithinBusinessHours(startDateTime, endDateTime, businessHours) {
+    if (!businessHours) return { valid: true }; // If no hours defined, assume open
+
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+
+    // Get day name (monday, tuesday, etc) in America/Sao_Paulo
+    const formatterDay = new Intl.DateTimeFormat('en-US', {
+        weekday: 'long',
+        timeZone: 'America/Sao_Paulo'
+    });
+    const dayName = formatterDay.format(start).toLowerCase();
+
+    const settings = businessHours[dayName];
+
+    if (!settings || !settings.isOpen) {
+        return { valid: false, reason: 'closed_day' };
+    }
+
+    const startHour = parseInt(settings.start.split(':')[0]);
+    const startMin = parseInt(settings.start.split(':')[1]);
+    const endHour = parseInt(settings.end.split(':')[0]);
+    const endMin = parseInt(settings.end.split(':')[1]);
+
+    // Helper to get HH and MM in specific timezone
+    const getParts = (date) => {
+        const fmt = new Intl.DateTimeFormat('en-US', {
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: false,
+            timeZone: 'America/Sao_Paulo'
+        });
+        const parts = fmt.formatToParts(date);
+        const h = parseInt(parts.find(p => p.type === 'hour').value);
+        const m = parseInt(parts.find(p => p.type === 'minute').value);
+        // Handle 24h format weirdness if any (usually Intl with hour12: false is good)
+        // If hour is 24, it means 00
+        return { h: h === 24 ? 0 : h, m };
+    };
+
+    const reqStart = getParts(start);
+    const reqEnd = getParts(end);
+
+    const reqStartHour = reqStart.h;
+    const reqStartMin = reqStart.m;
+    const reqEndHour = reqEnd.h;
+    const reqEndMin = reqEnd.m;
+
+    // Convert everything to minutes for easier comparison
+    const dayStartMins = startHour * 60 + startMin;
+    const dayEndMins = endHour * 60 + endMin;
+    const reqStartMins = reqStartHour * 60 + reqStartMin;
+    const reqEndMins = reqEndHour * 60 + reqEndMin;
+
+    if (reqStartMins < dayStartMins || reqEndMins > dayEndMins) {
+        return { valid: false, reason: 'hours_out_of_range' };
+    }
+
+    return { valid: true };
+}
+
+/**
+ * Format business hours for display
+ * @param {object} businessHours 
+ * @returns {string}
+ */
+function formatBusinessHoursForDisplay(businessHours) {
+    if (!businessHours) return "24 horas";
+
+    const daysMap = {
+        sunday: 'Domingo', monday: 'Segunda', tuesday: 'Terça',
+        wednesday: 'Quarta', thursday: 'Quinta', friday: 'Sexta', saturday: 'Sábado'
+    };
+
+    let lines = [];
+    for (const [key, label] of Object.entries(daysMap)) {
+        const day = businessHours[key];
+        if (day && day.isOpen) {
+            lines.push(`${label}: ${day.start} - ${day.end}`);
+        }
+    }
+
+    return lines.join('\n');
+}

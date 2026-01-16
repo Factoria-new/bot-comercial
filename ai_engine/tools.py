@@ -137,6 +137,32 @@ class GoogleCalendarTool(BaseTool):
         """
         node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
         
+        # Validação de antecedência mínima de 2 horas
+        from datetime import datetime, timedelta, timezone
+        try:
+            # Parse o datetime de início
+            if 'Z' in start_datetime:
+                start_dt = datetime.fromisoformat(start_datetime.replace('Z', '+00:00'))
+            elif '+' in start_datetime or (start_datetime.count('-') > 2):
+                start_dt = datetime.fromisoformat(start_datetime)
+            else:
+                # Sem timezone, assume UTC-3 (Brasil)
+                start_dt = datetime.fromisoformat(start_datetime)
+            
+            # Converter para comparação naive se necessário
+            now = datetime.now()
+            if start_dt.tzinfo:
+                start_dt_naive = start_dt.replace(tzinfo=None)
+            else:
+                start_dt_naive = start_dt
+            
+            min_time = now + timedelta(hours=2)
+            
+            if start_dt_naive < min_time:
+                return f"⚠️ AÇÃO NÃO REALIZADA: O horário solicitado ({start_datetime}) é muito próximo. É necessário agendar com pelo menos 2 horas de antecedência. O horário mínimo disponível agora é {min_time.strftime('%d/%m/%Y às %H:%M')}. Por favor, escolha outro horário."
+        except Exception as parse_error:
+            pass  # Se falhar o parse, deixa o backend validar
+        
         try:
             response = requests.post(
                 f"{node_api_url}/api/google-calendar/schedule-appointment",
@@ -183,3 +209,244 @@ class GoogleCalendarTool(BaseTool):
         except Exception as e:
             return f"Erro de conexão com o serviço de calendário: {str(e)}"
 
+
+class GoogleCalendarRescheduleTool(BaseTool):
+    name: str = "Reagendar Compromisso"
+    description: str = """
+    Ferramenta para REAGENDAR um compromisso existente no calendário (mudar data/hora).
+    USE ESTA FERRAMENTA quando o cliente quiser MUDAR a data ou hora de um agendamento já existente.
+    
+    FLUXO DE USO:
+    1. Primeira chamada: passe customer_email e new_start_datetime
+       - Se houver 1 evento: reagenda automaticamente
+       - Se houver mais de 1: retorna lista numerada (1, 2, 3...)
+    
+    2. Segunda chamada (se houve lista): passe os MESMOS parâmetros + event_index
+       - event_index: número que o cliente escolheu (1, 2, 3...)
+       - A ferramenta busca novamente e usa o evento correspondente
+    
+    IMPORTANTE: 
+    - event_index é o NÚMERO da lista (1, 2, 3...), NÃO o ID técnico
+    - Você DEVE chamar a ferramenta novamente após cliente escolher
+    
+    Parâmetros:
+    - customer_email: E-mail do cliente (OBRIGATÓRIO)
+    - new_start_datetime: Nova data/hora (formato ISO: 2026-01-20T14:00:00) (OBRIGATÓRIO)
+    - event_index: Número do evento na lista (1, 2, 3...) - use SOMENTE após cliente escolher
+    """
+    
+    user_id: str = Field(default="", description="Email do usuário dono do calendário")
+    appointment_duration: int = Field(default=60, description="Duração padrão dos agendamentos em minutos")
+
+    def _run(self, customer_email: str, new_start_datetime: str, event_index: int = 0):
+        """
+        Reagenda um compromisso existente.
+        
+        Args:
+            customer_email: E-mail do cliente
+            new_start_datetime: Nova data e hora de início (formato ISO)
+            event_index: Número do evento na lista (1, 2, 3...) - opcional
+        """
+        node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
+        
+        # Validação de antecedência mínima de 2 horas
+        from datetime import datetime, timedelta
+        try:
+            if 'Z' in new_start_datetime:
+                start_dt = datetime.fromisoformat(new_start_datetime.replace('Z', '+00:00'))
+            elif '+' in new_start_datetime or (new_start_datetime.count('-') > 2):
+                start_dt = datetime.fromisoformat(new_start_datetime)
+            else:
+                start_dt = datetime.fromisoformat(new_start_datetime)
+            
+            now = datetime.now()
+            if start_dt.tzinfo:
+                start_dt_naive = start_dt.replace(tzinfo=None)
+            else:
+                start_dt_naive = start_dt
+            
+            min_time = now + timedelta(hours=2)
+            
+            if start_dt_naive < min_time:
+                return f"⚠️ AÇÃO NÃO REALIZADA: O horário solicitado ({new_start_datetime}) é muito próximo. É necessário reagendar com pelo menos 2 horas de antecedência. O horário mínimo disponível agora é {min_time.strftime('%d/%m/%Y às %H:%M')}. Por favor, escolha outro horário."
+        except Exception as parse_error:
+            pass  # Se falhar o parse, deixa o backend validar
+        
+        try:
+            # Sempre buscar eventos pelo email primeiro
+            search_response = requests.get(
+                f"{node_api_url}/api/google-calendar/customer-events",
+                params={
+                    "userId": self.user_id,
+                    "customerEmail": customer_email
+                }
+            )
+            search_result = search_response.json()
+            
+            if not search_result.get("success"):
+                return f"⚠️ AÇÃO NÃO REALIZADA: Erro ao buscar agendamentos: {search_result.get('error', 'Erro desconhecido')}"
+            
+            events = search_result.get("events", [])
+            
+            if len(events) == 0:
+                return f"⚠️ AÇÃO NÃO REALIZADA: Não encontrei nenhum agendamento futuro para o e-mail {customer_email}. Verifique se o e-mail está correto."
+            
+            event_id = None
+            selected_event = None
+            
+            if len(events) == 1:
+                # Só tem 1 evento - usar ele
+                event_id = events[0]["id"]
+                selected_event = events[0]
+            elif event_index > 0:
+                # Cliente escolheu um número da lista
+                if event_index > len(events):
+                    return f"⚠️ AÇÃO NÃO REALIZADA: O número {event_index} não existe na lista. Escolha um número entre 1 e {len(events)}."
+                
+                selected_event = events[event_index - 1]  # Converter para 0-indexed
+                event_id = selected_event["id"]
+            else:
+                # Múltiplos eventos e cliente não escolheu ainda - mostrar lista
+                event_list = "\n".join([
+                    f"  {i+1}. {e['summary']} - {e['start']}" 
+                    for i, e in enumerate(events)
+                ])
+                return f"""⚠️ AÇÃO NÃO REALIZADA - PRECISO QUE O CLIENTE ESCOLHA:
+
+Encontrei {len(events)} agendamentos para {customer_email}:
+{event_list}
+
+👉 PERGUNTE ao cliente qual número ele deseja reagendar.
+👉 Depois que ele responder, CHAME ESTA FERRAMENTA NOVAMENTE com:
+   - customer_email: "{customer_email}"
+   - new_start_datetime: "{new_start_datetime}"
+   - event_index: [número que o cliente escolheu]
+
+ATENÇÃO: O reagendamento NÃO foi feito. Você DEVE chamar a ferramenta novamente."""
+            
+            # Calcular horário de término
+            end_dt = start_dt + timedelta(minutes=self.appointment_duration)
+            new_end_datetime = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
+            
+            # Fazer o reagendamento
+            response = requests.post(
+                f"{node_api_url}/api/google-calendar/reschedule-appointment",
+                json={
+                    "userId": self.user_id,
+                    "eventId": event_id,
+                    "newStart": new_start_datetime,
+                    "newEnd": new_end_datetime
+                }
+            )
+            
+            result = response.json()
+            
+            if result.get("success"):
+                meet_link = result.get("meetLink")
+                # Formatar data para exibição
+                try:
+                    display_date = start_dt.strftime('%d/%m/%Y às %H:%M')
+                except:
+                    display_date = new_start_datetime
+                    
+                if meet_link:
+                    return f"✅ REAGENDAMENTO CONCLUÍDO COM SUCESSO!\n\nO compromisso '{selected_event.get('summary', 'Agendamento')}' foi alterado para {display_date}.\n\nLink da reunião: {meet_link}"
+                else:
+                    return f"✅ REAGENDAMENTO CONCLUÍDO COM SUCESSO!\n\nO compromisso '{selected_event.get('summary', 'Agendamento')}' foi alterado para {display_date}."
+            
+            elif result.get("reason") == "insufficient_advance_time":
+                return f"⚠️ AÇÃO NÃO REALIZADA: {result.get('message')}"
+            
+            elif result.get("reason") == "outside_business_hours":
+                formatted_hours = result.get('formattedHours', 'Horários não disponíveis')
+                return f"⚠️ AÇÃO NÃO REALIZADA: {result.get('message', 'Horário fora do funcionamento')}\n\nHorário de funcionamento:\n{formatted_hours}"
+            
+            elif result.get("reason") == "calendar_conflict":
+                suggestions = result.get("suggestions", [])
+                if suggestions:
+                    suggestion_text = "\n".join([
+                        f"  • {s['formatted']}" for s in suggestions
+                    ])
+                    return f"⚠️ AÇÃO NÃO REALIZADA: O novo horário não está disponível.\n\nSugestões de horários próximos:\n{suggestion_text}"
+                else:
+                    return "⚠️ AÇÃO NÃO REALIZADA: O novo horário não está disponível e não encontramos alternativas próximas."
+            
+            else:
+                return f"⚠️ AÇÃO NÃO REALIZADA: {result.get('error', result.get('message', 'Erro desconhecido'))}"
+                
+        except Exception as e:
+            return f"⚠️ AÇÃO NÃO REALIZADA: Erro de conexão com o serviço de calendário: {str(e)}"
+
+
+class GoogleCalendarCheckAvailabilityTool(BaseTool):
+    name: str = "Verificar Disponibilidade"
+    description: str = """
+    Ferramenta OBRIGATÓRIA para verificar se um horário está livre ANTES de sugerir ou confirmar.
+    
+    USE ESTA FERRAMENTA QUANDO:
+    1. O cliente perguntar se tem horário disponível em tal dia/hora
+    2. O cliente sugerir um horário para agendar ("Pode ser dia 20 às 15h?")
+    3. ANTES de você usar a ferramenta "Agendar Compromisso"
+    
+    A ferramenta verifica:
+    1. Se é um horário futuro válido (mínimo 2h antecedência)
+    2. Se está dentro do horário de funcionamento
+    3. Se não há conflito com outros agendamentos
+    
+    Parâmetros:
+    - requested_date: Data (YYYY-MM-DD)
+    - requested_time: Hora (HH:mm)
+    """
+    
+    user_id: str = Field(default="", description="Email do usuário dono do calendário")
+
+    def _run(self, requested_date: str, requested_time: str):
+        """
+        Verifica disponibilidade de um horário.
+        
+        Args:
+            requested_date: Data (YYYY-MM-DD)
+            requested_time: Hora (HH:mm)
+        """
+        node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
+        
+        try:
+            response = requests.post(f"{node_api_url}/api/google-calendar/check-availability", json={
+                "userId": self.user_id,
+                "date": requested_date,
+                "time": requested_time
+            })
+            
+            result = response.json()
+            
+            if result.get("success"):
+                if result.get("available"):
+                     return f"✅ O horário {requested_date} às {requested_time} está DISPONÍVEL! Você deve agora:\n1. Perguntar ao cliente se ele confirma o agendamento\n2. Se ele confirmar, usar a ferramenta 'Agendar Compromisso'"
+                else:
+                    reason = result.get("reason", "unknown")
+                    message = result.get("message", "Indisponível")
+                    
+                    if reason == "insufficient_advance_time":
+                         return f"❌ INDISPONÍVEL: {message}"
+                    
+                    elif reason == "outside_business_hours":
+                        formatted_hours = result.get('formattedHours', 'Horários não disponíveis')
+                        return f"❌ INDISPONÍVEL: Fora do horário de funcionamento.\nHorários:\n{formatted_hours}"
+                    
+                    elif reason == "calendar_conflict":
+                        suggestions = result.get("suggestions", [])
+                        if suggestions:
+                            suggestion_text = "\n".join([
+                                f"  • {s['formatted']}" for s in suggestions
+                            ])
+                            return f"❌ INDISPONÍVEL: Já existe um agendamento neste horário.\n\nSugestões próximas:\n{suggestion_text}"
+                        else:
+                             return "❌ INDISPONÍVEL: Já existe um agendamento e não há horários próximos livres."
+                    
+                    else:
+                        return f"❌ INDISPONÍVEL: {message}"
+            else:
+                 return f"Erro ao verificar disponibilidade: {result.get('error', 'Erro desconhecido')}"
+                 
+        except Exception as e:
+            return f"Erro de conexão: {str(e)}"

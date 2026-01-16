@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 import traceback
+import time
+import random
 
 app = FastAPI()
 
@@ -36,6 +38,33 @@ def format_history(history: Optional[List[HistoryItem]]) -> str:
     
     # Pegar apenas as últimas 10 mensagens para não estourar contexto
     return "\n".join(formatted[-10:])
+
+def run_crew_with_retry(crew, retries=3, delay=2):
+    """
+    Executa o crew.kickoff() com mecanismo de retry manual para falhas de API (500).
+    """
+    last_exception = None
+    
+    for attempt in range(retries):
+        try:
+            return crew.kickoff()
+        except Exception as e:
+            last_exception = e
+            error_str = str(e)
+            
+            # Verificar se é erro 500 ou mensagem de erro interno
+            if "500" in error_str or "Internal error" in error_str or "INTERNAL" in error_str:
+                wait_time = delay * (attempt + 1) + random.uniform(0, 1)
+                print(f"⚠️ Erro 500 detectado (Tentativa {attempt+1}/{retries}). Tentando novamente em {wait_time:.1f}s...")
+                time.sleep(wait_time)
+            else:
+                # Se não for erro de servidor, falha imediatamente (ex: erro de validação)
+                raise e
+                
+    # Se esgotou tentativas
+    print(f"❌ Falha após {retries} tentativas.")
+    raise last_exception
+
 
 @app.post("/webhook/whatsapp")
 async def handle_whatsapp_message(data: MessageInput):
@@ -80,7 +109,7 @@ Se o cliente quiser agendar, use a ferramenta 'Agendar Compromisso' com os dados
             memory=False
         )
 
-        result = crew.kickoff()
+        result = run_crew_with_retry(crew)
         return {"status": "processing", "result": str(result)}
     
     except Exception as e:
@@ -123,7 +152,7 @@ Analise a mensagem e responda de forma adequada seguindo suas instruções, LEVA
             memory=False
         )
 
-        result = crew.kickoff()
+        result = run_crew_with_retry(crew)
         print(f"✅ Instagram message processed for {data.senderId}")
         return {"status": "processing", "result": str(result)}
     

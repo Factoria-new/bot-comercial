@@ -9,7 +9,10 @@ import {
     findAvailableSlots,
     getCalendarFunctionDeclarations,
     executeCalendarFunction,
-    scheduleAppointment
+    scheduleAppointment,
+    findEventsByCustomerEmail,
+    rescheduleAppointment,
+    checkAvailability
 } from '../services/googleCalendarService.js';
 import prisma from '../config/prisma.js';
 
@@ -360,6 +363,128 @@ router.post('/schedule-appointment', async (req, res) => {
         res.json(result);
     } catch (error) {
         console.error('Schedule appointment error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/google-calendar/customer-events
+ * Find events for a specific customer by email
+ * Query params: userId (required), customerEmail (required)
+ */
+router.get('/customer-events', async (req, res) => {
+    try {
+        const { userId, customerEmail } = req.query;
+
+        if (!userId || !customerEmail) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId and customerEmail are required'
+            });
+        }
+
+        console.log(`📅 Finding events for customer ${customerEmail} in ${userId}'s calendar`);
+
+        const result = await findEventsByCustomerEmail(userId, customerEmail);
+        res.json(result);
+    } catch (error) {
+        console.error('Find customer events error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/google-calendar/reschedule-appointment
+ * Reschedule an existing appointment
+ * 
+ * Body: {
+ *   userId: string,           // Email of calendar owner
+ *   eventId: string,          // ID of event to reschedule
+ *   newStart: string,         // New start datetime (ISO)
+ *   newEnd: string            // New end datetime (ISO)
+ * }
+ */
+router.post('/reschedule-appointment', async (req, res) => {
+    try {
+        const { userId, eventId, newStart, newEnd } = req.body;
+
+        // Validate required fields
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId (email) is required'
+            });
+        }
+
+        if (!eventId) {
+            return res.status(400).json({
+                success: false,
+                error: 'eventId is required'
+            });
+        }
+
+        if (!newStart || !newEnd) {
+            return res.status(400).json({
+                success: false,
+                error: 'newStart and newEnd are required'
+            });
+        }
+
+        // Fetch user's business hours from database
+        const user = await prisma.user.findFirst({
+            where: { email: userId },
+            select: {
+                businessHours: true,
+                serviceType: true,
+                businessAddress: true
+            }
+        });
+
+        const businessHours = user?.businessHours || null;
+
+        console.log(`📅 Reschedule request for event ${eventId}`);
+        console.log(`   New time: ${newStart} to ${newEnd}`);
+
+        const result = await rescheduleAppointment(userId, eventId, newStart, newEnd, businessHours);
+        res.json(result);
+    } catch (error) {
+        console.error('Reschedule appointment error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/google-calendar/check-availability
+ * Check availability for a specific time slot
+ * Body: { userId, date, time }
+ */
+router.post('/check-availability', async (req, res) => {
+    try {
+        const { userId, date, time } = req.body;
+
+        if (!userId || !date || !time) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId, date, and time are required'
+            });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: { email: userId },
+            select: {
+                businessHours: true,
+                appointmentDuration: true
+            }
+        });
+
+        const businessHours = user?.businessHours || null;
+        const duration = user?.appointmentDuration || 60;
+
+        const result = await checkAvailability(userId, date, time, duration, businessHours);
+        res.json({ success: true, ...result });
+
+    } catch (error) {
+        console.error('Check availability error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
