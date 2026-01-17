@@ -12,7 +12,8 @@ import {
     scheduleAppointment,
     findEventsByCustomerEmail,
     rescheduleAppointment,
-    checkAvailability
+    checkAvailability,
+    cancelAppointment
 } from '../services/googleCalendarService.js';
 import prisma from '../config/prisma.js';
 
@@ -485,6 +486,44 @@ router.post('/check-availability', async (req, res) => {
 
     } catch (error) {
         console.error('Check availability error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/google-calendar/cancel-appointment
+ * Cancel an existing appointment
+ * 
+ * Body: {
+ *   userId: string,           // Email of calendar owner
+ *   eventId: string           // ID of event to cancel
+ * }
+ */
+router.post('/cancel-appointment', async (req, res) => {
+    try {
+        const { userId, eventId } = req.body;
+
+        // Validate required fields
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId (email) is required'
+            });
+        }
+
+        if (!eventId) {
+            return res.status(400).json({
+                success: false,
+                error: 'eventId is required'
+            });
+        }
+
+        console.log(`📅 Cancel appointment request for event ${eventId}`);
+
+        const result = await cancelAppointment(userId, eventId);
+        res.json(result);
+    } catch (error) {
+        console.error('Cancel appointment error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });

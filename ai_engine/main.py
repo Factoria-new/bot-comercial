@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime
 import traceback
 import time
 import random
@@ -18,6 +19,10 @@ class MessageInput(BaseModel):
     agentPrompt: Optional[str] = None
     history: Optional[List[HistoryItem]] = None
     userEmail: Optional[str] = None  # Email do usuário para Google Calendar
+    appointmentDuration: Optional[int] = 60  # Duração padrão dos agendamentos em minutos
+    serviceType: Optional[str] = "online"  # "online" ou "presencial"
+    businessAddress: Optional[str] = None  # Endereço do estabelecimento
+    calendarConnected: Optional[bool] = False  # Se o Google Calendar está conectado
 
 class InstagramMessageInput(BaseModel):
     userId: str  # User's email
@@ -38,6 +43,64 @@ def format_history(history: Optional[List[HistoryItem]]) -> str:
     
     # Pegar apenas as últimas 10 mensagens para não estourar contexto
     return "\n".join(formatted[-10:])
+
+
+def get_calendar_tools_description(calendar_connected: bool, current_year: int) -> str:
+    """Returns calendar tools description if connected, otherwise a warning message."""
+    if not calendar_connected:
+        return """
+⚠️ AGENDAMENTO NÃO DISPONÍVEL
+O Google Calendar não está conectado. Você NÃO possui ferramentas de agendamento.
+Se o cliente solicitar agendamento, informe que no momento não é possível agendar
+pelo WhatsApp e peça para entrar em contato por outro canal.
+"""
+    
+    return f"""
+2. 'Verificar Disponibilidade' [⚠️ OBRIGATÓRIO ANTES DE AGENDAR]
+   🔍 Use ANTES de confirmar qualquer horário
+   Parâmetros:
+   - requested_date: data no formato YYYY-MM-DD (ex: {current_year}-01-22)
+   - requested_time: hora no formato HH:mm (ex: 14:00)
+   
+   QUANDO USAR:
+   - Cliente pergunta "tem horário dia X às Y?"
+   - Cliente sugere um horário para agendar
+   - SEMPRE antes de usar 'Agendar Compromisso'
+
+3. 'Agendar Compromisso'
+   📅 Use quando o cliente CONFIRMAR que deseja agendar
+   ⚠️ ANTES: sempre use 'Verificar Disponibilidade'
+   Parâmetros:
+   - customer_name: nome do cliente
+   - customer_email: e-mail do cliente
+   - start_datetime: início (ISO: {current_year}-01-22T14:00:00)
+   - end_datetime: fim (ISO: {current_year}-01-22T15:00:00)
+   - description: descrição (opcional)
+
+4. 'Reagendar Compromisso'
+   🔄 Use quando o cliente quiser MUDAR data/hora de um agendamento
+   Parâmetros:
+   - customer_email: e-mail usado no agendamento original
+   - new_start_datetime: nova data/hora (ISO: {current_year}-01-25T10:00:00)
+   - event_index: número do evento (só usar após cliente escolher da lista)
+   
+   FLUXO:
+   a) Primeira chamada: só customer_email e new_start_datetime
+   b) Se retornar lista, pergunte ao cliente qual número
+   c) Segunda chamada: inclua event_index com o número escolhido
+
+5. 'Cancelar Agendamento'
+   ❌ Use quando o cliente quiser CANCELAR um agendamento
+   Parâmetros:
+   - customer_email: e-mail usado no agendamento
+   - event_index: número do evento (só usar após cliente escolher da lista)
+   
+   FLUXO:
+   a) Primeira chamada: só customer_email
+   b) Se retornar lista, pergunte ao cliente qual número
+   c) Confirme com o cliente antes de cancelar definitivamente
+   d) Segunda chamada: inclua event_index com o número escolhido
+"""
 
 def run_crew_with_retry(crew, retries=3, delay=2):
     """
@@ -79,24 +142,76 @@ async def handle_whatsapp_message(data: MessageInput):
         # Get user email for Google Calendar (falls back to userId if not provided)
         user_email = data.userEmail or data.userId
         
+        # Get appointment duration (default to 60 if not provided)
+        appointment_duration = data.appointmentDuration or 60
+        
+        # Check if calendar is connected
+        calendar_connected = data.calendarConnected or False
+        
         # userId is the session_id (instance_1, etc), userEmail is for Google Calendar
-        comercial, social, trafego = get_agents(data.userId, custom_prompt, user_email)
+        comercial, social, trafego = get_agents(data.userId, custom_prompt, user_email, appointment_duration, calendar_connected)
+
+        # Get current datetime for context
+        now = datetime.now()
+        current_date_str = now.strftime('%d/%m/%Y')
+        current_time_str = now.strftime('%H:%M')
+        current_year = now.year
 
         # Include remoteJid in task so agent knows where to send response
         task_atendimento = Task(
             description=f"""
+📅 DATA E HORA ATUAL: {current_date_str} às {current_time_str} (Ano: {current_year})
+⚠️ IMPORTANTE: Quando o cliente mencionar uma data sem ano (ex: "22/01"), assuma o ANO ATUAL ({current_year}) ou o próximo se a data já passou.
+
 O cliente com ID '{data.remoteJid}' enviou a seguinte mensagem: '{data.message}'
 
 Histórico da Conversa:
 {format_history(data.history)}
 
-FERRAMENTAS DISPONÍVEIS:
-1. 'Enviar Mensagem WhatsApp' - use com remote_jid: {data.remoteJid} e message: sua resposta
-2. 'Agendar Compromisso' - use quando o cliente quiser agendar algo (requer nome, email, data/hora)
+═══════════════════════════════════════════════════════════════
+                    FERRAMENTAS DISPONÍVEIS
+═══════════════════════════════════════════════════════════════
 
-Analise a mensagem e responda de forma adequada seguindo suas instruções, LEVANDO EM CONTA O HISTÓRICO ACIMA. Se o histórico mostrar que você acabou de fazer uma pergunta, a mensagem atual é provavelmente a resposta para ela.
+1. 'Enviar Mensagem WhatsApp'
+   📤 Use para responder ao cliente
+   Parâmetros:
+   - remote_jid: {data.remoteJid}
+   - message: sua resposta (texto limpo, sem markdown)
 
-Se o cliente quiser agendar, use a ferramenta 'Agendar Compromisso' com os dados coletados.
+{get_calendar_tools_description(calendar_connected, current_year)}
+
+═══════════════════════════════════════════════════════════════
+
+📍 INFORMAÇÕES DO ESTABELECIMENTO:
+- Tipo de Atendimento: {'PRESENCIAL' if data.serviceType == 'presencial' else 'ONLINE (Google Meet)'}
+- Endereço: {data.businessAddress if data.businessAddress else 'Não configurado'}
+
+═══════════════════════════════════════════════════════════════
+                        INSTRUÇÕES GERAIS
+═══════════════════════════════════════════════════════════════
+
+REGRAS BÁSICAS:
+- Analise a mensagem e responda seguindo suas instruções
+- LEVE EM CONTA O HISTÓRICO ACIMA
+- Se você fez uma pergunta, a mensagem atual é provavelmente a resposta
+- NUNCA mencione "Factoria", "Factoria IA" ou qualquer coisa relacionada
+
+FLUXO DE CONFIRMAÇÃO DE AGENDAMENTO:
+Após verificar disponibilidade e ANTES de agendar, você DEVE enviar um RESUMO para confirmação:
+
+📋 Confirme os dados do agendamento:
+- Nome: [nome do cliente]
+- E-mail: [email do cliente]
+- Serviço: [serviço solicitado]
+- Data: [data formatada]
+- Horário: [horário]
+- Local: {'[ENDEREÇO DO ESTABELECIMENTO]' if data.serviceType == 'presencial' else 'Google Meet (link enviado por e-mail)'}
+
+Só use 'Agendar Compromisso' APÓS o cliente confirmar "sim" ou "pode marcar".
+
+APÓS AGENDAR COM SUCESSO:
+- Para PRESENCIAL: Informe o endereço completo ({data.businessAddress if data.businessAddress else 'endereço não configurado'})
+- Para ONLINE: Informe que o link do Google Meet foi enviado por e-mail
             """.strip(),
             expected_output="Mensagem enviada com sucesso ao cliente ou agendamento realizado.",
             agent=comercial

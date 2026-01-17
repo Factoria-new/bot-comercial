@@ -1,12 +1,14 @@
 from crewai import Agent, LLM
-from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool, GoogleCalendarTool, GoogleCalendarRescheduleTool, GoogleCalendarCheckAvailabilityTool
+from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool, GoogleCalendarTool, GoogleCalendarRescheduleTool, GoogleCalendarCheckAvailabilityTool, GoogleCalendarCancelTool
 import os
 
-def get_agents(user_id, custom_prompt=None, user_email=None):
+def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duration=60, calendar_connected=False):
     """
     Create CrewAI agents with Gemini LLM.
     user_id is actually the session_id (instance_1, instance_2, etc)
     user_email is the user's email for Google Calendar integration
+    appointment_duration is the default duration for appointments in minutes
+    calendar_connected indicates if Google Calendar is connected for this user
     """
     
     # Configure Gemini LLM using CrewAI's native format
@@ -21,9 +23,11 @@ def get_agents(user_id, custom_prompt=None, user_email=None):
     whats_audio_tool = WhatsAppSendAudioTool(session_id=user_id)
     
     # Google Calendar Tools - uses user's email for Composio connection
-    calendar_tool = GoogleCalendarTool(user_id=user_email or user_id)
-    reschedule_tool = GoogleCalendarRescheduleTool(user_id=user_email or user_id)
+    # Pass appointment_duration for scheduling
+    calendar_tool = GoogleCalendarTool(user_id=user_email or user_id, appointment_duration=appointment_duration)
+    reschedule_tool = GoogleCalendarRescheduleTool(user_id=user_email or user_id, appointment_duration=appointment_duration)
     availability_tool = GoogleCalendarCheckAvailabilityTool(user_id=user_email or user_id)
+    cancel_tool = GoogleCalendarCancelTool(user_id=user_email or user_id)
 
     # Define dynamic backstory based on user prompt
     comercial_backstory = 'Vendedor experiente, empático e focado em fechamento.'
@@ -59,18 +63,33 @@ REGRAS DE REAGENDAMENTO:
 3. Quando o cliente responder o número:
    - Use 'Reagendar Compromisso' novamente passando 'event_index'.
    - NUNCA assuma que reagendou se a ferramenta pediu para selecionar.
+
+REGRAS DE CANCELAMENTO:
+1. Use 'Cancelar Agendamento' passando o email do cliente.
+2. Se houver múltiplos agendamentos, PERGUNTE qual número quer cancelar.
+3. SEMPRE peça confirmação antes de cancelar definitivamente.
+4. Após confirmação, chame a ferramenta com 'confirmed=True'.
 """
     
     if custom_prompt:
         comercial_backstory = f"Você é um agente comercial operando no WhatsApp. SUAS INSTRUÇÕES MESTRAS SÃO: {custom_prompt}. Siga estas instruções acima de tudo. IMPORTANTE: NUNCA use asteriscos (*), negrito (MD) ou bullet points. Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo.{scheduling_instructions}"
         comercial_goal = f"Atender o cliente seguindo estritamente as instruções fornecidas, sem usar formatação markdown."
 
-    # Commercial Agent (Uses WhatsApp + Calendar)
+    # Build tools list - only include calendar tools if Google Calendar is connected
+    agent_tools = [whats_tool, whats_audio_tool]
+    
+    if calendar_connected:
+        agent_tools.extend([calendar_tool, reschedule_tool, availability_tool, cancel_tool])
+        print(f"📅 Calendar tools ENABLED for this agent")
+    else:
+        print(f"⚠️ Calendar tools DISABLED (Google Calendar not connected)")
+
+    # Commercial Agent (Uses WhatsApp + Calendar if connected)
     comercial = Agent(
         role='Gerente Comercial / Atendente',
         goal=comercial_goal,
         backstory=comercial_backstory,
-        tools=[whats_tool, whats_audio_tool, calendar_tool, reschedule_tool, availability_tool],
+        tools=agent_tools,
         llm=gemini_llm,
         verbose=True
     )

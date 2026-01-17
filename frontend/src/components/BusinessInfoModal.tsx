@@ -310,8 +310,10 @@ export function BusinessInfoModal({
             return true;
         }
         if (step === 2) {
-            // Step 2: at least one day must be enabled
-            return Object.values(openingHours).some(day => day.enabled);
+            // Step 2: at least one day must be enabled AND duration must be set
+            const hasEnabledDay = Object.values(openingHours).some(day => day.enabled);
+            const hasDuration = appointmentDuration > 0;
+            return hasEnabledDay && hasDuration;
         }
         return true;
     };
@@ -482,7 +484,7 @@ export function BusinessInfoModal({
                                 <div className="mt-6 p-4 bg-black/20 rounded-xl border border-white/10">
                                     <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider flex items-center gap-2 mb-3">
                                         <Clock className="h-3 w-3 text-purple-400" />
-                                        Duração Padrão dos Agendamentos
+                                        Duração Padrão dos Agendamentos <span className="text-purple-500">*</span>
                                     </Label>
                                     <div className="flex flex-wrap gap-2">
                                         {[30, 45, 60, 90, 120].map((duration) => (

@@ -1057,6 +1057,111 @@ export const findEventsByCustomerEmail = async (userId, customerEmail, fromDate 
 };
 
 /**
+ * Delete a calendar event
+ * @param {string} userId - User's email (calendar owner)
+ * @param {string} eventId - ID of the event to delete
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export const deleteEvent = async (userId, eventId) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Google Calendar not connected' };
+    }
+
+    try {
+        console.log(`🗑️ Deleting event ${eventId} for ${userId}`);
+
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_DELETE_EVENT',
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: {
+                    event_id: eventId
+                }
+            }
+        );
+
+        if (result.successful) {
+            console.log(`✅ Event ${eventId} deleted successfully`);
+            return { success: true };
+        } else {
+            console.error('❌ Failed to delete event:', result.error);
+            return { success: false, error: result.error || 'Failed to delete event' };
+        }
+    } catch (error) {
+        console.error('Delete event error:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Cancel an appointment (delete from calendar)
+ * @param {string} userId - User's email (calendar owner)
+ * @param {string} eventId - ID of the event to cancel
+ * @returns {Promise<{success: boolean, message?: string, error?: string}>}
+ */
+export const cancelAppointment = async (userId, eventId) => {
+    if (!userId || !eventId) {
+        return { success: false, error: 'userId and eventId are required' };
+    }
+
+    console.log(`📅 Cancel appointment request: event ${eventId} for user ${userId}`);
+
+    const deleteResult = await deleteEvent(userId, eventId);
+
+    if (!deleteResult.success) {
+        return {
+            success: false,
+            reason: 'delete_error',
+            error: deleteResult.error
+        };
+    }
+
+    return {
+        success: true,
+        message: 'Agendamento cancelado com sucesso.'
+    };
+};
+
+/**
+ * Get a single event by ID
+ * @param {string} userId - User's email (calendar owner)
+ * @param {string} eventId - ID of the event to fetch
+ * @returns {Promise<{success: boolean, event?: object, error?: string}>}
+ */
+export const getEventById = async (userId, eventId) => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Google Calendar not connected' };
+    }
+
+    try {
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_GET_EVENT',
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: {
+                    event_id: eventId
+                }
+            }
+        );
+
+        if (result.successful) {
+            return { success: true, event: result.data };
+        } else {
+            return { success: false, error: result.error || 'Event not found' };
+        }
+    } catch (error) {
+        console.error('Get event by ID error:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
  * Update an existing calendar event
  * @param {string} userId - User's email (calendar owner)
  * @param {string} eventId - ID of the event to update
@@ -1185,10 +1290,16 @@ export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, b
         };
     }
 
-    // 3. Update the event
+    // 3. Fetch the existing event to preserve its summary/title
+    const existingEvent = await getEventById(userId, eventId);
+    const existingSummary = existingEvent.success ?
+        (existingEvent.event?.summary || existingEvent.event?.title) : null;
+
+    // 4. Update the event (include summary to preserve it)
     const updateResult = await updateEvent(userId, eventId, {
         start: normalizedStart,
-        end: normalizedEnd
+        end: normalizedEnd,
+        summary: existingSummary  // Preserve the original title
     });
 
     if (!updateResult.success) {
@@ -1294,9 +1405,12 @@ export const checkAvailability = async (userId, requestedDate, requestedTime, du
 
 /**
  * Check if a time range is within business hours
+ * Supports BOTH old format: { monday: { start: '09:00', end: '18:00', isOpen: true } }
+ * AND new format: { seg: { enabled: true, slots: [{ start: '09:00', end: '18:00' }] } }
+ * 
  * @param {string} startDateTime - ISO string
  * @param {string} endDateTime - ISO string
- * @param {object} businessHours - { monday: { start: '09:00', end: '18:00', isOpen: true }, ... }
+ * @param {object} businessHours - Business hours configuration
  * @returns {{ valid: boolean, reason?: string }}
  */
 function isWithinBusinessHours(startDateTime, endDateTime, businessHours) {
@@ -1305,23 +1419,45 @@ function isWithinBusinessHours(startDateTime, endDateTime, businessHours) {
     const start = new Date(startDateTime);
     const end = new Date(endDateTime);
 
-    // Get day name (monday, tuesday, etc) in America/Sao_Paulo
+    // Get day of week (0-6, Sunday=0) in America/Sao_Paulo
     const formatterDay = new Intl.DateTimeFormat('en-US', {
         weekday: 'long',
         timeZone: 'America/Sao_Paulo'
     });
-    const dayName = formatterDay.format(start).toLowerCase();
+    const dayNameEn = formatterDay.format(start).toLowerCase();
 
-    const settings = businessHours[dayName];
+    // Map English day names to both formats
+    const dayKeyMap = {
+        'sunday': { old: 'sunday', new: 'dom' },
+        'monday': { old: 'monday', new: 'seg' },
+        'tuesday': { old: 'tuesday', new: 'ter' },
+        'wednesday': { old: 'wednesday', new: 'qua' },
+        'thursday': { old: 'thursday', new: 'qui' },
+        'friday': { old: 'friday', new: 'sex' },
+        'saturday': { old: 'saturday', new: 'sab' }
+    };
 
-    if (!settings || !settings.isOpen) {
+    const keys = dayKeyMap[dayNameEn];
+    if (!keys) return { valid: false, reason: 'invalid_day' };
+
+    // Try new format first (seg, ter, etc with slots array)
+    let daySettings = businessHours[keys.new];
+    let isNewFormat = daySettings && Array.isArray(daySettings.slots);
+
+    // Fall back to old format (monday, tuesday, etc with isOpen)
+    if (!isNewFormat) {
+        daySettings = businessHours[keys.old];
+    }
+
+    if (!daySettings) {
         return { valid: false, reason: 'closed_day' };
     }
 
-    const startHour = parseInt(settings.start.split(':')[0]);
-    const startMin = parseInt(settings.start.split(':')[1]);
-    const endHour = parseInt(settings.end.split(':')[0]);
-    const endMin = parseInt(settings.end.split(':')[1]);
+    // Check if day is open
+    const isOpen = isNewFormat ? daySettings.enabled : daySettings.isOpen;
+    if (!isOpen) {
+        return { valid: false, reason: 'closed_day' };
+    }
 
     // Helper to get HH and MM in specific timezone
     const getParts = (date) => {
@@ -1334,24 +1470,43 @@ function isWithinBusinessHours(startDateTime, endDateTime, businessHours) {
         const parts = fmt.formatToParts(date);
         const h = parseInt(parts.find(p => p.type === 'hour').value);
         const m = parseInt(parts.find(p => p.type === 'minute').value);
-        // Handle 24h format weirdness if any (usually Intl with hour12: false is good)
-        // If hour is 24, it means 00
         return { h: h === 24 ? 0 : h, m };
     };
 
     const reqStart = getParts(start);
     const reqEnd = getParts(end);
+    const reqStartMins = reqStart.h * 60 + reqStart.m;
+    const reqEndMins = reqEnd.h * 60 + reqEnd.m;
 
-    const reqStartHour = reqStart.h;
-    const reqStartMin = reqStart.m;
-    const reqEndHour = reqEnd.h;
-    const reqEndMin = reqEnd.m;
+    // Handle new format with slots array
+    if (isNewFormat) {
+        const slots = daySettings.slots || [];
 
-    // Convert everything to minutes for easier comparison
+        // Check if the requested time falls within ANY of the slots
+        for (const slot of slots) {
+            const [slotStartH, slotStartM] = slot.start.split(':').map(Number);
+            const [slotEndH, slotEndM] = slot.end.split(':').map(Number);
+            const slotStartMins = slotStartH * 60 + slotStartM;
+            const slotEndMins = slotEndH * 60 + slotEndM;
+
+            // Check if requested time is within this slot
+            if (reqStartMins >= slotStartMins && reqEndMins <= slotEndMins) {
+                return { valid: true };
+            }
+        }
+
+        // No slot matched
+        return { valid: false, reason: 'hours_out_of_range' };
+    }
+
+    // Handle old format with single start/end
+    const startHour = parseInt(daySettings.start.split(':')[0]);
+    const startMin = parseInt(daySettings.start.split(':')[1]);
+    const endHour = parseInt(daySettings.end.split(':')[0]);
+    const endMin = parseInt(daySettings.end.split(':')[1]);
+
     const dayStartMins = startHour * 60 + startMin;
     const dayEndMins = endHour * 60 + endMin;
-    const reqStartMins = reqStartHour * 60 + reqStartMin;
-    const reqEndMins = reqEndHour * 60 + reqEndMin;
 
     if (reqStartMins < dayStartMins || reqEndMins > dayEndMins) {
         return { valid: false, reason: 'hours_out_of_range' };
@@ -1362,24 +1517,47 @@ function isWithinBusinessHours(startDateTime, endDateTime, businessHours) {
 
 /**
  * Format business hours for display
+ * Supports BOTH old format: { monday: { isOpen, start, end } }
+ * AND new format: { seg: { enabled, slots: [{ start, end }] } }
+ * 
  * @param {object} businessHours 
  * @returns {string}
  */
 function formatBusinessHoursForDisplay(businessHours) {
     if (!businessHours) return "24 horas";
 
-    const daysMap = {
-        sunday: 'Domingo', monday: 'Segunda', tuesday: 'Terça',
-        wednesday: 'Quarta', thursday: 'Quinta', friday: 'Sexta', saturday: 'Sábado'
+    // New format with Portuguese keys
+    const newDaysMap = {
+        'seg': 'Segunda', 'ter': 'Terça', 'qua': 'Quarta',
+        'qui': 'Quinta', 'sex': 'Sexta', 'sab': 'Sábado', 'dom': 'Domingo'
+    };
+
+    // Old format with English keys
+    const oldDaysMap = {
+        'monday': 'Segunda', 'tuesday': 'Terça', 'wednesday': 'Quarta',
+        'thursday': 'Quinta', 'friday': 'Sexta', 'saturday': 'Sábado', 'sunday': 'Domingo'
     };
 
     let lines = [];
-    for (const [key, label] of Object.entries(daysMap)) {
-        const day = businessHours[key];
-        if (day && day.isOpen) {
-            lines.push(`${label}: ${day.start} - ${day.end}`);
+
+    // Try new format first (check if 'seg' key exists)
+    if (businessHours.seg !== undefined) {
+        for (const [key, label] of Object.entries(newDaysMap)) {
+            const day = businessHours[key];
+            if (day && day.enabled && day.slots && day.slots.length > 0) {
+                const slotsStr = day.slots.map(s => `${s.start} - ${s.end}`).join(', ');
+                lines.push(`${label}: ${slotsStr}`);
+            }
+        }
+    } else {
+        // Fall back to old format
+        for (const [key, label] of Object.entries(oldDaysMap)) {
+            const day = businessHours[key];
+            if (day && day.isOpen) {
+                lines.push(`${label}: ${day.start} - ${day.end}`);
+            }
         }
     }
 
-    return lines.join('\n');
+    return lines.length > 0 ? lines.join('\n') : "Horários não configurados";
 }

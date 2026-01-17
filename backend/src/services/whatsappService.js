@@ -12,6 +12,7 @@ import { convertWavToOgg } from '../utils/audioConverter.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getConversationHistory, saveMessage } from './historyService.js';
 import prisma from '../config/prisma.js';
+import { getConnectionStatus as getCalendarConnectionStatus } from './googleCalendarService.js';
 
 // Store active WhatsApp sessions
 const sessions = new Map();
@@ -34,6 +35,15 @@ const audioModeEnabled = new Map(); // contactId -> boolean
 
 // Store user emails for Google Calendar integration (sessionId -> email)
 const userEmails = new Map();
+
+// Store appointment durations for calendar scheduling (sessionId -> minutes)
+const appointmentDurations = new Map();
+
+// Store service type (online/presencial) per session
+const serviceTypes = new Map();
+
+// Store business address per session
+const businessAddresses = new Map();
 
 // --- METRICS STATE ---
 let metrics = {
@@ -811,7 +821,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         // Try finding user by ID (if sessionId is a User ID)
                         let user = await prisma.user.findUnique({
                             where: { id: sessionId },
-                            select: { customPrompt: true, email: true }
+                            select: { customPrompt: true, email: true, appointmentDuration: true, serviceType: true, businessAddress: true }
                         });
 
                         // If not found, try stripping 'user_' prefix if present
@@ -820,7 +830,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                             console.log(`🔄 Trying again with clean ID: ${cleanId}`);
                             user = await prisma.user.findUnique({
                                 where: { id: cleanId },
-                                select: { customPrompt: true, email: true }
+                                select: { customPrompt: true, email: true, appointmentDuration: true, serviceType: true, businessAddress: true }
                             });
                         }
 
@@ -836,6 +846,22 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                             if (user.email) {
                                 userEmails.set(sessionId, user.email);
                                 console.log(`📧 User email cached: ${user.email}`);
+                            }
+
+                            // Store user appointmentDuration for calendar scheduling
+                            if (user.appointmentDuration) {
+                                appointmentDurations.set(sessionId, user.appointmentDuration);
+                                console.log(`⏱️ Appointment duration cached: ${user.appointmentDuration} minutes`);
+                            }
+
+                            // Store service type and address
+                            if (user.serviceType) {
+                                serviceTypes.set(sessionId, user.serviceType);
+                                console.log(`🏢 Service type cached: ${user.serviceType}`);
+                            }
+                            if (user.businessAddress) {
+                                businessAddresses.set(sessionId, user.businessAddress);
+                                console.log(`📍 Business address cached: ${user.businessAddress}`);
                             }
                         } else {
                             console.log(`⚠️ Prompt not found in DB for ${sessionId}`);
@@ -864,7 +890,10 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         socket: socket,
                         agentPrompt: agentPrompt,
                         remoteJid: remoteJid,
-                        userEmail: userEmails.get(sessionId) || null
+                        userEmail: userEmails.get(sessionId) || null,
+                        appointmentDuration: appointmentDurations.get(sessionId) || 60,
+                        serviceType: serviceTypes.get(sessionId) || 'online',
+                        businessAddress: businessAddresses.get(sessionId) || null
                     });
                 }
 
@@ -917,7 +946,7 @@ const processBufferedMessages = async (contactId, io) => {
         return;
     }
 
-    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid, userEmail } = buffer;
+    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid, userEmail, appointmentDuration, serviceType, businessAddress } = buffer;
 
     // Concatenar todas as mensagens em uma só, separadas por quebra de linha
     const combinedMessage = messages.join('\n');
@@ -966,6 +995,18 @@ const processBufferedMessages = async (contactId, io) => {
         const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
         console.log(`🤖 Forwarding ${messages.length} buffered messages to AI Engine: ${aiServiceUrl}`);
 
+        // Check if Google Calendar is connected for this user
+        let calendarConnected = false;
+        if (userEmail) {
+            try {
+                const calendarStatus = await getCalendarConnectionStatus(userEmail);
+                calendarConnected = calendarStatus?.isConnected || false;
+                console.log(`📅 Calendar connected for ${userEmail}: ${calendarConnected}`);
+            } catch (e) {
+                console.log(`⚠️ Could not check calendar status: ${e.message}`);
+            }
+        }
+
         await axios.post(`${aiServiceUrl}/webhook/whatsapp`, {
             userId: sessionId,
             remoteJid: remoteJid,
@@ -975,7 +1016,11 @@ const processBufferedMessages = async (contactId, io) => {
             incomingMessageType: lastIncomingType,
             instancePhone: instancePhone,
             customerPhone: customerPhone,
-            userEmail: userEmail  // Email do usuário para Google Calendar
+            userEmail: userEmail,  // Email do usuário para Google Calendar
+            appointmentDuration: appointmentDuration,  // Duração padrão dos agendamentos
+            serviceType: serviceType,  // Tipo de serviço (online/presencial)
+            businessAddress: businessAddress,  // Endereço do estabelecimento
+            calendarConnected: calendarConnected  // Se o Google Calendar está conectado
         });
 
         console.log(`✅ Buffered messages forwarded to AI Engine for ${remoteJid}`);

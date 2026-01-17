@@ -355,7 +355,8 @@ ${scheduleStr}
                 body: JSON.stringify({
                     businessHours: businessInfo.openingHours,
                     serviceType: businessInfo.serviceType,
-                    businessAddress: businessInfo.address || null
+                    businessAddress: businessInfo.address || null,
+                    appointmentDuration: businessInfo.appointmentDuration
                 })
             });
 
@@ -557,7 +558,7 @@ ${scheduleStr}
                                 agentPrompt={chatState.agentConfig?.prompt}
                                 wizardData={wizardData}
                                 nicheId={currentSchema?.id}
-                                onSaveAndFinish={() => setCurrentStep('dashboard')}
+                                onSaveAndFinish={() => onStartChat?.('')}
                                 onBack={() => setCurrentStep('chat')}
                                 whatsappModalState={whatsappModalState}
                                 handleGenerateQR={handleGenerateQR}

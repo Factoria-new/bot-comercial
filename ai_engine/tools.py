@@ -122,6 +122,7 @@ class GoogleCalendarTool(BaseTool):
     """
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
+    appointment_duration: int = Field(default=60, description="Duração padrão dos agendamentos em minutos")
 
     def _run(self, customer_name: str, customer_email: str, start_datetime: str, 
              end_datetime: str, description: str = ""):
@@ -450,3 +451,131 @@ class GoogleCalendarCheckAvailabilityTool(BaseTool):
                  
         except Exception as e:
             return f"Erro de conexão: {str(e)}"
+
+
+class GoogleCalendarCancelTool(BaseTool):
+    name: str = "Cancelar Agendamento"
+    description: str = """
+    Ferramenta para CANCELAR um compromisso existente no calendário.
+    USE ESTA FERRAMENTA quando o cliente quiser CANCELAR (remover) um agendamento.
+    
+    FLUXO DE USO:
+    1. Primeira chamada: passe customer_email
+       - Se houver 1 evento: pede confirmação antes de cancelar
+       - Se houver mais de 1: retorna lista numerada (1, 2, 3...)
+    
+    2. Segunda chamada (se houve lista): passe customer_email + event_index
+       - event_index: número que o cliente escolheu (1, 2, 3...)
+       - A ferramenta busca novamente e cancela o evento correspondente
+    
+    IMPORTANTE: 
+    - SEMPRE confirme com o cliente antes de cancelar definitivamente
+    - event_index é o NÚMERO da lista (1, 2, 3...), NÃO o ID técnico
+    - Você DEVE chamar a ferramenta novamente após cliente escolher
+    
+    Parâmetros:
+    - customer_email: E-mail do cliente (OBRIGATÓRIO)
+    - event_index: Número do evento na lista (1, 2, 3...) - use SOMENTE após cliente escolher
+    - confirmed: True se o cliente já confirmou que deseja cancelar
+    """
+    
+    user_id: str = Field(default="", description="Email do usuário dono do calendário")
+
+    def _run(self, customer_email: str, event_index: int = 0, confirmed: bool = False):
+        """
+        Cancela um compromisso existente.
+        
+        Args:
+            customer_email: E-mail do cliente
+            event_index: Número do evento na lista (1, 2, 3...) - opcional
+            confirmed: Se o cliente confirmou o cancelamento
+        """
+        node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
+        
+        try:
+            # 1. Primeiro, buscar eventos do cliente
+            search_response = requests.get(
+                f"{node_api_url}/api/google-calendar/customer-events",
+                params={
+                    "userId": self.user_id,
+                    "customerEmail": customer_email
+                }
+            )
+            search_result = search_response.json()
+            
+            if not search_result.get("success"):
+                return f"⚠️ AÇÃO NÃO REALIZADA: Erro ao buscar agendamentos: {search_result.get('error', 'Erro desconhecido')}"
+            
+            events = search_result.get("events", [])
+            
+            if len(events) == 0:
+                return f"⚠️ AÇÃO NÃO REALIZADA: Não encontrei nenhum agendamento futuro para o e-mail {customer_email}. Verifique se o e-mail está correto."
+            
+            event_id = None
+            selected_event = None
+            
+            if len(events) == 1:
+                # Só tem 1 evento - usar ele
+                event_id = events[0]["id"]
+                selected_event = events[0]
+            elif event_index > 0:
+                # Cliente escolheu um número da lista
+                if event_index > len(events):
+                    return f"⚠️ AÇÃO NÃO REALIZADA: O número {event_index} não existe na lista. Escolha um número entre 1 e {len(events)}."
+                
+                selected_event = events[event_index - 1]  # Converter para 0-indexed
+                event_id = selected_event["id"]
+            else:
+                # Múltiplos eventos e cliente não escolheu ainda - mostrar lista
+                event_list = "\n".join([
+                    f"  {i+1}. {e['summary']} - {e['start']}" 
+                    for i, e in enumerate(events)
+                ])
+                return f"""⚠️ AÇÃO NÃO REALIZADA - PRECISO QUE O CLIENTE ESCOLHA:
+
+Encontrei {len(events)} agendamentos para {customer_email}:
+{event_list}
+
+👉 PERGUNTE ao cliente qual número ele deseja CANCELAR.
+👉 Depois que ele responder, CHAME ESTA FERRAMENTA NOVAMENTE com:
+   - customer_email: "{customer_email}"
+   - event_index: [número que o cliente escolheu]
+   - confirmed: False (para pedir confirmação)
+
+ATENÇÃO: O cancelamento NÃO foi feito. Você DEVE chamar a ferramenta novamente."""
+            
+            # Pedir confirmação antes de cancelar
+            if not confirmed:
+                return f"""⚠️ CONFIRMAÇÃO NECESSÁRIA:
+
+Você deseja realmente cancelar o seguinte agendamento?
+📅 {selected_event['summary']}
+🕐 {selected_event['start']}
+
+👉 PERGUNTE ao cliente se ele CONFIRMA o cancelamento.
+👉 Se ele confirmar, CHAME ESTA FERRAMENTA NOVAMENTE com:
+   - customer_email: "{customer_email}"
+   - event_index: {event_index if event_index > 0 else 1}
+   - confirmed: True
+
+ATENÇÃO: O cancelamento NÃO foi feito ainda. Aguarde confirmação do cliente."""
+            
+            # Fazer o cancelamento
+            response = requests.post(
+                f"{node_api_url}/api/google-calendar/cancel-appointment",
+                json={
+                    "userId": self.user_id,
+                    "eventId": event_id
+                }
+            )
+            
+            result = response.json()
+            
+            if result.get("success"):
+                return f"✅ Agendamento cancelado com sucesso!\n\nO compromisso '{selected_event['summary']}' foi removido do calendário."
+            else:
+                return f"❌ Erro ao cancelar: {result.get('error', 'Erro desconhecido')}"
+                
+        except Exception as e:
+            return f"Erro de conexão com o serviço de calendário: {str(e)}"
+
