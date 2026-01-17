@@ -160,6 +160,7 @@ router.get('/business-info', extractUserId, async (req, res) => {
         });
     } catch (error) {
         logger.error('Erro ao buscar business info:', error);
+        console.error('🔴 FULL GET ERROR:', error);
         res.status(500).json({ success: false, error: 'Erro ao buscar informações de funcionamento' });
     }
 });
@@ -214,6 +215,7 @@ router.put('/business-info', extractUserId, async (req, res) => {
         });
     } catch (error) {
         logger.error('Erro ao salvar business info:', error);
+        console.error('🔴 FULL ERROR:', error);
         res.status(500).json({ success: false, error: 'Erro ao salvar informações de funcionamento' });
     }
 });

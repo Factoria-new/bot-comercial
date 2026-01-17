@@ -165,9 +165,35 @@ export const initWhatsAppService = async (io) => {
                     for (const sessionId of folders) {
                         try {
                             console.log(`🔄 Restoring session: ${sessionId}`);
-                            // Pass null as socket since no client is connected yet during boot
-                            // Pass null as userId/phone - let it recover from session data
-                            await createSession(sessionId, null, io);
+
+                            // Extract userId from sessionId (format: user_xxx)
+                            let userId = null;
+                            let phoneNumber = null;
+
+                            if (sessionId.startsWith('user_')) {
+                                userId = sessionId.replace('user_', '');
+                                console.log(`📋 Extracted userId from sessionId: ${userId}`);
+
+                                // Try to get instance info from database
+                                try {
+                                    const instance = await prisma.instance.findFirst({
+                                        where: { userId }
+                                    });
+
+                                    if (instance) {
+                                        phoneNumber = instance.phoneNumber;
+                                        console.log(`📱 Found instance in DB: phone=${phoneNumber} for user ${userId}`);
+                                    } else {
+                                        console.log(`⚠️ No instance found in DB for user ${userId}, will create on connect`);
+                                    }
+                                } catch (dbError) {
+                                    console.error(`❌ Error fetching instance from DB for ${sessionId}:`, dbError.message);
+                                }
+                            }
+
+                            // Pass userId and phoneNumber for proper session restoration
+                            await createSession(sessionId, null, io, phoneNumber, userId);
+                            console.log(`✅ Session ${sessionId} restoration initiated`);
                         } catch (err) {
                             console.error(`❌ Failed to restore session ${sessionId}:`, err.message);
                         }

@@ -968,11 +968,10 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
         };
     }
 
-    console.log(`✅ Appointment scheduled successfully. Link: ${eventResult.meetLink}`);
+    console.log(`✅ Appointment scheduled successfully. isOnline: ${isOnline}, Link: ${eventResult.meetLink}`);
 
-    // Return success with appropriate link/address
-    // ALWAYS return meetLink if it exists, regardless of serviceType
-    // The Agent/Front-end can decide how to present it
+    // Return success with appropriate link/address based on serviceType
+    // Only include meetLink for online appointments to avoid confusion
     const result = {
         success: true,
         event: eventResult.event,
@@ -980,8 +979,10 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
         customerEmail,
         startTime: requestedStart,
         endTime: requestedEnd,
-        meetLink: eventResult.meetLink || null,
-        address: businessAddress || null
+        // Only include meetLink for online appointments
+        meetLink: isOnline ? (eventResult.meetLink || null) : null,
+        // Only include address for presencial appointments
+        address: !isOnline ? (businessAddress || null) : null
     };
 
     return result;

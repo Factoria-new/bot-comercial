@@ -5,6 +5,8 @@ from datetime import datetime
 import traceback
 import time
 import random
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 app = FastAPI()
 
@@ -102,15 +104,50 @@ pelo WhatsApp e peça para entrar em contato por outro canal.
    d) Segunda chamada: inclua event_index com o número escolhido
 """
 
-def run_crew_with_retry(crew, retries=3, delay=2):
+# Timeout configuration (in seconds)
+CREW_TIMEOUT_SECONDS = 90  # Maximum time to wait for crew.kickoff()
+
+# Thread pool for running synchronous crew operations
+_executor = ThreadPoolExecutor(max_workers=4)
+
+async def run_crew_with_timeout(crew, timeout=CREW_TIMEOUT_SECONDS):
     """
-    Executa o crew.kickoff() com mecanismo de retry manual para falhas de API (500).
+    Executa o crew.kickoff() com timeout para evitar travamentos.
+    Usa ThreadPoolExecutor para rodar a operação síncrona em thread separada.
+    """
+    loop = asyncio.get_event_loop()
+    
+    try:
+        print(f"⏱️ Iniciando crew.kickoff() com timeout de {timeout}s...")
+        # Run synchronous crew.kickoff() in thread pool with timeout
+        result = await asyncio.wait_for(
+            loop.run_in_executor(_executor, crew.kickoff),
+            timeout=timeout
+        )
+        print(f"✅ crew.kickoff() completado com sucesso")
+        return result
+    except asyncio.TimeoutError:
+        print(f"❌ TIMEOUT: crew.kickoff() excedeu {timeout}s")
+        raise TimeoutError(f"O processamento excedeu o limite de {timeout} segundos. Tente novamente.")
+
+async def run_crew_with_retry(crew, retries=3, delay=2):
+    """
+    Executa o crew.kickoff() com mecanismo de retry e timeout.
     """
     last_exception = None
     
     for attempt in range(retries):
         try:
-            return crew.kickoff()
+            return await run_crew_with_timeout(crew)
+        except TimeoutError as e:
+            last_exception = e
+            if attempt < retries - 1:
+                wait_time = delay * (attempt + 1)
+                print(f"⚠️ Timeout (Tentativa {attempt+1}/{retries}). Tentando novamente em {wait_time}s...")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ Timeout após {retries} tentativas.")
+                raise e
         except Exception as e:
             last_exception = e
             error_str = str(e)
@@ -119,7 +156,7 @@ def run_crew_with_retry(crew, retries=3, delay=2):
             if "500" in error_str or "Internal error" in error_str or "INTERNAL" in error_str:
                 wait_time = delay * (attempt + 1) + random.uniform(0, 1)
                 print(f"⚠️ Erro 500 detectado (Tentativa {attempt+1}/{retries}). Tentando novamente em {wait_time:.1f}s...")
-                time.sleep(wait_time)
+                await asyncio.sleep(wait_time)
             else:
                 # Se não for erro de servidor, falha imediatamente (ex: erro de validação)
                 raise e
@@ -185,6 +222,7 @@ Histórico da Conversa:
 📍 INFORMAÇÕES DO ESTABELECIMENTO:
 - Tipo de Atendimento: {'PRESENCIAL' if data.serviceType == 'presencial' else 'ONLINE (Google Meet)'}
 - Endereço: {data.businessAddress if data.businessAddress else 'Não configurado'}
+- Duração padrão dos agendamentos: {appointment_duration} minutos
 
 ═══════════════════════════════════════════════════════════════
                         INSTRUÇÕES GERAIS
@@ -205,6 +243,7 @@ Após verificar disponibilidade e ANTES de agendar, você DEVE enviar um RESUMO 
 - Serviço: [serviço solicitado]
 - Data: [data formatada]
 - Horário: [horário]
+- Duração: {appointment_duration} minutos
 - Local: {'[ENDEREÇO DO ESTABELECIMENTO]' if data.serviceType == 'presencial' else 'Google Meet (link enviado por e-mail)'}
 
 Só use 'Agendar Compromisso' APÓS o cliente confirmar "sim" ou "pode marcar".
@@ -224,7 +263,7 @@ APÓS AGENDAR COM SUCESSO:
             memory=False
         )
 
-        result = run_crew_with_retry(crew)
+        result = await run_crew_with_retry(crew)
         return {"status": "processing", "result": str(result)}
     
     except Exception as e:
@@ -267,7 +306,7 @@ Analise a mensagem e responda de forma adequada seguindo suas instruções, LEVA
             memory=False
         )
 
-        result = run_crew_with_retry(crew)
+        result = await run_crew_with_retry(crew)
         print(f"✅ Instagram message processed for {data.senderId}")
         return {"status": "processing", "result": str(result)}
     

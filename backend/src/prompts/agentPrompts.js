@@ -10,6 +10,55 @@ const formatPrice = (price) => {
     return price.includes('R$') ? price : `R$ ${price}`;
 };
 
+// Map of weekday keys to Portuguese labels
+const WEEKDAYS_MAP = {
+    'seg': 'Segunda-feira',
+    'ter': 'Terça-feira',
+    'qua': 'Quarta-feira',
+    'qui': 'Quinta-feira',
+    'sex': 'Sexta-feira',
+    'sab': 'Sábado',
+    'dom': 'Domingo',
+};
+
+const WEEKDAYS_ORDER = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+
+/**
+ * Formats opening hours object to a readable string
+ * @param {Object|string} openingHours - Schedule object or string
+ * @returns {string} Formatted schedule string
+ */
+const formatOpeningHours = (openingHours) => {
+    // If already a string, return as-is
+    if (typeof openingHours === 'string') {
+        return openingHours;
+    }
+
+    // If null/undefined, return empty
+    if (!openingHours) {
+        return '';
+    }
+
+    // If object, format each enabled day
+    if (typeof openingHours === 'object') {
+        const lines = [];
+
+        WEEKDAYS_ORDER.forEach(key => {
+            const day = openingHours[key];
+            const label = WEEKDAYS_MAP[key] || key;
+
+            if (day?.enabled && day.slots?.length > 0) {
+                const slots = day.slots.map(s => `${s.start}-${s.end}`).join(', ');
+                lines.push(`${label}: ${slots}`);
+            }
+        });
+
+        return lines.length > 0 ? lines.join('\n') : 'Horários não definidos';
+    }
+
+    return '';
+};
+
 /**
  * Generates the unified catalog string based on available data fields
  */
@@ -39,7 +88,9 @@ const generateCatalogString = (data, niche) => {
         catalog += data.products.map(p => `- ${p.name}: ${p.description || ''}`).join('\n');
     }
 
-    if (data.openingHours) catalog += `\nHORÁRIO DE ATENDIMENTO: ${data.openingHours}`;
+    // NOTE: Opening hours and address are NOT added here anymore.
+    // They are managed by BusinessSettingsModal which adds the "INFORMAÇÕES DE FUNCIONAMENTO"
+    // section to the prompt. Adding them here would cause duplication.
 
     // Add useful links if present
     if (data.usefulLinks?.length > 0) {

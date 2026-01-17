@@ -22,9 +22,9 @@ const prisma = new PrismaClient({ adapter });
 
 async function createUser() {
     // Dados do usuário de desenvolvimento
-    const email = 'nathanods@gmail.com';
+    const email = 'portob162@gmail.com';
     const password = '123123';
-    const displayName = 'Nathan Oliveira';
+    const displayName = 'Bruno Porto';
     const role = 'pro';
 
     console.log('🔧 Criando usuário de desenvolvimento...\n');

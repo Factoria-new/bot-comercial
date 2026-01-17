@@ -339,15 +339,34 @@ ${scheduleStr}
 
 **IMPORTANTE para Agendamentos**: Ao utilizar o Google Calendar para criar eventos ou verificar disponibilidade, respeite estritamente os horários de funcionamento acima. NÃO agende nada fora desses horários.`;
 
+        let cleanedPrompt = prompt;
+
+        // Clean up duplicate schedule/address info from CONTEXTO DE DADOS section
+        // This handles prompts created before this fix was implemented
+
+        // Pattern 1: HORÁRIO DE ATENDIMENTO followed by weekday lines (with newline prefix)
+        cleanedPrompt = cleanedPrompt.replace(/\nHORÁRIO DE ATENDIMENTO:\n(?:[\w-]+:\s*\d{2}:\d{2}-\d{2}:\d{2}(?:,\s*\d{2}:\d{2}-\d{2}:\d{2})*\n?)+/gi, '');
+
+        // Pattern 2: Weekday lines stuck to text (without newline prefix) - handles "sobrancelha: 82Segunda-feira: 09:00-18:00"
+        // Match Portuguese weekday names followed by time ranges
+        cleanedPrompt = cleanedPrompt.replace(/(Segunda-feira|Terça-feira|Quarta-feira|Quinta-feira|Sexta-feira|Sábado|Domingo):\s*\d{2}:\d{2}-\d{2}:\d{2}(?:,\s*\d{2}:\d{2}-\d{2}:\d{2})*/gi, '');
+
+        // Pattern 3: Clean up any remaining address/online status in old format
+        cleanedPrompt = cleanedPrompt.replace(/\nENDEREÇO:\s*[^\n]+\n?/gi, '');
+        cleanedPrompt = cleanedPrompt.replace(/\nATENDIMENTO:\s*100%\s*Online\n?/gi, '');
+
+        // Clean up multiple consecutive newlines that may be left behind
+        cleanedPrompt = cleanedPrompt.replace(/\n{3,}/g, '\n\n');
+
         // Check if prompt already has the business info block
         const blockRegex = /# INFORMAÇÕES DE FUNCIONAMENTO[\s\S]*?(?=\n#|$)/;
 
-        if (blockRegex.test(prompt)) {
+        if (blockRegex.test(cleanedPrompt)) {
             // Replace existing block
-            return prompt.replace(blockRegex, businessInfoBlock);
+            return cleanedPrompt.replace(blockRegex, businessInfoBlock);
         } else {
             // Append block
-            return `${prompt}\n\n${businessInfoBlock}`;
+            return `${cleanedPrompt}\n\n${businessInfoBlock}`;
         }
     };
 
