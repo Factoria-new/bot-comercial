@@ -32,7 +32,15 @@ async function generateSamples() {
     for (const voice of VOICES) {
         try {
             console.log(`🎙️ Generating sample for ${voice}...`);
-            const result = await generateAudio(TEXT, voice, apiKey);
+
+            let sampleText = TEXT;
+            // Use male greeting for male voices
+            if (['Charon', 'Fenrir', 'Orus'].includes(voice)) {
+                sampleText = "Olá, eu sou o seu assistente virtual.";
+            }
+            console.log(`📝 Text for ${voice}: "${sampleText}"`);
+
+            const result = await generateAudio(sampleText, voice, apiKey);
 
             if (result && result.audioContent) {
                 const buffer = Buffer.from(result.audioContent, 'base64');

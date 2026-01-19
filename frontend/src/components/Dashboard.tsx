@@ -7,6 +7,7 @@ import { useIntegrations } from '@/hooks/useIntegrations';
 import { promptService } from '@/services/promptService';
 import { AnimatePresence } from 'framer-motion';
 import Layout from '@/components/Layout';
+import LottieLoader from '@/components/LottieLoader';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -55,11 +56,7 @@ const Dashboard = () => {
   // LOADING STATE
   // =====================
   if (phase === 'loading') {
-    return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-        <div className="text-white text-lg">Carregando...</div>
-      </div>
-    );
+    return <LottieLoader />;
   }
 
   // =====================
@@ -90,7 +87,7 @@ const Dashboard = () => {
             {/* Dashboard Content (Metrics) */}
             <DashboardStep
               integrations={integrations}
-              onOpenIntegrations={(id) => handleIntegrationClick(id)}
+              onOpenIntegrations={() => handleIntegrationClick('')}
             />
           </div>
         </Layout>

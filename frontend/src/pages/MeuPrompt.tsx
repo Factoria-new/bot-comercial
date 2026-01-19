@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Edit3, Upload, Save, RotateCcw, FileText, Check, Sparkles, Settings } from "lucide-react";
+import { Edit3, Upload, Save, RotateCcw, FileText, Check, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { promptService } from "@/services/promptService";
 import { PromptEditChat } from "@/components/PromptEditChat";
 import Lottie from "lottie-react";
 import { BusinessSettingsModal } from "@/components/BusinessSettingsModal";
 import Layout from "@/components/Layout";
+import LottieLoader from "@/components/LottieLoader";
 
 const MeuPrompt = () => {
     const { toast } = useToast();
@@ -149,11 +150,7 @@ const MeuPrompt = () => {
     };
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-                <div className="text-white text-lg">Carregando prompt...</div>
-            </div>
-        );
+        return <LottieLoader />;
     }
 
     return (
@@ -235,7 +232,7 @@ const MeuPrompt = () => {
                             variant="outline"
                             className="bg-white/5 border-white/20 text-white hover:bg-white/10"
                         >
-                            <Settings className="w-4 h-4 mr-2" />
+                            <img src="/icons/business-profile.png" alt="" className="w-4 h-4 mr-2 brightness-0 invert" />
                             Perfil do Negócio
                         </Button>
 

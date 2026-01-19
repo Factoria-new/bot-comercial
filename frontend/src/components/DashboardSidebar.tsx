@@ -34,12 +34,12 @@ import { useToast } from "@/hooks/use-toast";
 import Lottie from "lottie-react";
 
 const VOICE_OPTIONS = [
-    { value: 'Kore', label: 'Kore', gender: 'Feminino', audioSrc: '/voices/kore.wav' },
-    { value: 'Aoede', label: 'Aoede', gender: 'Feminino', audioSrc: '/voices/aoede.wav' },
-    { value: 'Zephyr', label: 'Zephyr', gender: 'Feminino', audioSrc: '/voices/zephyr.wav' },
-    { value: 'Charon', label: 'Charon', gender: 'Masculino', audioSrc: '/voices/charon.wav' },
-    { value: 'Fenrir', label: 'Fenrir', gender: 'Masculino', audioSrc: '/voices/fenrir.wav' },
-    { value: 'Puck', label: 'Puck', gender: 'Não-binário', audioSrc: '/voices/puck.wav' },
+    { value: 'Kore', label: 'Kore', gender: 'Feminino', audioSrc: '/voices/kore.wav?v=2' },
+    { value: 'Aoede', label: 'Aoede', gender: 'Feminino', audioSrc: '/voices/aoede.wav?v=2' },
+    { value: 'Zephyr', label: 'Zephyr', gender: 'Feminino', audioSrc: '/voices/zephyr.wav?v=2' },
+    { value: 'Charon', label: 'Charon', gender: 'Masculino', audioSrc: '/voices/charon.wav?v=2' },
+    { value: 'Fenrir', label: 'Fenrir', gender: 'Masculino', audioSrc: '/voices/fenrir.wav?v=2' },
+    { value: 'Puck', label: 'Puck', gender: 'Não-binário', audioSrc: '/voices/puck.wav?v=2' },
 ];
 
 interface DashboardSidebarProps {
@@ -653,8 +653,9 @@ export default function DashboardSidebar({
                                                             <TooltipTrigger asChild>
                                                                 <Info className="w-3 h-3 text-white/60 hover:text-white transition-colors cursor-default" />
                                                             </TooltipTrigger>
-                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs">
-                                                                <p>O bot enviará áudio até você pedir para parar.</p>
+                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs max-w-[240px]">
+                                                                <p>O bot iniciará as conversas em texto, mas muda o formato se o usuário solicitar (ex: "mande áudio").</p>
+                                                                <p className="mt-2 opacity-70">O formato se mantém até o usuário pedir para parar.</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>
@@ -687,8 +688,9 @@ export default function DashboardSidebar({
                                                             <TooltipTrigger asChild>
                                                                 <Info className="w-3 h-3 text-white/60 hover:text-white transition-colors cursor-default" />
                                                             </TooltipTrigger>
-                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs">
-                                                                <p>O bot responderá com áudio sempre que receber uma mensagem de voz.</p>
+                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs max-w-[240px]">
+                                                                <p>O comportamento se adapta ao usuário: responde texto com texto e áudio com áudio.</p>
+                                                                <p className="mt-2 opacity-70">Ideal para quem alterna entre digitar e falar.</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>
@@ -721,8 +723,9 @@ export default function DashboardSidebar({
                                                             <TooltipTrigger asChild>
                                                                 <Info className="w-3 h-3 text-white/60 hover:text-white transition-colors cursor-default" />
                                                             </TooltipTrigger>
-                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs">
-                                                                <p>O bot responderá todas as mensagens com áudio.</p>
+                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs max-w-[240px]">
+                                                                <p>O bot ignora o formato de entrada e responde sempre por áudio.</p>
+                                                                <p className="mt-2 opacity-70">Ideal para interações onde o foco é a voz, simulando uma chamada.</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>

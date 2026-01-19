@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import {
     X,
     Check,
-    Settings,
     MapPin,
     Globe,
     Trash2,
@@ -21,6 +20,7 @@ import {
     Clock,
     Loader2
 } from "lucide-react";
+import LottieLoader from "@/components/LottieLoader";
 import {
     DaySchedule,
     WeekDay,
@@ -471,7 +471,7 @@ ${scheduleStr}
                     <div className="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="p-2 rounded-lg bg-purple-500/20">
-                                <Settings className="w-5 h-5 text-purple-400" />
+                                <img src="/icons/business-profile.png" alt="" className="w-5 h-5 brightness-0 invert" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-white">Perfil do Negócio</h2>
@@ -492,7 +492,9 @@ ${scheduleStr}
                     <div className="flex-1 overflow-y-auto p-5 space-y-6">
                         {isLoading ? (
                             <div className="flex items-center justify-center py-12">
-                                <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                                <div className="p-4 rounded-full bg-white/5">
+                                    <LottieLoader fullScreen={false} size={100} />
+                                </div>
                             </div>
                         ) : (
                             <>
