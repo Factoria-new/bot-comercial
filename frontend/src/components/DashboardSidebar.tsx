@@ -639,24 +639,21 @@ export default function DashboardSidebar({
 
                                             {/* Rule 1: Audio on request */}
                                             <div
-                                                className={cn(
-                                                    "flex items-center justify-between p-2.5 rounded-lg transition-colors",
-                                                    ttsRules.audioOnly ? "opacity-50" : "hover:bg-white/5 cursor-pointer"
-                                                )}
-                                                onClick={() => {
-                                                    if (!ttsRules.audioOnly) {
-                                                        setTtsRules(prev => ({ ...prev, audioOnRequest: !prev.audioOnRequest }))
-                                                    }
-                                                }}
+                                                className="flex items-center justify-between p-2.5 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+                                                onClick={() => setTtsRules({
+                                                    audioOnRequest: !ttsRules.audioOnRequest,
+                                                    audioOnAudioReceived: false,
+                                                    audioOnly: false
+                                                })}
                                             >
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-xs text-white/80">Áudio quando solicitado</span>
                                                     <TooltipProvider>
-                                                        <Tooltip>
+                                                        <Tooltip delayDuration={200}>
                                                             <TooltipTrigger asChild>
-                                                                <Info className="w-3 h-3 text-white/60 hover:text-white transition-colors cursor-help" />
+                                                                <Info className="w-3 h-3 text-white/60 hover:text-white transition-colors cursor-default" />
                                                             </TooltipTrigger>
-                                                            <TooltipContent className="bg-slate-800 border-white/10 text-white text-xs">
+                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs">
                                                                 <p>O bot enviará áudio até você pedir para parar.</p>
                                                             </TooltipContent>
                                                         </Tooltip>
@@ -676,17 +673,26 @@ export default function DashboardSidebar({
 
                                             {/* Rule 2: Audio when receiving audio */}
                                             <div
-                                                className={cn(
-                                                    "flex items-center justify-between p-2.5 rounded-lg transition-colors",
-                                                    ttsRules.audioOnly ? "opacity-50" : "hover:bg-white/5 cursor-pointer"
-                                                )}
-                                                onClick={() => {
-                                                    if (!ttsRules.audioOnly) {
-                                                        setTtsRules(prev => ({ ...prev, audioOnAudioReceived: !prev.audioOnAudioReceived }))
-                                                    }
-                                                }}
+                                                className="flex items-center justify-between p-2.5 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+                                                onClick={() => setTtsRules({
+                                                    audioOnRequest: false,
+                                                    audioOnAudioReceived: !ttsRules.audioOnAudioReceived,
+                                                    audioOnly: false
+                                                })}
                                             >
-                                                <span className="text-xs text-white/80">Áudio quando recebe áudio</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs text-white/80">Áudio quando recebe áudio</span>
+                                                    <TooltipProvider>
+                                                        <Tooltip delayDuration={200}>
+                                                            <TooltipTrigger asChild>
+                                                                <Info className="w-3 h-3 text-white/60 hover:text-white transition-colors cursor-default" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs">
+                                                                <p>O bot responderá com áudio sempre que receber uma mensagem de voz.</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                </div>
                                                 <div className={cn(
                                                     "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",
                                                     ttsRules.audioOnAudioReceived
@@ -708,8 +714,18 @@ export default function DashboardSidebar({
                                                     audioOnly: !ttsRules.audioOnly
                                                 })}
                                             >
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1.5">
                                                     <span className="text-xs text-white/80">Somente áudio</span>
+                                                    <TooltipProvider>
+                                                        <Tooltip delayDuration={200}>
+                                                            <TooltipTrigger asChild>
+                                                                <Info className="w-3 h-3 text-white/60 hover:text-white transition-colors cursor-default" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="right" sideOffset={10} className="z-[100] bg-slate-800 border-white/10 text-white text-xs">
+                                                                <p>O bot responderá todas as mensagens com áudio.</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 </div>
                                                 <div className={cn(
                                                     "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",

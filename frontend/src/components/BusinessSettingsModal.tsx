@@ -474,7 +474,7 @@ ${scheduleStr}
                                 <Settings className="w-5 h-5 text-purple-400" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-white">Configurações do Negócio</h2>
+                                <h2 className="text-lg font-bold text-white">Perfil do Negócio</h2>
                                 <p className="text-white/50 text-xs">Tipo de atendimento e horários de funcionamento</p>
                             </div>
                         </div>
