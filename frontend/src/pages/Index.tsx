@@ -1,14 +1,10 @@
 
-import React from 'react';
-import Layout from '@/components/Layout';
 import Dashboard from '@/components/Dashboard';
 
+// Dashboard handles its own Layout internally, conditionally showing Lia button
+// based on whether user is in onboarding or app phase
 const Index = () => {
-  return (
-    <Layout>
-      <Dashboard />
-    </Layout>
-  );
+  return <Dashboard />;
 };
 
 export default Index;

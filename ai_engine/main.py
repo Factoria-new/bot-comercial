@@ -43,8 +43,8 @@ def format_history(history: Optional[List[HistoryItem]]) -> str:
         role_pt = "Atendente" if item.role in ["assistant", "model"] else "Cliente"
         formatted.append(f"{role_pt}: {item.content}")
     
-    # Pegar apenas as últimas 10 mensagens para não estourar contexto
-    return "\n".join(formatted[-10:])
+    # Pegar as últimas 40 mensagens para manter contexto robusto (Gemini aguenta muito mais)
+    return "\n".join(formatted[-30:])
 
 
 def get_calendar_tools_description(calendar_connected: bool, current_year: int) -> str:
@@ -249,10 +249,12 @@ Após verificar disponibilidade e ANTES de agendar, você DEVE enviar um RESUMO 
 Só use 'Agendar Compromisso' APÓS o cliente confirmar "sim" ou "pode marcar".
 
 APÓS AGENDAR COM SUCESSO:
+⚠️ VOCÊ DEVE OBRIGATORIAMENTE usar a ferramenta 'Enviar Mensagem WhatsApp' para confirmar ao cliente!
 - Para PRESENCIAL: Informe o endereço completo ({data.businessAddress if data.businessAddress else 'endereço não configurado'})
 - Para ONLINE: Informe que o link do Google Meet foi enviado por e-mail
+- NUNCA dê uma resposta final sem enviar a mensagem via ferramenta!
             """.strip(),
-            expected_output="Mensagem enviada com sucesso ao cliente ou agendamento realizado.",
+            expected_output="Mensagem de confirmação enviada ao cliente via ferramenta 'Enviar Mensagem WhatsApp'.",
             agent=comercial
         )
 

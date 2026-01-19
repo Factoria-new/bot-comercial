@@ -13,7 +13,8 @@ import {
     findEventsByCustomerEmail,
     rescheduleAppointment,
     checkAvailability,
-    cancelAppointment
+    cancelAppointment,
+    listAvailableSlotsForDay
 } from '../services/googleCalendarService.js';
 import prisma from '../config/prisma.js';
 
@@ -445,7 +446,7 @@ router.post('/reschedule-appointment', async (req, res) => {
 
         const businessContext = {
             businessHours: user?.businessHours || null,
-            serviceType: user?.serviceType || 'online',
+            serviceType: user?.serviceType || 'presencial',  // Default to presencial to avoid erroneously generating Meet links
             businessAddress: user?.businessAddress || null,
             appointmentDuration: user?.appointmentDuration || 60  // Default 60 minutes
         };
@@ -532,6 +533,58 @@ router.post('/cancel-appointment', async (req, res) => {
         res.json(result);
     } catch (error) {
         console.error('Cancel appointment error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/google-calendar/available-slots-for-day
+ * List all available time slots for a specific day
+ * 
+ * Body: {
+ *   userId: string,           // Email of calendar owner
+ *   date: string,             // Date in YYYY-MM-DD format
+ *   period?: string           // Optional: 'morning', 'afternoon', 'evening', or 'all'
+ * }
+ */
+router.post('/available-slots-for-day', async (req, res) => {
+    try {
+        const { userId, date, period } = req.body;
+
+        // Validate required fields
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'userId (email) is required'
+            });
+        }
+
+        if (!date) {
+            return res.status(400).json({
+                success: false,
+                error: 'date (YYYY-MM-DD) is required'
+            });
+        }
+
+        // Fetch user's business context from database
+        const user = await prisma.user.findFirst({
+            where: { email: userId },
+            select: {
+                businessHours: true,
+                appointmentDuration: true
+            }
+        });
+
+        const businessHours = user?.businessHours || null;
+        const duration = user?.appointmentDuration || 60;
+
+        console.log(`📅 Listing available slots for ${date}, duration=${duration}min, period=${period || 'all'}`);
+
+        const result = await listAvailableSlotsForDay(userId, date, duration, businessHours, period || 'all');
+        res.json(result);
+
+    } catch (error) {
+        console.error('List available slots error:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });

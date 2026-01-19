@@ -1,5 +1,5 @@
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'tags' | 'time' | 'file' | 'checkbox-group' | 'radio-group' | 'repeater' | 'card-group' | 'schedule';
+export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'tags' | 'time' | 'file' | 'checkbox-group' | 'radio-group' | 'repeater' | 'card-group' | 'schedule' | 'duration-selector';
 
 export interface FormField {
     name: string;
@@ -94,6 +94,13 @@ const OPERATIONS_FIELDS: FormField[] = [
         label: 'Horário de Atendimento',
         type: 'schedule',
         required: true
+    },
+    {
+        name: 'appointmentDuration',
+        label: 'Duração Padrão dos Agendamentos',
+        type: 'duration-selector',
+        required: true,
+        helperText: 'Tempo padrão de cada compromisso agendado pelo assistente.'
     },
     {
         name: 'usefulLinks',

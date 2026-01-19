@@ -785,6 +785,155 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
 };
 
 /**
+ * List ALL available time slots for a specific day
+ * This function calculates slots based on business hours, existing events, and appointment duration
+ * @param {string} userId - User's email
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @param {number} durationMinutes - Duration of appointments in minutes
+ * @param {object} businessHours - User's business hours configuration
+ * @param {string} period - Optional period filter: 'morning', 'afternoon', 'evening', or 'all'
+ * @returns {Promise<{success: boolean, slots?: Array, error?: string}>}
+ */
+export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 60, businessHours = null, period = 'all') => {
+    const status = await getConnectionStatus(userId);
+    if (!status.isConnected) {
+        return { success: false, error: 'Google Calendar not connected', slots: [] };
+    }
+
+    try {
+        const targetDate = new Date(date + 'T00:00:00');
+        const dayKey = DAY_MAP[targetDate.getDay()];
+        const daySchedule = businessHours?.[dayKey];
+
+        // Check if business is open on this day
+        if (businessHours && (!daySchedule?.enabled || !daySchedule.slots?.length)) {
+            return {
+                success: true,
+                slots: [],
+                message: `Não há expediente neste dia (${DAY_NAMES[dayKey]})`
+            };
+        }
+
+        // Get business hours for the day (or use default 9-18 if not configured)
+        const businessSlots = daySchedule?.slots || [{ start: '09:00', end: '18:00' }];
+
+        // Get all events for the day
+        const startOfDay = new Date(date + 'T00:00:00-03:00');
+        const endOfDay = new Date(date + 'T23:59:59-03:00');
+
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_EVENTS_LIST',
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                dangerouslySkipVersionCheck: true,
+                arguments: {
+                    time_min: startOfDay.toISOString(),
+                    time_max: endOfDay.toISOString(),
+                    max_results: 50,
+                    single_events: true,
+                    order_by: 'startTime',
+                    time_zone: DEFAULT_TIMEZONE,
+                    timezone: DEFAULT_TIMEZONE
+                }
+            }
+        );
+
+        // Get existing events
+        const existingEvents = (result.successful ? (result.data?.items || result.data || []) : [])
+            .filter(e => e.transparency !== 'transparent')
+            .map(e => ({
+                start: new Date(e.start?.dateTime || e.start?.date),
+                end: new Date(e.end?.dateTime || e.end?.date)
+            }));
+
+        console.log(`📅 Found ${existingEvents.length} events on ${date}`);
+
+        // Calculate available slots
+        const availableSlots = [];
+        const now = new Date();
+        const minAdvanceMs = 2 * 60 * 60 * 1000; // 2 hours minimum
+
+        // Period filters
+        const periodRanges = {
+            'morning': { start: 0, end: 12 },
+            'afternoon': { start: 12, end: 18 },
+            'evening': { start: 18, end: 24 },
+            'all': { start: 0, end: 24 }
+        };
+        const periodFilter = periodRanges[period] || periodRanges['all'];
+
+        for (const slot of businessSlots) {
+            const [openHour, openMin] = slot.start.split(':').map(Number);
+            const [closeHour, closeMin] = slot.end.split(':').map(Number);
+
+            // Start from opening time and increment by duration
+            let currentStart = new Date(targetDate);
+            currentStart.setHours(openHour, openMin, 0, 0);
+
+            const slotEnd = new Date(targetDate);
+            slotEnd.setHours(closeHour, closeMin, 0, 0);
+
+            while (currentStart.getTime() + durationMinutes * 60000 <= slotEnd.getTime()) {
+                const currentEnd = new Date(currentStart.getTime() + durationMinutes * 60000);
+                const hour = currentStart.getHours();
+
+                // Check period filter
+                if (hour < periodFilter.start || hour >= periodFilter.end) {
+                    currentStart = new Date(currentStart.getTime() + durationMinutes * 60000);
+                    continue;
+                }
+
+                // Check minimum advance time
+                if (currentStart.getTime() < now.getTime() + minAdvanceMs) {
+                    currentStart = new Date(currentStart.getTime() + durationMinutes * 60000);
+                    continue;
+                }
+
+                // Check for conflicts with existing events
+                const hasConflict = existingEvents.some(event =>
+                    currentStart < event.end && currentEnd > event.start
+                );
+
+                if (!hasConflict) {
+                    const timeStr = currentStart.toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    availableSlots.push({
+                        start: currentStart.toISOString(),
+                        end: currentEnd.toISOString(),
+                        time: timeStr,
+                        formatted: `${timeStr}`
+                    });
+                }
+
+                currentStart = new Date(currentStart.getTime() + durationMinutes * 60000);
+            }
+        }
+
+        console.log(`✅ Found ${availableSlots.length} available slots on ${date}`);
+
+        // Format date for display
+        const dayName = DAY_NAMES[dayKey];
+        const formattedDate = targetDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+        return {
+            success: true,
+            slots: availableSlots,
+            dayName,
+            formattedDate,
+            totalSlots: availableSlots.length,
+            durationMinutes
+        };
+    } catch (error) {
+        console.error('List available slots error:', error.message);
+        return { success: false, error: error.message, slots: [] };
+    }
+};
+
+/**
  * Create a calendar event with optional Google Meet link
  * @param {string} userId - User's email
  * @param {object} eventData - Event details
@@ -813,7 +962,7 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
             // Explicitly set duration - Composio defaults to 30 min if not provided!
             event_duration_hour: durationHours,
             event_duration_minutes: durationMins,
-            attendees: eventData.attendees ? eventData.attendees.map(email => ({ email })) : [],
+            attendees: eventData.attendees || [],  // Composio expects array of email strings, not objects
             location: eventData.location || '',
             timezone: DEFAULT_TIMEZONE,
             // EXPLICITLY control Meet link creation - default is True in Composio!
@@ -957,9 +1106,11 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
 
     // Step 3: Create the event
     const isOnline = serviceType === 'online';
+    // Use description (service type) as title prefix, fallback to "Agendamento" if empty
+    const eventTitle = description ? `${description} - ${customerName}` : `Agendamento - ${customerName}`;
     const eventResult = await createEventWithMeet(userId, {
-        summary: `Agendamento - ${customerName}`,
-        description: description || `Agendamento com ${customerName} (${customerEmail})`,
+        summary: eventTitle,
+        description: `Agendamento com ${customerName} (${customerEmail})${description ? ` - Serviço: ${description}` : ''}`,
         start: requestedStart,
         attendees: [customerEmail],
         location: isOnline ? '' : (businessAddress || '')

@@ -239,6 +239,38 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 console.log(`🔍 DEBUG: After setAgentPrompt, chatState.agentConfig?.prompt:`, chatState.agentConfig?.prompt?.substring(0, 50) || 'UNDEFINED');
                 setChatMode('agent');
 
+                // 📅 Persist business info to database (openingHours, appointmentDuration, serviceType, businessAddress)
+                try {
+                    const token = localStorage.getItem('token');
+
+                    // Determine serviceType based on onlineOnly checkbox
+                    const isOnlineOnly = wizardData.onlineOnly?.includes('Atendimento 100% Online (Sem endereço físico)');
+                    const serviceType = isOnlineOnly ? 'online' : 'presencial';
+
+                    const businessInfoResponse = await fetch(`${backendUrl}/api/user/business-info`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            businessHours: wizardData.openingHours || null,
+                            serviceType: serviceType,
+                            businessAddress: wizardData.address || null,
+                            appointmentDuration: wizardData.appointmentDuration || 60
+                        })
+                    });
+
+                    const businessInfoResult = await businessInfoResponse.json();
+                    if (businessInfoResult.success) {
+                        console.log('✅ Business info saved to database from wizard');
+                    } else {
+                        console.error('❌ Failed to save business info:', businessInfoResult.error);
+                    }
+                } catch (bizError) {
+                    console.error('❌ Error saving business info:', bizError);
+                }
+
                 // 🎤 Play Lia's completion audio feedback
                 const audioVariation = getRandomAudio('complete');
                 if (audioVariation.path) {

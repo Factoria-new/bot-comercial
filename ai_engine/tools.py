@@ -102,10 +102,15 @@ class GoogleCalendarTool(BaseTool):
     Ferramenta para agendar compromissos no calendário. Use esta ferramenta quando o cliente 
     quiser marcar uma reunião, consulta, atendimento ou qualquer compromisso.
     
+    ⚠️ IMPORTANTE - DURAÇÃO FIXA:
+    A duração dos agendamentos é configurada pelo dono do estabelecimento.
+    Você NÃO precisa perguntar a duração ao cliente - ela é aplicada automaticamente.
+    Se não fornecer end_datetime, o sistema calcula automaticamente baseado na duração configurada.
+    
     ANTES de usar esta ferramenta, você DEVE coletar:
     - Nome do cliente
     - E-mail do cliente
-    - Data e hora desejada
+    - Data e hora INICIAL desejada (o fim é calculado automaticamente)
     
     A ferramenta irá automaticamente:
     1. Verificar se o horário está dentro do funcionamento do estabelecimento
@@ -117,7 +122,7 @@ class GoogleCalendarTool(BaseTool):
     - customer_name: Nome do cliente
     - customer_email: E-mail do cliente (será adicionado como participante do evento)
     - start_datetime: Data e hora de início (formato ISO: 2026-01-20T14:00:00)
-    - end_datetime: Data e hora de fim (formato ISO: 2026-01-20T15:00:00)
+    - end_datetime: Data e hora de fim (OPCIONAL - calculado automaticamente se não fornecido)
     - description: Descrição do compromisso (opcional)
     """
     
@@ -125,7 +130,7 @@ class GoogleCalendarTool(BaseTool):
     appointment_duration: int = Field(default=60, description="Duração padrão dos agendamentos em minutos")
 
     def _run(self, customer_name: str, customer_email: str, start_datetime: str, 
-             end_datetime: str, description: str = ""):
+             end_datetime: str = "", description: str = ""):
         """
         Agenda um compromisso validando horário de funcionamento e disponibilidade.
         
@@ -133,10 +138,27 @@ class GoogleCalendarTool(BaseTool):
             customer_name: Nome do cliente
             customer_email: E-mail do cliente
             start_datetime: Data e hora de início (formato ISO)
-            end_datetime: Data e hora de fim (formato ISO)
+            end_datetime: Data e hora de fim (formato ISO) - opcional, calculado automaticamente
             description: Descrição opcional do compromisso
         """
         node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
+        
+        # Calculate end_datetime if not provided, using configured appointment_duration
+        if not end_datetime:
+            from datetime import datetime, timedelta
+            try:
+                if 'Z' in start_datetime:
+                    start_dt = datetime.fromisoformat(start_datetime.replace('Z', '+00:00'))
+                elif '+' in start_datetime or (start_datetime.count('-') > 2):
+                    start_dt = datetime.fromisoformat(start_datetime)
+                else:
+                    start_dt = datetime.fromisoformat(start_datetime)
+                
+                end_dt = start_dt + timedelta(minutes=self.appointment_duration)
+                end_datetime = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
+            except Exception:
+                # If parsing fails, let backend handle it with default duration
+                end_datetime = start_datetime  # Backend will use appointmentDuration from DB
         
         # Validação de antecedência mínima de 2 horas
         from datetime import datetime, timedelta, timezone
@@ -217,6 +239,9 @@ class GoogleCalendarRescheduleTool(BaseTool):
     Ferramenta para REAGENDAR um compromisso existente no calendário (mudar data/hora).
     USE ESTA FERRAMENTA quando o cliente quiser MUDAR a data ou hora de um agendamento já existente.
     
+    ⚠️ DURAÇÃO: A duração do agendamento é mantida automaticamente conforme configurado.
+    Você só precisa informar a nova data/hora de INÍCIO.
+    
     FLUXO DE USO:
     1. Primeira chamada: passe customer_email e new_start_datetime
        - Se houver 1 evento: reagenda automaticamente
@@ -232,12 +257,12 @@ class GoogleCalendarRescheduleTool(BaseTool):
     
     Parâmetros:
     - customer_email: E-mail do cliente (OBRIGATÓRIO)
-    - new_start_datetime: Nova data/hora (formato ISO: 2026-01-20T14:00:00) (OBRIGATÓRIO)
+    - new_start_datetime: Nova data/hora de INÍCIO (formato ISO: 2026-01-20T14:00:00) (OBRIGATÓRIO)
     - event_index: Número do evento na lista (1, 2, 3...) - use SOMENTE após cliente escolher
     """
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
-    appointment_duration: int = Field(default=60, description="Duração padrão dos agendamentos em minutos")
+    appointment_duration: int = Field(default=60, description="Duração configurada dos agendamentos em minutos")
 
     def _run(self, customer_email: str, new_start_datetime: str, event_index: int = 0):
         """
@@ -460,6 +485,96 @@ class GoogleCalendarCheckAvailabilityTool(BaseTool):
         except Exception as e:
             return f"Erro de conexão: {str(e)}"
 
+
+class GoogleCalendarListDaySlotsTool(BaseTool):
+    name: str = "Listar Horários Disponíveis do Dia"
+    description: str = """
+    Lista TODOS os horários disponíveis para um dia específico.
+    
+    USE ESTA FERRAMENTA QUANDO:
+    1. O cliente perguntar "quais horários tem?" ou "tem vaga no dia X?"
+    2. O cliente pedir horários disponíveis para uma parte do dia ("de tarde", "de manhã")
+    3. Você quiser mostrar opções ao cliente antes de agendar
+    
+    Esta ferramenta considera automaticamente:
+    - A duração configurada dos agendamentos
+    - O horário de funcionamento do estabelecimento
+    - Os agendamentos já existentes no calendário
+    
+    Parâmetros:
+    - date: Data no formato YYYY-MM-DD (OBRIGATÓRIO)
+    - period: 'morning' (manhã), 'afternoon' (tarde), 'evening' (noite), ou 'all' (OPCIONAL, padrão: all)
+    """
+    
+    user_id: str = Field(default="", description="Email do usuário dono do calendário")
+
+    def _run(self, date: str, period: str = "all"):
+        """
+        Lista todos os horários disponíveis para um dia.
+        
+        Args:
+            date: Data (YYYY-MM-DD)
+            period: 'morning', 'afternoon', 'evening', ou 'all'
+        """
+        node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
+        
+        try:
+            response = requests.post(f"{node_api_url}/api/google-calendar/available-slots-for-day", json={
+                "userId": self.user_id,
+                "date": date,
+                "period": period
+            })
+            
+            result = response.json()
+            
+            if result.get("success"):
+                slots = result.get("slots", [])
+                day_name = result.get("dayName", "")
+                formatted_date = result.get("formattedDate", date)
+                total = result.get("totalSlots", len(slots))
+                duration = result.get("durationMinutes", 60)
+                
+                if total == 0:
+                    message = result.get("message", "Não há horários disponíveis neste dia.")
+                    return f"❌ {message}"
+                
+                # Format slots nicely
+                period_name = {
+                    'morning': 'pela manhã',
+                    'afternoon': 'à tarde',
+                    'evening': 'à noite',
+                    'all': ''
+                }.get(period, '')
+                
+                slot_times = [s['time'] for s in slots]
+                
+                # Group by period for better readability
+                morning_slots = [t for t in slot_times if int(t.split(':')[0]) < 12]
+                afternoon_slots = [t for t in slot_times if 12 <= int(t.split(':')[0]) < 18]
+                evening_slots = [t for t in slot_times if int(t.split(':')[0]) >= 18]
+                
+                response_parts = [f"📅 *Horários disponíveis para {day_name}, {formatted_date}*"]
+                response_parts.append(f"\n(⏱️ Duração: {duration} min)\n")
+                
+                if morning_slots:
+                    morning_formatted = '\n• '.join(morning_slots)
+                    response_parts.append(f"\n🌅 *MANHÃ*\n\n• {morning_formatted}")
+                if afternoon_slots:
+                    afternoon_formatted = '\n• '.join(afternoon_slots)
+                    response_parts.append(f"\n\n☀️ *TARDE*\n\n• {afternoon_formatted}")
+                if evening_slots:
+                    evening_formatted = '\n• '.join(evening_slots)
+                    response_parts.append(f"\n\n🌙 *NOITE*\n\n• {evening_formatted}")
+                
+                response_parts.append(f"\n\n✅ *Total:* {total} horários livres.")
+                response_parts.append("\n\nQual desses você prefere? 😊")
+                
+                return "".join(response_parts)
+            else:
+                return f"Erro ao listar horários: {result.get('error', 'Erro desconhecido')}"
+                
+        except Exception as e:
+            return f"Erro de conexão: {str(e)}"
 
 class GoogleCalendarCancelTool(BaseTool):
     name: str = "Cancelar Agendamento"

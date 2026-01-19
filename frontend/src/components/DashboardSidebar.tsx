@@ -94,7 +94,7 @@ export default function DashboardSidebar({
     const [ttsRules, setTtsRules] = useState({
         audioOnRequest: false,      // Regra 1: Áudio somente quando solicitado
         audioOnAudioReceived: false, // Regra 2: Áudio quando recebe áudio
-        audioOnly: false            // Regra 3: Somente áudio (exclusiva)
+        audioOnly: false            // Regra 3: Somente áudio
     });
     const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
     const [isSavingTts, setIsSavingTts] = useState(false);
@@ -710,7 +710,6 @@ export default function DashboardSidebar({
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-xs text-white/80">Somente áudio</span>
-                                                    <span className="text-[10px] text-amber-400/70">(exclusiva)</span>
                                                 </div>
                                                 <div className={cn(
                                                     "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",
