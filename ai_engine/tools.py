@@ -344,16 +344,24 @@ ATENÇÃO: O reagendamento NÃO foi feito. Você DEVE chamar a ferramenta novame
             
             if result.get("success"):
                 meet_link = result.get("meetLink")
+                address = result.get("address")
+                customer_name = result.get("customerName") or selected_event.get('summary', 'Agendamento')
+                
                 # Formatar data para exibição
                 try:
                     display_date = start_dt.strftime('%d/%m/%Y às %H:%M')
                 except:
                     display_date = new_start_datetime
-                    
+                
+                # Build response based on service type
                 if meet_link:
-                    return f"✅ REAGENDAMENTO CONCLUÍDO COM SUCESSO!\n\nO compromisso '{selected_event.get('summary', 'Agendamento')}' foi alterado para {display_date}.\n\nLink da reunião: {meet_link}"
+                    # Online appointment
+                    return f"✅ REAGENDAMENTO CONCLUÍDO COM SUCESSO!\n\nO compromisso '{customer_name}' foi alterado para {display_date}.\n\nLink da reunião: {meet_link}"
+                elif address:
+                    # Presencial appointment
+                    return f"✅ REAGENDAMENTO CONCLUÍDO COM SUCESSO!\n\nO compromisso '{customer_name}' foi alterado para {display_date}.\n\nEndereço: {address}"
                 else:
-                    return f"✅ REAGENDAMENTO CONCLUÍDO COM SUCESSO!\n\nO compromisso '{selected_event.get('summary', 'Agendamento')}' foi alterado para {display_date}."
+                    return f"✅ REAGENDAMENTO CONCLUÍDO COM SUCESSO!\n\nO compromisso '{customer_name}' foi alterado para {display_date}."
             
             elif result.get("reason") == "insufficient_advance_time":
                 return f"⚠️ AÇÃO NÃO REALIZADA: {result.get('message')}"

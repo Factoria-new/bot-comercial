@@ -789,33 +789,39 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
  * @param {string} userId - User's email
  * @param {object} eventData - Event details
  * @param {boolean} createMeetLink - Whether to create a Google Meet link
+ * @param {number} durationMinutes - Duration of the event in minutes (default 60)
  * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string}>}
  */
-export const createEventWithMeet = async (userId, eventData, createMeetLink = false) => {
+export const createEventWithMeet = async (userId, eventData, createMeetLink = false, durationMinutes = 60) => {
     const status = await getConnectionStatus(userId);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
 
     try {
+        // Calculate hours and remaining minutes from total duration
+        const durationHours = Math.floor(durationMinutes / 60);
+        const durationMins = durationMinutes % 60;
+
+        // Use Composio's expected parameters:
+        // - start_datetime + event_duration_hour + event_duration_minutes (NOT end_datetime)
+        // - create_meeting_room (NOT create_video_conference)
         const params = {
             summary: eventData.summary || eventData.title,
             description: eventData.description || '',
             start_datetime: eventData.start || eventData.startDateTime,
-            end_datetime: eventData.end || eventData.endDateTime,
-            attendees: eventData.attendees || [],
+            // Explicitly set duration - Composio defaults to 30 min if not provided!
+            event_duration_hour: durationHours,
+            event_duration_minutes: durationMins,
+            attendees: eventData.attendees ? eventData.attendees.map(email => ({ email })) : [],
             location: eventData.location || '',
-            time_zone: DEFAULT_TIMEZONE,
-            timezone: DEFAULT_TIMEZONE
+            timezone: DEFAULT_TIMEZONE,
+            // EXPLICITLY control Meet link creation - default is True in Composio!
+            create_meeting_room: createMeetLink
         };
 
-        // Add conference data for Google Meet if requested
-        if (createMeetLink) {
-            params.conference_data_version = 1;
-            params.create_video_conference = true;
-        }
-
-        console.log(`📅 Creating event: "${params.summary}" for ${userId} (Meet: ${createMeetLink})`);
+        console.log(`📅 Creating event: "${params.summary}" for ${userId}`);
+        console.log(`   Duration: ${durationHours}h ${durationMins}min, Meet: ${createMeetLink}`);
 
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_CREATE_EVENT',
@@ -830,12 +836,9 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
         if (result.successful) {
             const eventData = result.data;
             // Google Calendar returns hangoutLink or conferenceData
-            const meetLink = eventData?.hangoutLink || eventData?.conferenceData?.entryPoints?.[0]?.uri || eventData?.htmlLink;
+            const meetLink = eventData?.hangoutLink || eventData?.conferenceData?.entryPoints?.[0]?.uri;
 
-            console.log(`✅ Event created: ${eventData?.id || 'success'}. Meet Link: ${meetLink}`);
-
-            // Log full data in case field names are different
-            console.log('Event Result Data Keys:', Object.keys(eventData || {}));
+            console.log(`✅ Event created: ${eventData?.id || 'success'}. Meet Link: ${meetLink || 'none'}`);
 
             return {
                 success: true,
@@ -843,6 +846,7 @@ export const createEventWithMeet = async (userId, eventData, createMeetLink = fa
                 meetLink: meetLink || null
             };
         } else {
+            console.error('❌ Event creation failed:', result.error);
             return { success: false, error: result.error || 'Failed to create event' };
         }
     } catch (error) {
@@ -873,18 +877,20 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
     console.log(`📅 Scheduling appointment for ${appointmentData.customerName} (${appointmentData.customerEmail})`);
 
     const { customerName, customerEmail, description } = appointmentData;
-    const { businessHours, serviceType, businessAddress } = businessContext || {};
+    const { businessHours, serviceType, businessAddress, appointmentDuration } = businessContext || {};
+
+    // Use appointment duration from business context (defaults to 60 min)
+    const durationMinutes = appointmentDuration || 60;
 
     // Ensure datetimes have timezone offset (Brazil -03:00)
     const requestedStart = ensureTimezone(appointmentData.requestedStart);
-    const requestedEnd = ensureTimezone(appointmentData.requestedEnd);
 
-    console.log(`   Normalized times: ${requestedStart} to ${requestedEnd}`);
-
-    // Calculate duration in minutes
+    // Calculate end time based on start + duration (for logging and other uses)
     const startDate = new Date(requestedStart);
-    const endDate = new Date(requestedEnd);
-    const durationMinutes = Math.round((endDate - startDate) / (1000 * 60));
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+    const requestedEnd = endDate.toISOString();
+
+    console.log(`   Start: ${requestedStart}, Duration: ${durationMinutes}min`);
 
     // Step 0: Validate minimum advance time (2 hours)
     const now = new Date();
@@ -955,10 +961,9 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
         summary: `Agendamento - ${customerName}`,
         description: description || `Agendamento com ${customerName} (${customerEmail})`,
         start: requestedStart,
-        end: requestedEnd,
         attendees: [customerEmail],
         location: isOnline ? '' : (businessAddress || '')
-    }, isOnline);
+    }, isOnline, durationMinutes);
 
     if (!eventResult.success) {
         return {
@@ -1128,6 +1133,7 @@ export const cancelAppointment = async (userId, eventId) => {
 
 /**
  * Get a single event by ID
+ * Uses EVENTS_LIST with a wide time range and filters by eventId
  * @param {string} userId - User's email (calendar owner)
  * @param {string} eventId - ID of the event to fetch
  * @returns {Promise<{success: boolean, event?: object, error?: string}>}
@@ -1140,7 +1146,7 @@ export const getEventById = async (userId, eventId) => {
 
     try {
         const result = await composio.tools.execute(
-            'GOOGLECALENDAR_GET_EVENT',
+            'GOOGLECALENDAR_EVENTS_GET',
             {
                 connectedAccountId: status.connectionId,
                 userId: userId,
@@ -1151,9 +1157,11 @@ export const getEventById = async (userId, eventId) => {
             }
         );
 
-        if (result.successful) {
+        if (result.successful && result.data) {
+            console.log(`✅ Found event by ID: ${eventId} - "${result.data?.summary}"`);
             return { success: true, event: result.data };
         } else {
+            console.log(`❌ Event not found by ID: ${eventId}`);
             return { success: false, error: result.error || 'Event not found' };
         }
     } catch (error) {
@@ -1167,31 +1175,40 @@ export const getEventById = async (userId, eventId) => {
  * @param {string} userId - User's email (calendar owner)
  * @param {string} eventId - ID of the event to update
  * @param {object} updateData - New data for the event
+ * @param {number} durationMinutes - Duration of the event in minutes (required for Composio)
+ * @param {boolean} createMeetLink - Whether to keep/create Google Meet link
  * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string}>}
  */
-export const updateEvent = async (userId, eventId, updateData) => {
+export const updateEvent = async (userId, eventId, updateData, durationMinutes = 60, createMeetLink = false) => {
     const status = await getConnectionStatus(userId);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
 
     try {
+        // Calculate hours and remaining minutes from total duration
+        const durationHours = Math.floor(durationMinutes / 60);
+        const durationMins = durationMinutes % 60;
+
+        // Use Composio's expected parameters for UPDATE_EVENT
         const params = {
-            event_id: eventId
+            event_id: eventId,
+            timezone: DEFAULT_TIMEZONE,
+            // Use duration instead of end_datetime
+            event_duration_hour: durationHours,
+            event_duration_minutes: durationMins,
+            // Control Meet link explicitly
+            create_meeting_room: createMeetLink
         };
 
         // Only include fields that are provided
         if (updateData.summary) params.summary = updateData.summary;
         if (updateData.description) params.description = updateData.description;
         if (updateData.start) params.start_datetime = ensureTimezone(updateData.start);
-        if (updateData.end) params.end_datetime = ensureTimezone(updateData.end);
         if (updateData.location !== undefined) params.location = updateData.location;
 
-        // Add timezone
-        params.time_zone = DEFAULT_TIMEZONE;
-        params.timezone = DEFAULT_TIMEZONE;
-
         console.log(`📅 Updating event ${eventId} for ${userId}`);
+        console.log(`   Duration: ${durationHours}h ${durationMins}min, Meet: ${createMeetLink}`);
 
         const result = await composio.tools.execute(
             'GOOGLECALENDAR_UPDATE_EVENT',
@@ -1207,7 +1224,7 @@ export const updateEvent = async (userId, eventId, updateData) => {
             const eventData = result.data;
             const meetLink = eventData?.hangoutLink || eventData?.conferenceData?.entryPoints?.[0]?.uri;
 
-            console.log(`✅ Event updated: ${eventId}. Meet Link: ${meetLink}`);
+            console.log(`✅ Event updated: ${eventId}. Meet Link: ${meetLink || 'none'}`);
 
             return {
                 success: true,
@@ -1215,6 +1232,7 @@ export const updateEvent = async (userId, eventId, updateData) => {
                 meetLink: meetLink || null
             };
         } else {
+            console.error('❌ Event update failed:', result.error);
             return { success: false, error: result.error || 'Failed to update event' };
         }
     } catch (error) {
@@ -1225,20 +1243,61 @@ export const updateEvent = async (userId, eventId, updateData) => {
 
 /**
  * Reschedule an existing appointment
+ * Preserves ALL original event data (summary, description, attendees) and only changes the date/time
+ * The duration is automatically calculated from the original event
  * @param {string} userId - User's email (calendar owner)
  * @param {string} eventId - ID of the event to reschedule
  * @param {string} newStart - New start datetime (ISO format)
- * @param {string} newEnd - New end datetime (ISO format)
- * @param {object} businessHours - User's business hours
- * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string, reason?: string}>}
+ * @param {string} newEnd - New end datetime (ISO format) - if not provided, uses original duration
+ * @param {object} businessContext - Business context (businessHours, serviceType, businessAddress)
+ * @returns {Promise<{success: boolean, event?: object, meetLink?: string, address?: string, error?: string, reason?: string}>}
  */
-export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, businessHours) => {
-    // Normalize timezone
-    const normalizedStart = ensureTimezone(newStart);
-    const normalizedEnd = ensureTimezone(newEnd);
+export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, businessContext) => {
+    const { businessHours, serviceType, businessAddress } = businessContext || {};
+    const isOnline = serviceType === 'online';
 
-    // 0. Validate minimum advance time (2 hours)
+    // 1. FIRST: Fetch the existing event to get its duration and data
+    const existingEvent = await getEventById(userId, eventId);
+    if (!existingEvent.success || !existingEvent.event) {
+        return {
+            success: false,
+            reason: 'event_not_found',
+            message: 'Não foi possível encontrar o agendamento original.'
+        };
+    }
+
+    const originalEvent = existingEvent.event;
+    console.log(`📅 Original event data:`, {
+        summary: originalEvent.summary,
+        description: originalEvent.description,
+        start: originalEvent.start?.dateTime || originalEvent.start,
+        end: originalEvent.end?.dateTime || originalEvent.end,
+        attendees: originalEvent.attendees?.map(a => a.email),
+        location: originalEvent.location
+    });
+
+
+    // Use appointmentDuration from businessContext (user's configured duration)
+    const appointmentDuration = businessContext?.appointmentDuration || 60;
+    const appointmentDurationMs = appointmentDuration * 60 * 1000;
+    console.log(`   Using configured appointment duration: ${appointmentDuration} minutes`);
+
+    // Normalize timezone for newStart
+    const normalizedStart = ensureTimezone(newStart);
     const startDate = new Date(normalizedStart);
+
+    // Calculate newEnd based on appointmentDuration (or use provided newEnd if available)
+    let normalizedEnd;
+    if (newEnd) {
+        normalizedEnd = ensureTimezone(newEnd);
+    } else {
+        // Use configured appointment duration
+        const calculatedEnd = new Date(startDate.getTime() + appointmentDurationMs);
+        normalizedEnd = calculatedEnd.toISOString();
+        console.log(`   Calculated new end based on configured duration: ${normalizedEnd}`);
+    }
+
+    // 2. Validate minimum advance time (2 hours)
     const now = new Date();
     const minAdvanceMs = 2 * 60 * 60 * 1000; // 2 hours
     const minValidTime = new Date(now.getTime() + minAdvanceMs);
@@ -1257,15 +1316,17 @@ export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, b
     }
 
     // 1. Validate business hours
-    const isWithinHours = isWithinBusinessHours(normalizedStart, normalizedEnd, businessHours);
-    if (!isWithinHours.valid) {
-        const formattedHours = formatBusinessHoursForDisplay(businessHours);
-        return {
-            success: false,
-            reason: 'outside_business_hours',
-            message: `O horário solicitado (${new Date(normalizedStart).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}) está fora do horário de funcionamento.`,
-            formattedHours
-        };
+    if (businessHours) {
+        const isWithinHours = isWithinBusinessHours(normalizedStart, normalizedEnd, businessHours);
+        if (!isWithinHours.valid) {
+            const formattedHours = formatBusinessHoursForDisplay(businessHours);
+            return {
+                success: false,
+                reason: 'outside_business_hours',
+                message: `O horário solicitado (${new Date(normalizedStart).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}) está fora do horário de funcionamento.`,
+                formattedHours
+            };
+        }
     }
 
     // 2. Check if new time slot is available (excluding the event being rescheduled)
@@ -1291,17 +1352,17 @@ export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, b
         };
     }
 
-    // 3. Fetch the existing event to preserve its summary/title
-    const existingEvent = await getEventById(userId, eventId);
-    const existingSummary = existingEvent.success ?
-        (existingEvent.event?.summary || existingEvent.event?.title) : null;
 
-    // 4. Update the event (include summary to preserve it)
+    // Note: originalEvent already fetched at the beginning of the function
+
+    // 4. Update the event preserving ALL original data
     const updateResult = await updateEvent(userId, eventId, {
         start: normalizedStart,
-        end: normalizedEnd,
-        summary: existingSummary  // Preserve the original title
-    });
+        // Preserve ALL original data
+        summary: originalEvent.summary || originalEvent.title,
+        description: originalEvent.description,
+        location: isOnline ? '' : (businessAddress || originalEvent.location || '')
+    }, appointmentDuration, isOnline);
 
     if (!updateResult.success) {
         return {
@@ -1311,14 +1372,20 @@ export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, b
         };
     }
 
-    console.log(`✅ Appointment rescheduled: ${eventId}`);
+    console.log(`✅ Appointment rescheduled: ${eventId} (isOnline: ${isOnline})`);
 
+    // Return appropriate info based on serviceType
     return {
         success: true,
         event: updateResult.event,
-        meetLink: updateResult.meetLink,
+        // Only return meetLink for ONLINE appointments
+        meetLink: isOnline ? (updateResult.meetLink || null) : null,
+        // Only return address for PRESENCIAL appointments
+        address: !isOnline ? (businessAddress || null) : null,
         newStart: normalizedStart,
-        newEnd: normalizedEnd
+        newEnd: normalizedEnd,
+        // Include original event info for context
+        customerName: originalEvent.summary?.replace('Agendamento - ', '') || null
     };
 };
 

@@ -332,26 +332,27 @@ router.post('/schedule-appointment', async (req, res) => {
             });
         }
 
-        // Fetch user's business context from database
-
+        // Fetch user's business context from database (including appointmentDuration)
         const user = await prisma.user.findFirst({
             where: { email: userId },
             select: {
                 businessHours: true,
                 serviceType: true,
-                businessAddress: true
+                businessAddress: true,
+                appointmentDuration: true
             }
         });
 
         const businessContext = user ? {
             businessHours: user.businessHours,
             serviceType: user.serviceType,
-            businessAddress: user.businessAddress
-        } : {};
+            businessAddress: user.businessAddress,
+            appointmentDuration: user.appointmentDuration || 60  // Default 60 minutes
+        } : { appointmentDuration: 60 };
 
         console.log(`📅 Schedule appointment request for ${customerName} (${customerEmail})`);
         console.log(`   Requested: ${requestedStart} to ${requestedEnd}`);
-        console.log(`   Business context:`, businessContext ? 'present' : 'none');
+        console.log(`   Business context: duration=${businessContext.appointmentDuration}min, type=${businessContext.serviceType}`);
 
         const result = await scheduleAppointment(userId, {
             customerName,
@@ -431,22 +432,29 @@ router.post('/reschedule-appointment', async (req, res) => {
             });
         }
 
-        // Fetch user's business hours from database
+        // Fetch user's business context from database (including appointmentDuration)
         const user = await prisma.user.findFirst({
             where: { email: userId },
             select: {
                 businessHours: true,
                 serviceType: true,
-                businessAddress: true
+                businessAddress: true,
+                appointmentDuration: true
             }
         });
 
-        const businessHours = user?.businessHours || null;
+        const businessContext = {
+            businessHours: user?.businessHours || null,
+            serviceType: user?.serviceType || 'online',
+            businessAddress: user?.businessAddress || null,
+            appointmentDuration: user?.appointmentDuration || 60  // Default 60 minutes
+        };
 
         console.log(`📅 Reschedule request for event ${eventId}`);
-        console.log(`   New time: ${newStart} to ${newEnd}`);
+        console.log(`   New time: ${newStart}`);
+        console.log(`   Business context: duration=${businessContext.appointmentDuration}min, type=${businessContext.serviceType}`);
 
-        const result = await rescheduleAppointment(userId, eventId, newStart, newEnd, businessHours);
+        const result = await rescheduleAppointment(userId, eventId, newStart, newEnd, businessContext);
         res.json(result);
     } catch (error) {
         console.error('Reschedule appointment error:', error.message);

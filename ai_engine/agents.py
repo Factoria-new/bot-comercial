@@ -14,7 +14,7 @@ def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duratio
     # Configure Gemini LLM using CrewAI's native format
     # Requires GEMINI_API_KEY environment variable
     gemini_llm = LLM(
-        model="gemini/gemini-3-flash-preview",  # Corrected to preview ID
+        model="gemini/gemini-2.0-flash-exp",  # Using stable model
         temperature=0.7
     )
 
@@ -124,7 +124,7 @@ def get_instagram_agent(user_id, custom_prompt=None):
     """
     
     gemini_llm = LLM(
-        model="gemini/gemini-3-flash-preview",
+        model="gemini/gemini-2.0-flash-exp",  # Using stable model
         temperature=0.7
     )
 
@@ -196,7 +196,7 @@ REGRAS DE REAGENDAMENTO:
     # Configure Gemini LLM using CrewAI's native format
     # Requires GEMINI_API_KEY environment variable
     gemini_llm = LLM(
-        model="gemini/gemini-3-flash-preview",  # Corrected to preview ID
+        model="gemini/gemini-2.0-flash-exp",  # Using stable model
         temperature=0.7
     )
 
@@ -277,7 +277,7 @@ def get_instagram_agent(user_id, custom_prompt=None):
     """
     
     gemini_llm = LLM(
-        model="gemini/gemini-3-flash-preview",
+        model="gemini/gemini-2.0-flash-exp",  # Using stable model
         temperature=0.7
     )
 
