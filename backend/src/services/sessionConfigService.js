@@ -13,7 +13,7 @@ const DEFAULT_CONFIG = {
     name: '',
     aiProvider: 'gemini',
     apiKey: process.env.GEMINI_API_KEY || '',
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.5-flash',
     systemPrompt: '',
     temperature: 1.0,
     ttsEnabled: false,

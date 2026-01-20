@@ -7,6 +7,10 @@ import time
 import random
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import requests
+import os
+import uuid
+from tools import TOOLS_USAGE_STATE
 
 app = FastAPI()
 
@@ -34,6 +38,9 @@ class InstagramMessageInput(BaseModel):
     history: Optional[List[HistoryItem]] = None
 
 
+
+
+
 def format_history(history: Optional[List[HistoryItem]]) -> str:
     if not history:
         return "Nenhum histórico disponível."
@@ -47,62 +54,7 @@ def format_history(history: Optional[List[HistoryItem]]) -> str:
     return "\n".join(formatted[-30:])
 
 
-def get_calendar_tools_description(calendar_connected: bool, current_year: int) -> str:
-    """Returns calendar tools description if connected, otherwise a warning message."""
-    if not calendar_connected:
-        return """
-⚠️ AGENDAMENTO NÃO DISPONÍVEL
-O Google Calendar não está conectado. Você NÃO possui ferramentas de agendamento.
-Se o cliente solicitar agendamento, informe que no momento não é possível agendar
-pelo WhatsApp e peça para entrar em contato por outro canal.
-"""
-    
-    return f"""
-2. 'Verificar Disponibilidade' [⚠️ OBRIGATÓRIO ANTES DE AGENDAR]
-   🔍 Use ANTES de confirmar qualquer horário
-   Parâmetros:
-   - requested_date: data no formato YYYY-MM-DD (ex: {current_year}-01-22)
-   - requested_time: hora no formato HH:mm (ex: 14:00)
-   
-   QUANDO USAR:
-   - Cliente pergunta "tem horário dia X às Y?"
-   - Cliente sugere um horário para agendar
-   - SEMPRE antes de usar 'Agendar Compromisso'
 
-3. 'Agendar Compromisso'
-   📅 Use quando o cliente CONFIRMAR que deseja agendar
-   ⚠️ ANTES: sempre use 'Verificar Disponibilidade'
-   Parâmetros:
-   - customer_name: nome do cliente
-   - customer_email: e-mail do cliente
-   - start_datetime: início (ISO: {current_year}-01-22T14:00:00)
-   - end_datetime: fim (ISO: {current_year}-01-22T15:00:00)
-   - description: descrição (opcional)
-
-4. 'Reagendar Compromisso'
-   🔄 Use quando o cliente quiser MUDAR data/hora de um agendamento
-   Parâmetros:
-   - customer_email: e-mail usado no agendamento original
-   - new_start_datetime: nova data/hora (ISO: {current_year}-01-25T10:00:00)
-   - event_index: número do evento (só usar após cliente escolher da lista)
-   
-   FLUXO:
-   a) Primeira chamada: só customer_email e new_start_datetime
-   b) Se retornar lista, pergunte ao cliente qual número
-   c) Segunda chamada: inclua event_index com o número escolhido
-
-5. 'Cancelar Agendamento'
-   ❌ Use quando o cliente quiser CANCELAR um agendamento
-   Parâmetros:
-   - customer_email: e-mail usado no agendamento
-   - event_index: número do evento (só usar após cliente escolher da lista)
-   
-   FLUXO:
-   a) Primeira chamada: só customer_email
-   b) Se retornar lista, pergunte ao cliente qual número
-   c) Confirme com o cliente antes de cancelar definitivamente
-   d) Segunda chamada: inclua event_index com o número escolhido
-"""
 
 # Timeout configuration (in seconds)
 CREW_TIMEOUT_SECONDS = 90  # Maximum time to wait for crew.kickoff()
@@ -185,8 +137,20 @@ async def handle_whatsapp_message(data: MessageInput):
         # Check if calendar is connected
         calendar_connected = data.calendarConnected or False
         
+        # Tracker to verify if message was sent via tool
+        request_id = str(uuid.uuid4())
+        TOOLS_USAGE_STATE[request_id] = {"sent": False}
+        
         # userId is the session_id (instance_1, etc), userEmail is for Google Calendar
-        comercial, social, trafego = get_agents(data.userId, custom_prompt, user_email, appointment_duration, calendar_connected)
+        comercial, social, trafego = get_agents(
+            user_id=data.userId, 
+            custom_prompt=custom_prompt, 
+            user_email=user_email, 
+            appointment_duration=appointment_duration, 
+            calendar_connected=calendar_connected,
+            target_remote_jid=data.remoteJid,  # SECURITY: Lock tools to this user
+            request_id=request_id              # STATEFUL: Track usage via global state
+        )
 
         # Get current datetime for context
         now = datetime.now()
@@ -205,20 +169,6 @@ O cliente com ID '{data.remoteJid}' enviou a seguinte mensagem: '{data.message}'
 Histórico da Conversa:
 {format_history(data.history)}
 
-═══════════════════════════════════════════════════════════════
-                    FERRAMENTAS DISPONÍVEIS
-═══════════════════════════════════════════════════════════════
-
-1. 'Enviar Mensagem WhatsApp'
-   📤 Use para responder ao cliente
-   Parâmetros:
-   - remote_jid: {data.remoteJid}
-   - message: sua resposta (texto limpo, sem markdown)
-
-{get_calendar_tools_description(calendar_connected, current_year)}
-
-═══════════════════════════════════════════════════════════════
-
 📍 INFORMAÇÕES DO ESTABELECIMENTO:
 - Tipo de Atendimento: {'PRESENCIAL' if data.serviceType == 'presencial' else 'ONLINE (Google Meet)'}
 - Endereço: {data.businessAddress if data.businessAddress else 'Não configurado'}
@@ -232,27 +182,10 @@ REGRAS BÁSICAS:
 - Analise a mensagem e responda seguindo suas instruções
 - LEVE EM CONTA O HISTÓRICO ACIMA
 - Se você fez uma pergunta, a mensagem atual é provavelmente a resposta
-- NUNCA mencione "Factoria", "Factoria IA" ou qualquer coisa relacionada
-
-FLUXO DE CONFIRMAÇÃO DE AGENDAMENTO:
-Após verificar disponibilidade e ANTES de agendar, você DEVE enviar um RESUMO para confirmação:
-
-📋 Confirme os dados do agendamento:
-- Nome: [nome do cliente]
-- E-mail: [email do cliente]
-- Serviço: [serviço solicitado]
-- Data: [data formatada]
-- Horário: [horário]
-- Duração: {appointment_duration} minutos
-- Local: {'[ENDEREÇO DO ESTABELECIMENTO]' if data.serviceType == 'presencial' else 'Google Meet (link enviado por e-mail)'}
-
-Só use 'Agendar Compromisso' APÓS o cliente confirmar "sim" ou "pode marcar".
-
-APÓS AGENDAR COM SUCESSO:
-⚠️ VOCÊ DEVE OBRIGATORIAMENTE usar a ferramenta 'Enviar Mensagem WhatsApp' para confirmar ao cliente!
-- Para PRESENCIAL: Informe o endereço completo ({data.businessAddress if data.businessAddress else 'endereço não configurado'})
-- Para ONLINE: Informe que o link do Google Meet foi enviado por e-mail
-- NUNCA dê uma resposta final sem enviar a mensagem via ferramenta!
+APÓS SUCESSO:
+Use 'Enviar Mensagem WhatsApp' para confirmar ao cliente.
+Para PRESENCIAL: informe o endereço ({data.businessAddress if data.businessAddress else 'não configurado'})
+Para ONLINE: informe que o link Google Meet foi enviado por e-mail.
             """.strip(),
             expected_output="Mensagem de confirmação enviada ao cliente via ferramenta 'Enviar Mensagem WhatsApp'.",
             agent=comercial
@@ -266,7 +199,47 @@ APÓS AGENDAR COM SUCESSO:
         )
 
         result = await run_crew_with_retry(crew)
-        return {"status": "processing", "result": str(result)}
+        
+        # --- RETRY LOGIC FOR WHATSAPP ---
+        final_answer = str(result)
+        
+        # Check tracking state instead of string parsing
+        # Check tracking state using global state
+        if not TOOLS_USAGE_STATE.get(request_id, {}).get("sent"):
+             # Agent finished but tool was NOT used. Force retry.
+             print(f"⚠️ Agent finished but 'sent' tracker is False. Retry triggered.")
+             print(f"Agent generated text: {final_answer}")
+             
+             retry_task = Task(
+                 description=f"""
+🚨 ATENÇÃO: Você gerou uma resposta mas NÃO usou a ferramenta de envio!
+Sua tarefa NÃO ESTÁ COMPLETA.
+
+Você DEVE usar a ferramenta 'Enviar Mensagem WhatsApp' agora mesmo.
+
+A mensagem que você gerou foi:
+"{final_answer}"
+
+👉 SUA TAREFA AGORA: Use a ferramenta 'Enviar Mensagem WhatsApp' para enviar EXATAMENTE o texto acima para o cliente.
+NÃO mude o texto. Apenas envie.
+                 """.strip(),
+                 expected_output="Confirmação de 'Mensagem enviada com sucesso' vinda da ferramenta.",
+                 agent=comercial
+             )
+             
+             crew_retry = Crew(
+                agents=[comercial],
+                tasks=[retry_task],
+                process=Process.sequential,
+                memory=False
+             )
+             
+             print("🔄 Starting RETRY to force message sending...")
+             result = await run_crew_with_retry(crew_retry)
+             final_answer = str(result)
+             print(f"✅ Retry result: {final_answer}")
+
+        return {"status": "success", "result": final_answer}
     
     except Exception as e:
         error_msg = str(e)
@@ -274,6 +247,10 @@ APÓS AGENDAR COM SUCESSO:
         print(f"❌ Error in webhook: {error_msg}")
         print(f"Traceback: {error_trace}")
         raise HTTPException(status_code=500, detail=error_msg)
+    finally:
+        # Cleanup global state
+        if 'request_id' in locals():
+            TOOLS_USAGE_STATE.pop(request_id, None)
 
 
 @app.post("/webhook/instagram")
@@ -282,7 +259,16 @@ async def handle_instagram_message(data: InstagramMessageInput):
         from crewai import Crew, Process, Task
         from agents import get_instagram_agent
         
-        comercial = get_instagram_agent(data.userId, data.agentPrompt)
+        # Tracker
+        request_id = str(uuid.uuid4())
+        TOOLS_USAGE_STATE[request_id] = {"sent": False}
+
+        comercial = get_instagram_agent(
+            user_id=data.userId, 
+            custom_prompt=data.agentPrompt,
+            target_recipient_id=data.senderId,  # SECURITY: Lock tools to this user
+            request_id=request_id               # STATEFUL: Track usage via global state
+        )
 
         task_atendimento = Task(
             description=f"""
@@ -309,15 +295,50 @@ Analise a mensagem e responda de forma adequada seguindo suas instruções, LEVA
         )
 
         result = await run_crew_with_retry(crew)
-        print(f"✅ Instagram message processed for {data.senderId}")
-        return {"status": "processing", "result": str(result)}
-    
+        
+        # --- RETRY LOGIC FOR INSTAGRAM ---
+        final_answer = str(result)
+        
+        if not message_tracker.get("sent"):
+             print(f"⚠️ Agent finished but 'sent' tracker (Instagram) is False. Retry triggered.")
+             
+             retry_task = Task(
+                 description=f"""
+🚨 ATENÇÃO: Você gerou uma resposta mas NÃO usou a ferramenta de envio do Instagram!
+Sua tarefa NÃO ESTÁ COMPLETA.
+
+Você DEVE usar a ferramenta 'Enviar Mensagem Instagram' agora mesmo.
+
+A mensagem que você gerou foi:
+"{final_answer}"
+
+👉 SUA TAREFA AGORA: Use a ferramenta 'Enviar Mensagem Instagram' para enviar EXATAMENTE o texto acima.
+                 """.strip(),
+                 expected_output="Confirmação de 'Mensagem Instagram enviada...' vinda da ferramenta.",
+                 agent=comercial
+             )
+             
+             crew_retry = Crew(
+                agents=[comercial],
+                tasks=[retry_task],
+                process=Process.sequential,
+                memory=False
+             )
+             
+             print("🔄 Starting RETRY to force Instagram message sending...")
+             result = await run_crew_with_retry(crew_retry)
+             final_answer = str(result)
+             print(f"✅ Retry result: {final_answer}")
+             
+        return {"status": "success", "result": final_answer}
+
     except Exception as e:
-        error_msg = str(e)
-        error_trace = traceback.format_exc()
-        print(f"❌ Error in Instagram webhook: {error_msg}")
-        print(f"Traceback: {error_trace}")
-        raise HTTPException(status_code=500, detail=error_msg)
+        print(f"❌ Error (Instagram): {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup global state
+        if 'request_id' in locals():
+            TOOLS_USAGE_STATE.pop(request_id, None)
 
 
 @app.get("/health")

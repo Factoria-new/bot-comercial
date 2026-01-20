@@ -1,15 +1,103 @@
 from crewai.tools import BaseTool
-from pydantic import Field
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
 import requests
 import os
 import json
 
+# Global state to track tool usage across threads/deepcopies
+# Format: { "request_id": { "sent": False } }
+TOOLS_USAGE_STATE = {}
+
+
+# ============================================================================
+# SCHEMAS PYDANTIC PARA ARGS_SCHEMA (OBRIGATÓRIOS PARA TOOL CALLING)
+# ============================================================================
+
+class WhatsAppSendInput(BaseModel):
+    """Schema de entrada para enviar mensagem WhatsApp."""
+    model_config = ConfigDict(extra='ignore')
+    
+    remote_jid: str = Field(..., description="ID do cliente no formato WhatsApp (ex: 5531999527076@s.whatsapp.net)")
+    message: str = Field(..., description="Texto da mensagem a ser enviada ao cliente")
+
+
+class InstagramSendInput(BaseModel):
+    """Schema de entrada para enviar mensagem Instagram."""
+    model_config = ConfigDict(extra='ignore')
+    
+    recipient_id: str = Field(..., description="ID do cliente no Instagram")
+    message: str = Field(..., description="Texto da mensagem a ser enviada")
+
+
+class WhatsAppAudioInput(BaseModel):
+    """Schema de entrada para enviar áudio WhatsApp."""
+    model_config = ConfigDict(extra='ignore')
+    
+    remote_jid: str = Field(..., description="ID do cliente no formato WhatsApp")
+    message: str = Field(..., description="Texto que será convertido em áudio e enviado")
+
+
+class GoogleCalendarInput(BaseModel):
+    """Schema de entrada para agendar compromisso."""
+    model_config = ConfigDict(extra='ignore')
+    
+    customer_name: str = Field(..., description="Nome completo do cliente")
+    customer_email: str = Field(..., description="E-mail do cliente para ser adicionado como participante")
+    start_datetime: str = Field(..., description="Data e hora de início no formato ISO (ex: 2026-01-20T14:00:00)")
+    end_datetime: Optional[str] = Field(default="", description="Data e hora de fim (opcional, calculado automaticamente)")
+    description: Optional[str] = Field(default="", description="Descrição opcional do compromisso")
+
+
+class GoogleCalendarRescheduleInput(BaseModel):
+    """Schema de entrada para reagendar compromisso."""
+    model_config = ConfigDict(extra='ignore')
+    
+    customer_email: str = Field(..., description="E-mail do cliente usado no agendamento original")
+    new_start_datetime: str = Field(..., description="Nova data e hora de início no formato ISO (ex: 2026-01-20T14:00:00)")
+    event_index: Optional[int] = Field(default=0, description="Número do evento na lista (1, 2, 3...) - usar após cliente escolher")
+
+
+class GoogleCalendarCheckAvailabilityInput(BaseModel):
+    """Schema de entrada para verificar disponibilidade."""
+    model_config = ConfigDict(extra='ignore')
+    
+    requested_date: str = Field(..., description="Data no formato YYYY-MM-DD (ex: 2026-01-20)")
+    requested_time: str = Field(..., description="Hora no formato HH:mm (ex: 14:00)")
+
+
+class GoogleCalendarListDaySlotsInput(BaseModel):
+    """Schema de entrada para listar horários disponíveis."""
+    model_config = ConfigDict(extra='ignore')
+    
+    date: str = Field(..., description="Data no formato YYYY-MM-DD")
+    period: Optional[str] = Field(default="all", description="Período do dia: 'morning', 'afternoon', 'evening' ou 'all'")
+
+
+class GoogleCalendarCancelInput(BaseModel):
+    """Schema de entrada para cancelar agendamento."""
+    model_config = ConfigDict(extra='ignore')
+    
+    customer_email: str = Field(..., description="E-mail do cliente usado no agendamento")
+    event_index: Optional[int] = Field(default=0, description="Número do evento na lista (1, 2, 3...) - usar após cliente escolher")
+    confirmed: Optional[bool] = Field(default=False, description="True se o cliente confirmou o cancelamento")
+
+
+# ============================================================================
+# FERRAMENTAS
+# ============================================================================
+
 class WhatsAppSendTool(BaseTool):
     name: str = "Enviar Mensagem WhatsApp"
     description: str = "Envia uma mensagem de texto para o cliente no WhatsApp. Use o remote_jid fornecido na tarefa para responder."
+    args_schema: type[BaseModel] = WhatsAppSendInput
     
     # Store session_id as instance variable
     session_id: str = Field(default="instance_1", description="Session ID do WhatsApp")
+    # SECURITY: Lock this tool to a specific recipient to prevent hallucination/data leakage
+    default_recipient: Optional[str] = Field(default=None, description="Se definido, força envio para este número ignorando o argumento remote_jid")
+    
+    request_id: Optional[str] = Field(default=None, exclude=True)
 
     def _run(self, remote_jid: str, message: str):
         """
@@ -19,16 +107,28 @@ class WhatsAppSendTool(BaseTool):
             remote_jid: O ID do cliente (ex: 109384344584362@lid ou 5531999527076@s.whatsapp.net)
             message: A mensagem a ser enviada
         """
+        # TRACKING UPDATE
+        if self.request_id and self.request_id in TOOLS_USAGE_STATE:
+            TOOLS_USAGE_STATE[self.request_id]["sent"] = True
+
+        # SECURITY OVERRIDE
+        if self.default_recipient:
+            if remote_jid != self.default_recipient:
+                print(f"🔒 SECURITY: Redirecting message from {remote_jid} to locked recipient {self.default_recipient}")
+            final_remote_jid = self.default_recipient
+        else:
+            final_remote_jid = remote_jid
+
         node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
         
         try:
             response = requests.post(f"{node_api_url}/api/internal/whatsapp/send-text", json={
                 "userId": self.session_id,  # This is the WhatsApp session ID (instance_1, etc)
-                "phoneNumber": remote_jid,   # This is the client's JID
+                "phoneNumber": final_remote_jid,   # This is the client's JID
                 "message": message
             })
             if response.status_code == 200:
-                return f"Mensagem enviada com sucesso para {remote_jid}."
+                return f"Mensagem enviada com sucesso para {final_remote_jid}."
             else:
                 return f"Falha ao enviar: {response.text}"
         except Exception as e:
@@ -38,9 +138,15 @@ class WhatsAppSendTool(BaseTool):
 class InstagramSendTool(BaseTool):
     name: str = "Enviar Mensagem Instagram"
     description: str = "Envia uma mensagem de texto para o cliente no Instagram DM. Use o sender_id fornecido na tarefa para responder."
+    args_schema: type[BaseModel] = InstagramSendInput
     
     # Store user_id (email) as instance variable
     user_id: str = Field(default="", description="Email do usuário conectado")
+    # SECURITY: Lock this tool to a specific recipient
+    default_recipient: Optional[str] = Field(default=None, description="Se definido, força envio para este ID ignorando o argumento recipient_id")
+    
+    # STATEFUL TRACKING
+    request_id: Optional[str] = Field(default=None, exclude=True)
 
     def _run(self, recipient_id: str, message: str):
         """
@@ -50,16 +156,28 @@ class InstagramSendTool(BaseTool):
             recipient_id: O ID do cliente no Instagram
             message: A mensagem a ser enviada
         """
+        # TRACKING UPDATE
+        if self.request_id and self.request_id in TOOLS_USAGE_STATE:
+            TOOLS_USAGE_STATE[self.request_id]["sent"] = True
+
+        # SECURITY OVERRIDE
+        if self.default_recipient:
+            if recipient_id != self.default_recipient:
+                print(f"🔒 SECURITY: Redirecting Instagram DM from {recipient_id} to locked recipient {self.default_recipient}")
+            final_recipient_id = self.default_recipient
+        else:
+            final_recipient_id = recipient_id
+
         node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
         
         try:
             response = requests.post(f"{node_api_url}/api/internal/instagram/send-dm", json={
                 "userId": self.user_id,
-                "recipientId": recipient_id,
+                "recipientId": final_recipient_id,
                 "message": message
             })
             if response.status_code == 200:
-                return f"Mensagem Instagram enviada com sucesso para {recipient_id}."
+                return f"Mensagem Instagram enviada com sucesso para {final_recipient_id}."
             else:
                 return f"Falha ao enviar Instagram DM: {response.text}"
         except Exception as e:
@@ -69,9 +187,13 @@ class InstagramSendTool(BaseTool):
 class WhatsAppSendAudioTool(BaseTool):
     name: str = "Enviar Áudio WhatsApp"
     description: str = "Envia uma resposta em ÁUDIO (voz) para o cliente no WhatsApp. Use esta ferramenta quando o cliente solicitar áudio especificamente (ex: 'manda áudio') ou quando você julgar que uma resposta falada é melhor. O texto fornecido será convertido em fala."
+    args_schema: type[BaseModel] = WhatsAppAudioInput
     
     # Store session_id as instance variable
     session_id: str = Field(default="instance_1", description="Session ID do WhatsApp")
+    request_id: Optional[str] = Field(default=None, exclude=True)
+    # SECURITY: Lock this tool to a specific recipient
+    default_recipient: Optional[str] = Field(default=None, description="Se definido, força envio para este número ignorando o argumento remote_jid")
 
     def _run(self, remote_jid: str, message: str):
         """
@@ -81,16 +203,27 @@ class WhatsAppSendAudioTool(BaseTool):
             remote_jid: O ID do cliente (ex: 109384344584362@lid ou 5531...)
             message: O texto que será falado no áudio
         """
+        # TRACKING UPDATE
+        if self.request_id and self.request_id in TOOLS_USAGE_STATE:
+            TOOLS_USAGE_STATE[self.request_id]["sent"] = True
+        # SECURITY OVERRIDE
+        if self.default_recipient:
+            if remote_jid != self.default_recipient:
+                print(f"🔒 SECURITY: Redirecting audio from {remote_jid} to locked recipient {self.default_recipient}")
+            final_remote_jid = self.default_recipient
+        else:
+            final_remote_jid = remote_jid
+
         node_api_url = os.getenv("NODE_BACKEND_URL", "http://localhost:3003")
         
         try:
             response = requests.post(f"{node_api_url}/api/internal/whatsapp/send-audio", json={
                 "userId": self.session_id,
-                "phoneNumber": remote_jid,
+                "phoneNumber": final_remote_jid,
                 "message": message
             })
             if response.status_code == 200:
-                return f"Áudio enviado com sucesso para {remote_jid}."
+                return f"Áudio enviado com sucesso para {final_remote_jid}."
             else:
                 return f"Falha ao enviar áudio: {response.text}"
         except Exception as e:
@@ -125,6 +258,7 @@ class GoogleCalendarTool(BaseTool):
     - end_datetime: Data e hora de fim (OPCIONAL - calculado automaticamente se não fornecido)
     - description: Descrição do compromisso (opcional)
     """
+    args_schema: type[BaseModel] = GoogleCalendarInput
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
     appointment_duration: int = Field(default=60, description="Duração padrão dos agendamentos em minutos")
@@ -260,6 +394,7 @@ class GoogleCalendarRescheduleTool(BaseTool):
     - new_start_datetime: Nova data/hora de INÍCIO (formato ISO: 2026-01-20T14:00:00) (OBRIGATÓRIO)
     - event_index: Número do evento na lista (1, 2, 3...) - use SOMENTE após cliente escolher
     """
+    args_schema: type[BaseModel] = GoogleCalendarRescheduleInput
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
     appointment_duration: int = Field(default=60, description="Duração configurada dos agendamentos em minutos")
@@ -431,6 +566,7 @@ class GoogleCalendarCheckAvailabilityTool(BaseTool):
     - requested_date: Data (YYYY-MM-DD)
     - requested_time: Hora (HH:mm)
     """
+    args_schema: type[BaseModel] = GoogleCalendarCheckAvailabilityInput
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
 
@@ -505,6 +641,7 @@ class GoogleCalendarListDaySlotsTool(BaseTool):
     - date: Data no formato YYYY-MM-DD (OBRIGATÓRIO)
     - period: 'morning' (manhã), 'afternoon' (tarde), 'evening' (noite), ou 'all' (OPCIONAL, padrão: all)
     """
+    args_schema: type[BaseModel] = GoogleCalendarListDaySlotsInput
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
 
@@ -601,6 +738,7 @@ class GoogleCalendarCancelTool(BaseTool):
     - event_index: Número do evento na lista (1, 2, 3...) - use SOMENTE após cliente escolher
     - confirmed: True se o cliente já confirmou que deseja cancelar
     """
+    args_schema: type[BaseModel] = GoogleCalendarCancelInput
     
     user_id: str = Field(default="", description="Email do usuário dono do calendário")
 

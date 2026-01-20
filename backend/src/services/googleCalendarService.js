@@ -41,6 +41,67 @@ export const initGoogleCalendarService = (io) => {
 };
 
 /**
+ * Validate if a connected account is healthy and can execute operations
+ * This prevents connection issues after server restart
+ * @param {string} connectionId - The connected account ID
+ * @param {string} entityId - The entity ID (userId/email)
+ * @returns {Promise<{valid: boolean, reason?: string, error?: string}>}
+ */
+const validateConnectionHealth = async (connectionId, entityId) => {
+    try {
+        // Try to execute a simple operation to validate the connection
+        // Composio REQUIRES entityId (error 1811) when using connectedAccountId
+        const result = await composio.tools.execute(
+            'GOOGLECALENDAR_EVENTS_LIST',
+            {
+                connectedAccountId: connectionId,
+                userId: entityId,
+                dangerouslySkipVersionCheck: true,
+                arguments: {
+                    max_results: 1,
+                    time_min: new Date().toISOString()
+                }
+            }
+        );
+
+        // If we get here without error, connection is healthy
+        return { valid: result.successful !== false };
+    } catch (error) {
+        // Serialize the entire error to search for entity mismatch indicators
+        const errorString = JSON.stringify(error, Object.getOwnPropertyNames(error));
+        const errorMessage = error.message || '';
+        const errorCause = error.cause?.message || '';
+        const errorCode = error.code || '';
+        const statusCode = error.statusCode || 0;
+
+        // Check for entity ID mismatch error (code 1812)
+        // Can appear in various places in the error structure
+        const isEntityMismatch =
+            errorString.includes('1812') ||
+            errorString.includes('entity id does not match') ||
+            errorString.includes('EntityIdMismatch') ||
+            errorString.includes('ConnectedAccountEntityIdMismatch') ||
+            (statusCode === 400 && errorString.includes('entity'));
+
+        // Log full error for debugging
+        console.warn(`⚠️ Connection health check failed: ${errorMessage}`);
+        console.warn(`   Error cause: ${JSON.stringify(error.cause, Object.getOwnPropertyNames(error.cause || {}))}`);
+        console.warn(`   Error code: ${error.code || 'none'}, statusCode: ${error.statusCode || 'none'}`);
+
+        if (isEntityMismatch) {
+            console.warn(`   >>> Detected as Entity ID mismatch`);
+        }
+
+        return {
+            valid: false,
+            reason: isEntityMismatch ? 'entity_mismatch' : 'unknown',
+            error: errorMessage
+        };
+    }
+};
+
+
+/**
  * Generate OAuth URL for Google Calendar authentication
  * @param {string} userId - User's email (unique identifier) - REQUIRED
  * @returns {Promise<{success: boolean, authUrl?: string, connectionId?: string, error?: string}>}
@@ -122,9 +183,10 @@ export const handleCallback = async (connectionId) => {
 /**
  * Get connection status for a specific user
  * @param {string} userId - User's email (unique identifier) - REQUIRED
- * @returns {Promise<{isConnected: boolean, email?: string, connectionId?: string}>}
+ * @param {boolean} skipHealthCheck - Skip health validation (use for internal calls to avoid loops)
+ * @returns {Promise<{isConnected: boolean, email?: string, connectionId?: string, needsReconnection?: boolean}>}
  */
-export const getConnectionStatus = async (userId) => {
+export const getConnectionStatus = async (userId, skipHealthCheck = false) => {
     if (!userId) {
         return { isConnected: false, error: 'userId (email) is required' };
     }
@@ -146,6 +208,38 @@ export const getConnectionStatus = async (userId) => {
             return { isConnected: false };
         }
 
+        // Log entity ID comparison for debugging
+        console.log(`📅 Found active account for ${userId}:`);
+        console.log(`   - connectionId: ${activeAccount.id}`);
+        console.log(`   - entityId from Composio: ${activeAccount.entityId || 'NOT SET'}`);
+        console.log(`   - userId we're using: ${userId}`);
+
+        // Validate connection health (unless skipped to prevent loops)
+        if (!skipHealthCheck) {
+            const health = await validateConnectionHealth(activeAccount.id, userId);
+
+            if (!health.valid) {
+                console.warn(`⚠️ Calendar connection invalid for ${userId}: ${health.reason || health.error}`);
+
+                // If entity mismatch, auto-disconnect the invalid connection
+                if (health.reason === 'entity_mismatch') {
+                    console.log(`🔄 Auto-disconnecting invalid Google Calendar connection for ${userId}`);
+                    try {
+                        await composio.connectedAccounts.delete(activeAccount.id);
+                        console.log(`✅ Invalid connection removed. User needs to reconnect.`);
+                    } catch (deleteError) {
+                        console.warn(`Could not delete invalid connection: ${deleteError.message}`);
+                    }
+                }
+
+                return {
+                    isConnected: false,
+                    needsReconnection: true,
+                    reason: health.reason || 'connection_invalid'
+                };
+            }
+        }
+
         return {
             isConnected: true,
             connectionId: activeAccount.id,
@@ -157,6 +251,7 @@ export const getConnectionStatus = async (userId) => {
     }
 };
 
+
 /**
  * Disconnect Google Calendar account for a user
  * @param {string} userId - User's email - REQUIRED
@@ -167,7 +262,7 @@ export const disconnect = async (userId) => {
     }
 
     try {
-        const status = await getConnectionStatus(userId);
+        const status = await getConnectionStatus(userId, true);
 
         if (status.connectionId) {
             try {
@@ -201,7 +296,7 @@ export const disconnect = async (userId) => {
  * @returns {Promise<{success: boolean, events?: Array, error?: string}>}
  */
 export const listEvents = async (userId, maxResults = 10, timeMin = null) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
@@ -244,7 +339,7 @@ export const listEvents = async (userId, maxResults = 10, timeMin = null) => {
  * @returns {Promise<{success: boolean, event?: object, error?: string}>}
  */
 export const createEvent = async (userId, eventData) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
@@ -293,7 +388,7 @@ export const createEvent = async (userId, eventData) => {
  * @returns {Promise<{success: boolean, slots?: Array, error?: string}>}
  */
 export const findAvailableSlots = async (userId, date, durationMinutes = 60) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
@@ -607,7 +702,7 @@ export default {
  * @returns {Promise<{available: boolean, conflictingEvents?: Array}>}
  */
 export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTime) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { available: false, error: 'Google Calendar not connected' };
     }
@@ -694,7 +789,7 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
  * @returns {Promise<{success: boolean, suggestions: Array}>}
  */
 export const findAlternativeSlots = async (userId, requestedDateTime, businessHours, durationMinutes = 60) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected', suggestions: [] };
     }
@@ -795,7 +890,7 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
  * @returns {Promise<{success: boolean, slots?: Array, error?: string}>}
  */
 export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 60, businessHours = null, period = 'all') => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected', slots: [] };
     }
@@ -871,9 +966,15 @@ export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 6
             let currentStart = new Date(targetDate);
             currentStart.setHours(openHour, openMin, 0, 0);
 
+            // slotEnd represents the CLOSING TIME - appointments can END at this time
+            // So a slot starting at 17:00 with 60min duration ending at 18:00 is valid if close is 18:00
             const slotEnd = new Date(targetDate);
             slotEnd.setHours(closeHour, closeMin, 0, 0);
 
+            console.log(`   📅 Checking slot ${slot.start}-${slot.end}: slotEnd=${slotEnd.toISOString()}`);
+
+            // Use <= to include appointments that END exactly at closing time
+            // Example: if closing is 18:00 and duration is 60min, 17:00 start is valid (ends at 18:00)
             while (currentStart.getTime() + durationMinutes * 60000 <= slotEnd.getTime()) {
                 const currentEnd = new Date(currentStart.getTime() + durationMinutes * 60000);
                 const hour = currentStart.getHours();
@@ -942,7 +1043,7 @@ export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 6
  * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string}>}
  */
 export const createEventWithMeet = async (userId, eventData, createMeetLink = false, durationMinutes = 60) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
@@ -1152,7 +1253,7 @@ export const scheduleAppointment = async (userId, appointmentData, businessConte
  * @returns {Promise<{success: boolean, events?: Array, error?: string}>}
  */
 export const findEventsByCustomerEmail = async (userId, customerEmail, fromDate = null) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
@@ -1220,7 +1321,7 @@ export const findEventsByCustomerEmail = async (userId, customerEmail, fromDate 
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export const deleteEvent = async (userId, eventId) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
@@ -1290,7 +1391,7 @@ export const cancelAppointment = async (userId, eventId) => {
  * @returns {Promise<{success: boolean, event?: object, error?: string}>}
  */
 export const getEventById = async (userId, eventId) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }
@@ -1331,7 +1432,7 @@ export const getEventById = async (userId, eventId) => {
  * @returns {Promise<{success: boolean, event?: object, meetLink?: string, error?: string}>}
  */
 export const updateEvent = async (userId, eventId, updateData, durationMinutes = 60, createMeetLink = false) => {
-    const status = await getConnectionStatus(userId);
+    const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected' };
     }

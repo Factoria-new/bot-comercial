@@ -2,19 +2,21 @@ from crewai import Agent, LLM
 from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool, GoogleCalendarTool, GoogleCalendarRescheduleTool, GoogleCalendarCheckAvailabilityTool, GoogleCalendarCancelTool, GoogleCalendarListDaySlotsTool
 import os
 
-def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duration=60, calendar_connected=False):
+def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duration=60, calendar_connected=False, target_remote_jid=None, request_id=None):
     """
     Create CrewAI agents with Gemini LLM.
     user_id is actually the session_id (instance_1, instance_2, etc)
     user_email is the user's email for Google Calendar integration
     appointment_duration is the default duration for appointments in minutes
     calendar_connected indicates if Google Calendar is connected for this user
+    target_remote_jid is the specific user phone number we are talking to (used to lock security)
+    request_id is a unique ID to track if message was sent (passed to tools)
     """
     
     # Configure Gemini LLM using CrewAI's native format
     # Requires GEMINI_API_KEY environment variable
     gemini_llm = LLM(
-        model="gemini/gemini-2.0-flash-exp",  # Using stable model
+        model="gemini/gemini-2.5-flash",
         temperature=0.7,
         config={
             "safety_settings": [
@@ -25,10 +27,10 @@ def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duratio
             ]
         }
     )
-
-    # WhatsApp Tool with correct session_id
-    whats_tool = WhatsAppSendTool(session_id=user_id)
-    whats_audio_tool = WhatsAppSendAudioTool(session_id=user_id)
+    
+    # WhatsApp Tool with correct session_id and locked recipient
+    whats_tool = WhatsAppSendTool(session_id=user_id, default_recipient=target_remote_jid, request_id=request_id)
+    whats_audio_tool = WhatsAppSendAudioTool(session_id=user_id, default_recipient=target_remote_jid, request_id=request_id)
     
     # Google Calendar Tools - uses user's email for Composio connection
     # Pass appointment_duration for scheduling
@@ -45,23 +47,24 @@ def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duratio
     # Scheduling instructions to append to backstory
     scheduling_instructions = """
 
-REGRAS CRÍTICAS DE AGENDAMENTO (SIGA RIGOROSAMENTE):
+⚠️ IMPORTANTE: NUNCA escreva código JSON ou tool_code. EXECUTE as ferramentas diretamente!
 
-PASSO 1: VERIFICAR
-Antes de sugerir ou confirmar qualquer horário, você DEVE usar a ferramenta 'Verificar Disponibilidade'.
-- Se o cliente perguntar "Tem horário dia 20?", use a ferramenta.
-- Se o cliente disser "Pode ser dia 20 às 15h?", use a ferramenta.
-- NUNCA invente que está livre sem checar.
+REGRAS DE COMUNICAÇÃO (CHAT):
+1. SEMPRE RESPONDA: Nunca fique em silêncio.
+2. QUEBRA DE GELO: Se o cliente enviar risadas ("kkkk", "haha"), emojis ou mensagens casuais, RESPONDA com simpatia, emojis e tente engajar.
+   - Exemplo: "kkkk 😄 Posso te ajudar com o agendamento?"
+   - Exemplo: "Olá! Tudo bem? 😊"
+3. NÃO IGNORE: Mesmo mensagens curtas devem ter resposta.
 
-PASSO 2: CONFIRMAR
-Se a ferramenta disser que está DISPONÍVEL, você NÃO deve agendar ainda.
-Você deve enviar uma mensagem de confirmação para o cliente:
-"O horário de [Data] às [Hora] está disponível. Posso confirmar o agendamento?"
+REGRAS DE AGENDAMENTO:
 
-PASSO 3: AGENDAR
-SOMENTE após o cliente responder "Sim" ou "Pode marcar", use a ferramenta 'Agendar Compromisso'.
-- Se a ferramenta retornar sucesso, envie a confirmação final.
-- Se a ferramenta falhar, explique o motivo real retornado pela ferramenta.
+1. VERIFICAR: Antes de confirmar horário, use 'Verificar Disponibilidade'.
+
+2. CONFIRMAR DADOS: Se disponível, envie por WhatsApp um resumo com: Tipo (Presencial/Online), Data, Horário, Serviço, Nome, E-mail, Local. Pergunte se pode confirmar.
+   - ⚠️ DADOS REAIS: Se faltar qualquer dado (Nome, Email, etc), PERGUNTE ao cliente.
+   - 🚫 ALUCINAÇÃO ZERO: NUNCA invente dados, nunca use placeholders e NUNCA use o e-mail como nome.
+
+3. AGENDAR: Só use 'Agendar Compromisso' APÓS o cliente confirmar "sim".
 
 REGRAS DE REAGENDAMENTO:
 1. Use 'Reagendar Compromisso' passando APENAS email e nova data.
@@ -126,14 +129,16 @@ REGRAS DE CANCELAMENTO:
     return comercial, social_media, trafego
 
 
-def get_instagram_agent(user_id, custom_prompt=None):
+def get_instagram_agent(user_id, custom_prompt=None, target_recipient_id=None, request_id=None):
     """
     Create a single agent for Instagram DM responses.
     user_id is the user's email (connected account owner)
+    target_recipient_id is the customer ID to lock the tool to
+    request_id is a unique ID to track if message was sent
     """
     
     gemini_llm = LLM(
-        model="gemini/gemini-2.0-flash-exp",  # Using stable model
+        model="gemini/gemini-2.5-flash",
         temperature=0.7,
         config={
             "safety_settings": [
@@ -144,8 +149,22 @@ def get_instagram_agent(user_id, custom_prompt=None):
             ]
         }
     )
+    
+    # LLM separado para function calling
+    function_calling_llm = LLM(
+        model="gemini/gemini-2.5-flash",
+        temperature=0.1,
+        config={
+            "safety_settings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ]
+        }
+    )
 
-    instagram_tool = InstagramSendTool(user_id=user_id)
+    instagram_tool = InstagramSendTool(user_id=user_id, default_recipient=target_recipient_id, request_id=request_id)
     calendar_tool = GoogleCalendarTool(user_id=user_id)
     reschedule_tool = GoogleCalendarRescheduleTool(user_id=user_id)
     availability_tool = GoogleCalendarCheckAvailabilityTool(user_id=user_id)
@@ -157,33 +176,26 @@ def get_instagram_agent(user_id, custom_prompt=None):
     # Scheduling instructions to append to backstory
     scheduling_instructions = """
 
-REGRAS CRÍTICAS DE AGENDAMENTO (SIGA RIGOROSAMENTE):
+⚠️ IMPORTANTE: NUNCA escreva código JSON ou tool_code. EXECUTE as ferramentas diretamente!
 
-PASSO 1: VERIFICAR
-Antes de sugerir ou confirmar qualquer horário, você DEVE usar a ferramenta 'Verificar Disponibilidade'.
-- Se o cliente perguntar "Tem horário dia 20?", use a ferramenta.
-- Se o cliente disser "Pode ser dia 20 às 15h?", use a ferramenta.
-- NUNCA invente que está livre sem checar.
+REGRAS DE COMUNICAÇÃO (CHAT):
+1. SEMPRE RESPONDA: Nunca fique em silêncio.
+2. QUEBRA DE GELO: Se o cliente enviar risadas ("kkkk", "haha"), emojis ou mensagens casuais, RESPONDA com simpatia, emojis e tente engajar.
+   - Exemplo: "kkkk 😄 Posso te ajudar com o agendamento?"
+   - Exemplo: "Olá! Tudo bem? 😊"
+3. NÃO IGNORE: Mesmo mensagens curtas devem ter resposta.
 
-PASSO 2: CONFIRMAR
-Se a ferramenta disser que está DISPONÍVEL, você NÃO deve agendar ainda.
-Você deve enviar uma mensagem de confirmação para o cliente:
-"O horário de [Data] às [Hora] está disponível. Posso confirmar o agendamento?"
+REGRAS DE AGENDAMENTO:
 
-PASSO 3: AGENDAR
-SOMENTE após o cliente responder "Sim" ou "Pode marcar", use a ferramenta 'Agendar Compromisso'.
-- Se a ferramenta retornar sucesso, envie a confirmação final.
-- Se a ferramenta falhar, explique o motivo real retornado pela ferramenta.
+1. VERIFICAR: Antes de confirmar horário, use 'Verificar Disponibilidade'.
 
-REGRAS DE REAGENDAMENTO:
-1. Use 'Reagendar Compromisso' passando APENAS email e nova data.
-2. Se a ferramenta retornar uma LISTA numerada:
-   - APRESENTE a lista para o cliente.
-   - PERGUNTE qual número ele quer.
-   - AGUARDE a resposta.
-3. Quando o cliente responder o número:
-   - Use 'Reagendar Compromisso' novamente passando 'event_index'.
-   - NUNCA assuma que reagendou se a ferramenta pediu para selecionar.
+2. CONFIRMAR DADOS: Se disponível, envie um resumo com: Tipo (Presencial/Online), Data, Horário, Serviço, Nome, E-mail, Local. Pergunte se pode confirmar.
+
+3. AGENDAR: Só use 'Agendar Compromisso' APÓS o cliente confirmar "sim".
+
+REAGENDAMENTO:
+- Use 'Reagendar Compromisso' com email e nova data.
+- Se retornar lista, pergunte qual número e confirme dados antes de reagendar.
 """
     
     if custom_prompt:
@@ -196,14 +208,6 @@ REGRAS DE REAGENDAMENTO:
         backstory=backstory,
         tools=[instagram_tool, calendar_tool, reschedule_tool, availability_tool, list_slots_tool],
         llm=gemini_llm,
-        verbose=True
-    )
-
-    return Agent(
-        role='Atendente Instagram',
-        goal=goal,
-        backstory=backstory,
-        tools=[instagram_tool, calendar_tool, reschedule_tool, availability_tool, list_slots_tool],
-        llm=gemini_llm,
+        function_calling_llm=function_calling_llm,
         verbose=True
     )

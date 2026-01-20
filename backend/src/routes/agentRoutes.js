@@ -141,7 +141,7 @@ router.post('/chat', async (req, res) => {
         if (!API_KEY) return res.status(500).json({ error: 'API key ausente' });
 
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             systemInstruction: systemPrompt
         });
 
