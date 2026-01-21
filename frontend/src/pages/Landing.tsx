@@ -1076,6 +1076,16 @@ const Landing = () => {
                                         <p className="text-lg text-white/80 max-w-md mx-auto font-medium">
                                             Comece hoje e cancele quando quiser. Sem fidelidade, sem burocracia.
                                         </p>
+                                        {/* Arrow Video */}
+                                        <video
+                                            autoPlay
+                                            loop
+                                            muted
+                                            playsInline
+                                            className="w-24 h-24 mx-auto mt-6"
+                                        >
+                                            <source src="/videos/arrow.webm" type="video/webm" />
+                                        </video>
                                     </div>
                                 </div>
 
