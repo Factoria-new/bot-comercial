@@ -63,7 +63,7 @@ const Landing = () => {
                 setPricingCardsPosition('70%');
             } else {
                 // Desktop
-                setPricingVideoPosition('30%');
+                setPricingVideoPosition('20%');
                 setPricingCardsPosition('75%');
             }
         };
@@ -1033,10 +1033,10 @@ const Landing = () => {
                         <TestimonialsSection />
 
                         {/* Pricing Section */}
-                        <section id="pricing" className="relative min-h-screen flex flex-col justify-center py-24 px-5 bg-white overflow-hidden">
+                        <section id="pricing" className="relative min-h-screen flex flex-col justify-center px-12 md:px-4 bg-white overflow-hidden">
                             {/* Sticker Container - Rounded with margins */}
                             <div
-                                className="relative w-full h-full min-h-[80vh] overflow-hidden"
+                                className="relative w-full max-w-[80%] mx-auto h-full min-h-[80vh] overflow-hidden"
                                 style={{
                                     borderRadius: '32px',
                                     backgroundColor: '#f25622'
@@ -1070,10 +1070,10 @@ const Landing = () => {
                                 {/* Text on video side */}
                                 <div className="absolute z-10" style={{ left: pricingVideoPosition, top: "25%", transform: "translate(-50%, -50%)" }}>
                                     <div className="text-center">
-                                        <h2 className="text-[clamp(2rem,5vw,4rem)] font-clash font-bold text-white tracking-[-0.04em] leading-[0.85] mb-4">
+                                        <h2 className="text-[clamp(2rem,5vw,4rem)] font-clash font-bold text-[#1E293B] tracking-[-0.04em] leading-[0.85] mb-4">
                                             ESCOLHA SEU PLANO
                                         </h2>
-                                        <p className="text-lg text-white/80 max-w-md mx-auto font-medium">
+                                        <p className="text-lg text-slate-600 max-w-md mx-auto font-medium">
                                             Comece hoje e cancele quando quiser. Sem fidelidade, sem burocracia.
                                         </p>
                                         {/* Arrow Video */}
@@ -1148,7 +1148,7 @@ const Landing = () => {
                                                         contactHref="/payment"
                                                         linkState={{ plan: 'basic', period: pricingPeriod, price: `${formattedBasicPrice}${periodLabel}` }}
                                                         type="waves"
-                                                        className="bg-[#FE601E]"
+                                                        className="bg-[#00A947]"
                                                         rotation={rotation}
                                                         backChildren={
                                                             <>
