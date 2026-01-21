@@ -63,7 +63,7 @@ const Landing = () => {
                 setPricingCardsPosition('70%');
             } else {
                 // Desktop
-                setPricingVideoPosition('20%');
+                setPricingVideoPosition('21%');
                 setPricingCardsPosition('75%');
             }
         };
@@ -1070,10 +1070,11 @@ const Landing = () => {
                                 {/* Text on video side */}
                                 <div className="absolute z-10" style={{ left: pricingVideoPosition, top: "25%", transform: "translate(-50%, -50%)" }}>
                                     <div className="text-center">
-                                        <h2 className="text-[clamp(2rem,5vw,4rem)] font-clash font-bold text-[#1E293B] tracking-[-0.04em] leading-[0.85] mb-4">
+                                        <h2 className="text-[clamp(2rem,5vw,4rem)] font-clash font-bold text-[#1E293B] tracking-[-0.04em] leading-[0.85] mb-4"
+                                            style={{ wordSpacing: '0.5em' }}>
                                             ESCOLHA SEU PLANO
                                         </h2>
-                                        <p className="text-lg text-slate-600 max-w-md mx-auto font-medium">
+                                        <p className="text-lg text-slate-800 max-w-md mx-auto font-medium">
                                             Comece hoje e cancele quando quiser. Sem fidelidade, sem burocracia.
                                         </p>
                                         {/* Arrow Video */}
