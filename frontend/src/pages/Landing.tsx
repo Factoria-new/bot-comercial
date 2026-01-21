@@ -844,7 +844,8 @@ const Landing = () => {
                                 <div className="text-center max-w-3xl mx-auto">
                                     <h2 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
                                         Seu Assistente de Vendas <br className="hidden md:block" />
-                                        <span className="text-[#00A947]">no WhatsApp</span>
+                                        <span>no </span>
+                                        <span className="text-[#00A947]">WhatsApp</span>
                                     </h2>
                                     <p className="text-xl text-slate-600 leading-relaxed">
                                         Esqueça bots que só respondem FAQ. Nossa IA entende seu negócio, qualifica leads e agenda reuniões automaticamente.
@@ -852,176 +853,136 @@ const Landing = () => {
                                 </div>
                             </div>
 
-                            <div className="container mx-auto space-y-32 relative" style={{ maxWidth: "100%" }}>
+                            <div className="container mx-auto space-y-96 relative" style={{ maxWidth: "100%" }}>
 
 
-                                {/* Feature 1 */}
-                                <div className="relative">
-                                    {/* Timeline Line Part (Start) */}
-                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "50%", bottom: "-4rem" }} />
-                                    {/* Timeline Dot */}
-                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+                                {/* Feature 1: Atendimento Escalável */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true, margin: "-20%" }}
+                                    transition={{ duration: 0.9 }}
+                                    className="flex flex-col items-center text-center"
+                                >
+                                    <div className="max-w-[100rem]">
+                                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
+                                            Atendimento Escalável
+                                        </h3>
+                                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
+                                            Multiplique sua capacidade de atendimento sem contratar mais pessoas. Um bot para cada conversa, todas rodando ao mesmo tempo.
+                                        </p>
+                                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
+                                            {["Múltiplas conversas simultâneas", "Respostas instantâneas 24/7", "Escale sem aumentar custos"].map((item, i) => (
+                                                <li key={i} className="text-slate-600 font-medium">
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="w-full max-w-6xl aspect-[4/3] bg-feature-green flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl mt-16">
+                                        <img
+                                            src={bgFeature1}
+                                            alt="Atendimento Escalável"
+                                            className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                        />
+                                    </div>
+                                </motion.div>
 
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 50 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true, margin: "-20%" }}
-                                        transition={{ duration: 0.9 }}
-                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
-                                    >
-                                        <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
-                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                                Atendimento Escalável
-                                            </h3>
-                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Multiplique sua capacidade de atendimento sem contratar mais pessoas. Um bot para cada conversa, todas rodando ao mesmo tempo.
-                                            </p>
-                                            <ul className="space-y-4 mb-8">
-                                                {["Múltiplas conversas simultâneas", "Respostas instantâneas 24/7", "Escale sem aumentar custos"].map((item, i) => (
-                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
-                                                        {item}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                        <div className="order-1 lg:order-2 flex justify-end relative pr-20">
-                                            <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" }}>
-                                                <img
-                                                    src={bgFeature1}
-                                                    alt="Multiplicação de Força"
-                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
-                                                />
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                </div>
+                                {/* Feature 2: Agente IA Personalizado */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true, margin: "-20%" }}
+                                    transition={{ duration: 0.9 }}
+                                    className="flex flex-col items-center text-center"
+                                >
+                                    <div className="max-w-[100rem]">
+                                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
+                                            Agente IA Personalizado
+                                        </h3>
+                                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
+                                            Configure o prompt do seu bot com a personalidade da sua marca. Ele entende contexto, histórico e responde como seu melhor vendedor.
+                                        </p>
+                                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
+                                            {["Prompt 100% personalizável", "Conexão com Google Calendar", "Responde via áudio (TTS)"].map((item, i) => (
+                                                <li key={i} className="text-slate-600 font-medium">
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="w-full max-w-6xl aspect-[4/3] bg-[#030411] flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl p-8 mt-16">
+                                        <img
+                                            src="/images/AgentePersonalizado.png"
+                                            alt="Agente IA Personalizado"
+                                            className="w-full h-full object-contain shadow-lg rounded-xl hover:scale-105 transition-transform duration-700"
+                                        />
+                                    </div>
+                                </motion.div>
 
-                                {/* Feature 2 */}
-                                <div className="relative">
-                                    {/* Timeline Line Part (Middle) */}
-                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "-4rem", bottom: "-4rem" }} />
-                                    {/* Timeline Dot */}
-                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
+                                {/* Feature 3: Dashboard de Métricas */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true, margin: "-20%" }}
+                                    transition={{ duration: 0.9 }}
+                                    className="flex flex-col items-center text-center"
+                                >
+                                    <div className="max-w-[100rem]">
+                                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
+                                            Dashboard de Métricas
+                                        </h3>
+                                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
+                                            Acompanhe cada conversa, cada lead, cada agendamento. Tudo em tempo real com atualizações automáticas via WebSocket.
+                                        </p>
+                                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
+                                            {["Atualizações instantâneas", "Métricas de mensagens e leads", "Pergunte à Lia sobre seus dados"].map((item, i) => (
+                                                <li key={i} className="text-slate-600 font-medium">
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="w-full max-w-6xl aspect-[4/3] bg-[#0F0A28] flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl p-8 mt-16">
+                                        <img
+                                            src="/images/DashBoardDeMetricas.png"
+                                            alt="Dashboard de Métricas"
+                                            className="w-full h-full object-contain shadow-lg rounded-xl hover:scale-105 transition-transform duration-700"
+                                        />
+                                    </div>
+                                </motion.div>
 
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 50 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true, margin: "-20%" }}
-                                        transition={{ duration: 0.9 }}
-                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
-                                    >
-                                        <div className="order-1 flex justify-start relative pl-20">
-                                            <div className="w-full max-w-md aspect-[4/3] bg-[#030411] flex items-center justify-center shadow-inner overflow-hidden p-6" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
-                                                <img
-                                                    src="/images/AgentePersonalizado.png"
-                                                    alt="Funcionários Digitais"
-                                                    className="w-full h-full object-contain shadow-lg rounded-lg hover:scale-105 transition-transform duration-700"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
-                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                                Agente IA Personalizado
-                                            </h3>
-                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Configure o prompt do seu bot com a personalidade da sua marca. Ele entende contexto, histórico e responde como seu melhor vendedor.
-                                            </p>
-                                            <ul className="space-y-4 mb-8">
-                                                {["Prompt 100% personalizável", "Conexão com Google Calendar", "Responde via áudio (TTS)"].map((item, i) => (
-                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
-                                                        {item}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </motion.div>
-                                </div>
-
-                                {/* Feature 3 */}
-                                <div className="relative">
-                                    {/* Timeline Line Part (Middle) */}
-                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "-4rem", bottom: "-4rem" }} />
-                                    {/* Timeline Dot */}
-                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
-
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 50 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true, margin: "-20%" }}
-                                        transition={{ duration: 0.9 }}
-                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
-                                    >
-                                        <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
-                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }} >
-                                                Dashboard de Métricas
-                                            </h3>
-                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Acompanhe cada conversa, cada lead, cada agendamento. Tudo em tempo real com atualizações automáticas via WebSocket.
-                                            </p>
-                                            <ul className="space-y-4 mb-8">
-                                                {["Atualizações instantâneas", "Métricas de mensagens e leads", "Pergunte à Lia sobre seus dados"].map((item, i) => (
-                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
-                                                        {item}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                        <div className="order-1 lg:order-2 flex justify-end relative pr-20">
-                                            <div className="w-full max-w-md aspect-video bg-[#0F0A28] flex items-center justify-center shadow-inner overflow-hidden p-6" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
-                                                <img
-                                                    src="/images/DashBoardDeMetricas.png"
-                                                    alt="Controle Total"
-                                                    className="w-full h-full object-contain shadow-lg rounded-lg hover:scale-105 transition-transform duration-700"
-                                                />
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                </div>
-
-                                {/* Feature 4 */}
-                                <div className="relative">
-                                    {/* Timeline Line Part (End) */}
-                                    <div className="hidden lg:block absolute left-1/2 w-1 bg-[#00A947] -translate-x-1/2 rounded-full" style={{ top: "-4rem", bottom: "50%" }} />
-                                    {/* Timeline Dot */}
-                                    <div className="hidden lg:block absolute left-1/2 top-1/2 w-8 h-8 bg-[#00A947] rounded-full -translate-x-1/2 -translate-y-1/2 shadow-lg" />
-
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 50 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true, margin: "-20%" }}
-                                        transition={{ duration: 0.9 }}
-                                        className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
-                                    >
-                                        <div className="order-1 flex justify-start relative pl-20">
-                                            <div className="w-full max-w-md aspect-[4/3] bg-[#0F172A] flex items-center justify-center shadow-inner overflow-hidden p-6" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
-                                                <img
-                                                    src="/images/Integracoes.png"
-                                                    alt="Confiabilidade Enterprise"
-                                                    className="w-full h-full object-contain shadow-lg rounded-lg hover:scale-105 transition-transform duration-700"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
-                                            <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                                Integrações Poderosas
-                                            </h3>
-                                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Conecte WhatsApp, Instagram e Google Calendar em poucos cliques. Suas conversas e agendamentos sincronizados automaticamente.
-                                            </p>
-                                            <ul className="space-y-4 mb-8">
-                                                {["WhatsApp Business", "Instagram Direct", "Google Calendar integrado"].map((item, i) => (
-                                                    <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
-                                                        <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
-                                                        {item}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </motion.div>
-                                </div>
+                                {/* Feature 4: Integrações Poderosas */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true, margin: "-20%" }}
+                                    transition={{ duration: 0.9 }}
+                                    className="flex flex-col items-center text-center"
+                                >
+                                    <div className="max-w-[100rem]">
+                                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
+                                            Integrações Poderosas
+                                        </h3>
+                                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
+                                            Conecte WhatsApp, Instagram e Google Calendar em poucos cliques. Suas conversas e agendamentos sincronizados automaticamente.
+                                        </p>
+                                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
+                                            {["WhatsApp Business", "Instagram Direct", "Google Calendar integrado"].map((item, i) => (
+                                                <li key={i} className="text-slate-600 font-medium">
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="w-full max-w-6xl aspect-[4/3] bg-[#0F172A] flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl p-8 mt-16">
+                                        <img
+                                            src="/images/Integracoes.png"
+                                            alt="Integrações Poderosas"
+                                            className="w-full h-full object-contain shadow-lg rounded-xl hover:scale-105 transition-transform duration-700"
+                                        />
+                                    </div>
+                                </motion.div>
                             </div>
                         </section>
 
