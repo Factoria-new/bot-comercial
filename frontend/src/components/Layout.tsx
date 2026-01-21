@@ -15,9 +15,17 @@ interface LayoutProps {
   children: ReactNode;
   currentPage: "dashboard" | "chat" | "connections" | "integrations" | "ai-status" | "calendar" | "settings" | "my-prompt";
   showLiaButton?: boolean;
+  expandIntegrations?: boolean;
+  onExpandIntegrationsChange?: (expanded: boolean) => void;
 }
 
-const Layout = ({ children, currentPage, showLiaButton = true }: LayoutProps) => {
+const Layout = ({
+  children,
+  currentPage,
+  showLiaButton = true,
+  expandIntegrations = false,
+  onExpandIntegrationsChange
+}: LayoutProps) => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { toast } = useToast();
@@ -27,6 +35,21 @@ const Layout = ({ children, currentPage, showLiaButton = true }: LayoutProps) =>
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
   const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
+
+  // Sync external prop with internal state
+  useEffect(() => {
+    if (expandIntegrations) {
+      setIsSidebarOpen(true);
+      setShouldExpandIntegrations(true);
+    }
+  }, [expandIntegrations]);
+
+  // Handle closing side effects
+  const handleSidebarClose = () => {
+    setIsSidebarOpen(false);
+    setShouldExpandIntegrations(false);
+    onExpandIntegrationsChange?.(false);
+  };
 
   // Integrations state
   const {
@@ -96,7 +119,7 @@ const Layout = ({ children, currentPage, showLiaButton = true }: LayoutProps) =>
       {/* Persistent Components */}
       <DashboardSidebar
         isOpen={isSidebarOpen}
-        onClose={() => { setIsSidebarOpen(false); setShouldExpandIntegrations(false); }}
+        onClose={handleSidebarClose}
         onNavigate={() => { }} // Navigation handled by router internally in Sidebar
         currentPage={currentPage}
         integrations={integrations}

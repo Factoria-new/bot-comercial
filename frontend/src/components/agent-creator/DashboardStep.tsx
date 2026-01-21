@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link2, Sparkles, MessageCircle, MessagesSquare, Zap, Check } from "lucide-react";
+import { Link2, Sparkles, MessageCircle, MessagesSquare, Zap, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Integration } from "@/lib/agent-creator.types";
 import { useSocket } from "@/contexts/SocketContext";
@@ -123,7 +123,7 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                         >
                             <div className="flex items-center justify-between mb-3">
                                 <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
-                                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                                    <Users className="w-5 h-5 text-emerald-400" />
                                 </div>
                                 <span className="text-xs text-emerald-400/70 bg-emerald-500/10 px-2 py-1 rounded-full">Novos</span>
                             </div>

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Play, ThumbsUp, ShoppingBag } from "lucide-react";
+import { Users, MessageSquare, Calendar } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
@@ -44,6 +44,34 @@ const Landing = () => {
     const [rotation, setRotation] = useState(0);
     const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('monthly');
     const [isFanOpen, setIsFanOpen] = useState(true);
+
+    // Responsive pricing positions
+    const [pricingVideoPosition, setPricingVideoPosition] = useState('30%');
+    const [pricingCardsPosition, setPricingCardsPosition] = useState('75%');
+
+    // Update positions based on screen size
+    useEffect(() => {
+        const updatePositions = () => {
+            const width = window.innerWidth;
+            if (width < 768) {
+                // Mobile: centered layout
+                setPricingVideoPosition('50%');
+                setPricingCardsPosition('50%');
+            } else if (width < 1024) {
+                // Tablet
+                setPricingVideoPosition('35%');
+                setPricingCardsPosition('70%');
+            } else {
+                // Desktop
+                setPricingVideoPosition('30%');
+                setPricingCardsPosition('75%');
+            }
+        };
+
+        updatePositions();
+        window.addEventListener('resize', updatePositions);
+        return () => window.removeEventListener('resize', updatePositions);
+    }, []);
 
     const handleToggle = (period: 'monthly' | 'semiannual' | 'annual') => {
         if (!isFanOpen || pricingPeriod === period) return; // Prevent double clicks and same state
@@ -716,7 +744,10 @@ const Landing = () => {
                                 >
                                     <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
                                         <div className="group flex justify-center w-full">
-                                            <h1 className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-[-0.04em] leading-[0.85] group-hover:scale-105 transition-transform duration-500">
+                                            <h1
+                                                className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-widest leading-[1.1] group-hover:scale-105 transition-transform duration-500"
+                                                style={{ wordSpacing: '0.5em' }}
+                                            >
                                                 MÉTRICAS EM TEMPO REAL
                                             </h1>
                                         </div>
@@ -731,9 +762,9 @@ const Landing = () => {
                                     {/* Animated Arrow Cards */}
                                     <div className="flex flex-col gap-6 mt-[15vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
                                         {[
-                                            { icon: Play, color: "bg-[#027831]", value: "+100", label: "data points", width: "100%" },
-                                            { icon: ThumbsUp, color: "bg-[#6366F1]", value: "+80", label: "data points", width: "85%" },
-                                            { icon: ShoppingBag, color: "bg-[#EAB308]", value: "+50", label: "data points", width: "70%" }
+                                            { icon: Users, color: "bg-[#027831]", value: "+150%", label: "Leads", width: "100%" },
+                                            { icon: MessageSquare, color: "bg-[#6366F1]", value: "+80%", label: "Respostas", width: "85%" },
+                                            { icon: Calendar, color: "bg-[#EAB308]", value: "+3x", label: "Agendamentos", width: "70%" }
                                         ].map((Item, i) => (
                                             <motion.div
                                                 key={i}
@@ -881,11 +912,11 @@ const Landing = () => {
                                         className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
                                     >
                                         <div className="order-1 flex justify-start relative pl-20">
-                                            <div className="w-full max-w-md aspect-square bg-tan flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
+                                            <div className="w-full max-w-md aspect-[4/3] bg-[#030411] flex items-center justify-center shadow-inner overflow-hidden p-6" style={{ borderRadius: "30% 70% 70% 30% / 30% 30% 70% 70%" }}>
                                                 <img
-                                                    src={bgFeature1}
+                                                    src="/images/AgentePersonalizado.png"
                                                     alt="Funcionários Digitais"
-                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                                    className="w-full h-full object-contain shadow-lg rounded-lg hover:scale-105 transition-transform duration-700"
                                                 />
                                             </div>
                                         </div>
@@ -939,11 +970,11 @@ const Landing = () => {
                                             </ul>
                                         </div>
                                         <div className="order-1 lg:order-2 flex justify-end relative pr-20">
-                                            <div className="w-full max-w-md aspect-square bg-feature-green flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
+                                            <div className="w-full max-w-md aspect-video bg-[#0F0A28] flex items-center justify-center shadow-inner overflow-hidden p-6" style={{ borderRadius: "50% 50% 20% 80% / 25% 80% 20% 75%" }}>
                                                 <img
-                                                    src={bgFeature1}
+                                                    src="/images/DashBoardDeMetricas.png"
                                                     alt="Controle Total"
-                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                                    className="w-full h-full object-contain shadow-lg rounded-lg hover:scale-105 transition-transform duration-700"
                                                 />
                                             </div>
                                         </div>
@@ -965,11 +996,11 @@ const Landing = () => {
                                         className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
                                     >
                                         <div className="order-1 flex justify-start relative pl-20">
-                                            <div className="w-full max-w-md aspect-square bg-brown flex items-center justify-center shadow-inner overflow-hidden" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
+                                            <div className="w-full max-w-md aspect-[4/3] bg-[#0F172A] flex items-center justify-center shadow-inner overflow-hidden p-6" style={{ borderRadius: "70% 30% 30% 70% / 60% 40% 60% 40%" }}>
                                                 <img
-                                                    src={bgFeature1}
+                                                    src="/images/Integracoes.png"
                                                     alt="Confiabilidade Enterprise"
-                                                    className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
+                                                    className="w-full h-full object-contain shadow-lg rounded-lg hover:scale-105 transition-transform duration-700"
                                                 />
                                             </div>
                                         </div>
@@ -1002,199 +1033,191 @@ const Landing = () => {
                         <TestimonialsSection />
 
                         {/* Pricing Section */}
-                        <section id="pricing" className="relative min-h-screen flex flex-col justify-center py-24 px-6 md:px-12 bg-slate-900 overflow-hidden">
-                            {/* Background Video */}
-                            <div className="absolute inset-0 z-0">
-                                <video
-                                    autoPlay
-                                    loop
-                                    muted
-                                    playsInline
-                                    className="w-full h-full object-cover"
-                                    style={{ objectPosition: "50% 100%" }}
-                                >
-                                    <source src="/videos-scroll/NAVIGATE_4K_S20_loop@md.mp4" type="video/mp4" />
-                                </video>
-                            </div>
-
-                            <div className="container mx-auto relative z-10" style={{ maxWidth: "100%" }}>
-                                <div className="text-center mb-8">
-                                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                                        Escolha seu Plano
-                                    </h2>
-                                    <p className="text-xl text-white max-w-2xl mx-auto font-medium">
-                                        Comece hoje e cancele quando quiser. Sem fidelidade, sem burocracia.
-                                    </p>
-                                </div>
-
-                                <div className="flex justify-center mb-12">
-                                    <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer w-[340px] h-[50px]">
-                                        <div
-                                            className={`absolute top-1 bottom-1 w-[32%] bg-[#00A947] rounded-full transition-all duration-300 ${pricingPeriod === 'monthly' ? 'left-1' : pricingPeriod === 'semiannual' ? 'left-[34%]' : 'left-[67%]'}`}
-                                        />
-                                        <div onClick={() => handleToggle('monthly')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'monthly' ? 'text-white font-bold' : 'text-slate-400'}`}>
-                                            Mensal
-                                        </div>
-                                        <div onClick={() => handleToggle('semiannual')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'semiannual' ? 'text-white font-bold' : 'text-slate-400'}`}>
-                                            Semestral
-                                        </div>
-                                        <div onClick={() => handleToggle('annual')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'annual' ? 'text-white font-bold' : 'text-slate-400'}`}>
-                                            Anual
-                                        </div>
+                        <section id="pricing" className="relative min-h-screen flex flex-col justify-center py-24 px-5 bg-white overflow-hidden">
+                            {/* Sticker Container - Rounded with margins */}
+                            <div
+                                className="relative w-full h-full min-h-[80vh] overflow-hidden"
+                                style={{
+                                    borderRadius: '32px',
+                                    backgroundColor: '#f25622'
+                                }}
+                            >
+                                {/* Background Video - Inside the sticker */}
+                                <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: '32px' }}>
+                                    <div
+                                        className="absolute h-full"
+                                        style={{
+                                            width: 'calc(100% + 60px)',
+                                            marginLeft: '-10px',
+                                            left: pricingVideoPosition,
+                                            transform: 'translateX(-50%)',
+                                            clipPath: 'inset(0 10px 0 0)'
+                                        }}
+                                    >
+                                        <video
+                                            autoPlay
+                                            loop
+                                            muted
+                                            playsInline
+                                            className="w-full h-full object-cover"
+                                            style={{ objectPosition: "center center", display: "block" }}
+                                        >
+                                            <source src="/videos-scroll/NAVIGATE_4K_S10_loop@md.mp4" type="video/mp4" />
+                                        </video>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap relative h-[600px] w-full">
-                                    <motion.div
-                                        animate={{
-                                            x: isFanOpen ? 0 : "50%",
-                                            rotate: isFanOpen ? 0 : -5,
-                                            zIndex: isFanOpen ? 1 : 10
-                                        }}
-                                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                                        className="relative z-10 w-full max-w-sm"
-                                    >
-                                        <PricingWrapper
-                                            contactHref="/payment"
-                                            linkState={{ plan: 'basic', period: pricingPeriod, price: pricingPeriod === 'monthly' ? 'R$ 97/mês' : pricingPeriod === 'semiannual' ? 'R$ 582/semestre' : 'R$ 970/ano' }}
-                                            type="waves"
-                                            className="bg-[#FE601E]"
-                                            rotation={rotation}
-                                            backChildren={
-                                                <>
-                                                    <Heading>Básico</Heading>
-                                                    <Price>
-                                                        R$ 97<br /><span className="text-2xl">/mês</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            }
-                                        >
-                                            {pricingPeriod === 'monthly' && (
-                                                <>
-                                                    <Heading>Básico</Heading>
-                                                    <Price>
-                                                        R$ 97<br /><span className="text-2xl">/mês</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            )}
-                                            {pricingPeriod === 'semiannual' && (
-                                                <>
-                                                    <Heading>Básico</Heading>
-                                                    <Price>
-                                                        R$ 582<br /><span className="text-2xl">/semestre</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            )}
-                                            {pricingPeriod === 'annual' && (
-                                                <>
-                                                    <Heading>Básico</Heading>
-                                                    <Price>
-                                                        R$ 970<br /><span className="text-2xl">/ano</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </PricingWrapper>
-                                    </motion.div>
+                                {/* Text on video side */}
+                                <div className="absolute z-10" style={{ left: pricingVideoPosition, top: "25%", transform: "translate(-50%, -50%)" }}>
+                                    <div className="text-center">
+                                        <h2 className="text-[clamp(2rem,5vw,4rem)] font-clash font-bold text-white tracking-[-0.04em] leading-[0.85] mb-4">
+                                            ESCOLHA SEU PLANO
+                                        </h2>
+                                        <p className="text-lg text-white/80 max-w-md mx-auto font-medium">
+                                            Comece hoje e cancele quando quiser. Sem fidelidade, sem burocracia.
+                                        </p>
+                                    </div>
+                                </div>
 
-                                    <motion.div
-                                        animate={{
-                                            x: isFanOpen ? 0 : "-50%",
-                                            rotate: isFanOpen ? 0 : 5,
-                                            zIndex: isFanOpen ? 1 : 20
-                                        }}
-                                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                                        className="relative z-10 w-full max-w-sm"
-                                    >
-                                        <PricingWrapper
-                                            contactHref="/payment"
-                                            linkState={{ plan: 'pro', period: pricingPeriod, price: pricingPeriod === 'monthly' ? 'R$ 197/mês' : pricingPeriod === 'semiannual' ? 'R$ 1.182/semestre' : 'R$ 1.970/ano' }}
-                                            type="waves"
-                                            className="bg-[#00A947]"
-                                            featured={true}
-                                            rotation={rotation}
-                                            backChildren={
-                                                <>
-                                                    <Heading>Pro</Heading>
-                                                    <Price>
-                                                        R$ 197<br /><span className="text-2xl">/mês</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                            <li>Google Calendar</li>
-                                                            <li>TTS (Áudio)</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            }
-                                        >
-                                            {pricingPeriod === 'monthly' && (
-                                                <>
-                                                    <Heading>Pro</Heading>
-                                                    <Price>
-                                                        R$ 197<br /><span className="text-2xl">/mês</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                            <li>Google Calendar</li>
-                                                            <li>TTS (Áudio)</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            )}
-                                            {pricingPeriod === 'semiannual' && (
-                                                <>
-                                                    <Heading>Pro</Heading>
-                                                    <Price>
-                                                        R$ 1.182<br /><span className="text-2xl">/semestre</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                            <li>Google Calendar</li>
-                                                            <li>TTS (Áudio)</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            )}
-                                            {pricingPeriod === 'annual' && (
-                                                <>
-                                                    <Heading>Pro</Heading>
-                                                    <Price>
-                                                        R$ 1.970<br /><span className="text-2xl">/ano</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                            <li>Google Calendar</li>
-                                                            <li>TTS (Áudio)</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </PricingWrapper>
-                                    </motion.div>
+                                {/* Cards container */}
+                                <div className="container mx-auto relative z-10" style={{ maxWidth: "100%", position: "absolute", left: pricingCardsPosition, top: "50%", transform: "translate(-50%, -50%)", margin: 0 }}>
+                                    {/* Period selector - at top */}
+                                    <div className="flex justify-center mb-8" style={{ marginTop: "-180px" }}>
+                                        <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer w-[340px] h-[50px]">
+                                            <div
+                                                className={`absolute top-1 bottom-1 w-[32%] bg-[#00A947] rounded-full transition-all duration-300 ${pricingPeriod === 'monthly' ? 'left-1' : pricingPeriod === 'semiannual' ? 'left-[34%]' : 'left-[67%]'}`}
+                                            />
+                                            <div onClick={() => handleToggle('monthly')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'monthly' ? 'text-white font-bold' : 'text-slate-400'}`}>
+                                                Mensal
+                                            </div>
+                                            <div onClick={() => handleToggle('semiannual')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'semiannual' ? 'text-white font-bold' : 'text-slate-400'}`}>
+                                                Semestral
+                                            </div>
+                                            <div onClick={() => handleToggle('annual')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'annual' ? 'text-white font-bold' : 'text-slate-400'}`}>
+                                                Anual
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Pricing Logic Variables */}
+                                    {(() => {
+                                        const BASE_PRICE_BASIC = 19.90;
+                                        const BASE_PRICE_PRO = 29.90;
+
+                                        const formatCurrency = (value: number) => {
+                                            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                        };
+
+                                        const getPrice = (base: number, period: string) => {
+                                            if (period === 'monthly') return base;
+                                            if (period === 'semiannual') return base * 6;
+                                            if (period === 'annual') return base * 10;
+                                            return base;
+                                        };
+
+                                        const basicPrice = getPrice(BASE_PRICE_BASIC, pricingPeriod);
+                                        const proPrice = getPrice(BASE_PRICE_PRO, pricingPeriod);
+
+                                        const formattedBasicPrice = formatCurrency(basicPrice);
+                                        const formattedProPrice = formatCurrency(proPrice);
+
+                                        const periodLabel = pricingPeriod === 'monthly' ? '/mês' : pricingPeriod === 'semiannual' ? '/semestre' : '/ano';
+
+                                        return (
+                                            <div className="flex flex-col items-center justify-center gap-8 md:flex-row flex-wrap relative h-[600px] w-full">
+                                                <motion.div
+                                                    animate={{
+                                                        x: isFanOpen ? 0 : "50%",
+                                                        rotate: isFanOpen ? 0 : -5,
+                                                        zIndex: isFanOpen ? 1 : 10
+                                                    }}
+                                                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                                                    className="relative z-10 w-full max-w-sm"
+                                                >
+                                                    <PricingWrapper
+                                                        contactHref="/payment"
+                                                        linkState={{ plan: 'basic', period: pricingPeriod, price: `${formattedBasicPrice}${periodLabel}` }}
+                                                        type="waves"
+                                                        className="bg-[#FE601E]"
+                                                        rotation={rotation}
+                                                        backChildren={
+                                                            <>
+                                                                <Heading>Básico</Heading>
+                                                                <Price>
+                                                                    {formattedBasicPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                                                </Price>
+                                                                <div className="w-full text-left pl-4">
+                                                                    <ul className="text-lg">
+                                                                        <li>Bot de WhatsApp</li>
+                                                                    </ul>
+                                                                </div>
+                                                            </>
+                                                        }
+                                                    >
+                                                        {< >
+                                                            <Heading>Básico</Heading>
+                                                            <Price>
+                                                                {formattedBasicPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                                            </Price>
+                                                            <div className="w-full text-left pl-4">
+                                                                <ul className="text-lg">
+                                                                    <li>Bot de WhatsApp</li>
+                                                                </ul>
+                                                            </div>
+                                                        </>}
+                                                    </PricingWrapper>
+                                                </motion.div>
+
+                                                <motion.div
+                                                    animate={{
+                                                        x: isFanOpen ? 0 : "-50%",
+                                                        rotate: isFanOpen ? 0 : 5,
+                                                        zIndex: isFanOpen ? 1 : 20
+                                                    }}
+                                                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                                                    className="relative z-10 w-full max-w-sm"
+                                                >
+                                                    <PricingWrapper
+                                                        contactHref="/payment"
+                                                        linkState={{ plan: 'pro', period: pricingPeriod, price: `${formattedProPrice}${periodLabel}` }}
+                                                        type="waves"
+                                                        className="bg-[#00A947]"
+                                                        featured={true}
+                                                        rotation={rotation}
+                                                        backChildren={
+                                                            <>
+                                                                <Heading>Pro</Heading>
+                                                                <Price>
+                                                                    {formattedProPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                                                </Price>
+                                                                <div className="w-full text-left pl-4">
+                                                                    <ul className="text-lg">
+                                                                        <li>Bot de WhatsApp</li>
+                                                                        <li>Google Calendar</li>
+                                                                        <li>TTS (Áudio)</li>
+                                                                    </ul>
+                                                                </div>
+                                                            </>
+                                                        }
+                                                    >
+                                                        {< >
+                                                            <Heading>Pro</Heading>
+                                                            <Price>
+                                                                {formattedProPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                                            </Price>
+                                                            <div className="w-full text-left pl-4">
+                                                                <ul className="text-lg">
+                                                                    <li>Bot de WhatsApp</li>
+                                                                    <li>Google Calendar</li>
+                                                                    <li>TTS (Áudio)</li>
+                                                                </ul>
+                                                            </div>
+                                                        </>}
+                                                    </PricingWrapper>
+                                                </motion.div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </section>

@@ -19,7 +19,8 @@ const Dashboard = () => {
   const [showWelcome, setShowWelcome] = useState(true);
 
   // Integrations state for DashboardStep
-  const { integrations, handleIntegrationClick } = useIntegrations();
+  const { integrations } = useIntegrations();
+  const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
 
   // =====================
   // INITIALIZATION EFFECT
@@ -82,17 +83,23 @@ const Dashboard = () => {
           </Layout>
         )
       ) : (
-        <Layout key="dashboard-layout" currentPage="dashboard">
+
+        <Layout
+          key="dashboard-layout"
+          currentPage="dashboard"
+          expandIntegrations={shouldExpandIntegrations}
+          onExpandIntegrationsChange={setShouldExpandIntegrations}
+        >
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]">
             {/* Dashboard Content (Metrics) */}
             <DashboardStep
               integrations={integrations}
-              onOpenIntegrations={() => handleIntegrationClick('')}
+              onOpenIntegrations={() => setShouldExpandIntegrations(true)}
             />
           </div>
-        </Layout>
+        </Layout >
       )}
-    </AnimatePresence>
+    </AnimatePresence >
   );
 };
 
