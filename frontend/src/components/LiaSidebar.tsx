@@ -22,12 +22,18 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
     const [isResizing, setIsResizing] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const [shimmerData, setShimmerData] = useState<any>(null);
+    const [metaAiData, setMetaAiData] = useState<any>(null);
 
     useEffect(() => {
         fetch('/lotties/Chat%20Shimmer.json')
             .then(res => res.json())
             .then(data => setShimmerData(data))
             .catch(err => console.error("Failed to load Shimmer Lottie:", err));
+
+        fetch('/lotties/meta-ai-logo.json')
+            .then(res => res.json())
+            .then(data => setMetaAiData(data))
+            .catch(err => console.error("Failed to load Meta AI Lottie:", err));
     }, []);
 
     // Scroll to bottom when new messages arrive
@@ -136,14 +142,14 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                         >
                             {/* Visual Line (Hidden by default, visible on interaction) */}
                             <div className={`w-[2px] h-full transition-all duration-300 ${isResizing
-                                    ? 'bg-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.5)]'
-                                    : 'bg-transparent group-hover/resize:bg-white/10'
+                                ? 'bg-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.5)]'
+                                : 'bg-transparent group-hover/resize:bg-white/10'
                                 }`} />
 
                             {/* Center Handle Pill */}
                             <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 rounded-full transition-all duration-300 ease-out border border-transparent ${isResizing
-                                    ? 'h-24 bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)] border-emerald-400/50'
-                                    : 'h-12 bg-white/20 backdrop-blur-sm group-hover/resize:bg-emerald-500/60 group-hover/resize:h-16 group-hover/resize:shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                                ? 'h-24 bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)] border-emerald-400/50'
+                                : 'h-12 bg-white/20 backdrop-blur-sm group-hover/resize:bg-emerald-500/60 group-hover/resize:h-16 group-hover/resize:shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                                 }`} />
                         </div>
 
@@ -154,9 +160,12 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                         <div className="flex items-center justify-between p-6 border-b border-white/10 relative z-10">
                             <div className="flex items-center gap-4">
                                 <div className="relative">
-                                    <div className="absolute inset-0 bg-emerald-500 blur-lg opacity-40 animate-pulse" />
-                                    <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg relative z-10 border-2 border-white/20">
-                                        L
+                                    <div className="w-12 h-12 rounded-full overflow-hidden relative z-10">
+                                        {metaAiData ? (
+                                            <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
+                                        ) : (
+                                            <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">L</div>
+                                        )}
                                     </div>
                                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full z-20" />
                                 </div>
@@ -182,8 +191,12 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 relative z-10 custom-scrollbar">
                             {/* Welcome Message */}
                             <div className="flex gap-3">
-                                <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm shrink-0 border border-white/10">
-                                    L
+                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                    {metaAiData ? (
+                                        <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
+                                    ) : (
+                                        <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white text-sm">L</div>
+                                    )}
                                 </div>
                                 <div className="bg-white/10 rounded-2xl rounded-tl-none p-4 max-w-[85%] border border-white/5">
                                     <p className="text-white text-sm leading-relaxed">
@@ -210,7 +223,13 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                             {chatMessages.map((msg, idx) => (
                                 <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                                     {msg.role === 'lia' && (
-                                        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs shrink-0">L</div>
+                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                            {metaAiData ? (
+                                                <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
+                                            ) : (
+                                                <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white text-xs">L</div>
+                                            )}
+                                        </div>
                                     )}
                                     <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${msg.role === 'user'
                                         ? 'bg-emerald-600 text-white rounded-tr-none'
@@ -231,7 +250,13 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                                     </div>
                                 ) : (
                                     <div className="flex gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs shrink-0">L</div>
+                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                            {metaAiData ? (
+                                                <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
+                                            ) : (
+                                                <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white text-xs">L</div>
+                                            )}
+                                        </div>
                                         <div className="bg-white/10 rounded-2xl rounded-tl-none px-4 py-3 border border-white/5">
                                             <div className="flex gap-1">
                                                 <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

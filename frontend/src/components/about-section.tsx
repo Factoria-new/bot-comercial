@@ -31,12 +31,12 @@ export function AboutSection() {
                         </span>
                     </div>
                     <h2 className="text-4xl xl:text-5xl font-bold text-black mb-6">
-                        Transformando o{' '}
-                        <span className="text-[#00A947]">atendimento</span>{' '}
-                        do Brasil
+                        Automatizando{' '}
+                        <span className="text-[#00A947]">vendas</span>{' '}
+                        no Brasil
                     </h2>
                     <p className="text-lg text-black">
-                        Somos uma equipe apaixonada por tecnologia e inovação, dedicada a revolucionar a forma como empresas se comunicam.
+                        Somos especialistas em criar agentes de IA que vendem. Tecnologia brasileira para empresas que querem crescer sem aumentar equipe.
                     </p>
                 </div>
 

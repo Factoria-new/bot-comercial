@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import Lottie from 'lottie-react';
+import { useEffect, useState } from 'react';
 
 interface LiaFloatingButtonProps {
     onClick: () => void;
@@ -8,41 +9,37 @@ interface LiaFloatingButtonProps {
 }
 
 export const LiaFloatingButton = ({ onClick, message, className = "" }: LiaFloatingButtonProps) => {
+    const [animationData, setAnimationData] = useState<object | null>(null);
+
+    useEffect(() => {
+        fetch('/lotties/meta-ai-logo.json')
+            .then(res => res.json())
+            .then(data => setAnimationData(data))
+            .catch(err => console.error("Failed to load Meta AI Lottie:", err));
+    }, []);
+
     return (
         <div className={`fixed bottom-8 right-8 z-50 flex flex-col-reverse items-end gap-4 pointer-events-none ${className}`}>
             {/* Button */}
             <motion.button
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onClick}
-                className="pointer-events-auto relative w-16 h-16 group outline-none peer"
+                className="pointer-events-auto relative w-20 h-20 group outline-none peer"
             >
-                {/* Outer Glow Ring */}
-                <div className="absolute inset-0 rounded-full bg-emerald-500/30 blur-md group-hover:bg-emerald-400/50 transition-colors duration-500" />
-
-                {/* Rotating Border */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-emerald-400 via-teal-500 to-transparent p-[2px] animate-[spin_4s_linear_infinite] opacity-70 group-hover:opacity-100" />
-
-                {/* Main Circle */}
-                <div className="absolute inset-[2px] rounded-full bg-slate-950 flex items-center justify-center overflow-hidden border border-emerald-500/20 group-hover:border-emerald-500/50 transition-colors">
-                    {/* Inner Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-50" />
-
-                    {/* Lottie Animation */}
-                    <div className="relative z-10 w-12 h-12 flex items-center justify-center">
-                        <DotLottieReact
-                            src="https://lottie.host/81c943cc-b77a-4576-b5b5-05c6c68edb7d/vtCWds8DoU.lottie"
+                {/* Lottie Animation - Direct as button */}
+                <div className="w-full h-full">
+                    {animationData && (
+                        <Lottie
+                            animationData={animationData}
                             loop
                             autoplay
                             style={{ width: '100%', height: '100%' }}
                         />
-                    </div>
+                    )}
                 </div>
-
-                {/* Online Dot */}
-                <div className="absolute top-0 right-0 w-4 h-4 bg-emerald-400 rounded-full border-2 border-slate-900 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
             </motion.button>
 
             {/* Message Popup - Only renders if message is provided */}

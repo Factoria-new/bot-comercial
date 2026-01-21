@@ -31,7 +31,7 @@ export default function Footer() {
                             <img src="/logo-header.png" alt="Factoria" className="h-8 md:h-10 w-auto object-contain" />
                         </div>
                         <p className="text-slate-600 mb-6 max-w-sm">
-                            Transforme seu WhatsApp em um assistente de IA inteligente. Automatize conversas e escale seu negócio sem esforço.
+                            Transforme seu WhatsApp em uma máquina de vendas com IA. Atendimento automático, agendamentos e métricas em tempo real.
                         </p>
                         <div className="flex gap-4">
                             <a

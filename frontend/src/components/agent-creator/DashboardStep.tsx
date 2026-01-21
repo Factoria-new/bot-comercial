@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Integration } from "@/lib/agent-creator.types";
 import { useSocket } from "@/contexts/SocketContext";
 import { useEffect, useState } from "react";
-import LiaSidebar from "@/components/LiaSidebar";
 import { BrandIcons } from "@/components/ui/brand-icons";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface DashboardStepProps {
     integrations: Integration[];
@@ -27,8 +25,6 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
         activeChats: 0
     });
 
-    // State for Lia sidebar
-    const [isLiaSidebarOpen, setIsLiaSidebarOpen] = useState(false);
 
     useEffect(() => {
         if (!socket) return;
@@ -207,43 +203,6 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                     </motion.div>
                 </div>
             </div>
-
-            {/* Floating Action Button to open Lia */}
-            <div className="fixed bottom-8 right-8 z-30 flex items-center justify-center">
-                <motion.button
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
-                    onClick={() => setIsLiaSidebarOpen(true)}
-                    className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full shadow-2xl shadow-emerald-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform relative peer"
-                >
-                    {/* Pulse ring */}
-                    <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-25" />
-
-                    {/* Avatar */}
-                    {/* Avatar */}
-                    <div className="relative z-20 w-12 h-12 flex items-center justify-center pointer-events-none">
-                        <DotLottieReact
-                            src="https://lottie.host/81c943cc-b77a-4576-b5b5-05c6c68edb7d/vtCWds8DoU.lottie"
-                            loop
-                            autoplay
-                            style={{ width: '100%', height: '100%' }}
-                        />
-                    </div>
-                </motion.button>
-
-                {/* Tooltip */}
-                <div className="absolute right-20 pointer-events-none bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium opacity-0 peer-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg border border-white/10">
-                    Pergunte à Lia sobre métricas
-                </div>
-            </div>
-
-            {/* Lia Sidebar */}
-            <LiaSidebar
-                isOpen={isLiaSidebarOpen}
-                onClose={() => setIsLiaSidebarOpen(false)}
-                metrics={metrics}
-            />
         </motion.div>
     );
 };

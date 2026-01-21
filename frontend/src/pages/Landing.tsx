@@ -617,12 +617,12 @@ const Landing = () => {
 
 
                     <h1 className="text-[clamp(2.5rem,5vw,6rem)] font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
-                        Inteligência que conversa,{' '}
-                        <span className="text-[#00A947] block mt-2">Vendas que fecham</span>
+                        Seu Atendente IA no WhatsApp,{' '}
+                        <span className="text-[#00A947] block mt-2">Vendas 24 horas</span>
                     </h1>
 
                     <p className="text-gray-600 text-left mt-8 text-[clamp(1.25rem,2vw,1.5rem)] w-full max-w-2xl mr-auto leading-relaxed">
-                        Recupere 100% dos leads perdidos por demora na resposta. Atendimento instantâneo, inteligente e humano. A qualquer hora.
+                        Nunca mais perca um cliente por demora. IA que atende, agenda e vende enquanto você dorme.
                     </p>
 
                     {/* Botões CTA */}
@@ -631,10 +631,10 @@ const Landing = () => {
                             onClick={handleSkipToPricing}
                             className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
                         >
-                            Ver Futuro
+                            Começar Agora
                         </Button>
                         <Button variant="outline" className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all">
-                            Ver Demonstração
+                            Ver Como Funciona
                         </Button>
                     </div>
                 </div >
@@ -717,13 +717,13 @@ const Landing = () => {
                                     <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
                                         <div className="group flex justify-center w-full">
                                             <h1 className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-[-0.04em] leading-[0.85] group-hover:scale-105 transition-transform duration-500">
-                                                REAL TIME DATA
+                                                MÉTRICAS EM TEMPO REAL
                                             </h1>
                                         </div>
 
                                         <div className="group flex justify-center w-full">
                                             <p className="text-[clamp(0.75rem,2vw,1rem)] font-clash font-bold text-[#1E293B]/70 text-center tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
-                                                +300% SALES BOOST
+                                                +100% ATENDIMENTO AUTOMÁTICO
                                             </p>
                                         </div>
                                     </motion.div>
@@ -812,11 +812,11 @@ const Landing = () => {
                                 {/* Section Header */}
                                 <div className="text-center max-w-3xl mx-auto">
                                     <h2 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
-                                        Muito além de um simples <br className="hidden md:block" />
-                                        <span className="text-[#00A947]">Chatbot</span>
+                                        Seu Assistente de Vendas <br className="hidden md:block" />
+                                        <span className="text-[#00A947]">no WhatsApp</span>
                                     </h2>
                                     <p className="text-xl text-slate-600 leading-relaxed">
-                                        Esqueça as respostas prontas. Nossa IA entende contexto, intenção e emoção para vender como seus melhores especialistas.
+                                        Esqueça bots que só respondem FAQ. Nossa IA entende seu negócio, qualifica leads e agenda reuniões automaticamente.
                                     </p>
                                 </div>
                             </div>
@@ -840,13 +840,13 @@ const Landing = () => {
                                     >
                                         <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
                                             <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                                Multiplicação de Força
+                                                Atendimento Escalável
                                             </h3>
                                             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Você não precisa de mais atendentes. Você precisa de super-atendentes. Clone sua capacidade de atendimento instantaneamente.
+                                                Multiplique sua capacidade de atendimento sem contratar mais pessoas. Um bot para cada conversa, todas rodando ao mesmo tempo.
                                             </p>
                                             <ul className="space-y-4 mb-8">
-                                                {["Múltiplas conexões simultâneas", "Atendimento centralizado", "Escala sem aumentar a folha"].map((item, i) => (
+                                                {["Múltiplas conversas simultâneas", "Respostas instantâneas 24/7", "Escale sem aumentar custos"].map((item, i) => (
                                                     <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
                                                         <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
                                                         {item}
@@ -891,13 +891,13 @@ const Landing = () => {
                                         </div>
                                         <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
                                             <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                                Funcionários Digitais (IA)
+                                                Agente IA Personalizado
                                             </h3>
                                             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Cada conexão é equipada com um Cérebro de IA Independente. Eles nunca dormem, nunca têm um dia ruim.
+                                                Configure o prompt do seu bot com a personalidade da sua marca. Ele entende contexto, histórico e responde como seu melhor vendedor.
                                             </p>
                                             <ul className="space-y-4 mb-8">
-                                                {["Engenharia de Prompt Personalizada", "Humanização Extrema (Voz/TTS)", "Atendimento 24/7"].map((item, i) => (
+                                                {["Prompt 100% personalizável", "Conexão com Google Calendar", "Responde via áudio (TTS)"].map((item, i) => (
                                                     <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
                                                         <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
                                                         {item}
@@ -924,13 +924,13 @@ const Landing = () => {
                                     >
                                         <div className="order-2 lg:order-1 pl-20" style={{ maxWidth: "80%" }}>
                                             <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }} >
-                                                Controle Total (Tempo Real)
+                                                Dashboard de Métricas
                                             </h3>
                                             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Gestão não é achismo, é dado. Acompanhe sua operação com tecnologia WebSocket em tempo real.
+                                                Acompanhe cada conversa, cada lead, cada agendamento. Tudo em tempo real com atualizações automáticas via WebSocket.
                                             </p>
                                             <ul className="space-y-4 mb-8">
-                                                {["Sem 'F5' - Atualização instantânea", "Auto-Reconexão Inteligente", "Métricas de verdade"].map((item, i) => (
+                                                {["Atualizações instantâneas", "Métricas de mensagens e leads", "Pergunte à Lia sobre seus dados"].map((item, i) => (
                                                     <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
                                                         <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
                                                         {item}
@@ -975,13 +975,13 @@ const Landing = () => {
                                         </div>
                                         <div className="order-2 ml-auto pr-20" style={{ maxWidth: "80%" }}>
                                             <h3 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-slate-900" style={{ color: "#00A947" }}>
-                                                Confiabilidade Enterprise
+                                                Integrações Poderosas
                                             </h3>
                                             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                                Sua operação não pode parar. Arquitetura robusta projetada para estabilidade máxima.
+                                                Conecte WhatsApp, Instagram e Google Calendar em poucos cliques. Suas conversas e agendamentos sincronizados automaticamente.
                                             </p>
                                             <ul className="space-y-4 mb-8">
-                                                {["Persistência de Sessão", "Zero Configuração Repetitiva", "Segurança de dados"].map((item, i) => (
+                                                {["WhatsApp Business", "Instagram Direct", "Google Calendar integrado"].map((item, i) => (
                                                     <li key={i} className="flex items-center gap-3 text-slate-600 font-medium">
                                                         <div className="w-2 h-2 rounded-full bg-[#00A947]"></div>
                                                         {item}
@@ -1020,10 +1020,10 @@ const Landing = () => {
                             <div className="container mx-auto relative z-10" style={{ maxWidth: "100%" }}>
                                 <div className="text-center mb-8">
                                     <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                                        Planos Flexíveis
+                                        Escolha seu Plano
                                     </h2>
                                     <p className="text-xl text-white max-w-2xl mx-auto font-medium">
-                                        Comece pequeno e escale conforme sua demanda cresce. Sem contratos de longo prazo.
+                                        Comece hoje e cancele quando quiser. Sem fidelidade, sem burocracia.
                                     </p>
                                 </div>
 
