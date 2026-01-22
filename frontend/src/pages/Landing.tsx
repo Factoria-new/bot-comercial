@@ -609,7 +609,7 @@ const Landing = () => {
                 ? 'bg-white/80 backdrop-blur-md shadow-lg border border-gray-100'
                 : 'bg-transparent shadow-none border-transparent'
                 }`}>
-                <img src="/logo-header.png" alt="Factoria" className="h-8 md:h-10 w-auto object-contain" />
+                <img src="/logo-header.png" alt="Caji" className="h-8 md:h-10 w-auto object-contain" />
 
                 {/* Navegação Central - mantém o fundo pill sempre */}
                 <nav className="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">

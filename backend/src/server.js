@@ -10,6 +10,7 @@ import agentRoutes from './routes/agentRoutes.js';
 import internalToolsRoutes from './routes/internalToolsRoutes.js';
 import promptRoutes from './routes/promptRoutes.js';
 import googleCalendarRoutes from './routes/googleCalendarRoutes.js';
+import stripeRoutes from './routes/stripeRoutes.js';
 import { initGoogleCalendarService } from './services/googleCalendarService.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
 import { PROMPTS } from './prompts/agentPrompts.js';
@@ -120,7 +121,7 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Factoria Backend API',
+    message: 'Caji Backend API',
     version: '1.0.0',
     status: 'running'
   });
@@ -151,6 +152,9 @@ app.use('/api/user', promptRoutes);
 
 // Rotas do Google Calendar
 app.use('/api/google-calendar', googleCalendarRoutes);
+
+// Rotas de Pagamento (Stripe)
+app.use('/api/stripe', stripeRoutes);
 
 // Rotas de Status do WhatsApp
 app.get('/api/whatsapp/status/:sessionId', (req, res) => {
@@ -261,7 +265,7 @@ const PORT = process.env.PORT || 3003;
 httpServer.listen(PORT, () => {
   console.log('='.repeat(60));
   console.log('');
-  console.log('   Factoria Backend Server');
+  console.log('   Caji Backend Server');
   console.log('');
   console.log(`   Servidor rodando em: http://localhost:${PORT}`);
   console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);

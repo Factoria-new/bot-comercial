@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 const testimonials = [
     {
-        text: "Antes eu perdia vendas por demorar a responder. Com a Factoria, meu WhatsApp vende 24 horas por dia. O ROI foi imediato.",
+        text: "Antes eu perdia vendas por demorar a responder. Com a Caji, meu WhatsApp vende 24 horas por dia. O ROI foi imediato.",
         image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80",
         name: "Fernanda Silva",
         role: "Dona de E-commerce",

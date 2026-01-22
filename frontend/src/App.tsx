@@ -16,6 +16,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import InstagramCallback from "./pages/InstagramCallback";
 import GoogleCalendarCallback from "./pages/GoogleCalendarCallback";
 import MeuPrompt from "./pages/MeuPrompt";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/instagram-callback" element={<InstagramCallback />} />
               <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
+              <Route path="/checkout/success" element={<CheckoutSuccess />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

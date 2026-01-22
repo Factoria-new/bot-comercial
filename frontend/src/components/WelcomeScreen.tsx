@@ -33,9 +33,9 @@ const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
                 >
                     <h1 className="text-2xl font-bold tracking-tighter flex items-center gap-2">
                         <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white">
-                            F
+                            C
                         </div>
-                        Factoria
+                        Caji
                     </h1>
                 </motion.div>
 

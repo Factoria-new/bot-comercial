@@ -1,4 +1,4 @@
-// Schema Prisma para Factoria Assistant
+// Schema Prisma para Caji Assistant
 // Banco de dados: Supabase PostgreSQL
 
 generator client {
@@ -22,9 +22,10 @@ model User {
   period             String?   // monthly, semiannual, annual
   subscriptionStatus String?   // active, canceled, expired
   
-  // IDs externos
-  caktoCustomerId    String?
-  caktoSubscriptionId String?
+  // IDs externos (Stripe)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
   
   // Timestamps
   createdAt          DateTime  @default(now())

@@ -52,17 +52,17 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: AutoResizeProps) {
     return { textareaRef, adjustHeight };
 }
 
-interface FactoriaChatInterfaceProps {
+interface CajiChatInterfaceProps {
     onLogout?: () => void;
     onOpenSidebar?: () => void;
     initialMessage?: string;
 }
 
-export default function FactoriaChatInterface({
+export default function CajiChatInterface({
     onLogout,
     onOpenSidebar,
     initialMessage,
-}: FactoriaChatInterfaceProps) {
+}: CajiChatInterfaceProps) {
     const [message, setMessage] = useState("");
     const [chatWidth, setChatWidth] = useState(50); // Percentage of screen for chat (on right)
     const [isResizing, setIsResizing] = useState(false);
@@ -246,7 +246,7 @@ export default function FactoriaChatInterface({
                     <div className="flex items-center gap-3">
                         <img
                             src="/logo-header.png"
-                            alt="Factoria"
+                            alt="Caji"
                             className="h-8 w-auto"
                         />
                     </div>

@@ -28,7 +28,7 @@ export default function Footer() {
                 <div className="grid grid-cols-1 xl:grid-cols-6 gap-8 xl:gap-12 mb-12">
                     <div className="xl:col-span-2">
                         <div className="mb-6">
-                            <img src="/logo-header.png" alt="Factoria" className="h-8 md:h-10 w-auto object-contain" />
+                            <img src="/logo-header.png" alt="Caji" className="h-8 md:h-10 w-auto object-contain" />
                         </div>
                         <p className="text-slate-600 mb-6 max-w-sm">
                             Transforme seu WhatsApp em uma máquina de vendas com IA. Atendimento automático, agendamentos e métricas em tempo real.
@@ -126,12 +126,12 @@ export default function Footer() {
                 <div className="border-t border-border pt-8">
                     <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
                         <p className="text-sm text-slate-600">
-                            © 2025 Factoria
+                            © 2025 Caji
                         </p>
                         <div className="flex flex-col xl:flex-row gap-4 xl:gap-6 text-sm text-slate-600">
                             <div className="flex items-center gap-2">
                                 <Mail className="w-4 h-4" />
-                                <span>contato@factoria.ai</span>
+                                <span>contato@caji.ai</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <MessageCircle className="w-4 h-4" />

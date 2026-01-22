@@ -23,14 +23,14 @@ npm install -g vercel
 Adicione esta variável de ambiente na Vercel:
 
 ```
-VITE_API_URL=https://bora.factoriasolutions.com
+VITE_API_URL=https://bora.caji.com
 ```
 
 **Como adicionar:**
 1. No projeto na Vercel, vá em **Settings** > **Environment Variables**
 2. Adicione:
    - **Name:** `VITE_API_URL`
-   - **Value:** `https://bora.factoriasolutions.com`
+   - **Value:** `https://bora.caji.com`
    - **Environment:** Production, Preview, Development
 
 ### 4. **Redesploy**
@@ -51,7 +51,7 @@ npm install
 npm run dev
 ```
 
-O frontend vai usar automaticamente: `https://bora.factoriasolutions.com`
+O frontend vai usar automaticamente: `https://bora.caji.com`
 
 ### **Opção 2: Usar API local**
 
@@ -71,7 +71,7 @@ npm run dev
 
 | Ambiente | Frontend | Backend |
 |----------|----------|---------|
-| **Produção** | `https://seu-app.vercel.app` | `https://bora.factoriasolutions.com` |
+| **Produção** | `https://seu-app.vercel.app` | `https://bora.caji.com` |
 | **Local** | `http://localhost:5173` | `http://localhost:3003` |
 
 ---
@@ -82,7 +82,7 @@ Após o deploy, teste:
 
 1. **API Backend:**
    ```
-   https://bora.factoriasolutions.com/api/status
+   https://bora.caji.com/api/status
    ```
    Deve retornar:
    ```json
@@ -112,18 +112,18 @@ O backend já está configurado para aceitar requisições da Vercel:
 
 ### **API não conecta**
 - Verifique se `VITE_API_URL` está configurado na Vercel
-- Teste a API diretamente: `https://bora.factoriasolutions.com/api/status`
+- Teste a API diretamente: `https://bora.caji.com/api/status`
 - Verifique logs do backend: `pm2 logs bot-bora-backend`
 
 ### **Socket.IO não conecta**
 - Verifique se o Nginx está configurado corretamente para `/socket.io/`
-- Teste com: `https://bora.factoriasolutions.com/socket.io/`
+- Teste com: `https://bora.caji.com/socket.io/`
 
 ---
 
 ## 📝 Checklist de Deploy
 
-- [ ] Backend rodando em `https://bora.factoriasolutions.com`
+- [ ] Backend rodando em `https://bora.caji.com`
 - [ ] API testada e funcionando
 - [ ] SSL instalado (HTTPS)
 - [ ] Frontend commitado no Git

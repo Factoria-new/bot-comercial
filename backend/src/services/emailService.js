@@ -27,11 +27,11 @@ export const sendActivationEmail = async (email, token) => {
     try {
         const transporter = getTransporter();
         await transporter.sendMail({
-            from: '"Factoria Bot" <noreply@factoria.com>',
+            from: '"Caji Bot" <noreply@caji.com>',
             to: email,
-            subject: 'Ative sua conta Factoria',
+            subject: 'Ative sua conta Caji',
             html: `
-        <h1>Bem-vindo ao Factoria!</h1>
+        <h1>Bem-vindo ao Caji!</h1>
         <p>Para ativar sua conta e definir sua senha, clique no link abaixo:</p>
         <a href="${activationLink}">Definir Senha</a>
         <p>Se você não solicitou este email, apenas ignore.</p>
@@ -59,9 +59,9 @@ export const sendPasswordResetEmail = async (email, token) => {
     try {
         const transporter = getTransporter();
         await transporter.sendMail({
-            from: '"Factoria Bot" <noreply@factoria.com>',
+            from: '"Caji Bot" <noreply@caji.com>',
             to: email,
-            subject: 'Redefinição de Senha - Factoria',
+            subject: 'Redefinição de Senha - Caji',
             html: `
         <h1>Redefinição de Senha</h1>
         <p>Você solicitou a redefinição de sua senha. Clique no link abaixo para criar uma nova senha:</p>

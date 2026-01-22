@@ -42,7 +42,7 @@ const Login = () => {
             isLoading={isLoading}
             isSuccess={isSuccess}
             error={error}
-            brandName="Factoria"
+            brandName="Caji"
             brandLogo="/logo-header.png"
         />
     );

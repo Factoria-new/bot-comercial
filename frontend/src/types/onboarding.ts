@@ -83,7 +83,7 @@ export const INITIAL_ONBOARDING_STATE: OnboardingState = {
 };
 
 export const BOT_MESSAGES: Record<OnboardingStep, string> = {
-    'welcome': 'Olá! 👋 Sou a assistente da Factoria e vou te ajudar a criar seu **agente de vendas personalizado**.',
+    'welcome': 'Olá! 👋 Sou a assistente da Caji e vou te ajudar a criar seu **agente de vendas personalizado**.',
     'interview': 'Vamos conversar sobre o seu negócio para eu configurar tudo certinho.',
     'testing': 'Agora você pode testar seu agente! Mande uma mensagem como se fosse um cliente.',
     'company-name': 'Para começar, me conta: qual é o **nome da sua empresa ou marca**?',

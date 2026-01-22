@@ -294,11 +294,11 @@ export default function DashboardSidebar({
                 )}
             >
                 {/* Header */}
-                <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-white/10">
+                <div className="relative flex-shrink-0 flex items-center justify-center p-4 border-b border-white/10">
                     <div className="flex items-center gap-3">
                         <img
-                            src="/logo-header.png"
-                            alt="Factoria"
+                            src="/logo-header-light.png"
+                            alt="Caji"
                             className="h-12 w-auto"
                         />
 
@@ -307,7 +307,7 @@ export default function DashboardSidebar({
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="text-white/60 hover:text-white hover:bg-white/10"
+                        className="absolute right-4 text-white/60 hover:text-white hover:bg-white/10"
                     >
                         <X className="w-5 h-5" />
                     </Button>
@@ -857,7 +857,7 @@ export default function DashboardSidebar({
                         </button>
                     )}
                     <p className="text-xs text-white/30 text-center">
-                        © {new Date().getFullYear()} Factoria Assistant
+                        © {new Date().getFullYear()} Caji Assistant
                     </p>
                 </div>
             </div>

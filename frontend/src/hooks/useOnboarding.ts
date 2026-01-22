@@ -5,7 +5,7 @@ import {
     INITIAL_ONBOARDING_STATE,
 } from '@/types/onboarding';
 
-const STORAGE_KEY = 'factoria_onboarding';
+const STORAGE_KEY = 'caji_onboarding';
 const VERSION = '2.0'; // Sales-focused version
 
 // Generate unique ID
@@ -385,7 +385,7 @@ export function useOnboarding() {
             isTyping: false,
             integrations: prev.integrations.map(int =>
                 int.id === integrationId
-                    ? { ...int, connected: true, username: '@factoria_mock' }
+                    ? { ...int, connected: true, username: '@caji_mock' }
                     : int
             ),
         }));

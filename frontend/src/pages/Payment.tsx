@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, CreditCard, Wallet } from "lucide-react";
+import { ArrowLeft, Loader2, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
 const Payment = () => {
@@ -13,7 +12,6 @@ const Payment = () => {
     const { plan, period, price } = location.state || {};
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState("stripe");
 
     if (!plan) {
         return (
@@ -32,6 +30,20 @@ const Payment = () => {
     const planName = plan === 'basic' ? 'Básico' : 'Pro';
     const periodName = period === 'monthly' ? 'Mensal' : period === 'semiannual' ? 'Semestral' : 'Anual';
 
+    // Map plan and period to Stripe price IDs
+    // TODO: Replace these with actual Stripe price IDs from your dashboard
+    const getPriceId = () => {
+        const priceMap: Record<string, string> = {
+            'basic_monthly': import.meta.env.VITE_STRIPE_PRICE_BASIC_MONTHLY || 'price_basic_monthly',
+            'basic_semiannual': import.meta.env.VITE_STRIPE_PRICE_BASIC_SEMIANNUAL || 'price_basic_semiannual',
+            'basic_annual': import.meta.env.VITE_STRIPE_PRICE_BASIC_ANNUAL || 'price_basic_annual',
+            'pro_monthly': import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY || 'price_pro_monthly',
+            'pro_semiannual': import.meta.env.VITE_STRIPE_PRICE_PRO_SEMIANNUAL || 'price_pro_semiannual',
+            'pro_annual': import.meta.env.VITE_STRIPE_PRICE_PRO_ANNUAL || 'price_pro_annual',
+        };
+        return priceMap[`${plan}_${period}`] || 'price_pro_monthly';
+    };
+
     const handlePayment = async () => {
         if (!email) {
             toast.error("Por favor, preencha seu e-mail.");
@@ -40,21 +52,16 @@ const Payment = () => {
         setIsLoading(true);
 
         try {
-            const endpoint = paymentMethod === 'mercadopago'
-                ? '/api/mercadopago/create-preference'
-                : '/api/stripe/create-checkout-session';
-
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3003'}${endpoint}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3003'}/api/stripe/create-checkout`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     email,
-                    plan,
+                    priceId: getPriceId(),
+                    planType: plan,
                     period,
-                    price, // Required for Mercado Pago dynamically, ignored by Stripe controller
-                    title: `Plano ${planName} - ${periodName}` // Optional specifically for MP display
                 }),
             });
 
@@ -64,11 +71,8 @@ const Payment = () => {
                 throw new Error(data.error || 'Erro ao criar sessão de pagamento');
             }
 
-            // Mercado Pago returns init_point, Stripe returns url
-            const redirectUrl = data.url || data.init_point || data.sandbox_init_point;
-
-            if (redirectUrl) {
-                window.location.href = redirectUrl;
+            if (data.url) {
+                window.location.href = data.url;
             } else {
                 throw new Error('URL de pagamento não retornada');
             }
@@ -126,6 +130,19 @@ const Payment = () => {
                                 )}
                             </ul>
                         </div>
+
+                        {/* Métodos de Pagamento Aceitos */}
+                        <div className="mt-8 pt-6 border-t border-slate-100">
+                            <p className="text-xs text-slate-500 mb-3">Métodos de pagamento aceitos:</p>
+                            <div className="flex gap-3 items-center">
+                                <div className="bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600">
+                                    💳 Cartão de Crédito
+                                </div>
+                                <div className="bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-400">
+                                    📱 Pix <span className="text-[10px]">(em breve)</span>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
 
                     {/* Área de Pagamento / Checkout */}
@@ -138,32 +155,6 @@ const Payment = () => {
                         <h3 className="text-xl font-semibold mb-6 text-slate-900">Dados da Conta</h3>
 
                         <div className="space-y-4 mb-8">
-                            <div className="space-y-2">
-                                <Label className="text-slate-700">Forma de Pagamento</Label>
-                                <RadioGroup defaultValue="stripe" value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <RadioGroupItem value="stripe" id="stripe" className="peer sr-only" />
-                                        <Label
-                                            htmlFor="stripe"
-                                            className="flex flex-col items-center justify-between rounded-xl border-2 border-slate-200 bg-white p-4 hover:bg-slate-50 hover:border-[#00A947]/50 peer-data-[state=checked]:border-[#00A947] peer-data-[state=checked]:bg-[#00A947]/5 cursor-pointer transition-all"
-                                        >
-                                            <CreditCard className="mb-3 h-6 w-6 text-slate-700 peer-data-[state=checked]:text-[#00A947]" />
-                                            <span className="font-semibold text-slate-700">Stripe</span>
-                                        </Label>
-                                    </div>
-                                    <div>
-                                        <RadioGroupItem value="mercadopago" id="mercadopago" className="peer sr-only" />
-                                        <Label
-                                            htmlFor="mercadopago"
-                                            className="flex flex-col items-center justify-between rounded-xl border-2 border-slate-200 bg-white p-4 hover:bg-slate-50 hover:border-[#00BCFF]/50 peer-data-[state=checked]:border-[#00BCFF] peer-data-[state=checked]:bg-[#00BCFF]/5 cursor-pointer transition-all"
-                                        >
-                                            <Wallet className="mb-3 h-6 w-6 text-slate-700 peer-data-[state=checked]:text-[#00BCFF]" />
-                                            <span className="font-semibold text-slate-700">Mercado Pago</span>
-                                        </Label>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="text-slate-700">Seu melhor e-mail</Label>
                                 <Input
@@ -180,12 +171,21 @@ const Payment = () => {
                             </div>
                         </div>
 
+                        <div className="bg-gradient-to-r from-[#00A947]/10 to-[#00A947]/5 rounded-xl p-4 mb-6">
+                            <div className="flex items-start gap-3">
+                                <CreditCard className="h-5 w-5 text-[#00A947] mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-medium text-slate-700">Pagamento seguro via Stripe</p>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Seus dados são protegidos por criptografia de ponta a ponta.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col items-center">
                             <Button
-                                className={`w-full text-white font-semibold py-6 text-lg rounded-xl shadow-md hover:shadow-lg transition-all ${paymentMethod === 'mercadopago'
-                                        ? 'bg-[#00BCFF] hover:bg-[#00BCFF]/90'
-                                        : 'bg-[#00A947] hover:bg-[#00A947]/90'
-                                    }`}
+                                className="w-full bg-[#00A947] hover:bg-[#00A947]/90 text-white font-semibold py-6 text-lg rounded-xl shadow-md hover:shadow-lg transition-all"
                                 onClick={handlePayment}
                                 disabled={isLoading}
                             >
@@ -194,14 +194,14 @@ const Payment = () => {
                                         <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processando...
                                     </div>
                                 ) : (
-                                    `Ir para Pagamento com ${paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Stripe'}`
+                                    'Ir para Pagamento'
                                 )}
                             </Button>
 
                             <div className="flex items-center gap-2 mt-4 text-slate-400 text-sm">
                                 <span>🔒 Ambiente Seguro</span>
                                 <span>•</span>
-                                <span>Powered by {paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Stripe'}</span>
+                                <span>Powered by Stripe</span>
                             </div>
                         </div>
                     </motion.div>

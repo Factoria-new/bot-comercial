@@ -187,7 +187,7 @@ export function AnimatedCharactersLogin({
     isLoading = false,
     error = "",
     isSuccess = false,
-    brandName = "Factoria",
+    brandName = "Caji",
     brandLogo
 }: AnimatedCharactersLoginProps) {
     const [showPassword, setShowPassword] = useState(false);
