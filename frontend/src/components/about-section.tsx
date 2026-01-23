@@ -10,13 +10,9 @@ export function AboutSection() {
     ];
 
     return (
-        <section id="sobre" className="py-20 xl:py-32 bg-background relative overflow-hidden">
+        <section id="sobre" className="py-20 xl:py-32 relative overflow-hidden">
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-30">
-                <div className="absolute inset-0" style={{
-                    backgroundImage: `radial-gradient(circle at 2px 2px, #e2e8f0 1px, transparent 0)`,
-                    backgroundSize: '40px 40px'
-                }} />
             </div>
 
 
@@ -116,6 +112,6 @@ export function AboutSection() {
                     </div>
                 </div>
             </div>
-        </section>
+        </section >
     );
 }

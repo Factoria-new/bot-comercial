@@ -61,7 +61,8 @@ export const PricingWrapper: React.FC<{
     rotation?: number
     backChildren?: React.ReactNode
     linkState?: any
-}> = ({ children, contactHref, className, type = 'waves', featured = false, rotation = 0, backChildren, linkState }) => {
+    ignoreAuth?: boolean
+}> = ({ children, contactHref, className, type = 'waves', featured = false, rotation = 0, backChildren, linkState, ignoreAuth = false }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
 
@@ -114,7 +115,7 @@ export const PricingWrapper: React.FC<{
                     'w-full h-full relative duration-200',
                 )}
             >
-                {/* FLIPPER CONTAINER - Handles the 180deg rotation */}
+                {/* FLIPPER CONTAINER */}
                 <motion.div
                     initial={false}
                     animate={{ rotateY: rotation }}
@@ -125,13 +126,7 @@ export const PricingWrapper: React.FC<{
                         transformStyle: "preserve-3d",
                     }}
                 >
-                    {/* THICKNESS LAYERS (Stacked behind - Attached to Flipper) */}
-                    {/* We need thickness to follow the flip, so they should be inside the flipper or duplicated? 
-                         actually, thickness usually stays "behind" the current face. 
-                         For simplicity in this specific "card" style, let's keep thickness attached to the "Front" mentally, 
-                         but since it rotates, we might need a "Back Thickness" or just let it rotate.
-                         Let's try keeping them here, they will rotate with the card.
-                     */}
+                    {/* THICKNESS LAYERS */}
                     <div
                         className={cn('absolute inset-[1px] rounded-2xl brightness-50 z-[-4] border-2 border-transparent', className)}
                         style={{ transform: "translateZ(-16px)", backfaceVisibility: 'hidden' }}
@@ -149,11 +144,11 @@ export const PricingWrapper: React.FC<{
                         style={{ transform: "translateZ(-4px)", backfaceVisibility: 'hidden' }}
                     />
 
-                    {/* FRONT FACE (Main Content) */}
+                    {/* FRONT FACE */}
                     <div
                         style={{
                             backfaceVisibility: 'hidden',
-                            transform: "rotateY(0deg)", // Explicitly front
+                            transform: "rotateY(0deg)",
                             position: "absolute",
                             inset: 0,
                             borderRadius: "1rem",
@@ -171,15 +166,15 @@ export const PricingWrapper: React.FC<{
                                 className
                             )}
                         >
-                            <ContentLayer contactHref={contactHref} type={type} featured={featured} linkState={linkState}>{children}</ContentLayer>
+                            <ContentLayer contactHref={contactHref} type={type} featured={featured} linkState={linkState} ignoreAuth={ignoreAuth}>{children}</ContentLayer>
                         </motion.div>
                     </div>
 
-                    {/* BACK FACE (Annual Content) */}
+                    {/* BACK FACE */}
                     <div
                         style={{
                             backfaceVisibility: 'hidden',
-                            transform: "rotateY(180deg)", // Explicitly back
+                            transform: "rotateY(180deg)",
                             position: "absolute",
                             inset: 0,
                             borderRadius: "1rem",
@@ -188,16 +183,16 @@ export const PricingWrapper: React.FC<{
                     >
                         <motion.div
                             style={{
-                                transform: "translateZ(0px)", // Should match front
+                                transform: "translateZ(0px)",
                                 transformStyle: "preserve-3d",
-                                boxShadow // Shadow might look weird if light source text doesn't change, but ok for now
+                                boxShadow
                             }}
                             className={cn(
                                 'w-full h-full relative text-white border-2 border-white/20',
                                 className
                             )}
                         >
-                            <ContentLayer contactHref={contactHref} type={type} featured={featured} linkState={linkState}>{backChildren}</ContentLayer>
+                            <ContentLayer contactHref={contactHref} type={type} featured={featured} linkState={linkState} ignoreAuth={ignoreAuth}>{backChildren}</ContentLayer>
                         </motion.div>
                     </div>
                 </motion.div>
@@ -206,14 +201,14 @@ export const PricingWrapper: React.FC<{
     )
 }
 
-// Extracted Content Layer to reuse for Front/Back
 const ContentLayer: React.FC<{
     children: React.ReactNode,
     contactHref: string,
     type: 'waves' | 'crosses',
     featured: boolean,
-    linkState?: any
-}> = ({ children, contactHref, type, featured, linkState }) => (
+    linkState?: any,
+    ignoreAuth?: boolean
+}> = ({ children, contactHref, type, featured, linkState, ignoreAuth }) => (
     <>
         <div
             style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
@@ -223,8 +218,7 @@ const ContentLayer: React.FC<{
         >
             {children}
             <div style={{ transform: "translateZ(25px)" }} className={'w-full h-full flex items-end justify-end text-base'}>
-                {/* Logic to determine button state based on plan */}
-                <PricingButton contactHref={contactHref} isProCard={featured} linkState={linkState} />
+                <PricingButton contactHref={contactHref} isProCard={featured} linkState={linkState} ignoreAuth={ignoreAuth} />
             </div>
         </div>
         {type === 'waves' && (
@@ -297,12 +291,10 @@ export const Paragraph: React.FC<{ children: React.ReactNode; className?: string
     </p>
 )
 
-const PricingButton: React.FC<{ contactHref: string; isProCard: boolean; linkState?: any }> = ({ contactHref, isProCard, linkState }) => {
+const PricingButton: React.FC<{ contactHref: string; isProCard: boolean; linkState?: any; ignoreAuth?: boolean }> = ({ contactHref, isProCard, linkState, ignoreAuth }) => {
     const { user } = useAuth();
 
-    // Determine if this is the user's current plan
-    // If user is not logged in, they don't have a "current plan" visible here usually, or defaults to basic logic
-    if (!user) {
+    if (!user || ignoreAuth) {
         return (
             <Link to={contactHref} state={linkState} className={'w-full h-fit'}>
                 <motion.button
