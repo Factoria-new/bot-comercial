@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { MoreHorizontal } from "lucide-react";
 
 const scenarios = [
     [
@@ -110,12 +112,30 @@ export const ChatOverlay = () => {
             transition={{ duration: 0.8, ease: "easeInOut" }}
             className="absolute inset-0 flex flex-col items-start justify-center p-6 md:pl-20 pointer-events-none z-30"
         >
-            <div className="w-full max-w-sm bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-4 shadow-2xl">
-
+            <div className="w-full max-w-sm bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-white/10 border-b border-white/10 backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <Avatar className="h-9 w-9 border border-white/20">
+                                <AvatarImage src="/favicon.png" alt="Caji Agent" />
+                                <AvatarFallback className="bg-[#025e27] text-white text-xs">CJ</AvatarFallback>
+                            </Avatar>
+                            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white/10 ring-1 ring-black/5"></span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-white leading-none">Caji Assistant</span>
+                            <span className="text-[10px] text-white/70 font-medium mt-0.5">Online agora</span>
+                        </div>
+                    </div>
+                    <button className="text-white/70 hover:text-white transition-colors">
+                        <MoreHorizontal className="h-5 w-5" />
+                    </button>
+                </div>
 
                 {/* Messages */}
                 <motion.div
-                    className="space-y-4 min-h-[300px] flex flex-col justify-end"
+                    className="space-y-4 min-h-[300px] flex flex-col justify-end p-4"
                     animate={{ opacity: isExiting ? 0 : 1, y: isExiting ? -20 : 0 }}
                     transition={{ duration: 0.5 }}
                 >

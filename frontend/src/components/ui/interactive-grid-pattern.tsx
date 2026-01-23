@@ -14,57 +14,70 @@ export function InteractiveGridPattern({
     className,
     squaresClassName,
 }: InteractiveGridPatternProps) {
-    const [trail, setTrail] = useState<Array<{ x: number; y: number; id: number }>>([]);
+    const [squares, setSquares] = useState<Array<{ x: number; y: number; id: number }>>([]);
     const containerRef = useRef<HTMLDivElement>(null);
-    const lastPosRef = useRef<{ x: number; y: number } | null>(null);
+    // Track mouse position globally to handle scroll updates
+    const mousePosRef = useRef<{ x: number; y: number } | null>(null);
 
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
-        const parent = container.parentElement;
-        if (!parent) return;
 
-        const handleMouseMove = (e: MouseEvent) => {
-            const rect = parent.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+        const updateSquare = (x: number, y: number) => {
+            const rect = container.getBoundingClientRect();
+            // Calculate relative coordinates
+            const relX = x - rect.left;
+            const relY = y - rect.top;
 
-            const col = Math.floor(x / width);
-            const row = Math.floor(y / height);
+            // Check if mouse is actually inside the container
+            if (relX < 0 || relY < 0 || relX > rect.width || relY > rect.height) {
+                return;
+            }
+
+            const col = Math.floor(relX / width);
+            const row = Math.floor(relY / height);
 
             const newX = col * width;
             const newY = row * height;
 
-            // Only add if position changed
-            if (lastPosRef.current?.x !== newX || lastPosRef.current?.y !== newY) {
-                lastPosRef.current = { x: newX, y: newY };
+            setSquares((prev) => {
+                // Check if this specific square is already active (to avoid duplicates/flicker)
+                const exists = prev.find(s => s.x === newX && s.y === newY && Date.now() - s.id < 100);
+                if (exists) return prev;
 
-                setTrail(prev => {
-                    const newTrail = [...prev, { x: newX, y: newY, id: Date.now() }];
-                    // Keep last 10 items for the trail
-                    return newTrail.slice(-10);
-                });
-            }
+                return [...prev, { x: newX, y: newY, id: Date.now() }];
+            });
         };
 
-        const handleMouseLeave = () => {
-            setTrail([]);
-            lastPosRef.current = null;
+        const handleMouseMove = (e: MouseEvent) => {
+            mousePosRef.current = { x: e.clientX, y: e.clientY };
+            updateSquare(e.clientX, e.clientY);
         };
 
-        parent.addEventListener("mousemove", handleMouseMove);
-        parent.addEventListener("mouseleave", handleMouseLeave);
+        window.addEventListener("mousemove", handleMouseMove);
 
         return () => {
-            parent.removeEventListener("mousemove", handleMouseMove);
-            parent.removeEventListener("mouseleave", handleMouseLeave);
+            window.removeEventListener("mousemove", handleMouseMove);
         };
     }, [width, height]);
+
+    // Timer to clean up old squares
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setSquares((prev) => {
+                const now = Date.now();
+                // Remove squares older than 2 seconds (adjust duration as needed)
+                return prev.filter(s => now - s.id < 1000);
+            });
+        }, 100);
+
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <div
             ref={containerRef}
-            className={cn("absolute inset-0 pointer-events-none select-none z-0", className)}
+            className={cn("inset-0 pointer-events-none select-none", className)}
         >
             <svg
                 className="absolute inset-0 w-full h-full stroke-black/5"
@@ -85,35 +98,36 @@ export function InteractiveGridPattern({
                             strokeWidth={1}
                         />
                     </pattern>
+                    <style>
+                        {`
+                            @keyframes grid-fade-out {
+                                0% { opacity: 1; }
+                                100% { opacity: 0; }
+                            }
+                            @keyframes grid-color-shift {
+                                0% { fill: rgba(34, 197, 94, 0.4); }
+                                100% { fill: rgba(255, 255, 255, 1); }
+                            }
+                            .grid-square-fade {
+                                animation: grid-fade-out 1s ease-out forwards, grid-color-shift 1s linear forwards;
+                            }
+                        `}
+                    </style>
                 </defs>
 
                 {/* Trail Rects */}
-                {trail.map((pos, index) => {
-                    // Calculate "freshness" (0 to 1)
-                    // Index 0 is oldest (tail), Index length-1 is newest (head)
-                    const ratio = index / Math.max(1, trail.length - 1);
-
-                    // Gradient: Orange (#FF621E) -> Green (#00A947)
-                    // RGB Interpolation
-                    const r = Math.round(255 + (0 - 255) * ratio);
-                    const g = Math.round(98 + (169 - 98) * ratio);
-                    const b = Math.round(30 + (71 - 30) * ratio);
-
-                    // Opacity: Fade out tail (0.1 to 0.4)
-                    const opacity = 0.05 + (0.2 * ratio);
-
-                    return (
-                        <rect
-                            key={pos.id}
-                            x={pos.x}
-                            y={pos.y}
-                            width={width}
-                            height={height}
-                            fill={`rgba(${r}, ${g}, ${b}, ${opacity})`}
-                            className="transition-all duration-300 ease-out"
-                        />
-                    );
-                })}
+                {/* Trail Rects */}
+                {squares.map(({ x, y, id }) => (
+                    <rect
+                        key={id}
+                        x={x}
+                        y={y}
+                        width={width}
+                        height={height}
+                        className="grid-square-fade"
+                        style={{ pointerEvents: 'none' }}
+                    />
+                ))}
 
                 <rect width="100%" height="100%" strokeWidth={0} fill="url(#grid-pattern)" />
             </svg>

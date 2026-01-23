@@ -72,7 +72,10 @@ const Landing = () => {
     }, []);
 
     return (
-        <div style={{ fontFamily: "'Poppins', sans-serif" }}>
+        <div style={{ fontFamily: "'Poppins', sans-serif" }} className="relative">
+            {/* Global Interactive Grid Pattern - Active in all phases */}
+            <InteractiveGridPattern className="fixed inset-0 opacity-100 z-0" />
+
             <Header
                 phase={phase}
                 onResetHome={handleResetToHome}
@@ -86,10 +89,8 @@ const Landing = () => {
             />
 
             {/* Content visible only after Hero animation ends */}
-            {/* Content visible only after Hero animation ends */}
             {phase === 'ended' && (
-                <div className="relative isolate bg-white">
-                    <InteractiveGridPattern className="opacity-100" />
+                <div className="relative isolate bg-transparent">
                     <div className="relative z-10">
                         <AboutSection />
                         <ProductSection />

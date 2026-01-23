@@ -477,12 +477,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(117, 211, 175, 0.3);
+  background: #19B159;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(117, 211, 175, 0.5);
+  background: #14a34e;
 }
 
 @keyframes waves {
@@ -514,10 +514,10 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(117, 211, 175, 0.2);
+  background: #19B159;
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(117, 211, 175, 0.4);
+  background: #14a34e;
 }

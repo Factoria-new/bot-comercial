@@ -1,158 +1,200 @@
 import { motion } from "framer-motion";
+import { CSSProperties } from "react";
 
-const bgFeature1 = "/images/Cachorro.jpg";
+interface PositionStyle {
+    // Posicionamento do container (use em px, %, ou rem)
+    top?: string;
+    bottom?: string;
+    left?: string;
+    right?: string;
+    // Alinhamento do texto
+    textAlign?: "left" | "center" | "right";
+    // Largura máxima do container
+    maxWidth?: string;
+}
+
+interface Feature {
+    title: string;
+    description: string;
+    bullets: string[];
+    image: string;
+    titleStyle: PositionStyle;   // Posicionamento do título
+    textStyle: PositionStyle;    // Posicionamento da descrição e bullets
+}
+
+const features: Feature[] = [
+    {
+        title: "Atendimento Escalável",
+        description: "Multiplique sua capacidade de atendimento sem contratar mais pessoas. Um bot para cada conversa, todas rodando ao mesmo tempo.",
+        bullets: ["Múltiplas conversas simultâneas", "Respostas instantâneas 24/7", "Escale sem aumentar custos"],
+        image: "/images/Cachorro.svg",
+        titleStyle: {
+            top: "63%",
+            left: "45%",
+            textAlign: "left",
+            maxWidth: "1000px",
+        },
+        textStyle: {
+            top: "78.5%",
+            left: "23%",
+            textAlign: "left",
+            maxWidth: "100rem",
+        },
+    },
+    {
+        title: "Agente IA Personalizado",
+        description: "Configure o prompt do seu bot com a personalidade da sua marca. Ele entende contexto, histórico e responde como seu melhor vendedor.",
+        bullets: ["Prompt 100% personalizável", "Conexão com Google Calendar", "Responde via áudio (TTS)"],
+        image: "/images/AgentePersonalizado.svg",
+        titleStyle: {
+            top: "10%",
+            left: "40%",
+            textAlign: "left",
+            maxWidth: "1000px",
+        },
+        textStyle: {
+            top: "35%",
+            left: "75%",
+            textAlign: "left",
+            maxWidth: "100rem",
+        },
+    },
+    {
+        title: "Dashboard de Métricas",
+        description: "Acompanhe cada conversa, cada lead, cada agendamento. Tudo em tempo real com atualizações automáticas via WebSocket.",
+        bullets: ["Atualizações instantâneas", "Métricas de mensagens e leads", "Pergunte à Lia sobre seus dados"],
+        image: "/images/DashBoardDeMetricas.svg",
+        titleStyle: {
+            top: "8%",
+            left: "13%",
+            textAlign: "center",
+            maxWidth: "40rem",
+        },
+        textStyle: {
+            top: "55%",
+            left: "65%",
+            textAlign: "left",
+            maxWidth: "30rem",
+        },
+    },
+    {
+        title: "Integrações Poderosas",
+        description: "Conecte WhatsApp, Instagram e Google Calendar em poucos cliques. Suas conversas e agendamentos sincronizados automaticamente.",
+        bullets: ["WhatsApp Business", "Instagram Direct", "Google Calendar integrado"],
+        image: "/images/Integracoes.svg",
+        titleStyle: {
+            top: "5%",
+            left: "60%",
+            textAlign: "center",
+            maxWidth: "1000px",
+        },
+        textStyle: {
+            top: "30%",
+            left: "67%",
+            textAlign: "center",
+        },
+    },
+];
+
+const getContainerStyle = (style: PositionStyle): CSSProperties => {
+    const cssStyle: CSSProperties = {
+        position: "absolute",
+        maxWidth: style.maxWidth || "500px",
+    };
+
+    if (style.top) cssStyle.top = style.top;
+    if (style.bottom) cssStyle.bottom = style.bottom;
+    if (style.left) cssStyle.left = style.left;
+    if (style.right) cssStyle.right = style.right;
+
+    if (style.top === "50%") {
+        cssStyle.transform = "translateY(-50%)";
+    }
+
+    return cssStyle;
+};
 
 export const ProductSection = () => {
     return (
-        <section
-            id="produto"
-            className="relative py-24 px-6 md:px-12 text-slate-900 overflow-hidden"
-        >
-            <div className="container mx-auto mb-32" style={{ maxWidth: "100%" }}>
-                {/* Section Header */}
-                <div className="text-center max-w-3xl mx-auto">
-                    <h2 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
-                        Seu Assistente de Vendas <br className="hidden md:block" />
-                        <span>no </span>
-                        <span className="text-[#00A947]">WhatsApp</span>
-                    </h2>
-                    <p className="text-xl text-slate-600 leading-relaxed">
-                        Esqueça bots que só respondem FAQ. Nossa IA entende seu negócio, qualifica leads e agenda reuniões automaticamente.
-                    </p>
+        <section id="produto" className="relative scroll-mt-32">
+            {/* Section Header */}
+            <div className="py-24 px-6 md:px-12 text-slate-900">
+                <div className="container mx-auto" style={{ maxWidth: "100%" }}>
+                    <div className="text-center max-w-4xl mx-auto">
+                        <h2 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
+                            Seu Assistente de Vendas <br className="hidden md:block" />
+                            <span>no </span>
+                            <span className="text-[#00A947]">WhatsApp</span>
+                        </h2>
+                        <p className="text-xl text-slate-600 leading-relaxed">
+                            Esqueça bots que só respondem FAQ. Nossa IA entende seu negócio, qualifica leads e agenda reuniões automaticamente.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div className="container mx-auto space-y-96 relative" style={{ maxWidth: "100%" }}>
-
-
-                {/* Feature 1: Atendimento Escalável */}
+            {/* Features Full-Screen */}
+            {features.map((feature, index) => (
                 <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-20%" }}
-                    transition={{ duration: 0.9 }}
-                    className="flex flex-col items-center text-center"
+                    key={index}
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true, margin: "-10%" }}
+                    transition={{ duration: 0.8 }}
+                    className="relative w-full overflow-hidden"
+                    style={{ minHeight: 'calc(100vh - 80px)', marginBottom: '15rem' }}
                 >
-                    <div className="max-w-[100rem]">
-                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
-                            Atendimento Escalável
-                        </h3>
-                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
-                            Multiplique sua capacidade de atendimento sem contratar mais pessoas. Um bot para cada conversa, todas rodando ao mesmo tempo.
+                    {/* Background Image */}
+                    <img
+                        src={feature.image}
+                        alt={feature.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                    />
+
+                    {/* Title - Posicionamento independente */}
+                    <motion.h3
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                        className="z-10 px-6 text-5xl md:text-7xl font-extrabold font-clash tracking-tight leading-tight text-[#00A947]"
+                        style={{
+                            ...getContainerStyle(feature.titleStyle),
+                            textAlign: feature.titleStyle.textAlign,
+                            wordSpacing: '0.5em',
+                        }}
+                    >
+                        {feature.title}
+                    </motion.h3>
+
+                    {/* Content - Posicionamento independente */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8, delay: 0.3 }}
+                        className="z-10 px-6"
+                        style={getContainerStyle(feature.textStyle)}
+                    >
+                        <p
+                            className="text-lg md:text-xl text-slate-700 leading-relaxed mb-8"
+                            style={{ textAlign: feature.textStyle.textAlign }}
+                        >
+                            {feature.description}
                         </p>
-                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
-                            {["Múltiplas conversas simultâneas", "Respostas instantâneas 24/7", "Escale sem aumentar custos"].map((item, i) => (
+                        <ul
+                            className="space-y-2 text-base md:text-lg"
+                            style={{ textAlign: feature.textStyle.textAlign }}
+                        >
+                            {feature.bullets.map((item, i) => (
                                 <li key={i} className="text-slate-600 font-medium">
                                     {item}
                                 </li>
                             ))}
                         </ul>
-                    </div>
-                    <div className="w-full max-w-6xl aspect-[4/3] bg-feature-green flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl mt-16">
-                        <img
-                            src={bgFeature1}
-                            alt="Atendimento Escalável"
-                            className="w-full h-full object-cover opacity-90 hover:scale-110 transition-transform duration-700"
-                        />
-                    </div>
+                    </motion.div>
                 </motion.div>
-
-                {/* Feature 2: Agente IA Personalizado */}
-                <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-20%" }}
-                    transition={{ duration: 0.9 }}
-                    className="flex flex-col items-center text-center"
-                >
-                    <div className="max-w-[100rem]">
-                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
-                            Agente IA Personalizado
-                        </h3>
-                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
-                            Configure o prompt do seu bot com a personalidade da sua marca. Ele entende contexto, histórico e responde como seu melhor vendedor.
-                        </p>
-                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
-                            {["Prompt 100% personalizável", "Conexão com Google Calendar", "Responde via áudio (TTS)"].map((item, i) => (
-                                <li key={i} className="text-slate-600 font-medium">
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className="w-full max-w-6xl aspect-[4/3] bg-[#030411] flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl p-8 mt-16">
-                        <img
-                            src="/images/AgentePersonalizado.png"
-                            alt="Agente IA Personalizado"
-                            className="w-full h-full object-contain shadow-lg rounded-xl hover:scale-105 transition-transform duration-700"
-                        />
-                    </div>
-                </motion.div>
-
-                {/* Feature 3: Dashboard de Métricas */}
-                <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-20%" }}
-                    transition={{ duration: 0.9 }}
-                    className="flex flex-col items-center text-center"
-                >
-                    <div className="max-w-[100rem]">
-                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
-                            Dashboard de Métricas
-                        </h3>
-                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
-                            Acompanhe cada conversa, cada lead, cada agendamento. Tudo em tempo real com atualizações automáticas via WebSocket.
-                        </p>
-                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
-                            {["Atualizações instantâneas", "Métricas de mensagens e leads", "Pergunte à Lia sobre seus dados"].map((item, i) => (
-                                <li key={i} className="text-slate-600 font-medium">
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className="w-full max-w-6xl aspect-[4/3] bg-[#0F0A28] flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl p-8 mt-16">
-                        <img
-                            src="/images/DashBoardDeMetricas.png"
-                            alt="Dashboard de Métricas"
-                            className="w-full h-full object-contain shadow-lg rounded-xl hover:scale-105 transition-transform duration-700"
-                        />
-                    </div>
-                </motion.div>
-
-                {/* Feature 4: Integrações Poderosas */}
-                <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-20%" }}
-                    transition={{ duration: 0.9 }}
-                    className="flex flex-col items-center text-center"
-                >
-                    <div className="max-w-[100rem]">
-                        <h3 className="text-5xl md:text-7xl font-extrabold mb-8 leading-tight" style={{ color: "#00A947" }}>
-                            Integrações Poderosas
-                        </h3>
-                        <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
-                            Conecte WhatsApp, Instagram e Google Calendar em poucos cliques. Suas conversas e agendamentos sincronizados automaticamente.
-                        </p>
-                        <ul className="space-y-3 flex flex-col items-center text-lg md:text-xl">
-                            {["WhatsApp Business", "Instagram Direct", "Google Calendar integrado"].map((item, i) => (
-                                <li key={i} className="text-slate-600 font-medium">
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className="w-full max-w-6xl aspect-[4/3] bg-[#0F172A] flex items-center justify-center shadow-2xl overflow-hidden rounded-3xl p-8 mt-16">
-                        <img
-                            src="/images/Integracoes.png"
-                            alt="Integrações Poderosas"
-                            className="w-full h-full object-contain shadow-lg rounded-xl hover:scale-105 transition-transform duration-700"
-                        />
-                    </div>
-                </motion.div>
-            </div>
+            ))}
         </section>
     );
 };

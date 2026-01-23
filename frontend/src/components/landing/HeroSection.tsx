@@ -508,7 +508,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
 
     return (
-        <div className="relative bg-white min-h-screen">
+        <div className="relative min-h-screen">
             {/* Texto Hero (Lado Esquerdo) */}
             <div
                 ref={heroTextRef}

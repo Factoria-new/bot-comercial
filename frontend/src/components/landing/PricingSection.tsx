@@ -72,7 +72,7 @@ export const PricingSection = () => {
                 {/* Content Grid - Always 2 Columns (Text | Cards) */}
                 <div className="relative z-10 w-full h-full grid grid-cols-2">
                     {/* Left Column: Text */}
-                    <div className="flex flex-col justify-start items-center text-center p-4 pt-16 md:p-12 md:pt-24">
+                    <div className="flex flex-col justify-start items-center text-center p-4 pt-[8vh] md:p-12 md:pt-[12vh]">
                         <h2 className="text-[clamp(1.5rem,4vw,3.5rem)] font-clash font-bold text-[#1E293B] tracking-[-0.04em] leading-[1.1] mb-6 max-w-lg">
                             ESCOLHA SEU PLANO
                         </h2>
@@ -91,7 +91,7 @@ export const PricingSection = () => {
                     </div>
 
                     {/* Right Column: Pricing Cards - Scaled to fit */}
-                    <div className="flex flex-col justify-center items-center p-2 md:p-8 relative origin-center scale-[0.55] sm:scale-[0.65] md:scale-[0.75] lg:scale-90 transition-transform">
+                    <div className="flex flex-col justify-center items-center p-2 pt-[6vh] md:p-8 md:pt-[8vh] relative origin-center scale-[0.55] sm:scale-[0.65] md:scale-[0.75] lg:scale-90 transition-transform">
                         {/* Period selector */}
                         <div className="flex justify-center mb-8 w-full">
                             <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer w-[340px] h-[50px]">
