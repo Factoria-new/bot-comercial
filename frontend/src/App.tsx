@@ -18,6 +18,7 @@ import GoogleCalendarCallback from "./pages/GoogleCalendarCallback";
 import MeuPrompt from "./pages/MeuPrompt";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 
 const queryClient = new QueryClient();
 
@@ -41,7 +42,11 @@ const App = () => (
                   <MeuPrompt />
                 </ProtectedRoute>
               } />
-              <Route path="/login" element={<Login />} />
+              <Route path="/login" element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } />
               <Route path="/payment" element={<Payment />} />
               <Route path="/check-email" element={<CheckEmail />} />
               <Route path="/setup-password" element={<SetupPassword />} />

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AgentCreator from '@/components/AgentCreator';
-import WelcomeScreen from '@/components/WelcomeScreen';
 import { DashboardStep } from '@/components/agent-creator/DashboardStep';
 import { useIntegrations } from '@/hooks/useIntegrations';
 import { promptService } from '@/services/promptService';
@@ -14,9 +13,6 @@ const Dashboard = () => {
 
   // Phase: 'onboarding' = criação do agente | 'app' = uso diário
   const [phase, setPhase] = useState<'loading' | 'onboarding' | 'app'>('loading');
-
-  // Onboarding sub-step (only used when phase === 'onboarding')
-  const [showWelcome, setShowWelcome] = useState(true);
 
   // Integrations state for DashboardStep
   const { integrations } = useIntegrations();
@@ -35,7 +31,6 @@ const Dashboard = () => {
         try {
           const result = await promptService.getPrompt();
           if (result.success && result.prompt) {
-            setShowWelcome(false); // Ensure sidebar is visible
             setPhase('app'); // Skip to main app
             console.log("✅ Prompt loaded, entering app phase");
             return;
@@ -66,22 +61,15 @@ const Dashboard = () => {
   return (
     <AnimatePresence mode="wait">
       {phase === 'onboarding' ? (
-        showWelcome ? (
-          <WelcomeScreen
-            key="welcome"
-            onStart={() => setShowWelcome(false)}
+        <Layout key="creator-layout" currentPage="dashboard" showLiaButton={false}>
+          <AgentCreator
+            key="creator"
+            isExiting={false}
+            onOpenSidebar={() => { }} // Layout handled
+            onOpenIntegrations={() => { }} // Layout handled
+            onStartChat={() => setPhase('app')}
           />
-        ) : (
-          <Layout key="creator-layout" currentPage="dashboard" showLiaButton={false}>
-            <AgentCreator
-              key="creator"
-              isExiting={false}
-              onOpenSidebar={() => { }} // Layout handled
-              onOpenIntegrations={() => { }} // Layout handled
-              onStartChat={() => setPhase('app')}
-            />
-          </Layout>
-        )
+        </Layout>
       ) : (
 
         <Layout

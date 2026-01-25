@@ -21,7 +21,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
         );
     }
 
-    if (!user) {
+    if (!user || !user.uid) {
         return <Navigate to="/login" replace />;
     }
 

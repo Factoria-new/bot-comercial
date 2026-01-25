@@ -51,6 +51,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     const [uploadedPrompt, setUploadedPrompt] = useState<string | null>(null);
 
 
+
+
     // Transitions
     const [isSwitchingToTest, setIsSwitchingToTest] = useState(false);
     const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -65,6 +67,10 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     ];
 
     // --- HOOKS ---
+    const { user } = useAuth();
+    const userEmail = user?.email || '';
+    const userId = user?.uid || '';
+
     const {
         state: chatState,
         startOnboarding,
@@ -73,7 +79,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         startTesting,
         sendMessageToLia,
         addUserMessage
-    } = useOnboarding();
+    } = useOnboarding(userId);
 
     const { speak, stop: stopTTS, resumeContext, voiceLevel: ttsVoiceLevel } = useTTS();
 
@@ -90,8 +96,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         handleDisconnect
     } = useWhatsAppInstances();
 
-    const { user } = useAuth();
-    const userEmail = user?.email || '';
+
 
     const {
         integrationVoiceLevel,
@@ -136,6 +141,9 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     // --- EFFECTS ---
 
+    // Check for API Key on mount via Backend
+
+
     // Sync test mode
     useEffect(() => {
         if (chatState.step === 'testing') {
@@ -159,21 +167,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         return () => clearInterval(interval);
     }, [isSwitchingToTest]);
 
-    // Auto-switch to Test Mode
-    useEffect(() => {
-        if (chatState.agentCreated && chatState.agentConfig?.prompt) {
-            console.log("🚀 Agent created detected! Switching to Test Mode.");
-            if (isSwitchingToTest) {
-                setTimeout(() => {
-                    setChatMode('agent');
-                    setIsSwitchingToTest(false);
-                }, 8000);
-            }
-            if (chatState.testMessages.length === 0) {
-                startTesting();
-            }
-        }
-    }, [chatState.agentCreated, chatState.agentConfig, startTesting, chatState.testMessages.length, isSwitchingToTest]);
+
 
     // Audio Triggers for specific steps
     useEffect(() => {
@@ -212,18 +206,25 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     // --- HANDLERS ---
 
+
+
     const handleWizardComplete = async () => {
         resumeContext();
         setIsWizardOpen(false);
         setIsSwitchingToTest(true);
 
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const apiKey = localStorage.getItem("user_gemini_api_key"); // Retrieve User Key
 
         try {
             // Generate prompt directly from template (NO LIA)
             const response = await fetch(`${backendUrl}/api/agent/generate-prompt`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Pass the key in a specific header (will need to update backend to read this)
+                    'X-Gemini-Key': apiKey || ''
+                },
                 body: JSON.stringify({
                     data: wizardData,
                     niche: currentSchema?.id || 'general'
@@ -301,6 +302,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         const updatedMessages = [...testMessages, userMsg];
         setTestMessages(updatedMessages);
         setIsTestTyping(true);
+        const apiKey = localStorage.getItem("user_gemini_api_key");
 
         try {
             console.log(`🔍 DEBUG handleTestSend: chatState.agentConfig?.prompt length:`, chatState.agentConfig?.prompt?.length || 0);
@@ -312,7 +314,10 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
             const res = await fetch('http://localhost:3003/api/agent/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Gemini-Key': apiKey || ''
+                },
                 body: JSON.stringify({
                     message: message,
                     systemPrompt: chatState.agentConfig?.prompt || '',
@@ -515,6 +520,8 @@ ${scheduleStr}
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {/* ... Rest of the components ... */}
 
                     {/* 2. WIZARD MODAL */}
                     <WizardModal

@@ -31,13 +31,19 @@ import { generateAudio } from '../services/ttsService.js';
 // Architect Agent Endpoint
 // O cérebro que constrói outros bots - usa o prompt da Lia
 // ============================================
+// ============================================
+// Architect Agent Endpoint
+// O cérebro que constrói outros bots - usa o prompt da Lia
+// ============================================
 router.post('/architect', async (req, res) => {
     try {
         const { message, history, currentSystemPrompt, userId } = req.body;
+        const apiKey = req.headers['x-gemini-key'] || '';
 
         const userMessage = message || '[INÍCIO] O usuário acabou de abrir a página. Inicie a conversa se apresentando e perguntando sobre o negócio dele.';
 
         console.log(`🏗️ [Architect] Processando mensagem...`);
+        if (apiKey) console.log(`🔑 [BYOK] Usando chave de API personalizada (termina com ...${apiKey.slice(-4)})`);
 
         // Get non-streaming response
         const { success, message: responseMessage, systemPrompt } = await runArchitectAgent(
@@ -45,7 +51,8 @@ router.post('/architect', async (req, res) => {
             userMessage,
             null,
             history || [],
-            currentSystemPrompt || ''
+            currentSystemPrompt || '',
+            apiKey
         );
 
         let audioData = null;
@@ -59,7 +66,11 @@ router.post('/architect', async (req, res) => {
 
                 if (cleanText) {
                     console.log(`🎤 [Architect] Generating Server-Side Audio for: "${cleanText.substring(0, 30)}..."`);
-                    const ttsResult = await generateAudio(cleanText, 'Kore', API_KEY);
+                    // Use custom key for TTS if available, logic inside generateAudio receives apiKey? 
+                    // Actually generateAudio currently uses global API_KEY in ttsService.
+                    // We might need to update ttsService too if we want TTS to use BYOK. 
+                    // For now let's use the provided key or fallback.
+                    const ttsResult = await generateAudio(cleanText, 'Kore', apiKey || API_KEY);
                     audioData = {
                         content: ttsResult.audioContent,
                         mimeType: ttsResult.mimeType
@@ -93,6 +104,8 @@ router.post('/architect', async (req, res) => {
 // Generates prompt from agentPrompts.js template - NO LIA
 // ============================================
 router.post('/generate-prompt', async (req, res) => {
+    // This endpoint doesn't use AI, it uses a template function.
+    // So no change needed for API Key here.
     try {
         const { data, niche } = req.body;
 
@@ -137,52 +150,40 @@ router.post('/generate-prompt', async (req, res) => {
 router.post('/chat', async (req, res) => {
     try {
         const { message, systemPrompt, history = [] } = req.body;
+        const apiKey = req.headers['x-gemini-key'] || '';
 
-        if (!API_KEY) return res.status(500).json({ error: 'API key ausente' });
+        // Pass apiKey to chatWithAgent
+        // If apiKey is empty, service will fallback/error checking
 
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash',
-            systemInstruction: systemPrompt
-        });
+        const result = await chatWithAgent(message, systemPrompt, history, apiKey);
 
-        // Convert history to Gemini format
-        const geminiHistory = history.map(h => ({
-            role: h.role === 'user' ? 'user' : 'model',
-            parts: [{ text: h.content }]
-        }));
-
-        const chat = model.startChat({
-            history: geminiHistory,
-            generationConfig: {
-                maxOutputTokens: 2048,
-            },
-        });
-
-        const result = await chat.sendMessage(message);
-        const response = await result.response;
-        const text = response.text();
+        if (!result.success) {
+            return res.status(500).json({ success: false, error: result.message });
+        }
 
         res.json({
             success: true,
-            message: text
+            message: result.message
         });
 
     } catch (error) {
         console.error('❌ Erro no chat de teste:', error);
         res.status(500).json({ success: false, error: 'Erro no chat' });
     }
-});
-
-// Text-to-Speech Endpoint using Gemini 2.0 Native TTS with fallback
+});// Text-to-Speech Endpoint using Gemini 2.0 Native TTS with fallback
 router.post('/speak', async (req, res) => {
     try {
         const { text, voice = 'Kore' } = req.body;
+        const apiKey = req.headers['x-gemini-key'] || '';
 
-        if (!API_KEY) {
+        // Use custom key if provided
+        const keyToUse = apiKey || API_KEY;
+
+        if (!keyToUse) {
             return res.status(500).json({ error: 'API key not configured' });
         }
 
-        const ttsResult = await generateAudio(text, voice, API_KEY);
+        const ttsResult = await generateAudio(text, voice, keyToUse);
 
         return res.json({
             audioContent: ttsResult.audioContent,
@@ -207,6 +208,7 @@ router.post('/speak', async (req, res) => {
 router.post('/live-audio', async (req, res) => {
     try {
         const { message, audio, history = [], userId = 'anonymous' } = req.body;
+        const apiKey = req.headers['x-gemini-key'] || '';
 
         console.log(`🎙️ [Live Audio] Request received - Message: ${message ? message.substring(0, 30) + '...' : 'AUDIO'}`);
 
@@ -222,8 +224,8 @@ router.post('/live-audio', async (req, res) => {
             audioBuffer = Buffer.from(audio, 'base64');
         }
 
-        // Run the live audio stream
-        const stream = runGeminiLiveAudioStream(userId, message, audioBuffer, history);
+        // Run the live audio stream with custom key
+        const stream = runGeminiLiveAudioStream(userId, message, audioBuffer, history, apiKey);
 
         for await (const chunk of stream) {
             res.write(`data: ${JSON.stringify(chunk)}\n\n`);

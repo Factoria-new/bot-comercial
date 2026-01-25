@@ -16,9 +16,13 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 console.log('🚀 useOnboarding hook loaded - Version:', VERSION);
 
-export function useOnboarding() {
+export function useOnboarding(userId?: string) {
     const [state, setState] = useState<OnboardingState>(INITIAL_ONBOARDING_STATE);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    const getStorageKey = useCallback(() => {
+        return userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+    }, [userId]);
 
     // Ref to always have access to current state (avoids stale closure issues)
     const stateRef = useRef(state);
@@ -26,9 +30,13 @@ export function useOnboarding() {
         stateRef.current = state;
     }, [state]);
 
-    // Load from localStorage on mount
+    // Load from localStorage on mount (or when userId changes)
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!userId) return; // Wait for userId
+
+        const key = getStorageKey();
+        const saved = localStorage.getItem(key);
+
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -37,7 +45,7 @@ export function useOnboarding() {
                 // If so, clear and start fresh
                 if (parsed.apiKey !== undefined || parsed.companyInfo?.niche !== undefined) {
                     console.log('Detected old onboarding data, clearing...');
-                    localStorage.removeItem(STORAGE_KEY);
+                    localStorage.removeItem(key);
                     setIsInitialized(true);
                     return;
                 }
@@ -50,18 +58,22 @@ export function useOnboarding() {
                 setState(parsed);
             } catch (e) {
                 console.error('Failed to parse onboarding state:', e);
-                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(key);
             }
+        } else {
+            // No saved state for this user, ensure clean slate
+            setState(INITIAL_ONBOARDING_STATE);
         }
         setIsInitialized(true);
-    }, []);
+    }, [userId, getStorageKey]);
 
     // Save to localStorage whenever state changes
     useEffect(() => {
-        if (isInitialized) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (isInitialized && userId) {
+            const key = getStorageKey();
+            localStorage.setItem(key, JSON.stringify(state));
         }
-    }, [state, isInitialized]);
+    }, [state, isInitialized, userId, getStorageKey]);
 
     // Add bot message with typing animation
     const addBotMessage = useCallback(async (content: string, typingDelay = 1500) => {

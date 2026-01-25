@@ -13,6 +13,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getConversationHistory, saveMessage } from './historyService.js';
 import prisma from '../config/prisma.js';
 import { getConnectionStatus as getCalendarConnectionStatus } from './googleCalendarService.js';
+import { decrypt } from '../utils/encryption.js';
 
 // Store active WhatsApp sessions
 const sessions = new Map();
@@ -44,6 +45,9 @@ const serviceTypes = new Map();
 
 // Store business address per session
 const businessAddresses = new Map();
+
+// Store Gemini API Key per session
+const geminiApiKeys = new Map();
 
 // --- METRICS STATE ---
 let metrics = {
@@ -847,7 +851,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         // Try finding user by ID (if sessionId is a User ID)
                         let user = await prisma.user.findUnique({
                             where: { id: sessionId },
-                            select: { customPrompt: true, email: true, appointmentDuration: true, serviceType: true, businessAddress: true }
+                            select: { customPrompt: true, email: true, appointmentDuration: true, serviceType: true, businessAddress: true, geminiApiKey: true }
                         });
 
                         // If not found, try stripping 'user_' prefix if present
@@ -856,7 +860,7 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                             console.log(`🔄 Trying again with clean ID: ${cleanId}`);
                             user = await prisma.user.findUnique({
                                 where: { id: cleanId },
-                                select: { customPrompt: true, email: true, appointmentDuration: true, serviceType: true, businessAddress: true }
+                                select: { customPrompt: true, email: true, appointmentDuration: true, serviceType: true, businessAddress: true, geminiApiKey: true }
                             });
                         }
 
@@ -889,6 +893,17 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                                 businessAddresses.set(sessionId, user.businessAddress);
                                 console.log(`📍 Business address cached: ${user.businessAddress}`);
                             }
+
+                            // Store Gemini API Key
+                            if (user.geminiApiKey) {
+                                try {
+                                    const decryptedKey = decrypt(user.geminiApiKey);
+                                    geminiApiKeys.set(sessionId, decryptedKey);
+                                    console.log(`🔑 Gemini API Key decrypted and cached for ${sessionId}`);
+                                } catch (encError) {
+                                    console.error(`❌ Error decrypting API Key for ${sessionId}:`, encError.message);
+                                }
+                            }
                         } else {
                             console.log(`⚠️ Prompt not found in DB for ${sessionId}`);
                         }
@@ -919,7 +934,8 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         userEmail: userEmails.get(sessionId) || null,
                         appointmentDuration: appointmentDurations.get(sessionId) || 60,
                         serviceType: serviceTypes.get(sessionId) || 'online',
-                        businessAddress: businessAddresses.get(sessionId) || null
+                        businessAddress: businessAddresses.get(sessionId) || null,
+                        apiKey: geminiApiKeys.get(sessionId) || null
                     });
                 }
 
@@ -972,7 +988,7 @@ const processBufferedMessages = async (contactId, io) => {
         return;
     }
 
-    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid, userEmail, appointmentDuration, serviceType, businessAddress } = buffer;
+    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid, userEmail, appointmentDuration, serviceType, businessAddress, apiKey } = buffer;
 
     // Concatenar todas as mensagens em uma só, separadas por quebra de linha
     const combinedMessage = messages.join('\n');
@@ -1046,7 +1062,8 @@ const processBufferedMessages = async (contactId, io) => {
             appointmentDuration: appointmentDuration,  // Duração padrão dos agendamentos
             serviceType: serviceType,  // Tipo de serviço (online/presencial)
             businessAddress: businessAddress,  // Endereço do estabelecimento
-            calendarConnected: calendarConnected  // Se o Google Calendar está conectado
+            calendarConnected: calendarConnected,  // Se o Google Calendar está conectado
+            apiKey: apiKey // Pass user provided API Key
         });
 
         console.log(`✅ Buffered messages forwarded to AI Engine for ${remoteJid}`);

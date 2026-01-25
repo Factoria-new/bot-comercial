@@ -10,6 +10,7 @@ import WhatsAppConnectionModal from './WhatsAppConnectionModal';
 import { LiaFloatingButton } from './LiaFloatingButton';
 import { Button } from './ui/button';
 import { Menu } from 'lucide-react';
+import { ApiKeyModal } from './ApiKeyModal';
 
 interface LayoutProps {
   children: ReactNode;
@@ -27,7 +28,7 @@ const Layout = ({
   onExpandIntegrationsChange
 }: LayoutProps) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { toast } = useToast();
   const { socket } = useSocket();
 
@@ -35,6 +36,10 @@ const Layout = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
   const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
+
+  // API Key Check State
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [verificationLoading, setVerificationLoading] = useState(true);
 
   // Sync external prop with internal state
   useEffect(() => {
@@ -97,6 +102,66 @@ const Layout = ({
     }
   };
 
+  const handleApiKeyComplete = () => {
+    setIsApiKeyModalOpen(false);
+    // Optionally, refresh user data or set a flag to indicate API key is now set
+  };
+
+  // Global API Key Check
+  useEffect(() => {
+    const checkApiKey = async () => {
+      // Optimization: If AuthContext already has the info, skip fetch
+      if (user) {
+        if (user.hasGeminiApiKey) {
+          setVerificationLoading(false);
+          return;
+        } else if (user.hasGeminiApiKey === false) {
+          setVerificationLoading(false);
+          setIsApiKeyModalOpen(true);
+          return;
+        }
+      }
+
+      // Fallback: Fetch if user context didn't have definitive answer
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setVerificationLoading(false);
+          return;
+        }
+
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+
+        const response = await fetch(`${backendUrl}/api/users/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && !data.user.hasGeminiApiKey) {
+            setIsApiKeyModalOpen(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking API key status:", error);
+      } finally {
+        setVerificationLoading(false);
+      }
+    };
+
+    checkApiKey();
+  }, [user]);
+
+  if (verificationLoading) {
+    // Loading State
+    return (
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white space-y-4">
+        <div className="w-10 h-10 border-4 border-[#00A947] border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-lg font-medium text-slate-300">Verificando Credenciais...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Hamburger Menu Button */}
@@ -144,6 +209,11 @@ const Layout = ({
         isOpen={isLiaChatOpen}
         onClose={() => setIsLiaChatOpen(false)}
         metrics={metrics}
+      />
+
+      <ApiKeyModal
+        open={isApiKeyModalOpen}
+        onComplete={handleApiKeyComplete}
       />
 
       {showLiaButton && !isLiaChatOpen && (

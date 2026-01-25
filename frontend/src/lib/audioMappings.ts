@@ -21,7 +21,8 @@ export type AudioTriggerType =
     | 'step_operations' // NEW
     | 'step_operations_modal' // NEW (Specific for BusinessInfoModal)
     | 'dashboard_suggestion' // NEW
-    | 'step_details'; // NEW
+    | 'step_details' // NEW
+    | 'intro_apikey'; // NEW
 
 interface AudioVariation {
     id: string;
@@ -89,10 +90,10 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Excelente! Seu assistente está configurado. Vamos ativá-lo nos seus canais de comunicação? Escolha abaixo onde você quer que ele atenda seus clientes.",
         "Tudo certo! Agora só falta conectar seu assistente. Selecione uma plataforma para ativar o atendimento automático nos seus canais."
     ]),
-    'upload_success': defineVariations('intro_wizard', 3, [
-        "Olá! Sou a Lia. Vamos configurar seu assistente juntos.",
-        "Oi! Que bom te ver. Vamos criar um assistente incrível para você.",
-        "Bem-vindo! Eu sou a Lia. Vou te guiar nesse processo rápido."
+    'upload_success': defineVariations('upload_success', 3, [
+        "Seu arquivo foi analisado com sucesso! Essa é a área de teste, onde você pode conversar com seu assistente para verificar como ele ficou.",
+        "Análise concluída! Já configurei seu assistente com base no arquivo. Aproveite este ambiente para testar as respostas dele.",
+        "Recebi e processei seu arquivo. Seu assistente está pronto para ser testado aqui nesta tela. Fique à vontade para fazer ajustes se precisar."
     ]),
     'integrations_success': defineVariations('integrations_success', 3, [
         "Integração realizada com sucesso! Seu assistente já está conectado e pronto para atender.",
@@ -118,6 +119,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Agora, me diga quais são seus principais produtos ou serviços. Preciso saber o nome e o preço ou uma breve descrição.",
         "Vamos cadastrar o que você vende. Adicione os itens principais para que eu possa oferecê-los aos seus clientes.",
         "Chegou a hora de adicionar seu catálogo. Liste seus produtos ou serviços com detalhes e valores."
+    ]),
+    'intro_apikey': defineVariations('intro_apikey', 3, [
+        "Oi! Seja bem vindo ao Cají assistente. Nessa etapa, precisamos que você adicione sua chave de API para que tudo funcione. Caso não tenha uma ainda, é só clicar no botão abaixo para ser redirecionado até a criação da sua chave. Se não souber como criar, veja o vídeo abaixo onde mostramos os detalhes. Quando estiver tudo pronto, clique em continuar e daremos início na sua jornada.",
+        "Olá! Bem-vindo ao Cají assistente. Para começarmos, preciso que você insira sua chave de API e garanta o funcionamento do sistema. Se ainda não possui uma, clique no botão abaixo para criá-la. Também preparamos um vídeo explicativo logo abaixo com o passo a passo. Assim que tiver sua chave, clique em continuar para iniciarmos sua jornada.",
+        "Oi! Que bom ter você no Cají assistente. Para que tudo funcione perfeitamente, precisamos da sua chave de API agora. Se você ainda não tem, pode criar clicando no botão abaixo. Caso tenha dúvidas, o vídeo abaixo explica detalhadamente como gerar a chave. Com a chave em mãos, clique em continuar e vamos começar!"
     ])
 };
 

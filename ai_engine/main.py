@@ -28,7 +28,10 @@ class MessageInput(BaseModel):
     appointmentDuration: Optional[int] = 60  # Duração padrão dos agendamentos em minutos
     serviceType: Optional[str] = "online"  # "online" ou "presencial"
     businessAddress: Optional[str] = None  # Endereço do estabelecimento
+    serviceType: Optional[str] = "online"  # "online" ou "presencial"
+    businessAddress: Optional[str] = None  # Endereço do estabelecimento
     calendarConnected: Optional[bool] = False  # Se o Google Calendar está conectado
+    apiKey: Optional[str] = None # User provided API Key
 
 class InstagramMessageInput(BaseModel):
     userId: str  # User's email
@@ -149,7 +152,8 @@ async def handle_whatsapp_message(data: MessageInput):
             appointment_duration=appointment_duration, 
             calendar_connected=calendar_connected,
             target_remote_jid=data.remoteJid,  # SECURITY: Lock tools to this user
-            request_id=request_id              # STATEFUL: Track usage via global state
+            request_id=request_id,             # STATEFUL: Track usage via global state
+            api_key=data.apiKey                # Pass custom API Key
         )
 
         # Get current datetime for context

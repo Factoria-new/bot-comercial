@@ -9,6 +9,24 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_dev';
 const SALT_ROUNDS = 10;
 
 /**
+ * Gera um token de sessão padronizado
+ * @param {object} user - Objeto do usuário
+ * @returns {string} Token JWT
+ */
+export const generateSessionToken = (user) => {
+    return jwt.sign(
+        {
+            uid: user.id,
+            email: user.email,
+            role: user.role,
+            hasGeminiApiKey: !!user.geminiApiKey
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+};
+
+/**
  * Cria um novo usuário (estado Pending) - chamado após pagamento
  * @param {string} email - Email do usuário
  * @param {string} name - Nome do usuário (opcional)
@@ -107,11 +125,10 @@ export const setPassword = async (token, password) => {
     });
 
     // Retornar novo token de sessão com role
-    const sessionToken = jwt.sign(
-        { uid, email: decoded.email, role: user.role || 'basic' },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-    );
+    // Note: user object loaded above needs to have geminiApiKey populated if we want it in token.
+    // prisma.findUnique default doesn't guarantee select fields unless specified or all scalars returned.
+    // By default findUnique returns all scalars.
+    const sessionToken = generateSessionToken({ ...user, geminiApiKey: user.geminiApiKey });
 
     return sessionToken;
 };
@@ -123,28 +140,31 @@ export const setPassword = async (token, password) => {
  * @returns {Promise<{token: string, user: object}>}
  */
 export const login = async (email, password) => {
-    const user = await prisma.user.findUnique({
-        where: { email }
-    });
+    let user;
+    try {
+        user = await prisma.user.findUnique({
+            where: { email }
+        });
+    } catch (error) {
+        // Log detailed error for debugging but return generic message to user
+        console.error(`Database error during login for ${email}:`, error);
+        throw new Error('Email ou senha incorretos');
+    }
 
     if (!user) {
-        throw new Error('Invalid credentials');
+        throw new Error('Email ou senha incorretos');
     }
 
     if (!user.password) {
-        throw new Error('Account not activated or uses different login method');
+        throw new Error('Conta não ativada ou método de login inválido');
     }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-        throw new Error('Invalid credentials');
+        throw new Error('Email ou senha incorretos');
     }
 
-    const sessionToken = jwt.sign(
-        { uid: user.id, email: user.email, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-    );
+    const sessionToken = generateSessionToken(user);
 
     return {
         token: sessionToken,
@@ -156,7 +176,8 @@ export const login = async (email, password) => {
             status: user.status,
             plan: user.plan,
             subscriptionStatus: user.subscriptionStatus,
-            hasPrompt: !!user.customPrompt
+            hasPrompt: !!user.customPrompt,
+            hasGeminiApiKey: !!user.geminiApiKey
         }
     };
 };

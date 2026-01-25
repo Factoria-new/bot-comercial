@@ -56,9 +56,11 @@ export const ProductSection = () => {
                 scrollTrigger: {
                     trigger: sectionRef.current,
                     pin: true,
+                    start: "top top",
                     scrub: 1,
                     snap: 1 / (features.length - 1),
                     end: "+=3000",
+                    anticipatePin: 1,
                 },
             });
         }, sectionRef);

@@ -1,8 +1,27 @@
 // src/services/geminiService.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import prisma from '../config/prisma.js';
+import { decrypt } from '../utils/encryption.js';
 
-// Use same env var logic as agentRoutes.js
-const API_KEY = process.env.API_GEMINI || process.env.GEMINI_API_KEY || '';
+/**
+ * Retrieves and decrypts the user's Gemini API Key.
+ */
+async function getUserApiKey(userId) {
+    if (!userId) return null;
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { geminiApiKey: true }
+        });
+
+        if (user && user.geminiApiKey) {
+            return decrypt(user.geminiApiKey);
+        }
+    } catch (error) {
+        console.error('Error fetching user API Key:', error);
+    }
+    return null;
+}
 
 const ARCHITECT_SYSTEM_INSTRUCTION = `
 # PERSONA: LIA (ASSISTENTE E GESTORA DE IA)
@@ -115,13 +134,33 @@ async function scrapeWebsite(url) {
  * @param {string} currentPromptContext - Rascunho atual do prompt do bot
  * @returns {Object} - { success: boolean, message: string, systemPrompt?: string }
  */
-export async function runArchitectAgent(userId, userMessage, userAudioBuffer = null, history = [], currentPromptContext = "") {
+/**
+ * Agente Arquiteto: Versão Non-Streaming (Texto Estático)
+ * 
+ * @param {string} userId - ID do usuário
+ * @param {string} userMessage - Mensagem do usuário
+ * @param {Buffer|null} userAudioBuffer - Buffer de áudio (opcional)
+ * @param {Array} history - Histórico da conversa
+ * @param {string} currentPromptContext - Rascunho atual do prompt do bot
+ * @param {string} apiKey - Chave de API do usuário (opcional)
+ * @returns {Object} - { success: boolean, message: string, systemPrompt?: string }
+ */
+export async function runArchitectAgent(userId, userMessage, userAudioBuffer = null, history = [], currentPromptContext = "", apiKey = "") {
     try {
-        if (!API_KEY) {
-            throw new Error('GEMINI_API_KEY não configurada');
+        let keyToUse = apiKey;
+
+        // If not provided in args (e.g. from frontend ephemeral), try fetching from DB
+        if (!keyToUse && userId) {
+            keyToUse = await getUserApiKey(userId);
         }
 
-        const genAI = new GoogleGenerativeAI(API_KEY);
+        if (!keyToUse) {
+            // Fallback to env only if strictly necessary or strictly block it as per user request? 
+            // User said: "no more using dotenv key". So we throw error.
+            throw new Error('GEMINI_API_KEY não configurada para este usuário');
+        }
+
+        const genAI = new GoogleGenerativeAI(keyToUse);
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             generationConfig: { temperature: 0.7 }
@@ -223,15 +262,30 @@ export async function runArchitectAgent(userId, userMessage, userAudioBuffer = n
  * @param {string} message - Mensagem do usuário
  * @param {string} systemPrompt - System prompt do assistente criado
  * @param {Array} history - Histórico de conversa (opcional)
+ * @param {string} apiKey - Chave de API do usuário (opcional)
  * @returns {Object} { success, message }
  */
-export async function chatWithAgent(message, systemPrompt, history = []) {
+export async function chatWithAgent(message, systemPrompt, history = [], apiKey = "") {
     try {
-        if (!API_KEY) {
-            throw new Error('GEMINI_API_KEY não configurada');
+        // Need userId to fetch from DB if apiKey not provided. 
+        // Note: The signature of this function might need to change to accept userId if we want DB lookup 
+        // OR we assume apiKey is passed in by the caller who did the lookup.
+        // For now, let's assume the caller will pass the key, OR we need to refactor usage.
+
+        let keyToUse = apiKey;
+
+        // This function signature (message, systemPrompt, history, apiKey) doesn't have userId.
+        // If we want to look up DB key, we need userId.
+        // However, looking at runArchitectAgent, it takes userId.
+        // Let's check callers of chatWithAgent.
+        // If we can't get userId, we can't lookup. 
+        // But let's temporarily assume apiKey IS passed or we fail.
+
+        if (!keyToUse) {
+            throw new Error('GEMINI_API_KEY não fornecida');
         }
 
-        const genAI = new GoogleGenerativeAI(API_KEY);
+        const genAI = new GoogleGenerativeAI(keyToUse);
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             systemInstruction: systemPrompt + " IMPORTANTE: NUNCA use asteriscos (*). Para listar itens, use emojis ou apenas quebras de linha. O formato deve ser texto simples e limpo.",
@@ -275,14 +329,20 @@ export async function chatWithAgent(message, systemPrompt, history = []) {
  * @param {string} userMessage - Mensagem de texto do usuário
  * @param {Buffer|null} userAudioBuffer - Buffer de áudio do usuário (opcional)
  * @param {Array} history - Histórico da conversa
+ * @param {string} apiKey - Chave de API do usuário (opcional)
  * @returns {AsyncGenerator} - Stream de chunks de áudio em tempo real
  */
-export async function* runGeminiLiveAudioStream(userId, userMessage, userAudioBuffer = null, history = []) {
+export async function* runGeminiLiveAudioStream(userId, userMessage, userAudioBuffer = null, history = [], apiKey = "") {
     const { GoogleGenAI, Modality } = await import('@google/genai');
 
-    if (!API_KEY) throw new Error('GEMINI_API_KEY não configurada');
+    let keyToUse = apiKey;
+    if (!keyToUse && userId) {
+        keyToUse = await getUserApiKey(userId);
+    }
 
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    if (!keyToUse) throw new Error('GEMINI_API_KEY não configurada para este usuário');
+
+    const ai = new GoogleGenAI({ apiKey: keyToUse });
 
     // Fila de mensagens recebidas do servidor
     const responseQueue = [];

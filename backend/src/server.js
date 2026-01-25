@@ -1,8 +1,8 @@
+import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import logger from './config/logger.js';
 import caktoRoutes from './routes/caktoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
@@ -11,11 +11,10 @@ import internalToolsRoutes from './routes/internalToolsRoutes.js';
 import promptRoutes from './routes/promptRoutes.js';
 import googleCalendarRoutes from './routes/googleCalendarRoutes.js';
 import stripeRoutes from './routes/stripeRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import { initGoogleCalendarService } from './services/googleCalendarService.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
 import { PROMPTS } from './prompts/agentPrompts.js';
-
-dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
@@ -91,7 +90,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature']
+  allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature', 'X-Gemini-Key']
 }));
 
 // Configuração para Webhook do Stripe (precisa do raw body)
@@ -149,6 +148,7 @@ app.use('/api/internal', internalToolsRoutes);
 
 // Rotas de Gerenciamento de Prompt do Usuário
 app.use('/api/user', promptRoutes);
+app.use('/api/users', userRoutes); // User Management (Profile, API Keys)
 
 // Rotas do Google Calendar
 app.use('/api/google-calendar', googleCalendarRoutes);

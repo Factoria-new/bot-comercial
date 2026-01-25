@@ -2,7 +2,7 @@ from crewai import Agent, LLM
 from tools import WhatsAppSendTool, InstagramSendTool, WhatsAppSendAudioTool, GoogleCalendarTool, GoogleCalendarRescheduleTool, GoogleCalendarCheckAvailabilityTool, GoogleCalendarCancelTool, GoogleCalendarListDaySlotsTool
 import os
 
-def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duration=60, calendar_connected=False, target_remote_jid=None, request_id=None):
+def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duration=60, calendar_connected=False, target_remote_jid=None, request_id=None, api_key=None):
     """
     Create CrewAI agents with Gemini LLM.
     user_id is actually the session_id (instance_1, instance_2, etc)
@@ -11,14 +11,17 @@ def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duratio
     calendar_connected indicates if Google Calendar is connected for this user
     target_remote_jid is the specific user phone number we are talking to (used to lock security)
     request_id is a unique ID to track if message was sent (passed to tools)
+    api_key is the user's Gemini API Key
     """
     
     # Configure Gemini LLM using CrewAI's native format
-    # Requires GEMINI_API_KEY environment variable
-    gemini_llm = LLM(
-        model="gemini/gemini-2.5-flash",
-        temperature=0.7,
-        config={
+    # Requires GEMINI_API_KEY environment variable IF api_key is not passed?
+    # Actually, LLM constructor accepts api_key.
+    
+    llm_kwargs = {
+        "model": "gemini/gemini-2.5-flash",
+        "temperature": 0.7,
+        "config": {
             "safety_settings": [
                 {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
                 {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -26,7 +29,15 @@ def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duratio
                 {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
             ]
         }
-    )
+    }
+    
+    if api_key:
+        llm_kwargs["api_key"] = api_key
+        print(f"🔑 Using Custom API Key for session {user_id}")
+    else:
+        print(f"⚠️ Using Environment API Key for session {user_id}")
+
+    gemini_llm = LLM(**llm_kwargs)
     
     # WhatsApp Tool with correct session_id and locked recipient
     whats_tool = WhatsAppSendTool(session_id=user_id, default_recipient=target_remote_jid, request_id=request_id)

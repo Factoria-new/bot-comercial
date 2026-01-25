@@ -8,6 +8,7 @@ export interface UserProfile {
     displayName?: string;
     hasPrompt?: boolean;
     isWhatsAppConnected?: boolean;
+    hasGeminiApiKey?: boolean;
 }
 
 interface AuthContextType {
@@ -99,7 +100,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         email: decoded.email,
                         role: decoded.role || 'basic',
                         displayName: decoded.displayName,
-                        hasPrompt
+                        hasPrompt,
+                        hasGeminiApiKey: decoded.hasGeminiApiKey || false // Ensure backend sends this in token, or we fetch it
                     });
                 } else {
                     localStorage.removeItem('token');
@@ -140,7 +142,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 email: data.user.email,
                 role: data.user.role || 'basic',
                 displayName: data.user.displayName,
-                hasPrompt: data.user.hasPrompt || false
+                hasPrompt: data.user.hasPrompt || false,
+                hasGeminiApiKey: data.user.hasGeminiApiKey || false
             });
         }
     };
