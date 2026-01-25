@@ -473,7 +473,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
         }
     };
 
-    const executeSkipToPricing = () => {
+    const transitionToSection = (sectionId: string) => {
         const wrapper = videoWrapperRef.current;
         const heroText = heroTextRef.current;
         const videoLoop = videoLoopRef.current;
@@ -485,26 +485,31 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
         isAnimatingRef.current = false;
         if (reverseAnimationRef.current) {
             cancelAnimationFrame(reverseAnimationRef.current);
+            reverseAnimationRef.current = null;
         }
 
         gsap.set(wrapper, { width: "100vw", height: "100vh", top: "0vh", right: "0vw", borderRadius: "0px" });
         gsap.set(heroText, { x: -100, autoAlpha: 0 });
+
         videoLoop.pause();
         gsap.set(videoLoop, { autoAlpha: 0 });
         videoMain.pause();
         gsap.set(videoMain, { autoAlpha: 0 });
+
         videoEndLoop.currentTime = 0;
-        videoEndLoop.play();
+        videoEndLoop.play().catch(() => { });
         gsap.set(videoEndLoop, { autoAlpha: 1, scale: 1 });
 
         setPhase('ended');
         zoomEndLevelRef.current = 1;
 
         setTimeout(() => {
-            const pricingSection = document.getElementById('pricing');
-            if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-    }
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
+    };
+
+    const executeSkipToPricing = () => transitionToSection('pricing');
 
 
     return (
@@ -531,7 +536,11 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     >
                         Começar Agora
                     </Button>
-                    <Button variant="outline" className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all">
+                    <Button
+                        variant="outline"
+                        onClick={() => transitionToSection('produto')}
+                        className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all"
+                    >
                         Ver Como Funciona
                     </Button>
                 </div>
