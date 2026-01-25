@@ -1,92 +1,110 @@
-import { motion } from "framer-motion";
-import { Calendar, Instagram, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import Lottie from "lottie-react";
+import {
+    SiFacebook,
+    SiInstagram,
+    SiGmail,
+    SiGooglesheets,
+    SiShopify,
+    SiStripe,
+    SiX,
+    SiTiktok
+} from "react-icons/si";
+
+const iconConfigs = [
+    // Orbit 1 (Inner)
+    [
+        { Icon: SiInstagram, color: "#E4405F" },
+        { Icon: SiGmail, color: "#EA4335" },
+        { Icon: SiFacebook, color: "#1877F2" },
+        { Icon: SiGooglesheets, color: "#34A853" },
+    ],
+    // Orbit 2 (Outer)
+    [
+        { Icon: SiShopify, color: "#95BF47" },
+        { Icon: SiX, color: "#000000" },
+        { Icon: SiStripe, color: "#635BFF" },
+        { Icon: SiTiktok, color: "#000000" },
+    ]
+];
 
 export const IntegrationsAnimation = () => {
+    const [lottieData, setLottieData] = useState<any>(null);
+
+    useEffect(() => {
+        fetch("/lotties/meta-ai-logo.json")
+            .then(res => res.json())
+            .then(data => setLottieData(data))
+            .catch(err => console.error("Error loading lottie:", err));
+    }, []);
+
     return (
-        <div className="w-full h-full relative flex items-center justify-center bg-slate-50/50 backdrop-blur-sm rounded-3xl overflow-hidden p-8">
-            {/* Central Hub - WhatsApp Logo style */}
-            <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                className="z-20 w-24 h-24 bg-[#00A947] rounded-3xl flex items-center justify-center shadow-2xl relative"
-            >
-                <MessageCircle size={40} className="text-white fill-current" />
-                {/* Pulse effect */}
-                <div className="absolute inset-0 bg-[#00A947] rounded-3xl animate-ping opacity-20"></div>
-            </motion.div>
+        <div className="w-full h-full flex items-center justify-center p-4 min-h-[350px] overflow-hidden">
+            <div className="relative flex items-center justify-center">
 
-            {/* Connecting Lines */}
-            <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
-                {/* Top Left Line */}
-                <motion.line
-                    x1="50%" y1="50%" x2="25%" y2="25%"
-                    stroke="#CBD5E1" strokeWidth="2" strokeDasharray="6 6"
-                    initial={{ pathLength: 0 }}
-                    whileInView={{ pathLength: 1 }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                />
-                {/* Top Right Line */}
-                <motion.line
-                    x1="50%" y1="50%" x2="75%" y2="25%"
-                    stroke="#CBD5E1" strokeWidth="2" strokeDasharray="6 6"
-                    initial={{ pathLength: 0 }}
-                    whileInView={{ pathLength: 1 }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                />
-                {/* Bottom Line */}
-                <motion.line
-                    x1="50%" y1="50%" x2="50%" y2="75%"
-                    stroke="#CBD5E1" strokeWidth="2" strokeDasharray="6 6"
-                    initial={{ pathLength: 0 }}
-                    whileInView={{ pathLength: 1 }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                />
-            </svg>
-
-
-            {/* Satellites */}
-
-            {/* Calendar - Top Left */}
-            <motion.div
-                initial={{ opacity: 0, x: 20, y: 20 }}
-                whileInView={{ opacity: 1, x: 0, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="absolute top-[20%] left-[20%] z-10 bg-white p-4 rounded-2xl shadow-lg border border-slate-100 flex flex-col items-center gap-2 w-28"
-            >
-                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
-                    <Calendar size={20} />
+                {/* Central Hub - Lottie */}
+                <div className="z-20 w-28 h-28 flex items-center justify-center relative">
+                    {lottieData ? (
+                        <Lottie animationData={lottieData} loop={true} className="w-full h-full transform scale-125" />
+                    ) : (
+                        <div className="w-full h-full bg-slate-100 animate-pulse rounded-full" />
+                    )}
                 </div>
-                <span className="text-xs font-semibold text-slate-600">Calendar</span>
-            </motion.div>
 
-            {/* Instagram - Top Right */}
-            <motion.div
-                initial={{ opacity: 0, x: -20, y: 20 }}
-                whileInView={{ opacity: 1, x: 0, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-                className="absolute top-[20%] right-[20%] z-10 bg-white p-4 rounded-2xl shadow-lg border border-slate-100 flex flex-col items-center gap-2 w-28"
-            >
-                <div className="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center text-pink-500">
-                    <Instagram size={20} />
-                </div>
-                <span className="text-xs font-semibold text-slate-600">Instagram</span>
-            </motion.div>
+                {/* Orbits */}
+                {iconConfigs.map((orbitIcons, orbitIndex) => {
+                    const orbitSize = 200 + (orbitIndex * 120); // 200px (inner), 320px (outer)
+                    const duration = 25 + (orbitIndex * 10); // Different speeds
+                    const reverse = orbitIndex % 2 === 1; // Alternate direction
 
-            {/* WhatsApp Business - Bottom */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-                className="absolute bottom-[20%] z-10 bg-white p-4 rounded-2xl shadow-lg border border-slate-100 flex flex-col items-center gap-2 w-28"
-            >
-                <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-500">
-                    <MessageCircle size={20} />
-                </div>
-                <span className="text-xs font-semibold text-slate-600">WhatsApp</span>
-            </motion.div>
+                    return (
+                        <div
+                            key={orbitIndex}
+                            className="absolute rounded-full border border-dashed border-slate-200"
+                            style={{
+                                width: orbitSize,
+                                height: orbitSize,
+                                animation: `spin ${duration}s linear infinite ${reverse ? 'reverse' : ''}`
+                            }}
+                        >
+                            {orbitIcons.map((config, iconIndex) => {
+                                const angleStep = 360 / orbitIcons.length;
+                                const angle = iconIndex * angleStep;
 
+                                return (
+                                    <div
+                                        key={iconIndex}
+                                        className="absolute top-1/2 left-1/2"
+                                        style={{
+                                            transform: `rotate(${angle}deg) translate(${orbitSize / 2}px) rotate(-${angle}deg)`,
+                                        }}
+                                    >
+                                        <div className="transform -translate-x-1/2 -translate-y-1/2">
+                                            <div
+                                                className="bg-white p-2.5 rounded-full shadow-md border border-slate-100 flex items-center justify-center"
+                                                style={{
+                                                    width: 40,
+                                                    height: 40,
+                                                    animation: `spin ${duration}s linear infinite ${reverse ? 'normal' : 'reverse'}`
+                                                }}
+                                            >
+                                                <config.Icon size={20} style={{ color: config.color }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 };

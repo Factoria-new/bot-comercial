@@ -99,10 +99,10 @@ export const ProductSection = () => {
                                         transition={{ duration: 0.8 }}
                                     >
                                         <div className="w-12 h-1 bg-[#00A947] mb-4"></div>
-                                        <h3 className="text-3xl md:text-4xl font-black font-clash text-slate-900 leading-[1.1] mb-4 tracking-tight">
+                                        <h3 className="text-3xl md:text-4xl font-black font-clash text-slate-900 leading-tight mb-4 tracking-normal">
                                             {feature.title}
                                         </h3>
-                                        <p className="text-base text-slate-600 leading-relaxed mb-6 max-w-lg">
+                                        <p className="text-base text-slate-600 leading-relaxed mb-6 max-w-xl">
                                             {feature.description}
                                         </p>
 
@@ -126,7 +126,7 @@ export const ProductSection = () => {
                                         whileInView={{ opacity: 1, scale: 1, x: 0 }}
                                         viewport={{ once: true, amount: 0.1 }}
                                         transition={{ duration: 0.6, ease: "backOut" }}
-                                        className="w-full h-[320px] max-w-xl rounded-3xl overflow-hidden shadow-sm bg-white"
+                                        className="w-full h-[500px] max-w-2xl flex items-center justify-center"
                                     >
                                         {feature.component}
                                     </motion.div>

@@ -1,13 +1,37 @@
-import { motion } from "framer-motion";
-import { Mic, Sliders, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mic, Sliders, MessageSquare, Play, Pause } from "lucide-react";
 
 export const AgentCustomizationAnimation = () => {
+    const [audioEnabled, setAudioEnabled] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    const handlePlay = () => {
+        if (isPlaying) {
+            window.speechSynthesis.cancel();
+            setIsPlaying(false);
+            return;
+        }
+
+        setIsPlaying(true);
+        const utterance = new SpeechSynthesisUtterance("Olá! Sou seu especialista em vendas. Como posso ajudar com os preços hoje?");
+        utterance.lang = "pt-BR";
+        utterance.rate = 1.1;
+        utterance.pitch = 1.0;
+
+        utterance.onend = () => setIsPlaying(false);
+        window.speechSynthesis.speak(utterance);
+    };
+
     return (
-        <div className="w-full h-full relative flex items-center justify-center bg-slate-50/50 backdrop-blur-sm rounded-3xl overflow-hidden p-8">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center p-4">
+            <div className="w-full max-w-[380px] bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transform scale-90 md:scale-100 origin-center">
                 {/* Header */}
                 <div className="bg-slate-900 p-4 flex items-center justify-between">
-                    <span className="text-white font-semibold">Configurar Agente</span>
+                    <span className="text-white font-semibold flex items-center gap-2">
+                        <Sliders size={16} className="text-[#00A947]" />
+                        Configurar Agente
+                    </span>
                     <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
                         <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
@@ -16,65 +40,115 @@ export const AgentCustomizationAnimation = () => {
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-6">
-                    {/* Interaction 1: Tone Slider */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-2 text-slate-700 font-medium text-sm">
-                            <Sliders size={16} />
-                            <span>Tom de Voz</span>
-                        </div>
-                        <div className="h-2 bg-slate-100 rounded-full relative overflow-hidden">
-                            <motion.div
-                                initial={{ width: "20%" }}
-                                whileInView={{ width: "80%" }}
-                                transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
-                                className="absolute top-0 left-0 h-full bg-[#00A947] rounded-full"
-                            />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-bold">
-                            <span>Formal</span>
-                            <span>Amigável</span>
-                        </div>
-                    </div>
-
-                    {/* Interaction 2: Prompt Input */}
+                <div className="p-5 space-y-6">
+                    {/* Interaction 2: Prompt Input (Typing Effect) */}
                     <div>
                         <div className="flex items-center gap-2 mb-2 text-slate-700 font-medium text-sm">
                             <MessageSquare size={16} />
                             <span>Persona</span>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            <motion.div
-                                initial={{ opacity: 0.5 }}
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 h-24 font-mono text-xs text-slate-600 leading-relaxed overflow-hidden relative">
+                            <motion.span
+                                initial={{ opacity: 0 }}
                                 whileInView={{ opacity: 1 }}
-                                className="space-y-2"
+                                transition={{ duration: 0.5 }}
                             >
-                                <div className="h-2 bg-slate-200 rounded w-full animate-pulse"></div>
-                                <div className="h-2 bg-slate-200 rounded w-2/3 animate-pulse"></div>
-                                <div className="h-2 bg-slate-200 rounded w-3/4 animate-pulse"></div>
-                            </motion.div>
+                                {Array.from("Você é um especialista em vendas consultivas. Seu objetivo é entender a dor do cliente e propor a melhor solução...").map((char, index) => (
+                                    <motion.span
+                                        key={index}
+                                        initial={{ opacity: 0 }}
+                                        whileInView={{ opacity: 1 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.02, delay: 1 + index * 0.03 }}
+                                    >
+                                        {char}
+                                    </motion.span>
+                                ))}
+                            </motion.span>
+                            <motion.span
+                                initial={{ opacity: 0 }}
+                                whileInView={{ opacity: [0, 1, 0] }}
+                                transition={{ duration: 0.8, repeat: Infinity, delay: 4 }}
+                                className="inline-block w-1.5 h-3 bg-[#00A947] ml-1 align-middle"
+                            />
                         </div>
                     </div>
 
-                    {/* Interaction 3: Voice Toggle */}
-                    <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-lg shadow-sm text-[#00A947]">
-                                <Mic size={18} />
+                    {/* Interaction 3: Voice Toggle & Player */}
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 overflow-hidden transition-all duration-500">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white rounded-lg shadow-sm text-[#00A947]">
+                                    <Mic size={18} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-semibold text-slate-700">Respostas em Áudio</span>
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wide">TTS Neural</span>
+                                </div>
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-slate-700">Respostas em Áudio</span>
-                                <span className="text-xs text-slate-500">TTS Neural</span>
+
+                            {/* Toggle Switch */}
+                            <div className="relative">
+                                <div className="w-11 h-6 rounded-full bg-[#00A947]">
+                                    <div className="absolute top-1 left-[22px] w-4 h-4 bg-white rounded-full shadow-sm" />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Toggle Switch */}
-                        <div className="w-10 h-6 bg-[#00A947] rounded-full relative cursor-pointer">
-                            <motion.div
-                                className="absolute top-1 right-1 w-4 h-4 bg-white rounded-full shadow-sm"
-                                transition={{ type: "spring" }}
-                            />
-                        </div>
+                        {/* Player (Appears when enabled) */}
+                        <AnimatePresence>
+                            {audioEnabled && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                    animate={{ height: "auto", opacity: 1, marginTop: 12 }}
+                                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                    className="border-t border-slate-200/60 pt-3"
+                                >
+                                    <div className="bg-white rounded-xl p-2.5 flex items-center gap-3 shadow-sm border border-slate-100">
+                                        <button
+                                            onClick={handlePlay}
+                                            className="w-8 h-8 rounded-full bg-[#00A947] flex items-center justify-center text-white shrink-0 hover:bg-[#008f3c] transition-colors"
+                                        >
+                                            {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+                                        </button>
+
+                                        {/* Waveform Visualization */}
+                                        <div className="flex-1 h-8 flex items-center justify-between gap-2 px-1">
+                                            <div className="flex items-center gap-0.5">
+                                                {[...Array(12)].map((_, i) => (
+                                                    <motion.div
+                                                        key={i}
+                                                        animate={{
+                                                            height: isPlaying ? [8, 24, 12, 32, 16, 8][i % 6] : 4,
+                                                            backgroundColor: isPlaying ? "#00A947" : "#cbd5e1"
+                                                        }}
+                                                        transition={{
+                                                            duration: 0.4,
+                                                            repeat: Infinity,
+                                                            repeatType: "reverse",
+                                                            delay: i * 0.05,
+                                                            ease: "easeInOut"
+                                                        }}
+                                                        className="w-1 rounded-full bg-slate-300"
+                                                        style={{ height: 4 }}
+                                                    />
+                                                ))}
+                                            </div>
+
+                                            {!isPlaying && (
+                                                <motion.span
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    className="text-[10px] text-slate-400 font-medium whitespace-nowrap mr-1"
+                                                >
+                                                    Clique para ouvir o assistente
+                                                </motion.span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </div>
             </div>
