@@ -11,8 +11,13 @@ import { ProductSection } from "@/components/landing/ProductSection";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { InteractiveGridPattern } from "@/components/ui/interactive-grid-pattern";
 import Lenis from "lenis";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SmoothScrollProvider } from "@/contexts/SmoothScrollContext";
 
 const Landing = () => {
+    const [lenis, setLenisInstance] = useState<Lenis | null>(null);
+
     // Shared state between Header and Hero
     const [phase, setPhase] = useState<'initial' | 'expanded' | 'playing' | 'ended' | 'reversing'>('initial');
     const heroRef = useRef<HeroSectionRef>(null);
@@ -59,48 +64,58 @@ const Landing = () => {
             infinite: false,
         });
 
-        function raf(time: number) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
-        }
+        setLenisInstance(lenis);
 
-        requestAnimationFrame(raf);
+        // Synchronize Lenis and ScrollTrigger
+        lenis.on('scroll', ScrollTrigger.update);
+
+        // Use GSAP ticker for Lenis animation loop
+        gsap.ticker.add((time) => {
+            lenis.raf(time * 1000);
+        });
+
+        // Disable GSAP lag smoothing for smoother scroll
+        gsap.ticker.lagSmoothing(0);
 
         return () => {
+            gsap.ticker.remove(lenis.raf);
             lenis.destroy();
+            setLenisInstance(null);
         };
     }, []);
 
     return (
-        <div style={{ fontFamily: "'Poppins', sans-serif" }} className="relative">
-            {/* Global Interactive Grid Pattern - Active in all phases */}
-            <InteractiveGridPattern className="fixed inset-0 opacity-100 z-0" />
+        <SmoothScrollProvider lenis={lenis || undefined}>
+            <div style={{ fontFamily: "'Poppins', sans-serif" }} className="relative">
+                {/* Global Interactive Grid Pattern - Active in all phases */}
+                <InteractiveGridPattern className="fixed inset-0 opacity-100 z-0" />
 
-            <Header
-                phase={phase}
-                onResetHome={handleResetToHome}
-                onNavigate={handleNavigate}
-            />
+                <Header
+                    phase={phase}
+                    onResetHome={handleResetToHome}
+                    onNavigate={handleNavigate}
+                />
 
-            <HeroSection
-                ref={heroRef}
-                phase={phase}
-                setPhase={setPhase}
-            />
+                <HeroSection
+                    ref={heroRef}
+                    phase={phase}
+                    setPhase={setPhase}
+                />
 
-            {/* Content visible only after Hero animation ends */}
-            {phase === 'ended' && (
-                <div className="relative isolate bg-transparent">
-                    <div className="relative z-10">
-                        <AboutSection />
-                        <ProductSection />
-                        <TestimonialsSection />
-                        <PricingSection />
+                {/* Content visible only after Hero animation ends */}
+                {phase === 'ended' && (
+                    <div className="relative isolate bg-transparent">
+                        <div className="relative z-10">
+                            <AboutSection />
+                            <ProductSection />
+                            <TestimonialsSection />
+                            <PricingSection />
+                        </div>
+                        <Footer />
                     </div>
-                    <Footer />
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+        </SmoothScrollProvider>
     );
 };
 

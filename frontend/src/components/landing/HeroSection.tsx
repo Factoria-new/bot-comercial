@@ -5,6 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Button } from "@/components/ui/button";
 import { Users, MessageSquare, Calendar } from "lucide-react";
 import { ChatOverlay } from "@/components/chat-overlay";
+import { useSmoothScroll } from "@/contexts/SmoothScrollContext";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -20,6 +21,7 @@ interface HeroSectionProps {
 }
 
 export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase, setPhase }, ref) => {
+    const { lenis } = useSmoothScroll();
     const { scrollY } = useScroll();
     const metricsOpacity = useTransform(scrollY, [0, 300], [1, 0]);
     const metricsY = useTransform(scrollY, [0, 300], [0, -80]);
@@ -386,7 +388,18 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             zoomEndLevelRef.current = 1;
             setIsInstantReset(true);
             setPhase('initial');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setPhase('initial');
+            setPhase('initial');
+            setTimeout(() => {
+                if (lenis) {
+                    lenis.resize(); // Force recalculation of dimensions
+                    ScrollTrigger.refresh(); // Ensure pin spacers are calculated
+                    lenis.scrollTo(0, { duration: 1.2, force: true });
+                } else {
+                    ScrollTrigger.refresh();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 50);
         },
 
         navigateToSection: (sectionId: string) => {
@@ -420,9 +433,16 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             zoomEndLevelRef.current = 1;
 
             setTimeout(() => {
-                const targetSection = document.getElementById(sectionId);
-                if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
+                if (lenis) {
+                    lenis.resize();
+                    ScrollTrigger.refresh();
+                    lenis.scrollTo('#' + sectionId, { duration: 1.2, force: true, offset: -100 });
+                } else {
+                    ScrollTrigger.refresh();
+                    const targetSection = document.getElementById(sectionId);
+                    if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 800);
         },
 
         skipToPricing: () => {
@@ -453,9 +473,16 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             zoomEndLevelRef.current = 1;
 
             setTimeout(() => {
-                const pricingSection = document.getElementById('pricing');
-                if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
+                if (lenis) {
+                    lenis.resize();
+                    ScrollTrigger.refresh();
+                    lenis.scrollTo('#pricing', { duration: 1.2, force: true, offset: -50 });
+                } else {
+                    ScrollTrigger.refresh();
+                    const pricingSection = document.getElementById('pricing');
+                    if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 800);
         }
     }));
 
@@ -504,9 +531,16 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
         zoomEndLevelRef.current = 1;
 
         setTimeout(() => {
-            const targetSection = document.getElementById(sectionId);
-            if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 500);
+            if (lenis) {
+                lenis.resize();
+                ScrollTrigger.refresh();
+                lenis.scrollTo('#' + sectionId, { duration: 1.2, force: true, offset: -100 });
+            } else {
+                ScrollTrigger.refresh();
+                const targetSection = document.getElementById(sectionId);
+                if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 1000);
     };
 
     const executeSkipToPricing = () => transitionToSection('pricing');
@@ -520,7 +554,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                 className="absolute top-0 left-0 w-full md:w-[60vw] lg:w-[50vw] h-screen flex flex-col justify-start md:justify-center pt-32 md:pt-28 pb-24 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto"
             >
                 <h1 className="text-[clamp(2.5rem,5vw,6rem)] font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
-                    Seu Atendente IA no WhatsApp,{' '}
+                    Seu Atendente IA em todos os seus canais,{' '}
                     <span className="text-[#00A947] block mt-2">Vendas 24 horas</span>
                 </h1>
 
