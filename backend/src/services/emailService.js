@@ -6,7 +6,7 @@ const getTransporter = () => {
     return nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: process.env.SMTP_PORT,
-        secure: false, // true for 465, false for other ports
+        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
@@ -27,7 +27,7 @@ export const sendActivationEmail = async (email, token) => {
     try {
         const transporter = getTransporter();
         await transporter.sendMail({
-            from: '"Caji Bot" <noreply@caji.com>',
+            from: '"Suporte CajiAssist" <support@cajiassist.com>',
             to: email,
             subject: 'Ative sua conta Caji',
             html: `
@@ -59,7 +59,7 @@ export const sendPasswordResetEmail = async (email, token) => {
     try {
         const transporter = getTransporter();
         await transporter.sendMail({
-            from: '"Caji Bot" <noreply@caji.com>',
+            from: '"Suporte CajiAssist" <support@cajiassist.com>',
             to: email,
             subject: 'Redefinição de Senha - Caji',
             html: `

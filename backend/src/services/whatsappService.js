@@ -602,7 +602,11 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
 
                 // Se for erro 401 com device_removed, é logout definitivo
                 const is401Conflict = statusCode === 401 && (isDeviceRemoved || payloadMessage?.includes('conflict'));
-                const shouldReconnect = !(isUnrecoverableCode || isLoggedOutFlag || is401Conflict);
+
+                // FORCE RECONNECT if statusCode is undefined (connection drop) or 515 (restart required)
+                const isConnectionDrop = statusCode === undefined || statusCode === 515;
+
+                const shouldReconnect = isConnectionDrop || !(isUnrecoverableCode || isLoggedOutFlag || is401Conflict);
 
                 console.log(`❌ Connection closed for ${sessionId}. statusCode=${statusCode} payloadMessage=${payloadMessage} isDeviceRemoved=${isDeviceRemoved} shouldReconnect=${shouldReconnect}`);
 
@@ -1553,13 +1557,13 @@ export const cleanup = async () => {
 
         sessions.clear();
 
-        // Delete auth_info directory
-        const authInfoPath = path.join(process.cwd(), 'auth_info');
-        if (fs.existsSync(authInfoPath)) {
-            console.log(`🗑️ Deleting auth info at ${authInfoPath}`);
-            fs.rmSync(authInfoPath, { recursive: true, force: true });
-        }
-        console.log('✅ WhatsApp service cleaned up (auth_info deleted)');
+        // Delete auth_info directory - DISABLED to allow persistent sessions
+        // const authInfoPath = path.join(process.cwd(), 'auth_info');
+        // if (fs.existsSync(authInfoPath)) {
+        //     console.log(`🗑️ Deleting auth info at ${authInfoPath}`);
+        //     fs.rmSync(authInfoPath, { recursive: true, force: true });
+        // }
+        console.log('✅ WhatsApp service cleaned up (sessions preserved)');
     } catch (error) {
         console.error('❌ Error cleaning up WhatsApp service:', error);
     }

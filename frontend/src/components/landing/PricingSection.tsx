@@ -1,25 +1,14 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { PricingWrapper, Heading, Price } from "@/components/ui/animated-pricing-cards";
+import { MessageSquare, Calendar, Mic, ShieldCheck } from "lucide-react";
 
 export const PricingSection = () => {
-    const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('monthly');
-    const [isFanOpen, setIsFanOpen] = useState(true);
-    const [rotation, setRotation] = useState(0);
+    const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
 
     const handleToggle = (period: 'monthly' | 'semiannual' | 'annual') => {
-        if (!isFanOpen || pricingPeriod === period) return;
-
-        setIsFanOpen(false);
-        setTimeout(() => {
-            setRotation(prev => prev + 360);
-        }, 400);
-        setTimeout(() => {
-            setPricingPeriod(period);
-        }, 850);
-        setTimeout(() => {
-            setIsFanOpen(true);
-        }, 1100);
+        if (pricingPeriod === period) return;
+        setPricingPeriod(period);
     };
 
     return (
@@ -77,7 +66,7 @@ export const PricingSection = () => {
                             ESCOLHA SEU PLANO
                         </h2>
                         <p className="text-base md:text-lg text-slate-800 max-w-sm mx-auto font-medium mb-8">
-                            Comece hoje e cancele quando quiser. Sem fidelidade, sem burocracia.
+                            Tudo o que você precisa em um único plano completo.
                         </p>
                         <video
                             autoPlay
@@ -90,8 +79,8 @@ export const PricingSection = () => {
                         </video>
                     </div>
 
-                    {/* Right Column: Pricing Cards - Scaled to fit */}
-                    <div className="flex flex-col justify-center items-center p-2 pt-[6vh] md:p-8 md:pt-[8vh] relative origin-center scale-[0.55] sm:scale-[0.65] md:scale-[0.75] lg:scale-90 transition-transform">
+                    {/* Right Column: Pricing Cards - Fit to container */}
+                    <div className="flex flex-col justify-center items-center p-2 pt-[6vh] md:p-8 md:pt-[8vh] relative w-full">
                         {/* Period selector */}
                         <div className="flex justify-center mb-8 w-full">
                             <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer w-[340px] h-[50px]">
@@ -112,8 +101,7 @@ export const PricingSection = () => {
 
                         {/* Pricing Logic Variables */}
                         {(() => {
-                            const BASE_PRICE_BASIC = 19.90;
-                            const BASE_PRICE_PRO = 29.90;
+                            const BASE_PRICE = 19.90;
 
                             const formatCurrency = (value: number) => {
                                 return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -126,103 +114,75 @@ export const PricingSection = () => {
                                 return base;
                             };
 
-                            const basicPrice = getPrice(BASE_PRICE_BASIC, pricingPeriod);
-                            const proPrice = getPrice(BASE_PRICE_PRO, pricingPeriod);
-
-                            const formattedBasicPrice = formatCurrency(basicPrice);
-                            const formattedProPrice = formatCurrency(proPrice);
-
+                            const price = getPrice(BASE_PRICE, pricingPeriod);
+                            const formattedPrice = formatCurrency(price);
                             const periodLabel = pricingPeriod === 'monthly' ? '/mês' : pricingPeriod === 'semiannual' ? '/semestre' : '/ano';
+
+                            // Savings text for Annual plan
+                            const savingsText = pricingPeriod === 'annual' ? (
+                                <div className="absolute -top-4 right-0 bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded-full animate-bounce">
+                                    2 MESES GRÁTIS
+                                </div>
+                            ) : null;
 
                             return (
                                 <div className="flex flex-row items-center justify-center gap-4 xl:gap-8 flex-nowrap w-full">
                                     <motion.div
-                                        animate={{
-                                            x: isFanOpen ? 0 : "50%",
-                                            rotate: isFanOpen ? 0 : -5,
-                                            zIndex: isFanOpen ? 1 : 10
-                                        }}
-                                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5 }}
                                         className="relative z-10 w-full max-w-sm"
                                     >
                                         <PricingWrapper
                                             contactHref="/payment"
-                                            linkState={{ plan: 'basic', period: pricingPeriod, price: `${formattedBasicPrice}${periodLabel}` }}
-                                            type="waves"
-                                            className="bg-[#00A947]"
-                                            rotation={rotation}
-                                            ignoreAuth={true}
-                                            backChildren={
-                                                <>
-                                                    <Heading>Básico</Heading>
-                                                    <Price>
-                                                        {formattedBasicPrice}<br /><span className="text-2xl">{periodLabel}</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            }
-                                        >
-                                            {< >
-                                                <Heading>Básico</Heading>
-                                                <Price>
-                                                    {formattedBasicPrice}<br /><span className="text-2xl">{periodLabel}</span>
-                                                </Price>
-                                                <div className="w-full text-left pl-4">
-                                                    <ul className="text-lg">
-                                                        <li>Bot de WhatsApp</li>
-                                                    </ul>
-                                                </div>
-                                            </>}
-                                        </PricingWrapper>
-                                    </motion.div>
-
-                                    <motion.div
-                                        animate={{
-                                            x: isFanOpen ? 0 : "-50%",
-                                            rotate: isFanOpen ? 0 : 5,
-                                            zIndex: isFanOpen ? 1 : 20
-                                        }}
-                                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                                        className="relative z-10 w-full max-w-sm"
-                                    >
-                                        <PricingWrapper
-                                            contactHref="/payment"
-                                            linkState={{ plan: 'pro', period: pricingPeriod, price: `${formattedProPrice}${periodLabel}` }}
+                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedPrice}${periodLabel}` }}
                                             type="waves"
                                             className="bg-[#00A947]"
                                             featured={true}
-                                            rotation={rotation}
+                                            rotation={0}
                                             ignoreAuth={true}
                                             backChildren={
                                                 <>
-                                                    <Heading>Pro</Heading>
+                                                    <Heading>Premium</Heading>
                                                     <Price>
-                                                        {formattedProPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                                        {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
                                                     </Price>
-                                                    <div className="w-full text-left pl-4">
-                                                        <ul className="text-lg">
-                                                            <li>Bot de WhatsApp</li>
-                                                            <li>Google Calendar</li>
-                                                            <li>TTS (Áudio)</li>
+                                                    <div className="w-full text-left pl-4 relative">
+                                                        {savingsText}
+                                                        <ul className="text-lg space-y-2 mt-4">
+                                                            <li>✨ Bot de WhatsApp</li>
+                                                            <li>📅 Google Calendar</li>
+                                                            <li>🗣️ TTS (Áudio Natural)</li>
+                                                            <li>🛡️ Suporte Prioritário</li>
                                                         </ul>
                                                     </div>
                                                 </>
                                             }
                                         >
-                                            {< >
-                                                <Heading>Pro</Heading>
+                                            {<>
+                                                <Heading>Premium</Heading>
                                                 <Price>
-                                                    {formattedProPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                                    {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
                                                 </Price>
-                                                <div className="w-full text-left pl-4">
-                                                    <ul className="text-lg">
-                                                        <li>Bot de WhatsApp</li>
-                                                        <li>Google Calendar</li>
-                                                        <li>TTS (Áudio)</li>
+                                                <div className="w-full text-left pl-4 relative">
+                                                    {savingsText}
+                                                    <ul className="text-lg space-y-3 mt-6">
+                                                        <li className="flex items-center gap-3">
+                                                            <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                                                            <span>Bot de WhatsApp</span>
+                                                        </li>
+                                                        <li className="flex items-center gap-3">
+                                                            <Calendar className="w-5 h-5 flex-shrink-0" />
+                                                            <span>Google Calendar</span>
+                                                        </li>
+                                                        <li className="flex items-center gap-3">
+                                                            <Mic className="w-5 h-5 flex-shrink-0" />
+                                                            <span>TTS (Áudio Natural)</span>
+                                                        </li>
+                                                        <li className="flex items-center gap-3">
+                                                            <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+                                                            <span>Suporte Prioritário</span>
+                                                        </li>
                                                     </ul>
                                                 </div>
                                             </>}

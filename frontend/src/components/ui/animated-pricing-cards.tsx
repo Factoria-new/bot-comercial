@@ -99,7 +99,7 @@ export const PricingWrapper: React.FC<{
 
     return (
         <div
-            className={'min-h-[300px] h-[600px] max-h-[500px] max-w-sm w-full relative sm:mx-6'}
+            className={'min-h-[500px] h-[600px] max-w-sm w-full relative sm:mx-6'}
             style={{ perspective: "1000px" }}
         >
             <motion.article
@@ -109,7 +109,6 @@ export const PricingWrapper: React.FC<{
                     rotateX,
                     rotateY,
                     transformStyle: "preserve-3d",
-                    willChange: "transform",
                 }}
                 className={cn(
                     'w-full h-full relative duration-200',
@@ -147,7 +146,6 @@ export const PricingWrapper: React.FC<{
                     {/* FRONT FACE */}
                     <div
                         style={{
-                            backfaceVisibility: 'hidden',
                             transform: "rotateY(0deg)",
                             position: "absolute",
                             inset: 0,
@@ -315,8 +313,9 @@ const PricingButton: React.FC<{ contactHref: string; isProCard: boolean; linkSta
     }
 
     const isCurrentPlan = (
+        (linkState?.plan === 'premium' && (user.role === 'basic' || user.role === 'pro' || user.role === 'admin')) ||
         (isProCard && (user.role === 'pro' || user.role === 'admin')) ||
-        (!isProCard && user.role === 'basic')
+        (!isProCard && linkState?.plan !== 'premium' && user.role === 'basic')
     );
 
     if (isCurrentPlan) {

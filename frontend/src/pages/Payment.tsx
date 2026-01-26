@@ -27,7 +27,7 @@ const Payment = () => {
         );
     }
 
-    const planName = plan === 'basic' ? 'Básico' : 'Pro';
+    const planName = (plan === 'basic' || plan === 'premium') ? 'Premium' : 'Pro';
     const periodName = period === 'monthly' ? 'Mensal' : period === 'semiannual' ? 'Semestral' : 'Anual';
 
     // Map plan and period to Stripe price IDs
@@ -37,6 +37,12 @@ const Payment = () => {
             'basic_monthly': import.meta.env.VITE_STRIPE_PRICE_BASIC_MONTHLY || 'price_basic_monthly',
             'basic_semiannual': import.meta.env.VITE_STRIPE_PRICE_BASIC_SEMIANNUAL || 'price_basic_semiannual',
             'basic_annual': import.meta.env.VITE_STRIPE_PRICE_BASIC_ANNUAL || 'price_basic_annual',
+
+            // Map premium to basic prices as requested
+            'premium_monthly': import.meta.env.VITE_STRIPE_PRICE_BASIC_MONTHLY || 'price_basic_monthly',
+            'premium_semiannual': import.meta.env.VITE_STRIPE_PRICE_BASIC_SEMIANNUAL || 'price_basic_semiannual',
+            'premium_annual': import.meta.env.VITE_STRIPE_PRICE_BASIC_ANNUAL || 'price_basic_annual',
+
             'pro_monthly': import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY || 'price_pro_monthly',
             'pro_semiannual': import.meta.env.VITE_STRIPE_PRICE_PRO_SEMIANNUAL || 'price_pro_semiannual',
             'pro_annual': import.meta.env.VITE_STRIPE_PRICE_PRO_ANNUAL || 'price_pro_annual',
@@ -60,7 +66,7 @@ const Payment = () => {
                 body: JSON.stringify({
                     email,
                     priceId: getPriceId(),
-                    planType: plan,
+                    planType: plan === 'premium' ? 'basic' : plan, // Map premium back to basic for backend compatibility if needed
                     period,
                 }),
             });
@@ -116,7 +122,7 @@ const Payment = () => {
                                     <div className="w-1.5 h-1.5 rounded-full bg-[#00A947]" />
                                     Bot de WhatsApp
                                 </li>
-                                {plan === 'pro' && (
+                                {(plan === 'pro' || plan === 'premium') && (
                                     <>
                                         <li className="flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-[#00A947]" />

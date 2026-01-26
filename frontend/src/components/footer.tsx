@@ -1,4 +1,4 @@
-import { MessageCircle, Mail, MapPin, Twitter, Linkedin, Github } from 'lucide-react';
+import { Mail, Linkedin, Instagram } from 'lucide-react';
 
 export default function Footer() {
     const footerLinks = {
@@ -35,25 +35,22 @@ export default function Footer() {
                         </p>
                         <div className="flex gap-4">
                             <a
-                                href="#"
+                                href="https://www.instagram.com/cajisolutionsofc/"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#00A947] group flex items-center justify-center transition-all duration-300 shadow-sm"
-                                aria-label="Twitter"
+                                aria-label="Instagram"
                             >
-                                <Twitter className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
+                                <Instagram className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                             </a>
                             <a
-                                href="#"
+                                href="https://www.linkedin.com/company/caji-solutions"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#00A947] group flex items-center justify-center transition-all duration-300 shadow-sm"
                                 aria-label="LinkedIn"
                             >
                                 <Linkedin className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
-                            </a>
-                            <a
-                                href="#"
-                                className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-[#00A947] group flex items-center justify-center transition-all duration-300 shadow-sm"
-                                aria-label="GitHub"
-                            >
-                                <Github className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
                             </a>
                         </div>
                     </div>
@@ -131,15 +128,7 @@ export default function Footer() {
                         <div className="flex flex-col xl:flex-row gap-4 xl:gap-6 text-sm text-slate-600">
                             <div className="flex items-center gap-2">
                                 <Mail className="w-4 h-4" />
-                                <span>contato@caji.ai</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <MessageCircle className="w-4 h-4" />
-                                <span>+55 (11) 99999-9999</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4" />
-                                <span>São Paulo, SP</span>
+                                <span>contact@cajiassist.com</span>
                             </div>
                         </div>
                     </div>
