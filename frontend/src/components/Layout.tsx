@@ -28,7 +28,7 @@ const Layout = ({
   onExpandIntegrationsChange
 }: LayoutProps) => {
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { logout, user, updateUserApiKeyStatus } = useAuth();
   const { toast } = useToast();
   const { socket } = useSocket();
 
@@ -104,7 +104,7 @@ const Layout = ({
 
   const handleApiKeyComplete = () => {
     setIsApiKeyModalOpen(false);
-    // Optionally, refresh user data or set a flag to indicate API key is now set
+    updateUserApiKeyStatus(true);
   };
 
   // Global API Key Check
