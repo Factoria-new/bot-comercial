@@ -191,8 +191,13 @@ export const IntegrationsStep = ({
                 qrCode={qrCode}
                 errorMessage={whatsappModalState.errorMessage}
                 onClose={() => {
-                    closeWhatsappModal();
-                    setSelectedIntegration(null);
+                    try {
+                        closeWhatsappModal();
+                    } catch (e) {
+                        console.error("Error closing modal:", e);
+                    } finally {
+                        setSelectedIntegration(null);
+                    }
                 }}
                 onGenerateQR={handleGenerateQR}
                 onDisconnect={handleDisconnect}
