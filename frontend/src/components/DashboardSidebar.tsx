@@ -928,7 +928,7 @@ export default function DashboardSidebar({
                     </div>
 
                     {/* Rest of menu items */}
-                    {menuItems.slice(2).map((item) => (
+                    {menuItems.slice(3).map((item) => (
                         <button
                             key={item.id}
                             onClick={() => {
