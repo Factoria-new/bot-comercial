@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 // New Imports
 import { AgentCreatorProps, ChatMode, CreatorStep, AgentMessage } from "@/lib/agent-creator.types";
-import { getIntegrations } from "@/lib/integrations";
+
 import { useAgentAudio } from "@/hooks/useAgentAudio";
 import { useLiaChat } from "@/hooks/useLiaChat";
 
@@ -29,7 +29,7 @@ import BusinessInfoModal, { BusinessInfoData } from "./BusinessInfoModal";
 import { DaySchedule, WeekDay, WEEKDAYS_MAP } from "@/lib/scheduleTypes";
 import LottieLoader from "@/components/LottieLoader";
 
-export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat }: AgentCreatorProps) {
+export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat, integrations }: AgentCreatorProps) {
 
     // --- STATE ---
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -68,7 +68,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     ];
 
     // --- HOOKS ---
-    const { user, logout } = useAuth();
+    const { user, logout, updateUserPromptStatus } = useAuth();
     const userEmail = user?.email || '';
     const userId = user?.uid || '';
 
@@ -137,7 +137,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     });
 
     const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
-    const integrations = getIntegrations(isWhatsAppConnected);
+
     const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel, integrationVoiceLevel);
 
 
@@ -311,6 +311,13 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 } catch (bizError) {
                     console.error('❌ Error saving business info:', bizError);
                 }
+
+                // Update Auth Context to reflect that user now has a prompt
+                if (updateUserPromptStatus) {
+                    updateUserPromptStatus(true);
+                }
+                // Need to change the destructuring at the top first.
+
 
                 // 🎤 Play Lia's completion audio feedback
                 const audioVariation = getRandomAudio('complete');
@@ -668,7 +675,7 @@ ${scheduleStr}
                                 whatsappModalState={whatsappModalState}
                                 handleGenerateQR={handleGenerateQR}
                                 handleDisconnect={handleDisconnect}
-                                closeModal={closeWhatsappModal}
+                                closeWhatsappModal={closeWhatsappModal}
                                 qrCode={whatsappInstances[0]?.qrCode}
                                 userEmail={userEmail}
                             />

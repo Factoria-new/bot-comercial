@@ -5,6 +5,7 @@ import { Check, X } from "lucide-react";
 import { Integration } from "@/lib/agent-creator.types";
 import { IntegrationCard } from "./IntegrationCard";
 import { WhatsAppConnectionModal } from "./WhatsAppConnectionModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface IntegrationsStepProps {
     integrations: Integration[];
@@ -41,6 +42,7 @@ export const IntegrationsStep = ({
     isManageMode,
     onReturnToDashboard
 }: IntegrationsStepProps) => {
+    const { updateUserPromptStatus } = useAuth();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
 
     const handleIntegrationClick = (id: string) => {

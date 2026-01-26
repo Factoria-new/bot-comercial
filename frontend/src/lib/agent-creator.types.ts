@@ -5,6 +5,7 @@ export interface AgentCreatorProps {
     onOpenIntegrations?: () => void;
     isExiting?: boolean;
     onStartChat?: (prompt: string) => void;
+    integrations: Integration[];
 }
 
 export type ChatMode = 'lia' | 'agent';

@@ -81,6 +81,7 @@ const Dashboard = () => {
               setShouldExpandIntegrations(true);
             }}
             onStartChat={() => setPhase('app')}
+            integrations={integrations}
           />
         </Layout>
       ) : (
