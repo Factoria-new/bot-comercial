@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Sparkles, Upload, LogOut } from "lucide-react";
+import { Menu, Sparkles, Upload, LogOut } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTTS } from "@/hooks/useTTS";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
@@ -485,14 +485,25 @@ ${scheduleStr}
 
             {/* Absolute Menu Button -> Exit Button */}
             <div className="absolute top-4 left-4 z-50">
-                <Button
-                    variant="ghost"
-                    className="text-white/70 hover:bg-red-500/10 hover:text-red-400 gap-2 px-2"
-                    onClick={() => logout()}
-                >
-                    <LogOut className="w-5 h-5" />
-                    <span className="hidden sm:inline">Sair</span>
-                </Button>
+                {currentStep === 'dashboard' ? (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onOpenSidebar}
+                        className="text-white/70 hover:bg-white/10"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </Button>
+                ) : (
+                    <Button
+                        variant="ghost"
+                        className="text-white/70 hover:bg-red-500/10 hover:text-red-400 gap-2 px-2"
+                        onClick={() => logout()}
+                    >
+                        <LogOut className="w-5 h-5" />
+                        <span className="hidden sm:inline">Sair</span>
+                    </Button>
+                )}
             </div>
 
             {/* Background Layer */}
