@@ -21,6 +21,8 @@ interface IntegrationsStepProps {
     userEmail: string;
     wizardData?: Record<string, any>;
     nicheId?: string;
+    isManageMode?: boolean; // NEW
+    onReturnToDashboard?: () => void; // NEW
 }
 
 export const IntegrationsStep = ({
@@ -35,7 +37,9 @@ export const IntegrationsStep = ({
     closeWhatsappModal,
     qrCode,
     wizardData,
-    nicheId
+    nicheId,
+    isManageMode,
+    onReturnToDashboard
 }: IntegrationsStepProps) => {
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
 
@@ -44,6 +48,7 @@ export const IntegrationsStep = ({
     };
 
     const handleSave = async () => {
+        // ... existing save logic ...
         if (!agentPrompt) {
             onSaveAndFinish();
             return;
@@ -103,28 +108,45 @@ export const IntegrationsStep = ({
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="w-full max-w-4xl mx-auto pb-4"
         >
-            {/* Lia's Explanation */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-center mb-12 max-w-2xl mx-auto"
-            >
-                <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6">
-                    L
-                </div>
-                <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-white leading-relaxed mb-6">
-                    Parabéns! Seu assistente está pronto! 🎉
-                </h1>
-                <p className="text-white/70 text-lg leading-relaxed">
-                    Agora é hora de conectar ele às suas plataformas de atendimento.
-                    As <span className="text-emerald-400 font-medium">integrações</span> permitem que seu assistente
-                    responda automaticamente seus clientes no WhatsApp.
-                </p>
-                <p className="text-white/50 text-base mt-4">
-                    Clique no WhatsApp abaixo para começar:
-                </p>
-            </motion.div>
+            {/* Lia's Explanation - Conditional */}
+            {!isManageMode && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-center mb-12 max-w-2xl mx-auto"
+                >
+                    <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6">
+                        L
+                    </div>
+                    <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-white leading-relaxed mb-6">
+                        Parabéns! Seu assistente está pronto! 🎉
+                    </h1>
+                    <p className="text-white/70 text-lg leading-relaxed">
+                        Agora é hora de conectar ele às suas plataformas de atendimento.
+                        As <span className="text-emerald-400 font-medium">integrações</span> permitem que seu assistente
+                        responda automaticamente seus clientes no WhatsApp.
+                    </p>
+                    <p className="text-white/50 text-base mt-4">
+                        Clique no WhatsApp abaixo para começar:
+                    </p>
+                </motion.div>
+            )}
+
+            {isManageMode && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-12 max-w-2xl mx-auto"
+                >
+                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-6">
+                        Gerenciar Integrações
+                    </h1>
+                    <p className="text-white/70 text-lg leading-relaxed">
+                        Conecte ou desconecte seus canais de atendimento aqui.
+                    </p>
+                </motion.div>
+            )}
 
             {/* Integration Cards Grid */}
             <div className="flex flex-col md:flex-row justify-center gap-6 w-full">
@@ -138,22 +160,26 @@ export const IntegrationsStep = ({
             </div>
 
             {/* Action Button */}
-            <div className="flex justify-center mt-8">
-                {integrations.some(i => i.connected) ? (
+            <div className="flex justify-center mt-8 gap-4">
+                {/* Only show 'Back' if in manage mode OR if no integrations connected yet */}
+                {(isManageMode || !integrations.some(i => i.connected)) && (
+                    <Button
+                        variant="ghost"
+                        onClick={isManageMode ? onReturnToDashboard : onBack}
+                        className="text-white/60 hover:text-white"
+                    >
+                        {isManageMode ? "Voltar ao Dashboard" : "Voltar ao Chat"}
+                    </Button>
+                )}
+
+                {/* Show Save/Finish if connected and NOT in manage mode (or if user wants to explicit save) */}
+                {(!isManageMode && integrations.some(i => i.connected)) && (
                     <Button
                         onClick={handleSave}
                         className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 text-lg rounded-xl"
                     >
                         <Check className="w-5 h-5 mr-2" />
                         Salvar e Finalizar
-                    </Button>
-                ) : (
-                    <Button
-                        variant="ghost"
-                        onClick={onBack}
-                        className="text-white/60 hover:text-white"
-                    >
-                        Voltar ao Chat
                     </Button>
                 )}
             </div>

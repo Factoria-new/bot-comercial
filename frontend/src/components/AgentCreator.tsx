@@ -192,205 +192,205 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 playIntegrationAudio(audioVariation.path, delay);
             }
         }
-        return () => {
-            stopIntegrationAudio();
-        };
+    }
+        // Removing automatic cleanup here to prevent audio cutting off when state changes (e.g. switching to test mode or dashboard)
+        // The audio will naturally finish or be replaced by the next trigger.
     }, [
-        currentStep,
-        playIntegrationAudio,
-        stopIntegrationAudio,
-        isWizardOpen,
-        testMode,
-        isSwitchingToTest,
-        isBusinessInfoModalOpen,
-        chatState.agentConfig?.prompt
-    ]);
+    currentStep,
+    playIntegrationAudio,
+    // stopIntegrationAudio, // Removed from dependencies
+    isWizardOpen,
+    testMode,
+    isSwitchingToTest,
+    isBusinessInfoModalOpen,
+    chatState.agentConfig?.prompt
+]);
 
-    // WhatsApp Success Audio
-    useEffect(() => {
-        if (whatsappModalState.connectionState === 'connected') {
-            const timer = setTimeout(() => {
-                console.log("🎉 WhatsApp Connected! Playing success audio...");
-                const audioVariation = getRandomAudio('integrations_success');
-                if (audioVariation.path) {
-                    playIntegrationAudio(audioVariation.path);
-                }
-            }, 500); // Reduced from 3000ms to 500ms to avoid race conditions
-            return () => clearTimeout(timer);
-        }
-    }, [whatsappModalState.connectionState, playIntegrationAudio]); // Removed isOpen dependency
-
-
-
-
-    // --- HANDLERS ---
-
-
-
-    const handleWizardComplete = async () => {
-        resumeContext();
-        // Set switching to test FIRST to prevent "Options Screen" detection
-        setIsSwitchingToTest(true);
-        setIsWizardOpen(false);
-
-        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
-        const apiKey = localStorage.getItem("user_gemini_api_key"); // Retrieve User Key
-
-        try {
-            // Generate prompt directly from template (NO LIA)
-            const response = await fetch(`${backendUrl}/api/agent/generate-prompt`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Pass the key in a specific header (will need to update backend to read this)
-                    'X-Gemini-Key': apiKey || ''
-                },
-                body: JSON.stringify({
-                    data: wizardData,
-                    niche: currentSchema?.id || 'general'
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.success && result.prompt) {
-                console.log(`✅ Prompt generated from template (${result.niche}): ${result.prompt.length} chars`);
-                console.log(`🔍 DEBUG: Calling setAgentPrompt with prompt:`, result.prompt.substring(0, 100) + '...');
-                setAgentPrompt(result.prompt);
-                console.log(`🔍 DEBUG: After setAgentPrompt, chatState.agentConfig?.prompt:`, chatState.agentConfig?.prompt?.substring(0, 50) || 'UNDEFINED');
-                setChatMode('agent');
-
-                // 📅 Persist business info to database (openingHours, appointmentDuration, serviceType, businessAddress)
-                try {
-                    const token = localStorage.getItem('token');
-
-                    // Determine serviceType based on onlineOnly checkbox
-                    const isOnlineOnly = wizardData.onlineOnly?.includes('Atendimento 100% Online (Sem endereço físico)');
-                    const serviceType = isOnlineOnly ? 'online' : 'presencial';
-
-                    const businessInfoResponse = await fetch(`${backendUrl}/api/user/business-info`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            businessHours: wizardData.openingHours || null,
-                            serviceType: serviceType,
-                            businessAddress: wizardData.address || null,
-                            appointmentDuration: wizardData.appointmentDuration || 60
-                        })
-                    });
-
-                    const businessInfoResult = await businessInfoResponse.json();
-                    if (businessInfoResult.success) {
-                        console.log('✅ Business info saved to database from wizard');
-                    } else {
-                        console.error('❌ Failed to save business info:', businessInfoResult.error);
-                    }
-                } catch (bizError) {
-                    console.error('❌ Error saving business info:', bizError);
-                }
-
-                // 🎤 Play Lia's completion audio feedback
-                const audioVariation = getRandomAudio('complete');
-                if (audioVariation.path) {
-                    playIntegrationAudio(audioVariation.path, 500);
-                }
-
-                // Transition to test mode after loading animation
-                setTimeout(() => {
-                    setIsSwitchingToTest(false);
-                    startTesting();
-                }, 4000);
-            } else {
-                console.error('❌ Failed to generate prompt:', result.error);
-                setIsSwitchingToTest(false);
+// WhatsApp Success Audio
+useEffect(() => {
+    if (whatsappModalState.connectionState === 'connected') {
+        const timer = setTimeout(() => {
+            console.log("🎉 WhatsApp Connected! Playing success audio...");
+            const audioVariation = getRandomAudio('integrations_success');
+            if (audioVariation.path) {
+                playIntegrationAudio(audioVariation.path);
             }
-        } catch (error) {
-            console.error('❌ Error calling generate-prompt:', error);
+        }, 500); // Reduced from 3000ms to 500ms to avoid race conditions
+        return () => clearTimeout(timer);
+    }
+}, [whatsappModalState.connectionState, playIntegrationAudio]); // Removed isOpen dependency
+
+
+
+
+// --- HANDLERS ---
+
+
+
+const handleWizardComplete = async () => {
+    resumeContext();
+    // Set switching to test FIRST to prevent "Options Screen" detection
+    setIsSwitchingToTest(true);
+    setIsWizardOpen(false);
+
+    const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+    const apiKey = localStorage.getItem("user_gemini_api_key"); // Retrieve User Key
+
+    try {
+        // Generate prompt directly from template (NO LIA)
+        const response = await fetch(`${backendUrl}/api/agent/generate-prompt`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // Pass the key in a specific header (will need to update backend to read this)
+                'X-Gemini-Key': apiKey || ''
+            },
+            body: JSON.stringify({
+                data: wizardData,
+                niche: currentSchema?.id || 'general'
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.prompt) {
+            console.log(`✅ Prompt generated from template (${result.niche}): ${result.prompt.length} chars`);
+            console.log(`🔍 DEBUG: Calling setAgentPrompt with prompt:`, result.prompt.substring(0, 100) + '...');
+            setAgentPrompt(result.prompt);
+            console.log(`🔍 DEBUG: After setAgentPrompt, chatState.agentConfig?.prompt:`, chatState.agentConfig?.prompt?.substring(0, 50) || 'UNDEFINED');
+            setChatMode('agent');
+
+            // 📅 Persist business info to database (openingHours, appointmentDuration, serviceType, businessAddress)
+            try {
+                const token = localStorage.getItem('token');
+
+                // Determine serviceType based on onlineOnly checkbox
+                const isOnlineOnly = wizardData.onlineOnly?.includes('Atendimento 100% Online (Sem endereço físico)');
+                const serviceType = isOnlineOnly ? 'online' : 'presencial';
+
+                const businessInfoResponse = await fetch(`${backendUrl}/api/user/business-info`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        businessHours: wizardData.openingHours || null,
+                        serviceType: serviceType,
+                        businessAddress: wizardData.address || null,
+                        appointmentDuration: wizardData.appointmentDuration || 60
+                    })
+                });
+
+                const businessInfoResult = await businessInfoResponse.json();
+                if (businessInfoResult.success) {
+                    console.log('✅ Business info saved to database from wizard');
+                } else {
+                    console.error('❌ Failed to save business info:', businessInfoResult.error);
+                }
+            } catch (bizError) {
+                console.error('❌ Error saving business info:', bizError);
+            }
+
+            // 🎤 Play Lia's completion audio feedback
+            const audioVariation = getRandomAudio('complete');
+            if (audioVariation.path) {
+                playIntegrationAudio(audioVariation.path, 500);
+            }
+
+            // Transition to test mode after loading animation
+            setTimeout(() => {
+                setIsSwitchingToTest(false);
+                startTesting();
+            }, 4000);
+        } else {
+            console.error('❌ Failed to generate prompt:', result.error);
             setIsSwitchingToTest(false);
         }
-    };
+    } catch (error) {
+        console.error('❌ Error calling generate-prompt:', error);
+        setIsSwitchingToTest(false);
+    }
+};
 
-    // Agent Test Chat Handler
-    const handleTestSend = async (message: string) => {
-        if (!message.trim() || isTestTyping) return;
-        resumeContext();
+// Agent Test Chat Handler
+const handleTestSend = async (message: string) => {
+    if (!message.trim() || isTestTyping) return;
+    resumeContext();
 
-        const userMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'user', content: message };
-        const updatedMessages = [...testMessages, userMsg];
-        setTestMessages(updatedMessages);
-        setIsTestTyping(true);
-        const apiKey = localStorage.getItem("user_gemini_api_key");
+    const userMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'user', content: message };
+    const updatedMessages = [...testMessages, userMsg];
+    setTestMessages(updatedMessages);
+    setIsTestTyping(true);
+    const apiKey = localStorage.getItem("user_gemini_api_key");
 
-        try {
-            console.log(`🔍 DEBUG handleTestSend: chatState.agentConfig?.prompt length:`, chatState.agentConfig?.prompt?.length || 0);
-            console.log(`🔍 DEBUG handleTestSend: Prompt first 100 chars:`, chatState.agentConfig?.prompt?.substring(0, 100) || 'EMPTY');
-            const history = updatedMessages.map(msg => ({
-                role: msg.type === 'user' ? 'user' : 'model',
-                content: msg.content
-            }));
+    try {
+        console.log(`🔍 DEBUG handleTestSend: chatState.agentConfig?.prompt length:`, chatState.agentConfig?.prompt?.length || 0);
+        console.log(`🔍 DEBUG handleTestSend: Prompt first 100 chars:`, chatState.agentConfig?.prompt?.substring(0, 100) || 'EMPTY');
+        const history = updatedMessages.map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'model',
+            content: msg.content
+        }));
 
-            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
-            const res = await fetch(`${backendUrl}/api/agent/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Gemini-Key': apiKey || ''
-                },
-                body: JSON.stringify({
-                    message: message,
-                    systemPrompt: chatState.agentConfig?.prompt || '',
-                    history: history
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: data.message };
-                setTestMessages(prev => [...prev, botMsg]);
-            }
-        } catch (error) {
-            console.error('Test chat error:', error);
-            const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: "Erro ao conectar com o assistente de teste." };
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+        const res = await fetch(`${backendUrl}/api/agent/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Gemini-Key': apiKey || ''
+            },
+            body: JSON.stringify({
+                message: message,
+                systemPrompt: chatState.agentConfig?.prompt || '',
+                history: history
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: data.message };
             setTestMessages(prev => [...prev, botMsg]);
-        } finally {
-            setIsTestTyping(false);
         }
+    } catch (error) {
+        console.error('Test chat error:', error);
+        const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: "Erro ao conectar com o assistente de teste." };
+        setTestMessages(prev => [...prev, botMsg]);
+    } finally {
+        setIsTestTyping(false);
+    }
+};
+
+// Handler for BusinessInfoModal completion (after prompt upload)
+const handleBusinessInfoComplete = async (businessInfo: BusinessInfoData) => {
+    if (!uploadedPrompt) {
+        console.error('❌ No uploaded prompt found');
+        setIsBusinessInfoModalOpen(false);
+        return;
+    }
+
+    // Set switching to test FIRST to prevent "Options Screen" detection
+    setIsSwitchingToTest(true);
+    setIsBusinessInfoModalOpen(false);
+
+    // Format opening hours into a readable string
+    const formatSchedule = (schedule: Record<WeekDay, DaySchedule>): string => {
+        const lines: string[] = [];
+        (Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).forEach(([key, label]) => {
+            const day = schedule[key];
+            if (day?.enabled && day.slots.length > 0) {
+                const slots = day.slots.map(s => `${s.start}-${s.end}`).join(', ');
+                lines.push(`${label}: ${slots}`);
+            }
+        });
+        return lines.join('\n');
     };
 
-    // Handler for BusinessInfoModal completion (after prompt upload)
-    const handleBusinessInfoComplete = async (businessInfo: BusinessInfoData) => {
-        if (!uploadedPrompt) {
-            console.error('❌ No uploaded prompt found');
-            setIsBusinessInfoModalOpen(false);
-            return;
-        }
+    const scheduleStr = formatSchedule(businessInfo.openingHours);
+    const serviceTypeStr = businessInfo.serviceType === 'online'
+        ? 'Atendimento 100% Online'
+        : `Atendimento Presencial - Endereço: ${businessInfo.address || 'Não informado'}`;
 
-        // Set switching to test FIRST to prevent "Options Screen" detection
-        setIsSwitchingToTest(true);
-        setIsBusinessInfoModalOpen(false);
-
-        // Format opening hours into a readable string
-        const formatSchedule = (schedule: Record<WeekDay, DaySchedule>): string => {
-            const lines: string[] = [];
-            (Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).forEach(([key, label]) => {
-                const day = schedule[key];
-                if (day?.enabled && day.slots.length > 0) {
-                    const slots = day.slots.map(s => `${s.start}-${s.end}`).join(', ');
-                    lines.push(`${label}: ${slots}`);
-                }
-            });
-            return lines.join('\n');
-        };
-
-        const scheduleStr = formatSchedule(businessInfo.openingHours);
-        const serviceTypeStr = businessInfo.serviceType === 'online'
-            ? 'Atendimento 100% Online'
-            : `Atendimento Presencial - Endereço: ${businessInfo.address || 'Não informado'}`;
-
-        // Inject business info into the prompt
-        const enrichedPrompt = `${uploadedPrompt}
+    // Inject business info into the prompt
+    const enrichedPrompt = `${uploadedPrompt}
 
 # INFORMAÇÕES DE FUNCIONAMENTO
 Tipo de Atendimento: ${serviceTypeStr}
@@ -400,251 +400,251 @@ ${scheduleStr}
 
 **IMPORTANTE para Agendamentos**: Ao utilizar o Google Calendar para criar eventos ou verificar disponibilidade, respeite estritamente os horários de funcionamento acima. NÃO agende nada fora desses horários.`;
 
-        console.log('✅ Prompt enriched with business info:', enrichedPrompt.substring(0, 200) + '...');
+    console.log('✅ Prompt enriched with business info:', enrichedPrompt.substring(0, 200) + '...');
 
-        // Persist business info to database
-        try {
-            const token = localStorage.getItem('token');
-            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+    // Persist business info to database
+    try {
+        const token = localStorage.getItem('token');
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
-            const response = await fetch(`${backendUrl}/api/user/business-info`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    businessHours: businessInfo.openingHours,
-                    serviceType: businessInfo.serviceType,
-                    businessAddress: businessInfo.address || null,
-                    appointmentDuration: businessInfo.appointmentDuration
-                })
-            });
+        const response = await fetch(`${backendUrl}/api/user/business-info`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                businessHours: businessInfo.openingHours,
+                serviceType: businessInfo.serviceType,
+                businessAddress: businessInfo.address || null,
+                appointmentDuration: businessInfo.appointmentDuration
+            })
+        });
 
-            const result = await response.json();
-            if (result.success) {
-                console.log('✅ Business info saved to database');
-            } else {
-                console.error('❌ Failed to save business info:', result.error);
-            }
-        } catch (error) {
-            console.error('❌ Error saving business info:', error);
+        const result = await response.json();
+        if (result.success) {
+            console.log('✅ Business info saved to database');
+        } else {
+            console.error('❌ Failed to save business info:', result.error);
         }
+    } catch (error) {
+        console.error('❌ Error saving business info:', error);
+    }
 
-        // Set the enriched prompt and proceed to test mode
-        setAgentPrompt(enrichedPrompt);
-        // setIsSwitchingToTest(true); // Already set at start
+    // Set the enriched prompt and proceed to test mode
+    setAgentPrompt(enrichedPrompt);
+    // setIsSwitchingToTest(true); // Already set at start
 
-        // Play completion audio
-        const audioVariation = getRandomAudio('complete');
-        if (audioVariation.path) {
-            playIntegrationAudio(audioVariation.path, 500);
-        }
+    // Play completion audio
+    const audioVariation = getRandomAudio('complete');
+    if (audioVariation.path) {
+        playIntegrationAudio(audioVariation.path, 500);
+    }
 
-        // Transition to test mode
-        setTimeout(() => {
-            setChatMode('agent');
-            setIsSwitchingToTest(false);
-            startTesting();
-        }, 4000);
+    // Transition to test mode
+    setTimeout(() => {
+        setChatMode('agent');
+        setIsSwitchingToTest(false);
+        startTesting();
+    }, 4000);
 
-        // Clear temporary state
-        setUploadedPrompt(null);
-    };
+    // Clear temporary state
+    setUploadedPrompt(null);
+};
 
 
-    return (
-        <div className="min-h-screen relative flex flex-col p-4 overflow-hidden text-white font-outfit bg-[#020617]">
-            {/* Animations Styles */}
-            <style>{`
+return (
+    <div className="min-h-screen relative flex flex-col p-4 overflow-hidden text-white font-outfit bg-[#020617]">
+        {/* Animations Styles */}
+        <style>{`
                 @keyframes floatOrganic1 {
                     0%, 100% { transform: translate(-50%, -50%) scale(1); }
                     50% { transform: translate(-50%, -50%) translate(2%, -2%) scale(1.05); }
                 }
             `}</style>
 
-            {/* Absolute Menu Button */}
-            <div className="absolute top-4 left-4 z-50">
-                <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="text-white/70 hover:bg-white/10">
-                    <Menu className="w-6 h-6" />
-                </Button>
-            </div>
+        {/* Absolute Menu Button */}
+        <div className="absolute top-4 left-4 z-50">
+            <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="text-white/70 hover:bg-white/10">
+                <Menu className="w-6 h-6" />
+            </Button>
+        </div>
 
-            {/* Background Layer */}
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[50%] left-[50%] w-[100vw] h-[100vh] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-black translate-x-[-50%] translate-y-[-50%]" />
-                <div
-                    className="absolute top-[30%] left-[50%] w-[60vw] h-[60vh] mix-blend-screen opacity-40 blur-[80px] rounded-full bg-purple-600 transition-all duration-100 ease-out"
-                    style={{ transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 1})` }}
+        {/* Background Layer */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-[50%] left-[50%] w-[100vw] h-[100vh] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-black translate-x-[-50%] translate-y-[-50%]" />
+            <div
+                className="absolute top-[30%] left-[50%] w-[60vw] h-[60vh] mix-blend-screen opacity-40 blur-[80px] rounded-full bg-purple-600 transition-all duration-100 ease-out"
+                style={{ transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 1})` }}
+            />
+            <div
+                className="absolute top-[60%] left-[60%] w-[50vw] h-[50vh] mix-blend-screen opacity-30 blur-[90px] rounded-full bg-blue-600 transition-all duration-200 ease-out"
+                style={{ transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 0.8})` }}
+            />
+        </div>
+
+        {/* Content Layer */}
+        <div className="relative z-10 w-full max-w-[2000px] mx-auto flex-1 flex flex-col" >
+
+            {/* --- MAIN MAIN AREA --- */}
+            <div className="flex-1 flex flex-col items-center justify-center relative min-h-[60vh]">
+
+                {/* LOADING OVERLAY */}
+                <LoadingOverlay
+                    isSwitchingToTest={isSwitchingToTest}
+                    loadingMessageIndex={loadingMessageIndex}
+                    loadingMessages={loadingMessages}
                 />
-                <div
-                    className="absolute top-[60%] left-[60%] w-[50vw] h-[50vh] mix-blend-screen opacity-30 blur-[90px] rounded-full bg-blue-600 transition-all duration-200 ease-out"
-                    style={{ transform: `translate(-50%, -50%) scale(${1 + voiceLevel * 0.8})` }}
-                />
-            </div>
 
-            {/* Content Layer */}
-            <div className="relative z-10 w-full max-w-[2000px] mx-auto flex-1 flex flex-col" >
+                {/* 1. LIA'S PRESENCE (Initial Screen) */}
+                <AnimatePresence>
+                    {(!isWizardOpen && !testMode && !isSwitchingToTest && !isBusinessInfoModalOpen) && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="text-center max-w-2xl mb-12"
+                        >
+                            <h1 className={cn(
+                                "text-4xl md:text-6xl font-bold tracking-tighter mb-6 transition-all duration-500",
+                                !isVisible ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+                            )}>
+                                {displayText || "Olá! Vamos criar seu assistente."}
+                            </h1>
 
-                {/* --- MAIN MAIN AREA --- */}
-                <div className="flex-1 flex flex-col items-center justify-center relative min-h-[60vh]">
-
-                    {/* LOADING OVERLAY */}
-                    <LoadingOverlay
-                        isSwitchingToTest={isSwitchingToTest}
-                        loadingMessageIndex={loadingMessageIndex}
-                        loadingMessages={loadingMessages}
-                    />
-
-                    {/* 1. LIA'S PRESENCE (Initial Screen) */}
-                    <AnimatePresence>
-                        {(!isWizardOpen && !testMode && !isSwitchingToTest && !isBusinessInfoModalOpen) && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="text-center max-w-2xl mb-12"
-                            >
-                                <h1 className={cn(
-                                    "text-4xl md:text-6xl font-bold tracking-tighter mb-6 transition-all duration-500",
-                                    !isVisible ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
-                                )}>
-                                    {displayText || "Olá! Vamos criar seu assistente."}
-                                </h1>
-
-                                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                                    <Button
-                                        onClick={() => {
-                                            setCurrentSchema(NICHE_SCHEMAS.general);
-                                            setWizardStep(1);
-                                            setIsWizardOpen(true);
-                                        }}
-                                        className="bg-white text-black hover:bg-gray-200 text-lg px-8 py-6 rounded-full font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                                    >
-                                        <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
-                                        Iniciar Criação
-                                    </Button>
-
-                                    <Button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="bg-white/10 text-white hover:bg-white/20 text-lg px-8 py-6 rounded-full font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105 backdrop-blur-sm border border-white/10"
-                                    >
-                                        <Upload className="w-5 h-5 mr-2" />
-                                        Upload do Prompt
-                                    </Button>
-
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileUpload}
-                                        accept=".txt,.pdf,.docx"
-                                        className="hidden"
-                                    />
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* ... Rest of the components ... */}
-
-                    {/* 2. WIZARD MODAL */}
-                    <WizardModal
-                        open={isWizardOpen}
-                        step={wizardStep}
-                        schema={currentSchema}
-                        data={wizardData}
-                        onDataUpdate={setWizardData}
-                        onStepChange={setWizardStep}
-                        onComplete={handleWizardComplete}
-                        voiceActive={voiceMode}
-                        onPlayAudio={playIntegrationAudio}
-                        onClose={() => setIsWizardOpen(false)}
-                    />
-
-                    {/* 2.5 BUSINESS INFO MODAL (after prompt upload) */}
-                    <AnimatePresence>
-                        {isBusinessInfoModalOpen && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="flex items-center justify-center"
-                            >
-                                <BusinessInfoModal
-                                    open={isBusinessInfoModalOpen}
-                                    onComplete={handleBusinessInfoComplete}
-                                    onPlayAudio={playIntegrationAudio}
-                                    onClose={() => {
-                                        setIsBusinessInfoModalOpen(false);
-                                        setUploadedPrompt(null);
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                                <Button
+                                    onClick={() => {
+                                        setCurrentSchema(NICHE_SCHEMAS.general);
+                                        setWizardStep(1);
+                                        setIsWizardOpen(true);
                                     }}
+                                    className="bg-white text-black hover:bg-gray-200 text-lg px-8 py-6 rounded-full font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                >
+                                    <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
+                                    Iniciar Criação
+                                </Button>
+
+                                <Button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="bg-white/10 text-white hover:bg-white/20 text-lg px-8 py-6 rounded-full font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105 backdrop-blur-sm border border-white/10"
+                                >
+                                    <Upload className="w-5 h-5 mr-2" />
+                                    Upload do Prompt
+                                </Button>
+
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileUpload}
+                                    accept=".txt,.pdf,.docx"
+                                    className="hidden"
                                 />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                    {/* 3. UNIFIED CHAT MODE (Lia or Agent) */}
-                    <AnimatePresence>
-                        {testMode && currentStep === 'chat' && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center pb-4"
-                            >
-                                {chatMode === 'lia' ? (
-                                    <LiaChatPanel
-                                        messages={chatState.messages}
-                                        isTyping={chatState.isTyping}
-                                        onManualInput={handleManualInput}
-                                        onSwitchToAgent={() => setChatMode('agent')}
-                                        onFinish={() => setCurrentStep('integrations')}
-                                    />
-                                ) : (
-                                    <AgentTestPanel
-                                        testMessages={testMessages}
-                                        isTestTyping={isTestTyping}
-                                        onTestSend={handleTestSend}
-                                        onSwitchToLia={() => setChatMode('lia')}
-                                        onFinish={() => setCurrentStep('integrations')}
-                                    />
-                                )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                {/* ... Rest of the components ... */}
 
-                    {/* 4. INTEGRATIONS STEP */}
-                    <AnimatePresence mode="wait">
-                        {currentStep === 'integrations' && (
-                            <IntegrationsStep
-                                integrations={integrations}
-                                isWhatsAppConnected={isWhatsAppConnected}
-                                agentPrompt={chatState.agentConfig?.prompt}
-                                wizardData={wizardData}
-                                nicheId={currentSchema?.id}
-                                onSaveAndFinish={() => setCurrentStep('dashboard')}
-                                onBack={() => setCurrentStep('chat')}
-                                whatsappModalState={whatsappModalState}
-                                handleGenerateQR={handleGenerateQR}
-                                handleDisconnect={handleDisconnect}
-                                closeWhatsappModal={closeWhatsappModal}
-                                qrCode={whatsappInstances[0]?.qrCode}
-                                userEmail={userEmail}
+                {/* 2. WIZARD MODAL */}
+                <WizardModal
+                    open={isWizardOpen}
+                    step={wizardStep}
+                    schema={currentSchema}
+                    data={wizardData}
+                    onDataUpdate={setWizardData}
+                    onStepChange={setWizardStep}
+                    onComplete={handleWizardComplete}
+                    voiceActive={voiceMode}
+                    onPlayAudio={playIntegrationAudio}
+                    onClose={() => setIsWizardOpen(false)}
+                />
+
+                {/* 2.5 BUSINESS INFO MODAL (after prompt upload) */}
+                <AnimatePresence>
+                    {isBusinessInfoModalOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="flex items-center justify-center"
+                        >
+                            <BusinessInfoModal
+                                open={isBusinessInfoModalOpen}
+                                onComplete={handleBusinessInfoComplete}
+                                onPlayAudio={playIntegrationAudio}
+                                onClose={() => {
+                                    setIsBusinessInfoModalOpen(false);
+                                    setUploadedPrompt(null);
+                                }}
                             />
-                        )}
-                    </AnimatePresence>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                    {/* 5. DASHBOARD STEP */}
-                    <AnimatePresence mode="wait">
-                        {currentStep === 'dashboard' && (
-                            <DashboardStep
-                                integrations={integrations}
-                                onOpenIntegrations={() => setCurrentStep('integrations')}
-                            />
-                        )}
-                    </AnimatePresence>
+                {/* 3. UNIFIED CHAT MODE (Lia or Agent) */}
+                <AnimatePresence>
+                    {testMode && currentStep === 'chat' && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center pb-4"
+                        >
+                            {chatMode === 'lia' ? (
+                                <LiaChatPanel
+                                    messages={chatState.messages}
+                                    isTyping={chatState.isTyping}
+                                    onManualInput={handleManualInput}
+                                    onSwitchToAgent={() => setChatMode('agent')}
+                                    onFinish={() => setCurrentStep('integrations')}
+                                />
+                            ) : (
+                                <AgentTestPanel
+                                    testMessages={testMessages}
+                                    isTestTyping={isTestTyping}
+                                    onTestSend={handleTestSend}
+                                    onSwitchToLia={() => setChatMode('lia')}
+                                    onFinish={() => setCurrentStep('integrations')}
+                                />
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                </div>
+                {/* 4. INTEGRATIONS STEP */}
+                <AnimatePresence mode="wait">
+                    {currentStep === 'integrations' && (
+                        <IntegrationsStep
+                            integrations={integrations}
+                            isWhatsAppConnected={isWhatsAppConnected}
+                            agentPrompt={chatState.agentConfig?.prompt}
+                            wizardData={wizardData}
+                            nicheId={currentSchema?.id}
+                            onSaveAndFinish={() => setCurrentStep('dashboard')}
+                            onBack={() => setCurrentStep('chat')}
+                            whatsappModalState={whatsappModalState}
+                            handleGenerateQR={handleGenerateQR}
+                            handleDisconnect={handleDisconnect}
+                            closeWhatsappModal={closeWhatsappModal}
+                            qrCode={whatsappInstances[0]?.qrCode}
+                            userEmail={userEmail}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* 5. DASHBOARD STEP */}
+                <AnimatePresence mode="wait">
+                    {currentStep === 'dashboard' && (
+                        <DashboardStep
+                            integrations={integrations}
+                            onOpenIntegrations={() => setCurrentStep('integrations')}
+                        />
+                    )}
+                </AnimatePresence>
+
             </div>
         </div>
-    );
+    </div>
+);
 }
