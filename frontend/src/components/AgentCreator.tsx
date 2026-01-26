@@ -628,6 +628,8 @@ ${scheduleStr}
                                 closeWhatsappModal={closeWhatsappModal}
                                 qrCode={whatsappInstances[0]?.qrCode}
                                 userEmail={userEmail}
+                                isManageMode={!!chatState.agentConfig?.prompt} // If prompt exists, we are in manage mode
+                                onReturnToDashboard={() => setCurrentStep('dashboard')}
                             />
                         )}
                     </AnimatePresence>
