@@ -22,7 +22,8 @@ export type AudioTriggerType =
     | 'step_operations_modal' // NEW (Specific for BusinessInfoModal)
     | 'dashboard_suggestion' // NEW
     | 'step_details' // NEW
-    | 'intro_apikey'; // NEW
+    | 'intro_apikey' // NEW
+    | 'wizard_options'; // NEW
 
 interface AudioVariation {
     id: string;
@@ -124,6 +125,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Oi! Seja bem vindo ao Cají assistente. Nessa etapa, precisamos que você adicione sua chave de API para que tudo funcione. Caso não tenha uma ainda, é só clicar no botão abaixo para ser redirecionado até a criação da sua chave. Se não souber como criar, veja o vídeo abaixo onde mostramos os detalhes. Quando estiver tudo pronto, clique em continuar e daremos início na sua jornada.",
         "Olá! Bem-vindo ao Cají assistente. Para começarmos, preciso que você insira sua chave de API e garanta o funcionamento do sistema. Se ainda não possui uma, clique no botão abaixo para criá-la. Também preparamos um vídeo explicativo logo abaixo com o passo a passo. Assim que tiver sua chave, clique em continuar para iniciarmos sua jornada.",
         "Oi! Que bom ter você no Cají assistente. Para que tudo funcione perfeitamente, precisamos da sua chave de API agora. Se você ainda não tem, pode criar clicando no botão abaixo. Caso tenha dúvidas, o vídeo abaixo explica detalhadamente como gerar a chave. Com a chave em mãos, clique em continuar e vamos começar!"
+    ]),
+    'wizard_options': defineVariations('wizard_options', 3, [
+        "Agora você tem duas opções. Clique em 'Iniciar Criação' para eu te guiar passo a passo, ou use o botão de Upload se você já tiver um script com as instruções prontas.",
+        "Como prefere criar seu agente? Podemos montar juntos clicando em 'Iniciar Criação', ou você pode enviar seu arquivo de instruções direto pelo botão de Upload.",
+        "Para prosseguir, escolha o seu caminho: 'Iniciar Criação' para um modo guiado, ou o botão de Upload para enviar um script que você já tenha preparado."
     ])
 };
 

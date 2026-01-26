@@ -172,20 +172,39 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     // Audio Triggers for specific steps
     useEffect(() => {
         let trigger: any | null = null;
-        if (currentStep === 'integrations') trigger = 'integrations';
+
+        // Check for Wizard Options Screen (Initial state with no prompt)
+        // User must be on the main screen (not in wizard, not testing, not uploading) AND have no prompt yet
+        const isOptionsScreen = !isWizardOpen && !testMode && !isSwitchingToTest && !isBusinessInfoModalOpen;
+        const hasNoPrompt = !chatState.agentConfig?.prompt;
+
+        if (isOptionsScreen && hasNoPrompt) {
+            trigger = 'wizard_options';
+        }
+        else if (currentStep === 'integrations') trigger = 'integrations';
         else if (currentStep === 'dashboard') trigger = 'dashboard_suggestion';
 
         if (trigger) {
             const audioVariation = getRandomAudio(trigger);
             if (audioVariation.path) {
-                const delay = trigger === 'integrations' ? 1000 : 0;
+                // Add a small delay for the options screen to ensure component visual transition is ready
+                const delay = (trigger === 'integrations' || trigger === 'wizard_options') ? 1000 : 0;
                 playIntegrationAudio(audioVariation.path, delay);
             }
         }
         return () => {
             stopIntegrationAudio();
         };
-    }, [currentStep, playIntegrationAudio, stopIntegrationAudio]);
+    }, [
+        currentStep,
+        playIntegrationAudio,
+        stopIntegrationAudio,
+        isWizardOpen,
+        testMode,
+        isSwitchingToTest,
+        isBusinessInfoModalOpen,
+        chatState.agentConfig?.prompt
+    ]);
 
     // WhatsApp Success Audio
     useEffect(() => {
