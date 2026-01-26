@@ -19,6 +19,8 @@ interface LayoutProps {
   expandIntegrations?: boolean;
   onExpandIntegrationsChange?: (expanded: boolean) => void;
   showSidebarTrigger?: boolean;
+  sidebarOpen?: boolean;
+  onSidebarOpenChange?: (open: boolean) => void;
 }
 
 const Layout = ({
@@ -27,7 +29,9 @@ const Layout = ({
   showLiaButton = true,
   expandIntegrations = false,
   onExpandIntegrationsChange,
-  showSidebarTrigger = true
+  showSidebarTrigger = true,
+  sidebarOpen,
+  onSidebarOpenChange
 }: LayoutProps) => {
   const navigate = useNavigate();
   const { logout, user, updateUserApiKeyStatus } = useAuth();
@@ -35,7 +39,17 @@ const Layout = ({
   const { socket } = useSocket();
 
   // Sidebar and Lia state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
+  const isSidebarOpen = sidebarOpen !== undefined ? sidebarOpen : internalSidebarOpen;
+
+  const setIsSidebarOpen = (open: boolean) => {
+    if (onSidebarOpenChange) {
+      onSidebarOpenChange(open);
+    } else {
+      setInternalSidebarOpen(open);
+    }
+  };
+
   const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
   const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
 

@@ -17,6 +17,7 @@ const Dashboard = () => {
   // Integrations state for DashboardStep
   const { integrations } = useIntegrations();
   const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // =====================
   // INITIALIZATION EFFECT
@@ -68,12 +69,17 @@ const Dashboard = () => {
           showSidebarTrigger={false}
           expandIntegrations={shouldExpandIntegrations}
           onExpandIntegrationsChange={setShouldExpandIntegrations}
+          sidebarOpen={sidebarOpen}
+          onSidebarOpenChange={setSidebarOpen}
         >
           <AgentCreator
             key="creator"
             isExiting={false}
-            onOpenSidebar={() => { }} // Layout handled
-            onOpenIntegrations={() => setShouldExpandIntegrations(true)}
+            onOpenSidebar={() => setSidebarOpen(true)}
+            onOpenIntegrations={() => {
+              setSidebarOpen(true);
+              setShouldExpandIntegrations(true);
+            }}
             onStartChat={() => setPhase('app')}
           />
         </Layout>
