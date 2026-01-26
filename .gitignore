@@ -71,3 +71,7 @@ env/
 *.zip
 *.tar.gz
 deploy_pkg/
+
+# Secrets
+serviceAccountKey.json
+**/serviceAccountKey.json

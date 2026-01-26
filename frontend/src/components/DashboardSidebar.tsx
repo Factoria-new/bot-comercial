@@ -19,9 +19,12 @@ import {
     Info,
     LayoutDashboard,
     Key,
+    ExternalLink,
 } from "lucide-react";
 
-import { ApiKeyModal } from "./ApiKeyModal";
+import { Input } from "@/components/ui/input";
+
+// import { ApiKeyModal } from "./ApiKeyModal";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Integration } from "@/types/onboarding";
@@ -103,7 +106,11 @@ export default function DashboardSidebar({
     const [isSavingTts, setIsSavingTts] = useState(false);
     const [successAnimationData, setSuccessAnimationData] = useState<any>(null);
     const [showSuccess, setShowSuccess] = useState(false);
-    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+
+    // API Key State
+    const [apiKeyExpanded, setApiKeyExpanded] = useState(false);
+    const [apiKeyInput, setApiKeyInput] = useState("");
+    const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 
     useEffect(() => {
         fetch('/lotties/success.json')
@@ -240,6 +247,51 @@ export default function DashboardSidebar({
         }
     }, [forceExpandIntegrations, isOpen]);
 
+    const handleSaveApiKey = async () => {
+        if (!apiKeyInput.trim()) return;
+        setIsSavingApiKey(true);
+        try {
+            const token = localStorage.getItem('token');
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/users/apikey`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ apiKey: apiKeyInput })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                }
+
+                toast({
+                    title: "Sucesso",
+                    description: "Chave de API salva com sucesso.",
+                    className: "bg-emerald-500 text-white border-0"
+                });
+                setApiKeyInput("");
+                setApiKeyExpanded(false);
+                localStorage.setItem("user_gemini_api_key", apiKeyInput);
+            } else {
+                throw new Error(data.error || 'Falha ao salvar');
+            }
+        } catch (error: any) {
+            console.error(error);
+            toast({
+                title: "Erro",
+                description: error.message || "Erro ao salvar chave de API.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSavingApiKey(false);
+        }
+    };
+
 
 
     const menuItems = [
@@ -273,16 +325,7 @@ export default function DashboardSidebar({
                 onClose();
             }
         },
-        {
-            id: "api-key",
-            label: "Minha Chave de API",
-            icon: Key,
-            description: "Alterar chave Gemini",
-            onClick: () => {
-                setShowApiKeyModal(true);
-                onClose();
-            }
-        },
+
     ];
 
     return (
@@ -809,6 +852,77 @@ export default function DashboardSidebar({
                                         </div>
                                     </>
                                 )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* API Key Section */}
+                    <div>
+                        <button
+                            onClick={() => setApiKeyExpanded(!apiKeyExpanded)}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                                "group hover:bg-white/10",
+                                apiKeyExpanded
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "text-white/80 hover:text-white"
+                            )}
+                        >
+                            <Key
+                                className={cn(
+                                    "w-5 h-5 transition-colors",
+                                    apiKeyExpanded
+                                        ? "text-emerald-400"
+                                        : "text-white/50 group-hover:text-white/80"
+                                )}
+                            />
+                            <div className="flex-1 text-left">
+                                <p className="text-sm font-medium">Minha Chave de API</p>
+                                <p className="text-xs text-white/40">Gerenciar Gemini</p>
+                            </div>
+                            {apiKeyExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white/60" />
+                            )}
+                        </button>
+
+                        <div
+                            className={cn(
+                                "overflow-hidden transition-all duration-300",
+                                apiKeyExpanded ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"
+                            )}
+                        >
+                            <div className="pl-4 pr-2 py-3 space-y-2">
+                                <div className="px-3 space-y-3">
+                                    <div className="relative">
+                                        <Input
+                                            type="password"
+                                            placeholder="Cole sua chave aqui..."
+                                            value={apiKeyInput}
+                                            onChange={(e) => setApiKeyInput(e.target.value)}
+                                            className="bg-black/20 border-white/10 text-white text-xs h-9 pr-2"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <a
+                                            href="https://aistudio.google.com/app/apikey"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[10px] text-indigo-300 hover:text-indigo-200 flex items-center gap-1 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20"
+                                        >
+                                            Gerar Chave <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                        <Button
+                                            size="sm"
+                                            onClick={handleSaveApiKey}
+                                            disabled={!apiKeyInput || isSavingApiKey}
+                                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500"
+                                        >
+                                            {isSavingApiKey ? "Salvar" : "Salvar"}
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
