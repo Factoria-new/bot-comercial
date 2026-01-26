@@ -175,10 +175,12 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
         // Check for Wizard Options Screen (Initial state with no prompt)
         // User must be on the main screen (not in wizard, not testing, not uploading) AND have no prompt yet
+        // AND must have API Key (otherwise ApiKeyModal will open and play its own audio)
         const isOptionsScreen = !isWizardOpen && !testMode && !isSwitchingToTest && !isBusinessInfoModalOpen;
         const hasNoPrompt = !chatState.agentConfig?.prompt;
+        const hasApiKey = !!user?.hasGeminiApiKey;
 
-        if (isOptionsScreen && hasNoPrompt) {
+        if (isOptionsScreen && hasNoPrompt && hasApiKey) {
             trigger = 'wizard_options';
         }
         else if (currentStep === 'integrations') trigger = 'integrations';
