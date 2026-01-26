@@ -27,6 +27,7 @@ import { DashboardStep } from "./agent-creator/DashboardStep";
 import { LoadingOverlay } from "./agent-creator/LoadingOverlay";
 import BusinessInfoModal, { BusinessInfoData } from "./BusinessInfoModal";
 import { DaySchedule, WeekDay, WEEKDAYS_MAP } from "@/lib/scheduleTypes";
+import LottieLoader from "@/components/LottieLoader";
 
 export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat }: AgentCreatorProps) {
 
@@ -510,7 +511,13 @@ ${scheduleStr}
                                     "text-4xl md:text-6xl font-bold tracking-tighter mb-6 transition-all duration-500",
                                     !isVisible ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
                                 )}>
-                                    {displayText || "Olá! Vamos criar seu assistente."}
+                                    {displayText === "LOTTIE_LOADER" ? (
+                                        <div className="flex justify-center items-center py-2">
+                                            <LottieLoader fullScreen={false} size={250} />
+                                        </div>
+                                    ) : (
+                                        displayText || "Olá! Vamos criar seu assistente."
+                                    )}
                                 </h1>
 
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
