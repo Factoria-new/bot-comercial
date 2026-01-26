@@ -17,6 +17,9 @@ import InstagramCallback from "./pages/InstagramCallback";
 import GoogleCalendarCallback from "./pages/GoogleCalendarCallback";
 import MeuPrompt from "./pages/MeuPrompt";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import Lgpd from "./pages/Lgpd";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 
@@ -32,6 +35,9 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
+              <Route path="/termos-de-servico" element={<TermsOfService />} />
+              <Route path="/lgpd" element={<Lgpd />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Index />
