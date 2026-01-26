@@ -66,3 +66,8 @@ env/
 *$py.class
 .pytest_cache/
 **/.pytest_cache/
+
+# Large files
+*.zip
+*.tar.gz
+deploy_pkg/

@@ -213,7 +213,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         setIsWizardOpen(false);
         setIsSwitchingToTest(true);
 
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
         const apiKey = localStorage.getItem("user_gemini_api_key"); // Retrieve User Key
 
         try {
@@ -312,7 +312,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 content: msg.content
             }));
 
-            const res = await fetch('http://localhost:3003/api/agent/chat', {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const res = await fetch(`${backendUrl}/api/agent/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -381,7 +382,7 @@ ${scheduleStr}
         // Persist business info to database
         try {
             const token = localStorage.getItem('token');
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
             const response = await fetch(`${backendUrl}/api/user/business-info`, {
                 method: 'PUT',

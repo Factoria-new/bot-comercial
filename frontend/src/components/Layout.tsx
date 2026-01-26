@@ -130,7 +130,7 @@ const Layout = ({
           return;
         }
 
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
         const response = await fetch(`${backendUrl}/api/users/me`, {
           headers: { 'Authorization': `Bearer ${token}` }

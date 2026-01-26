@@ -54,7 +54,8 @@ export function ApiKeyModal({ open, onComplete, onClose }: ApiKeyModalProps) {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3003'}/api/users/apikey`, {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/users/apikey`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,0 +1,103 @@
+// Schema Prisma para Caji Assistant
+// Banco de dados: Supabase PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  password           String?
+  displayName        String?
+  role               String    @default("basic") // basic, pro, admin
+  status             String    @default("pending") // pending, active
+  
+  // Dados de assinatura
+  plan               String?   // pro_monthly, pro_semiannual, pro_annual
+  period             String?   // monthly, semiannual, annual
+  subscriptionStatus String?   // active, canceled, expired
+  
+  // IDs externos (Stripe)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  
+  // Timestamps
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  // Prompt personalizado do agente
+  customPrompt       String?   @db.Text
+  
+  // Informações de funcionamento do negócio
+  businessHours      Json?     // Estrutura JSON com horários por dia da semana
+  serviceType        String?   // "online" | "presencial"
+  businessAddress    String?   // Endereço físico (apenas se presencial)
+  appointmentDuration Int      @default(60) // Duração padrão dos agendamentos em minutos
+  
+  // Configurações de TTS e IA
+  ttsEnabled         Boolean   @default(false)
+  ttsVoice           String    @default("Kore")
+  ttsRules           String?   @db.Text // Regras em linguagem natural (ex: "Enviar apenas áudio")
+  aiModel            String    @default("gemini-2.0-flash-exp")
+  aiTemperature      Float     @default(1.0)
+  geminiApiKey       String?   @db.Text // Chave criptografada do usuário
+  
+  // Relação 1:1 com Instance
+  instance           Instance?
+  
+  @@map("users")
+}
+
+// Instância do bot (número conectado ao WhatsApp)
+model Instance {
+  id           String         @id @default(uuid())
+  userId       String         @unique // Foreign key para User (1:1)
+  phoneNumber  String         @unique // Número que está conectado ao bot
+  name         String?        // Nome opcional da instância
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  
+  @@map("instances")
+}
+
+// Conversa entre uma instância e um cliente
+model Conversation {
+  id            String    @id @default(uuid())
+  instanceId    String
+  customerPhone String    // Número do cliente que está conversando
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  instance      Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  
+  @@unique([instanceId, customerPhone]) // Uma conversa única por instância + cliente
+  @@index([instanceId])
+  @@index([customerPhone])
+  @@index([updatedAt]) // Para ordenar conversas recentes
+  @@map("conversations")
+}
+
+// Mensagens individuais da conversa
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  role           String       // "user" ou "model"
+  content        String       // Conteúdo da mensagem (texto)
+  createdAt      DateTime     @default(now())
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([conversationId, createdAt]) // Índice composto para buscar histórico ordenado
+  @@index([createdAt]) // Para limpeza de mensagens antigas
+  @@map("messages")
+}

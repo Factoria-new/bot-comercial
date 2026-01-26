@@ -212,7 +212,8 @@ export function useOnboarding(userId?: string) {
                 history.push({ role: 'user', content: userInput });
             }
 
-            const response = await fetch('http://localhost:3003/api/agent/architect', {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/agent/architect`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -287,7 +288,8 @@ export function useOnboarding(userId?: string) {
 
         setState(prev => ({ ...prev, isTyping: true }));
         try {
-            const res = await fetch('http://localhost:3003/api/agent/chat', {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const res = await fetch(`${backendUrl}/api/agent/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

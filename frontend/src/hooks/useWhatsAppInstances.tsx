@@ -41,7 +41,7 @@ export const useWhatsAppInstances = () => {
       if (!user?.uid) return;
 
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
         const token = localStorage.getItem('token');
 
         if (!token) {

@@ -15,7 +15,7 @@ const getTransporter = () => {
 };
 
 export const sendActivationEmail = async (email, token) => {
-    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://cajiassist.com').replace(/\/$/, '');
     const activationLink = `${frontendUrl}/setup-password?token=${token}`;
 
     // If no SMTP config, log to console for dev

@@ -18,7 +18,10 @@ import {
     Sparkles,
     Info,
     LayoutDashboard,
+    Key,
 } from "lucide-react";
+
+import { ApiKeyModal } from "./ApiKeyModal";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Integration } from "@/types/onboarding";
@@ -100,6 +103,7 @@ export default function DashboardSidebar({
     const [isSavingTts, setIsSavingTts] = useState(false);
     const [successAnimationData, setSuccessAnimationData] = useState<any>(null);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
     useEffect(() => {
         fetch('/lotties/success.json')
@@ -154,7 +158,7 @@ export default function DashboardSidebar({
 
     const loadTtsConfig = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`);
             if (response.ok) {
                 const data = await response.json();
@@ -190,7 +194,7 @@ export default function DashboardSidebar({
         if (!isPro) return;
         setIsSavingTts(true);
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -269,6 +273,16 @@ export default function DashboardSidebar({
                 onClose();
             }
         },
+        {
+            id: "api-key",
+            label: "Minha Chave de API",
+            icon: Key,
+            description: "Alterar chave Gemini",
+            onClick: () => {
+                setShowApiKeyModal(true);
+                onClose();
+            }
+        },
     ];
 
     return (
@@ -342,7 +356,7 @@ export default function DashboardSidebar({
                 {/* Menu Items - Scrollable */}
                 <nav className="flex-1 overflow-y-auto p-3 space-y-1">
                     {/* Regular menu items */}
-                    {menuItems.slice(0, 2).map((item) => (
+                    {menuItems.slice(0, 3).map((item) => (
                         <button
                             key={item.id}
                             onClick={() => {
@@ -755,7 +769,7 @@ export default function DashboardSidebar({
                                                         const handleSaveTts = async () => {
                                                             setIsSavingTts(true);
                                                             try {
-                                                                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+                                                                const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
                                                                 const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`, {
                                                                     method: 'POST',
                                                                     headers: { 'Content-Type': 'application/json' },

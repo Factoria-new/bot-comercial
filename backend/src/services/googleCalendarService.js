@@ -123,7 +123,7 @@ export const getAuthUrl = async (userId) => {
             userId,
             authConfigId,
             {
-                redirectUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/calendar-callback`
+                redirectUrl: `${process.env.FRONTEND_URL}/calendar-callback`
             }
         );
 

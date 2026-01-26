@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+crewai[google-genai]
+crewai-tools
+composio-crewai
+langchain-openai
+langchain-google-genai
+requests
+python-dotenv

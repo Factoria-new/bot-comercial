@@ -28,7 +28,7 @@ export const useIntegrations = () => {
     const checkGoogleCalendarStatus = async () => {
         if (!googleCalendarUserId) return;
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/google-calendar/status?userId=${encodeURIComponent(googleCalendarUserId)}`);
             const data = await response.json();
             if (data.success && data.isConnected) {
@@ -47,7 +47,7 @@ export const useIntegrations = () => {
 
     const handleGoogleCalendarConnect = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/google-calendar/auth-url?userId=${encodeURIComponent(googleCalendarUserId)}`);
             const data = await response.json();
 
@@ -93,7 +93,7 @@ export const useIntegrations = () => {
 
     const handleGoogleCalendarDisconnect = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/google-calendar/disconnect`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

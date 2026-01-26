@@ -198,7 +198,8 @@ export function useTTS() {
                 if (USE_BACKEND_TTS) {
                     console.log("📡 Fetching TTS from backend...");
                     // Call backend to generate audio
-                    const response = await fetch('http://localhost:3003/api/agent/speak', {
+                    const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+                    const response = await fetch(`${backendUrl}/api/agent/speak`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

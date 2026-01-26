@@ -282,7 +282,7 @@ export function BusinessSettingsModal({
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
             const response = await fetch(`${backendUrl}/api/user/business-info`, {
                 headers: {
@@ -374,7 +374,7 @@ ${scheduleStr}
         setIsSaving(true);
         try {
             const token = localStorage.getItem('token');
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
             // 1. Save business info to database
             const businessResponse = await fetch(`${backendUrl}/api/user/business-info`, {
