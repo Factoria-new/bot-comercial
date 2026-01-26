@@ -3,13 +3,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import AgentCreator from '@/components/AgentCreator';
 import { DashboardStep } from '@/components/agent-creator/DashboardStep';
 import { useIntegrations } from '@/hooks/useIntegrations';
-
+import { promptService } from '@/services/promptService';
 import { AnimatePresence } from 'framer-motion';
 import Layout from '@/components/Layout';
 import LottieLoader from '@/components/LottieLoader';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, updateUserPromptStatus } = useAuth();
 
   // Phase: 'onboarding' = criação do agente | 'app' = uso diário
   const [phase, setPhase] = useState<'loading' | 'onboarding' | 'app'>('loading');
@@ -26,20 +26,35 @@ const Dashboard = () => {
     const initialize = async () => {
       if (!user) return;
 
-      // Check if user has a prompt (completed onboarding)
+      // 1. Trust AuthContext if it says true
       if (user.hasPrompt) {
         setPhase('app'); // Skip to main app
         console.log("✅ Prompt loaded (from profile), entering app phase");
         return;
       }
 
-      // No prompt = start onboarding
-      console.log("📝 No prompt found, starting onboarding");
+      // 2. If AuthContext says false, DOUBLE CHECK with API
+      // (This handles cases where login response was missing data but prompt exists)
+      console.log("⚠️ user.hasPrompt is false, verifying with API...");
+      try {
+        const result = await promptService.getPrompt();
+        if (result.success && result.prompt) {
+          console.log("✅ Prompt found via API! syncing state...");
+          updateUserPromptStatus?.(true); // Fix state for future
+          setPhase('app');
+          return;
+        }
+      } catch (error) {
+        console.error("Error verifying prompt:", error);
+      }
+
+      // 3. Truly no prompt = start onboarding
+      console.log("📝 No prompt verified, starting onboarding");
       setPhase('onboarding');
     };
 
     initialize();
-  }, [user?.hasPrompt, user?.uid]);
+  }, [user?.hasPrompt, user?.uid, updateUserPromptStatus]);
 
   // =====================
   // LOADING STATE
