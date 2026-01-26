@@ -79,7 +79,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         setAgentPrompt,
         startTesting,
         sendMessageToLia,
-        addUserMessage
+        addUserMessage,
+        resetOnboarding
     } = useOnboarding(userId);
 
     const { speak, stop: stopTTS, resumeContext, voiceLevel: ttsVoiceLevel } = useTTS();
@@ -149,8 +150,25 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     useEffect(() => {
         if (chatState.step === 'testing') {
             setTestMode(true);
+        } else {
+            setTestMode(false);
         }
     }, [chatState.step]);
+
+    // SAFETY: Reset stale 'testing' state on mount
+    // If we are in this component, it means Dashboard decided we are in 'onboarding' (no prompt in DB).
+    // If local storage says 'testing', it's a zombie state from a deleted prompt.
+    useEffect(() => {
+        // Only run this check once when the component mounts and state is ready
+        if (chatState.step === 'testing') {
+            console.log("🧹 Stale 'testing' state detected on mount. Resetting onboarding.");
+            // We use a small timeout to let initialization settle and ensure we don't conflict with any immediate transitions
+            setTimeout(() => {
+                resetOnboarding();
+                setTestMode(false); // Force visual reset immediately
+            }, 100);
+        }
+    }, []); // Empty dependency = run on mount only
 
     // Loading Animation Cycle
     useEffect(() => {
@@ -634,7 +652,7 @@ ${scheduleStr}
                                 whatsappModalState={whatsappModalState}
                                 handleGenerateQR={handleGenerateQR}
                                 handleDisconnect={handleDisconnect}
-                                closeWhatsappModal={closeWhatsappModal}
+                                closeModal={closeWhatsappModal}
                                 qrCode={whatsappInstances[0]?.qrCode}
                                 userEmail={userEmail}
                             />
