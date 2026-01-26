@@ -61,12 +61,19 @@ const Dashboard = () => {
   return (
     <AnimatePresence mode="wait">
       {phase === 'onboarding' ? (
-        <Layout key="creator-layout" currentPage="dashboard" showLiaButton={false} showSidebarTrigger={false}>
+        <Layout
+          key="creator-layout"
+          currentPage="dashboard"
+          showLiaButton={false}
+          showSidebarTrigger={false}
+          expandIntegrations={shouldExpandIntegrations}
+          onExpandIntegrationsChange={setShouldExpandIntegrations}
+        >
           <AgentCreator
             key="creator"
             isExiting={false}
             onOpenSidebar={() => { }} // Layout handled
-            onOpenIntegrations={() => { }} // Layout handled
+            onOpenIntegrations={() => setShouldExpandIntegrations(true)}
             onStartChat={() => setPhase('app')}
           />
         </Layout>

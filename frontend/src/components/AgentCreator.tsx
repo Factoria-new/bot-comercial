@@ -680,7 +680,7 @@ ${scheduleStr}
                         {currentStep === 'dashboard' && (
                             <DashboardStep
                                 integrations={integrations}
-                                onOpenIntegrations={() => setCurrentStep('integrations')}
+                                onOpenIntegrations={onOpenIntegrations}
                             />
                         )}
                     </AnimatePresence>
