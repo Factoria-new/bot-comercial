@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Integration } from "@/types/onboarding";
-import { BrandIcons, FacebookIcon, InstagramIcon } from "@/components/ui/brand-icons";
+import { BrandIcons } from "@/components/ui/brand-icons";
 import { Switch } from "@/components/ui/switch";
 import {
     Tooltip,
@@ -485,6 +485,8 @@ export default function DashboardSidebar({
                             <div className="pl-4 pr-2 py-2 space-y-1">
                                 {integrations.map((integration) => {
                                     const Icon = BrandIcons[integration.icon];
+                                    const isComingSoon = integration.isComingSoon;
+
                                     return (
                                         <div
                                             key={integration.id}
@@ -493,12 +495,17 @@ export default function DashboardSidebar({
                                                 "bg-white/5 border",
                                                 integration.connected
                                                     ? "border-emerald-500/30"
-                                                    : "border-white/10"
+                                                    : "border-white/10",
+                                                isComingSoon && "opacity-60 cursor-default"
                                             )}
                                         >
                                             <button
-                                                onClick={() => !integration.connected && onIntegrationClick?.(integration.id)}
-                                                className="flex-1 flex items-center gap-3 text-left w-full min-w-0"
+                                                onClick={() => !integration.connected && !isComingSoon && onIntegrationClick?.(integration.id)}
+                                                className={cn(
+                                                    "flex-1 flex items-center gap-3 text-left w-full min-w-0",
+                                                    isComingSoon ? "cursor-default" : "cursor-pointer"
+                                                )}
+                                                disabled={isComingSoon}
                                             >
                                                 <div
                                                     className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -511,7 +518,7 @@ export default function DashboardSidebar({
                                                         {integration.name}
                                                     </p>
                                                     <p className="text-[10px] text-white/50">
-                                                        {integration.connected ? "Conectado" : "Conectar"}
+                                                        {integration.connected ? "Conectado" : (isComingSoon ? "Em breve" : "Conectar")}
                                                     </p>
                                                 </div>
                                             </button>
@@ -528,37 +535,17 @@ export default function DashboardSidebar({
                                                     <LogOut className="w-4 h-4 text-red-400 group-hover/disconnect:text-red-300" />
                                                 </button>
                                             ) : (
-                                                <button
-                                                    onClick={() => onIntegrationClick?.(integration.id)}
-                                                >
-                                                    <ChevronRight className="w-3.5 h-3.5 text-white/40 hover:text-white/60" />
-                                                </button>
+                                                !isComingSoon && (
+                                                    <button
+                                                        onClick={() => onIntegrationClick?.(integration.id)}
+                                                    >
+                                                        <ChevronRight className="w-3.5 h-3.5 text-white/40 hover:text-white/60" />
+                                                    </button>
+                                                )
                                             )}
                                         </div>
                                     );
                                 })}
-
-                                {/* Facebook (Coming Soon) */}
-                                <div className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 opacity-60">
-                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#1877F2]">
-                                        <FacebookIcon className="w-3.5 h-3.5 text-white" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-medium text-white truncate">Facebook</p>
-                                        <p className="text-[10px] text-white/50">Em breve</p>
-                                    </div>
-                                </div>
-
-                                {/* Instagram (Coming Soon) */}
-                                <div className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 opacity-60">
-                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]">
-                                        <InstagramIcon className="w-3.5 h-3.5 text-white" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-medium text-white truncate">Instagram</p>
-                                        <p className="text-[10px] text-white/50">Em breve</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>

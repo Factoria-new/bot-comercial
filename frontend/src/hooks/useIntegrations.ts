@@ -120,9 +120,9 @@ export const useIntegrations = () => {
 
     const integrations: Integration[] = [
         { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
-        { id: 'facebook', name: 'Facebook', color: '#1877F2', icon: 'facebook', connected: false, isComingSoon: true },
-        { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: false, isComingSoon: true },
         { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: isGoogleCalendarConnected },
+        { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: false, isComingSoon: true },
+        { id: 'facebook', name: 'Facebook', color: '#1877F2', icon: 'facebook', connected: false, isComingSoon: true },
     ];
 
     const handleIntegrationClick = (id: string) => {
