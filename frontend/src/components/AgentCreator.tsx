@@ -208,17 +208,17 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     // WhatsApp Success Audio
     useEffect(() => {
-        if (whatsappModalState.isOpen && whatsappModalState.connectionState === 'connected') {
+        if (whatsappModalState.connectionState === 'connected') {
             const timer = setTimeout(() => {
-                console.log("🎉 WhatsApp Connected Screen! Playing success audio...");
+                console.log("🎉 WhatsApp Connected! Playing success audio...");
                 const audioVariation = getRandomAudio('integrations_success');
                 if (audioVariation.path) {
                     playIntegrationAudio(audioVariation.path);
                 }
-            }, 3000);
+            }, 500); // Reduced from 3000ms to 500ms to avoid race conditions
             return () => clearTimeout(timer);
         }
-    }, [whatsappModalState.connectionState, whatsappModalState.isOpen, playIntegrationAudio]);
+    }, [whatsappModalState.connectionState, playIntegrationAudio]); // Removed isOpen dependency
 
 
 
@@ -229,8 +229,9 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     const handleWizardComplete = async () => {
         resumeContext();
-        setIsWizardOpen(false);
+        // Set switching to test FIRST to prevent "Options Screen" detection
         setIsSwitchingToTest(true);
+        setIsWizardOpen(false);
 
         const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
         const apiKey = localStorage.getItem("user_gemini_api_key"); // Retrieve User Key
@@ -360,12 +361,15 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     // Handler for BusinessInfoModal completion (after prompt upload)
     const handleBusinessInfoComplete = async (businessInfo: BusinessInfoData) => {
-        setIsBusinessInfoModalOpen(false);
-
         if (!uploadedPrompt) {
             console.error('❌ No uploaded prompt found');
+            setIsBusinessInfoModalOpen(false);
             return;
         }
+
+        // Set switching to test FIRST to prevent "Options Screen" detection
+        setIsSwitchingToTest(true);
+        setIsBusinessInfoModalOpen(false);
 
         // Format opening hours into a readable string
         const formatSchedule = (schedule: Record<WeekDay, DaySchedule>): string => {
@@ -429,7 +433,7 @@ ${scheduleStr}
 
         // Set the enriched prompt and proceed to test mode
         setAgentPrompt(enrichedPrompt);
-        setIsSwitchingToTest(true);
+        // setIsSwitchingToTest(true); // Already set at start
 
         // Play completion audio
         const audioVariation = getRandomAudio('complete');
@@ -617,7 +621,7 @@ ${scheduleStr}
                                 agentPrompt={chatState.agentConfig?.prompt}
                                 wizardData={wizardData}
                                 nicheId={currentSchema?.id}
-                                onSaveAndFinish={() => onStartChat?.('')}
+                                onSaveAndFinish={() => setCurrentStep('dashboard')}
                                 onBack={() => setCurrentStep('chat')}
                                 whatsappModalState={whatsappModalState}
                                 handleGenerateQR={handleGenerateQR}
