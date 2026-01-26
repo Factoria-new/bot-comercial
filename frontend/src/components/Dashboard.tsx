@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AgentCreator from '@/components/AgentCreator';
 import { DashboardStep } from '@/components/agent-creator/DashboardStep';
 import { useIntegrations } from '@/hooks/useIntegrations';
-import { promptService } from '@/services/promptService';
+
 import { AnimatePresence } from 'framer-motion';
 import Layout from '@/components/Layout';
 import LottieLoader from '@/components/LottieLoader';
@@ -28,17 +28,9 @@ const Dashboard = () => {
 
       // Check if user has a prompt (completed onboarding)
       if (user.hasPrompt) {
-        console.log("✅ User has prompt, loading from database...");
-        try {
-          const result = await promptService.getPrompt();
-          if (result.success && result.prompt) {
-            setPhase('app'); // Skip to main app
-            console.log("✅ Prompt loaded, entering app phase");
-            return;
-          }
-        } catch (error) {
-          console.error("Error loading prompt:", error);
-        }
+        setPhase('app'); // Skip to main app
+        console.log("✅ Prompt loaded (from profile), entering app phase");
+        return;
       }
 
       // No prompt = start onboarding
