@@ -61,7 +61,7 @@ const Dashboard = () => {
   return (
     <AnimatePresence mode="wait">
       {phase === 'onboarding' ? (
-        <Layout key="creator-layout" currentPage="dashboard" showLiaButton={false}>
+        <Layout key="creator-layout" currentPage="dashboard" showLiaButton={false} showSidebarTrigger={false}>
           <AgentCreator
             key="creator"
             isExiting={false}

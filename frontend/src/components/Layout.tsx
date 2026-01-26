@@ -18,6 +18,7 @@ interface LayoutProps {
   showLiaButton?: boolean;
   expandIntegrations?: boolean;
   onExpandIntegrationsChange?: (expanded: boolean) => void;
+  showSidebarTrigger?: boolean;
 }
 
 const Layout = ({
@@ -25,7 +26,8 @@ const Layout = ({
   currentPage,
   showLiaButton = true,
   expandIntegrations = false,
-  onExpandIntegrationsChange
+  onExpandIntegrationsChange,
+  showSidebarTrigger = true
 }: LayoutProps) => {
   const navigate = useNavigate();
   const { logout, user, updateUserApiKeyStatus } = useAuth();
@@ -165,16 +167,18 @@ const Layout = ({
   return (
     <div className="min-h-screen">
       {/* Hamburger Menu Button */}
-      <div className="fixed top-4 left-4 z-50">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsSidebarOpen(true)}
-          className="text-white/70 hover:bg-white/10"
-        >
-          <Menu className="w-6 h-6" />
-        </Button>
-      </div>
+      {showSidebarTrigger && (
+        <div className="fixed top-4 left-4 z-50">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(true)}
+            className="text-white/70 hover:bg-white/10"
+          >
+            <Menu className="w-6 h-6" />
+          </Button>
+        </div>
+      )}
 
       {/* Main Content */}
       <main>
