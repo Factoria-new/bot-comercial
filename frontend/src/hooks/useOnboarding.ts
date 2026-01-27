@@ -419,16 +419,26 @@ export function useOnboarding(userId?: string) {
         }));
     }, []);
 
-    // Reset onboarding (for testing)
+    // Reset onboarding (full reset including state)
     const resetOnboarding = useCallback(() => {
-        localStorage.removeItem(STORAGE_KEY);
+        // Use correct key with userId to actually clear the data
+        const key = userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+        localStorage.removeItem(key);
         setState(INITIAL_ONBOARDING_STATE);
         setIsInitialized(false);
         setTimeout(() => {
             setIsInitialized(true);
             setState(INITIAL_ONBOARDING_STATE); // Force reset
         }, 100);
-    }, []);
+    }, [userId]);
+
+    // Clear onboarding data from localStorage only (for when onboarding is completed)
+    // This doesn't reset state, just clears storage so next login goes to dashboard
+    const clearOnboardingData = useCallback(() => {
+        const key = userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+        localStorage.removeItem(key);
+        console.log(`🧹 Cleared onboarding data from localStorage (key: ${key})`);
+    }, [userId]);
 
     // Check if onboarding is completed
     const isOnboardingComplete = state.step === 'completed' && state.agentCreated;
@@ -458,6 +468,7 @@ export function useOnboarding(userId?: string) {
         connectIntegration,
         disconnectIntegration,
         resetOnboarding,
+        clearOnboardingData, // Clears localStorage only (for completed onboarding)
         startTesting,
         setAgentPrompt, // New export
         addBotMessage,   // Exported for manual message injection

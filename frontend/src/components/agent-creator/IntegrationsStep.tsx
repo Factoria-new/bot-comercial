@@ -24,8 +24,9 @@ interface IntegrationsStepProps {
     userEmail: string;
     wizardData?: Record<string, any>;
     nicheId?: string;
-    isManageMode?: boolean; // NEW
-    onReturnToDashboard?: () => void; // NEW
+    isManageMode?: boolean;
+    onReturnToDashboard?: () => void;
+    onClearOnboarding?: () => void; // Clears localStorage when onboarding is complete
 }
 
 export const IntegrationsStep = ({
@@ -43,7 +44,8 @@ export const IntegrationsStep = ({
     wizardData,
     nicheId,
     isManageMode,
-    onReturnToDashboard
+    onReturnToDashboard,
+    onClearOnboarding
 }: IntegrationsStepProps) => {
     const { updateUserPromptStatus } = useAuth();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
@@ -143,6 +145,12 @@ export const IntegrationsStep = ({
         // to ensure all test and integration steps are completed first
         if (updateUserPromptStatus) {
             updateUserPromptStatus(true);
+        }
+
+        // Clear onboarding localStorage as it's no longer needed
+        // This ensures next login goes directly to Dashboard instead of AgentCreator
+        if (onClearOnboarding) {
+            onClearOnboarding();
         }
 
         onSaveAndFinish();

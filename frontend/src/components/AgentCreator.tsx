@@ -28,6 +28,7 @@ import { LoadingOverlay } from "./agent-creator/LoadingOverlay";
 import BusinessInfoModal, { BusinessInfoData } from "./BusinessInfoModal";
 import { DaySchedule, WeekDay, WEEKDAYS_MAP } from "@/lib/scheduleTypes";
 import LottieLoader from "@/components/LottieLoader";
+import { promptService } from "@/services/promptService";
 
 export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat, integrations }: AgentCreatorProps) {
 
@@ -80,7 +81,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         startTesting,
         sendMessageToLia,
         addUserMessage,
-        resetOnboarding
+        resetOnboarding,
+        clearOnboardingData
     } = useOnboarding(userId);
 
     const { speak, stop: stopTTS, resumeContext, voiceLevel: ttsVoiceLevel } = useTTS();
@@ -155,20 +157,32 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         }
     }, [chatState.step]);
 
-    // SAFETY: Reset stale 'testing' state on mount
-    // If we are in this component, it means Dashboard decided we are in 'onboarding' (no prompt in DB).
-    // If local storage says 'testing', it's a zombie state from a deleted prompt.
+    // SAFETY: Validate onboarding state against backend on mount
+    // If localStorage has prompt/testing state but backend has no prompt, it's zombie data from deleted prompt
     useEffect(() => {
-        // Only run this check once when the component mounts and state is ready
-        if (chatState.step === 'testing') {
-            console.log("🧹 Stale 'testing' state detected on mount. Resetting onboarding.");
-            // We use a small timeout to let initialization settle and ensure we don't conflict with any immediate transitions
-            setTimeout(() => {
-                resetOnboarding();
-                setTestMode(false); // Force visual reset immediately
-            }, 100);
-        }
-    }, []); // Empty dependency = run on mount only
+        const validateOnboardingState = async () => {
+            // If localStorage thinks we have a prompt or are in testing, validate against backend
+            if (chatState.agentConfig?.prompt || chatState.step === 'testing') {
+                try {
+                    const result = await promptService.getPrompt();
+                    // If backend has no prompt but localStorage does, reset everything
+                    if (!result.success || !result.prompt) {
+                        console.log("🧹 Stale onboarding data detected (prompt removed from backend). Resetting...");
+                        resetOnboarding();
+                        setTestMode(false);
+                    }
+                } catch (error) {
+                    console.error("Error validating onboarding state:", error);
+                    // On error, be safe and reset if we're in testing state
+                    if (chatState.step === 'testing') {
+                        resetOnboarding();
+                        setTestMode(false);
+                    }
+                }
+            }
+        };
+        validateOnboardingState();
+    }, []); // Run on mount only
 
     // Loading Animation Cycle
     useEffect(() => {
@@ -677,6 +691,7 @@ ${scheduleStr}
                                 closeWhatsappModal={closeWhatsappModal}
                                 qrCode={whatsappInstances[0]?.qrCode}
                                 userEmail={userEmail}
+                                onClearOnboarding={clearOnboardingData}
                             />
                         )}
                     </AnimatePresence>
