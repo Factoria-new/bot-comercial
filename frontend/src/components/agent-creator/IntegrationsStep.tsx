@@ -99,6 +99,13 @@ export const IntegrationsStep = ({
             }
         }
 
+        // Update Auth Context to reflect that user now has a prompt
+        // This is called here (end of onboarding) rather than in wizard completion
+        // to ensure all test and integration steps are completed first
+        if (updateUserPromptStatus) {
+            updateUserPromptStatus(true);
+        }
+
         onSaveAndFinish();
     };
 

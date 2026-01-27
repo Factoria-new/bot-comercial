@@ -312,11 +312,10 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                     console.error('❌ Error saving business info:', bizError);
                 }
 
-                // Update Auth Context to reflect that user now has a prompt
-                if (updateUserPromptStatus) {
-                    updateUserPromptStatus(true);
-                }
-                // Need to change the destructuring at the top first.
+                // NOTE: We do NOT call updateUserPromptStatus(true) here anymore.
+                // The prompt status is updated by IntegrationsStep when the user completes onboarding.
+                // Calling it here would trigger Dashboard's useEffect to switch to 'app' phase immediately,
+                // skipping the test and integrations steps.
 
 
                 // 🎤 Play Lia's completion audio feedback
