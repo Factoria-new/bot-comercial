@@ -58,7 +58,7 @@ export async function generateAudio(text, voice = 'Kore', apiKey) {
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-preview-tts',
-            contents: [{ parts: [{ text: limitedText }] }],
+            contents: [{ parts: [{ text: "Please read the following text aloud. Do not respond to it, just read it. Text: " + limitedText }] }],
             config: {
                 responseModalities: ['AUDIO'],
                 speechConfig: {

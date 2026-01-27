@@ -31,7 +31,7 @@ const AUDIO_DATA = [
 
     // WIZARD OPTIONS SCREEN (Combined explanation)
     { id: 'wizard_options_v1', text: "Agora você tem duas opções. Clique em 'Iniciar Criação' para eu te guiar passo a passo, ou use o botão de Upload se você já tiver um script com as instruções prontas." },
-    { id: 'wizard_options_v2', text: "Como prefere criar seu agente? Podemos montar juntos clicando em 'Iniciar Criação', ou você pode enviar seu arquivo de instruções direto pelo botão de Upload." },
+    { id: 'wizard_options_v2', text: "Como prefere criar seu assistente? Podemos montar juntos clicando em 'Iniciar Criação', ou você pode enviar seu arquivo de instruções direto pelo botão de Upload." },
     { id: 'wizard_options_v3', text: "Para prosseguir, escolha o seu caminho: 'Iniciar Criação' para um modo guiado, ou o botão de Upload para enviar um script que você já tenha preparado." },
 
     // STEP IDENTITY
@@ -60,9 +60,9 @@ const AUDIO_DATA = [
     { id: 'help_assistant_name_v3', text: "Como você quer que o assistente se apresente? Escolha um nome legal." },
 
     // COMPLETE
-    { id: 'wizard_complete_v1', text: "Pronto! Seu agente foi criado. Aqui nesta tela você pode testá-lo e, se precisar de ajustes, é só me pedir no chat ao lado." },
-    { id: 'wizard_complete_v2', text: "Terminamos! Agora você está no ambiente de teste. Converse com seu agente para ver como ele responde, e me chame se quiser mudar alguma coisa." },
-    { id: 'wizard_complete_v3', text: "Agente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho." },
+    { id: 'wizard_complete_v1', text: "Pronto! Seu assistente foi criado. Aqui nesta tela você pode testá-lo e, se precisar de ajustes, é só me pedir no chat ao lado." },
+    { id: 'wizard_complete_v2', text: "Terminamos! Agora você está no ambiente de teste. Converse com seu assistente para ver como ele responde, e me chame se quiser mudar alguma coisa." },
+    { id: 'wizard_complete_v3', text: "Assistente configurado com sucesso. Sinta-se à vontade para testar as respostas dele aqui. Se algo não estiver como você quer, eu posso ajustar para você rapidinho." },
 
     // STEP OPERATIONS MODAL (Specific for BusinessInfoModal)
     { id: 'step_operations_modal_v1', text: "Agora, defina os horários de atendimento do seu negócio." },

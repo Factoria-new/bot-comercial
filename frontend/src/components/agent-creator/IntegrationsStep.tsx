@@ -7,7 +7,7 @@ import { Integration } from "@/lib/agent-creator.types";
 import { IntegrationCard } from "./IntegrationCard";
 import { WhatsAppConnectionModal } from "./WhatsAppConnectionModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCalendarConnection } from "@/hooks/useCalendarConnection";
+// Google Calendar hook removed
 
 interface IntegrationsStepProps {
     integrations: Integration[];
@@ -40,7 +40,7 @@ export const IntegrationsStep = ({
     handleDisconnect,
     closeWhatsappModal,
     qrCode,
-    userEmail,
+    // userEmail, // Removed from destructuring to avoid unused variable warning
     wizardData,
     nicheId,
     isManageMode,
@@ -49,11 +49,13 @@ export const IntegrationsStep = ({
 }: IntegrationsStepProps) => {
     const { updateUserPromptStatus } = useAuth();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
-    const [integrationsState, setIntegrationsState] = useState<Integration[]>(integrations);
+    const [integrationsState, setIntegrationsState] = useState<Integration[]>(
+        integrations.filter(i => i.id !== 'google_calendar')
+    );
     const [metaLogoAnimation, setMetaLogoAnimation] = useState<any>(null);
 
     useEffect(() => {
-        setIntegrationsState(integrations);
+        setIntegrationsState(integrations.filter(i => i.id !== 'google_calendar'));
     }, [integrations]);
 
     // Fetch Lottie Animation
@@ -64,30 +66,12 @@ export const IntegrationsStep = ({
             .catch(err => console.error("Error loading Meta Lottie:", err));
     }, []);
 
-    const updateIntegrationStatus = (id: string, isConnected: boolean) => {
-        setIntegrationsState(prev => prev.map(int =>
-            int.id === id ? { ...int, connected: isConnected } : int
-        ));
-    };
+    // updateIntegrationStatus removed as it was only used for Calendar
 
-    const {
-        connect: connectCalendar
-    } = useCalendarConnection({
-        sessionId: 'default', // Using default session for main calendar
-        userEmail: userEmail,
-        onConnected: () => {
-            updateIntegrationStatus('google_calendar', true);
-        }
-    });
+    // Calendar connection hook removed
 
     const handleIntegrationClick = async (id: string) => {
-        if (id === 'google_calendar') {
-            setSelectedIntegration(id); // Set selection to show loading if handled by card
-            await connectCalendar();
-            setSelectedIntegration(null); // Clear selection after initiating
-        } else {
-            setSelectedIntegration(id);
-        }
+        setSelectedIntegration(id);
     };
 
     const handleSave = async () => {
@@ -216,7 +200,6 @@ export const IntegrationsStep = ({
             {/* Integration Cards Grid */}
             <div className="flex flex-col md:flex-row justify-center gap-6 w-full">
                 {integrationsState
-                    .filter(integration => integration.id !== 'google_calendar')
                     .map((integration) => (
                         <IntegrationCard
                             key={integration.id}
