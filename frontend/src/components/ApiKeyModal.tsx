@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, ArrowRight, ExternalLink, Volume2, Sparkles, X } from "lucide-react";
+import { Lock, ArrowRight, ExternalLink, Volume2, Sparkles, X, LogOut } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
 import { useAgentAudio } from "@/hooks/useAgentAudio";
 import { getRandomAudio } from "@/lib/audioMappings";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ApiKeyModalProps {
     open: boolean;
@@ -19,6 +20,7 @@ export function ApiKeyModal({ open, onComplete, onClose }: ApiKeyModalProps) {
     const [error, setError] = useState("");
     const [currentAudioText, setCurrentAudioText] = useState<string | null>(null);
     const hasPlayedAudio = useRef(false);
+    const { logout } = useAuth();
 
     // Audio Hooks
     const { stop: stopTTS } = useTTS();
@@ -139,16 +141,29 @@ export function ApiKeyModal({ open, onComplete, onClose }: ApiKeyModalProps) {
                                 </motion.div>
                             )}
                         </div>
-                        {onClose && (
+                        <div className="flex items-center gap-2">
                             <Button
                                 variant="ghost"
-                                size="icon"
-                                onClick={onClose}
-                                className="text-white/50 hover:text-white hover:bg-white/10"
+                                onClick={() => {
+                                    stopIntegrationAudio();
+                                    logout();
+                                }}
+                                className="text-white/50 hover:text-red-400 hover:bg-red-500/10 gap-2"
                             >
-                                <X className="w-5 h-5" />
+                                <LogOut className="w-4 h-4" />
+                                Sair
                             </Button>
-                        )}
+                            {onClose && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={onClose}
+                                    className="text-white/50 hover:text-white hover:bg-white/10"
+                                >
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="p-8 space-y-8">
