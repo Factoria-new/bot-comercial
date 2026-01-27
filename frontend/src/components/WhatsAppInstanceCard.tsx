@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useSocket } from '@/contexts/SocketContext';
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import API_CONFIG from '@/config/api';
-import { auth } from '@/config/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import AgentConfigModal, { AgentConfig } from './AgentConfigModal';
 
 interface WhatsAppInstanceCardProps {
@@ -45,6 +45,7 @@ const WhatsAppInstanceCard = ({
   const { toast } = useToast();
   const { socket } = useSocket();
   const { authenticatedFetch } = useAuthenticatedFetch();
+  const { user } = useAuth();
 
   // Carregar configuração do backend quando a conexão conectar
   useEffect(() => {
@@ -419,7 +420,7 @@ const WhatsAppInstanceCard = ({
         initialConfig={agentConfig}
         instanceName={displayName}
         instanceId={instance.id}
-        userEmail={auth.currentUser?.email || ''}
+        userEmail={user?.email || ''}
       />
     </Card>
   );
