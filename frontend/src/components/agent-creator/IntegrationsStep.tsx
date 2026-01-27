@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
@@ -46,12 +46,26 @@ export const IntegrationsStep = ({
 }: IntegrationsStepProps) => {
     const { updateUserPromptStatus } = useAuth();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+    const [integrationsState, setIntegrationsState] = useState<Integration[]>(integrations);
+
+    useEffect(() => {
+        setIntegrationsState(integrations);
+    }, [integrations]);
+
+    const updateIntegrationStatus = (id: string, isConnected: boolean) => {
+        setIntegrationsState(prev => prev.map(int =>
+            int.id === id ? { ...int, connected: isConnected } : int
+        ));
+    };
 
     const {
         connect: connectCalendar
     } = useCalendarConnection({
         sessionId: 'default', // Using default session for main calendar
         userEmail: userEmail,
+        onConnected: () => {
+            updateIntegrationStatus('google_calendar', true);
+        }
     });
 
     const handleIntegrationClick = async (id: string) => {
@@ -174,7 +188,7 @@ export const IntegrationsStep = ({
 
             {/* Integration Cards Grid */}
             <div className="flex flex-col md:flex-row justify-center gap-6 w-full">
-                {integrations.map((integration) => (
+                {integrationsState.map((integration) => (
                     <IntegrationCard
                         key={integration.id}
                         integration={integration}
@@ -186,7 +200,7 @@ export const IntegrationsStep = ({
             {/* Action Button */}
             <div className="flex justify-center mt-8 gap-4">
                 {/* Only show 'Back' if in manage mode OR if no integrations connected yet */}
-                {(isManageMode || !integrations.some(i => i.connected)) && (
+                {(isManageMode || !integrationsState.some(i => i.connected)) && (
                     <Button
                         variant="ghost"
                         onClick={isManageMode ? onReturnToDashboard : onBack}
@@ -197,7 +211,7 @@ export const IntegrationsStep = ({
                 )}
 
                 {/* Show Save/Finish if connected and NOT in manage mode (or if user wants to explicit save) */}
-                {(!isManageMode && integrations.some(i => i.connected)) && (
+                {(!isManageMode && integrationsState.some(i => i.connected)) && (
                     <Button
                         onClick={handleSave}
                         className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 text-lg rounded-xl"
