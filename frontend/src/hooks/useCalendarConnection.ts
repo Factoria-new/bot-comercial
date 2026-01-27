@@ -64,13 +64,17 @@ export const useCalendarConnection = ({
             const data = await response.json();
 
             // Backend returns: { success: true, connected: boolean, ... }
-            setIsConnected(data.connected || false);
+            const isConnectedNow = data.connected || false;
+            setIsConnected(isConnectedNow);
 
-            if (data.connected && isConnecting) {
+            if (isConnectedNow && isConnecting) {
+                // If we were connecting and now we are connected, triggers might handle this outside
                 setIsConnecting(false);
             }
+            return isConnectedNow;
         } catch (error) {
             console.error('Erro ao verificar status do Calendar:', error);
+            return false;
         } finally {
             if (!isConnecting) setIsLoading(false);
         }
@@ -142,16 +146,26 @@ export const useCalendarConnection = ({
                     if (isWindowClosed) {
                         clearInterval(checkInterval);
                         // Final check
-                        await checkStatus();
+                        const finalStatus = await checkStatus();
+                        if (finalStatus) {
+                            if (onConnected) onConnected();
+                            setIsConnected(true);
+                        }
                         setIsConnecting(false);
                     } else {
                         // Poll backend for status
                         try {
-                            const statusUrl = `${API_CONFIG.BASE_URL}/api/google-calendar/status?userId=${userEmail}`;
-                            const statusResponse = await authenticatedFetch(statusUrl);
-                            const statusData = await statusResponse.json();
+                            // Use checkStatus to unify logic if possible, or keep direct fetch if checkStatus behavior (loading) is unwanted
+                            // checkStatus sets isLoading, which might flicker. But we entered IsConnecting=true.
+                            // To avoid flicker, we can do direct fetch or update checkStatus.
+                            // Keeping direct fetch for polling loop to avoid side effects of checkStatus (like setIsLoading globally if we wanted)
+                            // But actually checkStatus has `if (!isConnecting) setIsLoading(true)`. 
+                            // Since isConnecting IS true here, checkStatus WON'T set loading.
+                            // So we can use checkStatus!
 
-                            if (statusData.connected) {
+                            const isNowConnected = await checkStatus();
+
+                            if (isNowConnected) {
                                 clearInterval(checkInterval);
                                 try { authWindow?.close(); } catch (e) { }
 

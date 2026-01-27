@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
+import Lottie from "lottie-react"; // Import Lottie
 import { Integration } from "@/lib/agent-creator.types";
 import { IntegrationCard } from "./IntegrationCard";
 import { WhatsAppConnectionModal } from "./WhatsAppConnectionModal";
@@ -47,10 +48,19 @@ export const IntegrationsStep = ({
     const { updateUserPromptStatus } = useAuth();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
     const [integrationsState, setIntegrationsState] = useState<Integration[]>(integrations);
+    const [metaLogoAnimation, setMetaLogoAnimation] = useState<any>(null);
 
     useEffect(() => {
         setIntegrationsState(integrations);
     }, [integrations]);
+
+    // Fetch Lottie Animation
+    useEffect(() => {
+        fetch('/lotties/meta-ai-logo.json')
+            .then(res => res.json())
+            .then(data => setMetaLogoAnimation(data))
+            .catch(err => console.error("Error loading Meta Lottie:", err));
+    }, []);
 
     const updateIntegrationStatus = (id: string, isConnected: boolean) => {
         setIntegrationsState(prev => prev.map(int =>
@@ -154,9 +164,18 @@ export const IntegrationsStep = ({
                     transition={{ delay: 0.3 }}
                     className="text-center mb-12 max-w-2xl mx-auto"
                 >
-                    <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6">
-                        L
+                    {/* Replaced Green L with Meta Lottie */}
+                    <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                        {metaLogoAnimation ? (
+                            <Lottie animationData={metaLogoAnimation} loop={true} />
+                        ) : (
+                            // Fallback while loading (or keep empty)
+                            <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl">
+                                L
+                            </div>
+                        )}
                     </div>
+
                     <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-white leading-relaxed mb-6">
                         Parabéns! Seu assistente está pronto! 🎉
                     </h1>
