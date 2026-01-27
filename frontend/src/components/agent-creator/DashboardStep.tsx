@@ -75,6 +75,24 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
         };
     }, [socket]);
 
+    // Listen for Google Calendar connection via postMessage (from OAuth popup)
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'google-calendar-connected' && event.data?.success) {
+                console.log('📅 DashboardStep: Google Calendar connected via postMessage');
+                setLocalIntegrations(prev => prev.map(integration => {
+                    if (integration.id === 'google_calendar') {
+                        return { ...integration, connected: true };
+                    }
+                    return integration;
+                }));
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
     return (
         <motion.div
             key="dashboard"
