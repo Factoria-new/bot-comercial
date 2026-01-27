@@ -6,7 +6,6 @@ import { Integration } from "@/lib/agent-creator.types";
 import { IntegrationCard } from "./IntegrationCard";
 import { WhatsAppConnectionModal } from "./WhatsAppConnectionModal";
 import { useAuth } from "@/contexts/AuthContext";
-import CalendarSettingsModal from "@/components/CalendarSettingsModal";
 import { useCalendarConnection } from "@/hooks/useCalendarConnection";
 
 interface IntegrationsStepProps {
@@ -48,18 +47,21 @@ export const IntegrationsStep = ({
     const { updateUserPromptStatus } = useAuth();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
 
-    // Google Calendar Connection Hook
     const {
-        connect: connectCalendar,
-        savedSettings: calendarSettings,
-        isConnecting: isCalendarConnecting
+        connect: connectCalendar
     } = useCalendarConnection({
         sessionId: 'default', // Using default session for main calendar
         userEmail: userEmail,
     });
 
-    const handleIntegrationClick = (id: string) => {
-        setSelectedIntegration(id);
+    const handleIntegrationClick = async (id: string) => {
+        if (id === 'google_calendar') {
+            setSelectedIntegration(id); // Set selection to show loading if handled by card
+            await connectCalendar();
+            setSelectedIntegration(null); // Clear selection after initiating
+        } else {
+            setSelectedIntegration(id);
+        }
     };
 
     const handleSave = async () => {
@@ -225,19 +227,19 @@ export const IntegrationsStep = ({
                 onDisconnect={handleDisconnect}
             />
 
-            {/* Google Calendar Settings Modal */}
+            {/* Google Calendar Settings Modal - REMOVED for direct connection flow */}
+            {/* 
             <CalendarSettingsModal
                 isOpen={selectedIntegration === 'google_calendar'}
                 onClose={() => setSelectedIntegration(null)}
                 onConfirm={async (settings) => {
                     setSelectedIntegration(null);
-                    // Use a slightly different approach since we need to pass userEmail properly
-                    // The hook is initialized at top level, so we just call connect
                     await connectCalendar(settings);
                 }}
                 isLoading={isCalendarConnecting}
                 initialSettings={calendarSettings}
             />
+            */}
         </motion.div>
     );
 };

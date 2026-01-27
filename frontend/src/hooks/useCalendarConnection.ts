@@ -2,19 +2,19 @@
  * useCalendarConnection Hook
  * 
  * Centralizes Google Calendar OAuth connection logic.
- * Previously duplicated in CalendarIntegration.tsx and AgentConfigModal.tsx
+ * Updated to match backend/src/routes/googleCalendarRoutes.js
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import API_CONFIG from '@/config/api';
-import { CalendarSettings } from '@/lib/scheduleTypes';
+// import { CalendarSettings } from '@/lib/scheduleTypes'; // Not used in auth flow anymore
 
 interface UseCalendarConnectionOptions {
-    /** Session ID for calendar connection (e.g., 'instance_123' or 'user_xxx') */
+    /** Session ID (not used strictly for auth-url but good for context if needed later) */
     sessionId: string;
-    /** User email for multi-tenant identification */
+    /** User email is REQUIRED for the backend endpoint */
     userEmail?: string;
     /** Whether to check status on mount */
     autoCheck?: boolean;
@@ -25,20 +25,12 @@ interface UseCalendarConnectionOptions {
 }
 
 interface UseCalendarConnectionReturn {
-    /** Whether calendar is connected */
     isConnected: boolean;
-    /** Whether checking connection status */
     isLoading: boolean;
-    /** Whether OAuth flow is in progress */
     isConnecting: boolean;
-    /** Saved calendar settings from the server */
-    savedSettings: CalendarSettings | null;
-    /** Initiate connection (opens settings modal flow) */
-    connect: (settings: CalendarSettings) => Promise<void>;
-    /** Disconnect calendar */
+    connect: () => Promise<void>;
     disconnect: () => Promise<void>;
-    /** Manually check connection status */
-    checkStatus: (connectionId?: string) => Promise<void>;
+    checkStatus: () => Promise<void>;
 }
 
 export const useCalendarConnection = ({
@@ -54,33 +46,25 @@ export const useCalendarConnection = ({
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [savedSettings, setSavedSettings] = useState<CalendarSettings | null>(null);
 
     /**
      * Check the current connection status with the backend
      */
-    const checkStatus = useCallback(async (connectionId?: string) => {
-        if (!sessionId) return;
+    const checkStatus = useCallback(async () => {
+        if (!userEmail) return;
 
-        setIsLoading(true);
+        // Don't set global loading if we are just polling (isConnecting is true)
+        if (!isConnecting) setIsLoading(true);
+
         try {
-            let url = `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}`;
-            const params = new URLSearchParams();
-
-            if (connectionId) params.append('connectionId', connectionId);
-            if (userEmail) params.append('userId', userEmail);
-
-            if (params.toString()) {
-                url += `?${params.toString()}`;
-            }
+            // Updated endpoint matches router code: router.get('/status', ...)
+            const url = `${API_CONFIG.BASE_URL}/api/google-calendar/status?userId=${userEmail}`;
 
             const response = await authenticatedFetch(url);
             const data = await response.json();
 
+            // Backend returns: { success: true, connected: boolean, ... }
             setIsConnected(data.connected || false);
-            if (data.settings) {
-                setSavedSettings(data.settings);
-            }
 
             if (data.connected && isConnecting) {
                 setIsConnecting(false);
@@ -88,46 +72,35 @@ export const useCalendarConnection = ({
         } catch (error) {
             console.error('Erro ao verificar status do Calendar:', error);
         } finally {
-            setIsLoading(false);
+            if (!isConnecting) setIsLoading(false);
         }
-    }, [sessionId, userEmail, authenticatedFetch, isConnecting]);
+    }, [userEmail, authenticatedFetch, isConnecting]);
 
     /**
      * Initiate the OAuth connection flow
      */
-    const connect = useCallback(async (settings: CalendarSettings) => {
-        if (!sessionId) return;
+    const connect = useCallback(async () => {
+        if (!userEmail) {
+            toast({
+                title: "Erro",
+                description: "Email do usuário não identificado.",
+                variant: "destructive"
+            });
+            return;
+        }
 
         setIsConnecting(true);
 
         try {
-            const response = await authenticatedFetch(`${API_CONFIG.BASE_URL}/api/calendar/connect`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    sessionId,
-                    userId: userEmail,
-                    settings
-                }),
-            });
+            // Updated endpoint matches router code: router.get('/auth-url', ...)
+            const url = `${API_CONFIG.BASE_URL}/api/google-calendar/auth-url?userId=${userEmail}`;
 
+            const response = await authenticatedFetch(url);
             const data = await response.json();
 
-            // Already connected case
-            if (data.alreadyConnected) {
-                setIsConnected(true);
-                setIsConnecting(false);
-                setSavedSettings(settings);
-                toast({
-                    title: "Conexão Reativada",
-                    description: "Sua conta do Google Calendar foi reativada com sucesso.",
-                });
-                await checkStatus(data.connectionId);
-                onConnected?.();
-                return;
-            }
+            // data: { success: true, authUrl: string, connectionId: string }
 
-            // OAuth flow case
-            if (data.authUrl && data.connectionId) {
+            if (data.success && data.authUrl) {
                 // Open OAuth popup
                 const width = 600;
                 const height = 700;
@@ -168,14 +141,13 @@ export const useCalendarConnection = ({
 
                     if (isWindowClosed) {
                         clearInterval(checkInterval);
-                        await checkStatus(data.connectionId);
+                        // Final check
+                        await checkStatus();
                         setIsConnecting(false);
                     } else {
                         // Poll backend for status
                         try {
-                            let statusUrl = `${API_CONFIG.BASE_URL}/api/calendar/status/${sessionId}?connectionId=${data.connectionId}`;
-                            if (userEmail) statusUrl += `&userId=${userEmail}`;
-
+                            const statusUrl = `${API_CONFIG.BASE_URL}/api/google-calendar/status?userId=${userEmail}`;
                             const statusResponse = await authenticatedFetch(statusUrl);
                             const statusData = await statusResponse.json();
 
@@ -185,7 +157,6 @@ export const useCalendarConnection = ({
 
                                 setIsConnected(true);
                                 setIsConnecting(false);
-                                setSavedSettings(settings);
 
                                 toast({
                                     title: "Conectado!",
@@ -200,31 +171,30 @@ export const useCalendarConnection = ({
                     }
                 }, POLL_INTERVAL_MS);
             } else {
-                throw new Error('URL de autenticação não recebida');
+                throw new Error(data.error || 'URL de autenticação não recebida');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Erro ao conectar Calendar:', error);
             setIsConnecting(false);
             toast({
                 title: "Erro",
-                description: "Falha ao iniciar conexão. Verifique o backend.",
+                description: error.message || "Falha ao iniciar conexão.",
                 variant: "destructive"
             });
         }
-    }, [sessionId, userEmail, authenticatedFetch, toast, checkStatus, onConnected]);
+    }, [userEmail, authenticatedFetch, toast, checkStatus, onConnected]);
 
     /**
      * Disconnect the calendar
      */
     const disconnect = useCallback(async () => {
-        if (!sessionId) return;
+        if (!userEmail) return;
 
         try {
-            let disconnectUrl = `${API_CONFIG.BASE_URL}/api/calendar/disconnect/${sessionId}`;
-            if (userEmail) disconnectUrl += `?userId=${userEmail}`;
-
-            const response = await authenticatedFetch(disconnectUrl, {
-                method: 'DELETE',
+            const url = `${API_CONFIG.BASE_URL}/api/google-calendar/disconnect`;
+            const response = await authenticatedFetch(url, {
+                method: 'POST',
+                body: JSON.stringify({ userId: userEmail }),
             });
 
             if (!response.ok) {
@@ -232,7 +202,6 @@ export const useCalendarConnection = ({
             }
 
             setIsConnected(false);
-            setSavedSettings(null);
 
             toast({
                 title: "Desconectado",
@@ -248,42 +217,19 @@ export const useCalendarConnection = ({
                 variant: "destructive"
             });
         }
-    }, [sessionId, userEmail, authenticatedFetch, toast, onDisconnected]);
+    }, [userEmail, authenticatedFetch, toast, onDisconnected]);
 
     // Check status on mount if autoCheck is enabled
     useEffect(() => {
-        if (autoCheck && sessionId) {
+        if (autoCheck && userEmail) {
             checkStatus();
         }
-    }, [autoCheck, sessionId, checkStatus]);
-
-    // Handle URL callback parameters
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const calendarParam = urlParams.get('calendar');
-
-        if (calendarParam === 'connected') {
-            toast({
-                title: "Google Calendar Conectado!",
-                description: "Sua conta foi conectada com sucesso.",
-            });
-            window.history.replaceState({}, '', window.location.pathname);
-            checkStatus();
-        } else if (calendarParam === 'error') {
-            toast({
-                title: "Erro na Conexão",
-                description: "Não foi possível conectar ao Google Calendar. Tente novamente.",
-                variant: "destructive"
-            });
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-    }, []);
+    }, [autoCheck, userEmail, checkStatus]);
 
     return {
         isConnected,
         isLoading,
         isConnecting,
-        savedSettings,
         connect,
         disconnect,
         checkStatus
