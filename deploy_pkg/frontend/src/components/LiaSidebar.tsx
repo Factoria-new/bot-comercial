@@ -191,13 +191,7 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 relative z-10 custom-scrollbar">
                             {/* Welcome Message */}
                             <div className="flex gap-3">
-                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-                                    {metaAiData ? (
-                                        <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
-                                    ) : (
-                                        <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white text-sm">L</div>
-                                    )}
-                                </div>
+
                                 <div className="bg-white/10 rounded-2xl rounded-tl-none p-4 max-w-[85%] border border-white/5">
                                     <p className="text-white text-sm leading-relaxed">
                                         Olá! 👋 Estou aqui para te ajudar a entender suas métricas.
@@ -222,15 +216,7 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                             {/* Dynamic Messages */}
                             {chatMessages.map((msg, idx) => (
                                 <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                                    {msg.role === 'lia' && (
-                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-                                            {metaAiData ? (
-                                                <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
-                                            ) : (
-                                                <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white text-xs">L</div>
-                                            )}
-                                        </div>
-                                    )}
+
                                     <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${msg.role === 'user'
                                         ? 'bg-emerald-600 text-white rounded-tr-none'
                                         : 'bg-white/10 text-white rounded-tl-none border border-white/5'
@@ -250,13 +236,7 @@ const LiaSidebar = ({ isOpen, onClose, metrics }: LiaSidebarProps) => {
                                     </div>
                                 ) : (
                                     <div className="flex gap-3">
-                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-                                            {metaAiData ? (
-                                                <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
-                                            ) : (
-                                                <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white text-xs">L</div>
-                                            )}
-                                        </div>
+
                                         <div className="bg-white/10 rounded-2xl rounded-tl-none px-4 py-3 border border-white/5">
                                             <div className="flex gap-1">
                                                 <span className="w-2 h-2 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

@@ -470,6 +470,19 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                     console.log(`📝 Session data updated for ${sessionId} with user: ${sock.user?.id}`);
                     console.log(`📝 Session userId: ${sessionData.userId}, sock.user.id: ${sock.user?.id}`);
 
+                    // ✨ NEW: Fetch and cache Gemini API Key for this session
+                    try {
+                        const config = await getSessionConfig(sessionId);
+                        if (config && config.apiKey) {
+                            geminiApiKeys.set(sessionId, config.apiKey);
+                            console.log(`🔑 Gemini API Key cached for session ${sessionId}`);
+                        } else {
+                            console.warn(`⚠️ No Gemini API Key found for session ${sessionId} on connect`);
+                        }
+                    } catch (configError) {
+                        console.error(`❌ Error fetching config for API Key on connect:`, configError);
+                    }
+
                     // Atualizar phoneNumber na instância do banco de dados
                     if (sessionData.userId && sock.user?.id) {
                         const connectedPhoneNumber = sock.user.id.split(':')[0];

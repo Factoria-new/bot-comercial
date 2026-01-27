@@ -40,7 +40,8 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ sessionId = '1' }) => {
     useEffect(() => {
         const loadConfig = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003'}/api/whatsapp/config/${sessionId}`);
+                const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+                const res = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`);
                 const data = await res.json();
                 if (data.success && data.config) {
                     setTtsEnabled(data.config.ttsEnabled || false);
@@ -57,7 +58,8 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ sessionId = '1' }) => {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003'}/api/whatsapp/config/${sessionId}`, {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const res = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ttsEnabled, ttsVoice, ttsRules })

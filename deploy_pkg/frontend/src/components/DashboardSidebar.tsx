@@ -18,11 +18,17 @@ import {
     Sparkles,
     Info,
     LayoutDashboard,
+    Key,
+    ExternalLink,
 } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
+
+// import { ApiKeyModal } from "./ApiKeyModal";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Integration } from "@/types/onboarding";
-import { BrandIcons, FacebookIcon, InstagramIcon } from "@/components/ui/brand-icons";
+import { BrandIcons } from "@/components/ui/brand-icons";
 import { Switch } from "@/components/ui/switch";
 import {
     Tooltip,
@@ -101,6 +107,11 @@ export default function DashboardSidebar({
     const [successAnimationData, setSuccessAnimationData] = useState<any>(null);
     const [showSuccess, setShowSuccess] = useState(false);
 
+    // API Key State
+    const [apiKeyExpanded, setApiKeyExpanded] = useState(false);
+    const [apiKeyInput, setApiKeyInput] = useState("");
+    const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+
     useEffect(() => {
         fetch('/lotties/success.json')
             .then(res => res.json())
@@ -154,7 +165,7 @@ export default function DashboardSidebar({
 
     const loadTtsConfig = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`);
             if (response.ok) {
                 const data = await response.json();
@@ -190,7 +201,7 @@ export default function DashboardSidebar({
         if (!isPro) return;
         setIsSavingTts(true);
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -236,6 +247,51 @@ export default function DashboardSidebar({
         }
     }, [forceExpandIntegrations, isOpen]);
 
+    const handleSaveApiKey = async () => {
+        if (!apiKeyInput.trim()) return;
+        setIsSavingApiKey(true);
+        try {
+            const token = localStorage.getItem('token');
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/users/apikey`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ apiKey: apiKeyInput })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                }
+
+                toast({
+                    title: "Sucesso",
+                    description: "Chave de API salva com sucesso.",
+                    className: "bg-emerald-500 text-white border-0"
+                });
+                setApiKeyInput("");
+                setApiKeyExpanded(false);
+                localStorage.setItem("user_gemini_api_key", apiKeyInput);
+            } else {
+                throw new Error(data.error || 'Falha ao salvar');
+            }
+        } catch (error: any) {
+            console.error(error);
+            toast({
+                title: "Erro",
+                description: error.message || "Erro ao salvar chave de API.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSavingApiKey(false);
+        }
+    };
+
 
 
     const menuItems = [
@@ -269,6 +325,7 @@ export default function DashboardSidebar({
                 onClose();
             }
         },
+
     ];
 
     return (
@@ -342,7 +399,7 @@ export default function DashboardSidebar({
                 {/* Menu Items - Scrollable */}
                 <nav className="flex-1 overflow-y-auto p-3 space-y-1">
                     {/* Regular menu items */}
-                    {menuItems.slice(0, 2).map((item) => (
+                    {menuItems.slice(0, 3).map((item) => (
                         <button
                             key={item.id}
                             onClick={() => {
@@ -428,6 +485,8 @@ export default function DashboardSidebar({
                             <div className="pl-4 pr-2 py-2 space-y-1">
                                 {integrations.map((integration) => {
                                     const Icon = BrandIcons[integration.icon];
+                                    const isComingSoon = integration.isComingSoon;
+
                                     return (
                                         <div
                                             key={integration.id}
@@ -436,12 +495,17 @@ export default function DashboardSidebar({
                                                 "bg-white/5 border",
                                                 integration.connected
                                                     ? "border-emerald-500/30"
-                                                    : "border-white/10"
+                                                    : "border-white/10",
+                                                isComingSoon && "opacity-60 cursor-default"
                                             )}
                                         >
                                             <button
-                                                onClick={() => !integration.connected && onIntegrationClick?.(integration.id)}
-                                                className="flex-1 flex items-center gap-3 text-left w-full min-w-0"
+                                                onClick={() => !integration.connected && !isComingSoon && onIntegrationClick?.(integration.id)}
+                                                className={cn(
+                                                    "flex-1 flex items-center gap-3 text-left w-full min-w-0",
+                                                    isComingSoon ? "cursor-default" : "cursor-pointer"
+                                                )}
+                                                disabled={isComingSoon}
                                             >
                                                 <div
                                                     className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -454,7 +518,7 @@ export default function DashboardSidebar({
                                                         {integration.name}
                                                     </p>
                                                     <p className="text-[10px] text-white/50">
-                                                        {integration.connected ? "Conectado" : "Conectar"}
+                                                        {integration.connected ? "Conectado" : (isComingSoon ? "Em breve" : "Conectar")}
                                                     </p>
                                                 </div>
                                             </button>
@@ -471,37 +535,17 @@ export default function DashboardSidebar({
                                                     <LogOut className="w-4 h-4 text-red-400 group-hover/disconnect:text-red-300" />
                                                 </button>
                                             ) : (
-                                                <button
-                                                    onClick={() => onIntegrationClick?.(integration.id)}
-                                                >
-                                                    <ChevronRight className="w-3.5 h-3.5 text-white/40 hover:text-white/60" />
-                                                </button>
+                                                !isComingSoon && (
+                                                    <button
+                                                        onClick={() => onIntegrationClick?.(integration.id)}
+                                                    >
+                                                        <ChevronRight className="w-3.5 h-3.5 text-white/40 hover:text-white/60" />
+                                                    </button>
+                                                )
                                             )}
                                         </div>
                                     );
                                 })}
-
-                                {/* Facebook (Coming Soon) */}
-                                <div className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 opacity-60">
-                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#1877F2]">
-                                        <FacebookIcon className="w-3.5 h-3.5 text-white" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-medium text-white truncate">Facebook</p>
-                                        <p className="text-[10px] text-white/50">Em breve</p>
-                                    </div>
-                                </div>
-
-                                {/* Instagram (Coming Soon) */}
-                                <div className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 opacity-60">
-                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]">
-                                        <InstagramIcon className="w-3.5 h-3.5 text-white" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-medium text-white truncate">Instagram</p>
-                                        <p className="text-[10px] text-white/50">Em breve</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -755,7 +799,7 @@ export default function DashboardSidebar({
                                                         const handleSaveTts = async () => {
                                                             setIsSavingTts(true);
                                                             try {
-                                                                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+                                                                const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
                                                                 const response = await fetch(`${backendUrl}/api/whatsapp/config/${sessionId}`, {
                                                                     method: 'POST',
                                                                     headers: { 'Content-Type': 'application/json' },
@@ -799,8 +843,79 @@ export default function DashboardSidebar({
                         </div>
                     </div>
 
+                    {/* API Key Section */}
+                    <div>
+                        <button
+                            onClick={() => setApiKeyExpanded(!apiKeyExpanded)}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                                "group hover:bg-white/10",
+                                apiKeyExpanded
+                                    ? "bg-emerald-500/20 text-emerald-400"
+                                    : "text-white/80 hover:text-white"
+                            )}
+                        >
+                            <Key
+                                className={cn(
+                                    "w-5 h-5 transition-colors",
+                                    apiKeyExpanded
+                                        ? "text-emerald-400"
+                                        : "text-white/50 group-hover:text-white/80"
+                                )}
+                            />
+                            <div className="flex-1 text-left">
+                                <p className="text-sm font-medium">Minha Chave de API</p>
+                                <p className="text-xs text-white/40">Gerenciar Gemini</p>
+                            </div>
+                            {apiKeyExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white/60" />
+                            )}
+                        </button>
+
+                        <div
+                            className={cn(
+                                "overflow-hidden transition-all duration-300",
+                                apiKeyExpanded ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"
+                            )}
+                        >
+                            <div className="pl-4 pr-2 py-3 space-y-2">
+                                <div className="px-3 space-y-3">
+                                    <div className="relative">
+                                        <Input
+                                            type="password"
+                                            placeholder="Cole sua chave aqui..."
+                                            value={apiKeyInput}
+                                            onChange={(e) => setApiKeyInput(e.target.value)}
+                                            className="bg-black/20 border-white/10 text-white text-xs h-9 pr-2"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <a
+                                            href="https://aistudio.google.com/app/apikey"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[10px] text-indigo-300 hover:text-indigo-200 flex items-center gap-1 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20"
+                                        >
+                                            Gerar Chave <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                        <Button
+                                            size="sm"
+                                            onClick={handleSaveApiKey}
+                                            disabled={!apiKeyInput || isSavingApiKey}
+                                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500"
+                                        >
+                                            {isSavingApiKey ? "Salvar" : "Salvar"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Rest of menu items */}
-                    {menuItems.slice(2).map((item) => (
+                    {menuItems.slice(3).map((item) => (
                         <button
                             key={item.id}
                             onClick={() => {

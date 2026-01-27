@@ -113,18 +113,20 @@ const BUFFER_DELAY_MS = 10000;
  * Transcribe audio using Gemini API
  * @param {Buffer} audioBuffer - The audio file buffer
  * @param {string} mimeType - MIME type of the audio (e.g., 'audio/ogg; codecs=opus')
+ * @param {string} [apiKey] - Specific API Key to use (optional, falls back to env var)
  * @returns {Promise<string>} - Transcribed text
  */
-async function transcribeAudio(audioBuffer, mimeType = 'audio/ogg') {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+async function transcribeAudio(audioBuffer, mimeType = 'audio/ogg', apiKey = null) {
+    const finalApiKey = apiKey || process.env.GEMINI_API_KEY;
+
+    if (!finalApiKey) {
         console.error('❌ GEMINI_API_KEY not configured for audio transcription');
         return '[Áudio não transcrito - API Key ausente]';
     }
 
     try {
         console.log('🎤 Transcribing audio with Gemini 2.5 Flash...');
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const genAI = new GoogleGenerativeAI(finalApiKey);
         // Using gemini-2.5-flash for native audio support
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -147,6 +149,10 @@ async function transcribeAudio(audioBuffer, mimeType = 'audio/ogg') {
         return transcription;
     } catch (error) {
         console.error('❌ Audio transcription error:', error.message);
+        // Better error message for rate limits
+        if (error.message.includes('429')) {
+            return '[Erro: Limite de cota da API de transcrição excedido]';
+        }
         return '[Erro ao transcrever áudio]';
     }
 }
@@ -759,8 +765,18 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                         const mimeType = msg.message.audioMessage.mimetype || 'audio/ogg';
                         console.log(`📥 Audio downloaded: ${audioBuffer.length} bytes, type: ${mimeType}`);
 
+                        // Get session config to access user's API Key
+                        const config = await getSessionConfig(sessionId);
+                        const userApiKey = config?.apiKey;
+
+                        if (userApiKey) {
+                            console.log(`🔑 Using User API Key for transcription (ends with ${userApiKey.slice(-4)})`);
+                        } else {
+                            console.log(`⚠️ No User API Key found, falling back to system default`);
+                        }
+
                         // Transcribe using Gemini
-                        messageText = await transcribeAudio(audioBuffer, mimeType);
+                        messageText = await transcribeAudio(audioBuffer, mimeType, userApiKey);
                     } catch (error) {
                         console.error('❌ Failed to process audio:', error.message);
                         messageText = '[Áudio recebido mas não foi possível transcrever]';

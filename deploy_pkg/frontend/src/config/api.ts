@@ -1,11 +1,8 @@
 // Configuração da API
 const API_CONFIG = {
   // URL base do backend - usa variável de ambiente ou domínio de produção
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3003',
-
-  // URL para Socket.IO
-  SOCKET_URL: import.meta.env.VITE_API_URL || 'http://localhost:3003',
-
+  BASE_URL: import.meta.env.VITE_API_URL || 'https://api.cajiassist.com',
+  SOCKET_URL: import.meta.env.VITE_API_URL || 'https://api.cajiassist.com',
   // Endpoints da API
   ENDPOINTS: {
     HEALTH: '/health',
@@ -17,4 +14,4 @@ const API_CONFIG = {
   }
 };
 
-export default API_CONFIG; 
+export default API_CONFIG;

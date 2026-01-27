@@ -2,6 +2,8 @@ import { ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatMessages from "../chat/ChatMessages";
 import { AgentMessage } from "@/lib/agent-creator.types";
+import Lottie from "lottie-react";
+import { useState, useEffect } from "react";
 
 interface LiaChatPanelProps {
     messages: any[]; // ChatState messages
@@ -18,6 +20,15 @@ export const LiaChatPanel = ({
     onSwitchToAgent,
     onFinish
 }: LiaChatPanelProps) => {
+
+    const [metaAiData, setMetaAiData] = useState<any>(null);
+
+    useEffect(() => {
+        fetch('/lotties/meta-ai-logo.json')
+            .then(res => res.json())
+            .then(data => setMetaAiData(data))
+            .catch(err => console.error("Failed to load Meta AI Lottie:", err));
+    }, []);
 
     const filteredMessages = messages.filter(m => {
         if (m.content.startsWith('[SYSTEM]')) return false;
@@ -51,8 +62,14 @@ export const LiaChatPanel = ({
 
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
-                    <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xl">
-                        L
+                    <div className="w-12 h-12 rounded-full overflow-hidden relative">
+                        {metaAiData ? (
+                            <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
+                        ) : (
+                            <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xl">
+                                L
+                            </div>
+                        )}
                     </div>
                     <div>
                         <h3 className="font-semibold text-white">Lia</h3>

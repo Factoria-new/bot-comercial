@@ -8,6 +8,8 @@
 import logger from '../config/logger.js';
 import prisma from '../config/prisma.js';
 
+import { decrypt } from '../utils/encryption.js';
+
 // Default configuration template
 const DEFAULT_CONFIG = {
     name: '',
@@ -72,14 +74,38 @@ export async function getSessionConfig(sessionId) {
     const user = await findUserBySessionId(sessionId);
 
     if (!user) {
+        logger.warn(`⚠️ [DEBUG] getSessionConfig: User NOT found for session ${sessionId}`);
         logger.warn(`⚠️ No user found for session ${sessionId}, returning defaults`);
         return { ...DEFAULT_CONFIG };
+    }
+
+    logger.info(`✅ [DEBUG] getSessionConfig: User found for ${sessionId} (ID: ${user.id})`);
+    if (user.geminiApiKey) {
+        logger.info(`🔑 [DEBUG] User has geminiApiKey (length: ${user.geminiApiKey.length})`);
+    } else {
+        logger.warn(`⚠️ [DEBUG] User has NO geminiApiKey`);
+    }
+
+    // Decrypt API Key if present
+    let decryptedApiKey = null;
+    if (user.geminiApiKey) {
+        try {
+            decryptedApiKey = decrypt(user.geminiApiKey);
+            if (decryptedApiKey) {
+                logger.info(`✅ [DEBUG] API Key decrypted successfully (starts with: ${decryptedApiKey.substring(0, 4)}...)`);
+            } else {
+                logger.error(`❌ [DEBUG] Decryption returned empty string`);
+            }
+        } catch (error) {
+            logger.error(`❌ [DEBUG] Error decrypting API Key for user ${user.id}:`, error.message);
+        }
     }
 
     // Map DB fields to the expected config object format
     return {
         ...DEFAULT_CONFIG,
         name: user.displayName || '',
+        apiKey: decryptedApiKey || DEFAULT_CONFIG.apiKey,
         ttsEnabled: user.ttsEnabled,
         ttsVoice: user.ttsVoice,
         ttsRules: user.ttsRules || DEFAULT_CONFIG.ttsRules,

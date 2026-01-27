@@ -116,7 +116,7 @@ const MeuPrompt = () => {
         formData.append('file', file);
 
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/agent/upload-prompt`, {
                 method: 'POST',
                 body: formData

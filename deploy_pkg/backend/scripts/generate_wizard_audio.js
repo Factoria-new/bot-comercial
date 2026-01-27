@@ -29,6 +29,11 @@ const AUDIO_DATA = [
     { id: 'intro_wizard_v2', text: "Oi! Que bom te ver. Vamos criar um assistente incrível para você." },
     { id: 'intro_wizard_v3', text: "Bem-vindo! Eu sou a Lia. Vou te guiar nesse processo rápido." },
 
+    // WIZARD OPTIONS SCREEN (Combined explanation)
+    { id: 'wizard_options_v1', text: "Agora você tem duas opções. Clique em 'Iniciar Criação' para eu te guiar passo a passo, ou use o botão de Upload se você já tiver um script com as instruções prontas." },
+    { id: 'wizard_options_v2', text: "Como prefere criar seu agente? Podemos montar juntos clicando em 'Iniciar Criação', ou você pode enviar seu arquivo de instruções direto pelo botão de Upload." },
+    { id: 'wizard_options_v3', text: "Para prosseguir, escolha o seu caminho: 'Iniciar Criação' para um modo guiado, ou o botão de Upload para enviar um script que você já tenha preparado." },
+
     // STEP IDENTITY
     { id: 'step_identity_v1', text: "Primeiro, me conte um pouco sobre sua empresa e quem será o assistente." },
     { id: 'step_identity_v2', text: "Vamos começar pelo básico: Qual o nome do seu negócio?" },

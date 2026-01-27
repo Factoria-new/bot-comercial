@@ -9,7 +9,7 @@ import Layout from '@/components/Layout';
 import LottieLoader from '@/components/LottieLoader';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, updateUserPromptStatus } = useAuth();
 
   // Phase: 'onboarding' = criação do agente | 'app' = uso diário
   const [phase, setPhase] = useState<'loading' | 'onboarding' | 'app'>('loading');
@@ -17,6 +17,7 @@ const Dashboard = () => {
   // Integrations state for DashboardStep
   const { integrations } = useIntegrations();
   const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // =====================
   // INITIALIZATION EFFECT
@@ -25,28 +26,35 @@ const Dashboard = () => {
     const initialize = async () => {
       if (!user) return;
 
-      // Check if user has a prompt (completed onboarding)
+      // 1. Trust AuthContext if it says true
       if (user.hasPrompt) {
-        console.log("✅ User has prompt, loading from database...");
-        try {
-          const result = await promptService.getPrompt();
-          if (result.success && result.prompt) {
-            setPhase('app'); // Skip to main app
-            console.log("✅ Prompt loaded, entering app phase");
-            return;
-          }
-        } catch (error) {
-          console.error("Error loading prompt:", error);
-        }
+        setPhase('app'); // Skip to main app
+        console.log("✅ Prompt loaded (from profile), entering app phase");
+        return;
       }
 
-      // No prompt = start onboarding
-      console.log("📝 No prompt found, starting onboarding");
+      // 2. If AuthContext says false, DOUBLE CHECK with API
+      // (This handles cases where login response was missing data but prompt exists)
+      console.log("⚠️ user.hasPrompt is false, verifying with API...");
+      try {
+        const result = await promptService.getPrompt();
+        if (result.success && result.prompt) {
+          console.log("✅ Prompt found via API! syncing state...");
+          updateUserPromptStatus?.(true); // Fix state for future
+          setPhase('app');
+          return;
+        }
+      } catch (error) {
+        console.error("Error verifying prompt:", error);
+      }
+
+      // 3. Truly no prompt = start onboarding
+      console.log("📝 No prompt verified, starting onboarding");
       setPhase('onboarding');
     };
 
     initialize();
-  }, [user?.hasPrompt, user?.uid]);
+  }, [user?.hasPrompt, user?.uid, updateUserPromptStatus]);
 
   // =====================
   // LOADING STATE
@@ -61,13 +69,26 @@ const Dashboard = () => {
   return (
     <AnimatePresence mode="wait">
       {phase === 'onboarding' ? (
-        <Layout key="creator-layout" currentPage="dashboard" showLiaButton={false}>
+        <Layout
+          key="creator-layout"
+          currentPage="dashboard"
+          showLiaButton={false}
+          showSidebarTrigger={false}
+          expandIntegrations={shouldExpandIntegrations}
+          onExpandIntegrationsChange={setShouldExpandIntegrations}
+          sidebarOpen={sidebarOpen}
+          onSidebarOpenChange={setSidebarOpen}
+        >
           <AgentCreator
             key="creator"
             isExiting={false}
-            onOpenSidebar={() => { }} // Layout handled
-            onOpenIntegrations={() => { }} // Layout handled
+            onOpenSidebar={() => setSidebarOpen(true)}
+            onOpenIntegrations={() => {
+              setSidebarOpen(true);
+              setShouldExpandIntegrations(true);
+            }}
             onStartChat={() => setPhase('app')}
+            integrations={integrations}
           />
         </Layout>
       ) : (

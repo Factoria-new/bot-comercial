@@ -58,9 +58,11 @@ export const ProductSection = () => {
                     pin: true,
                     start: "top top",
                     scrub: 1,
-                    snap: 1 / (features.length - 1),
+                    // snap: 1 / (features.length - 1), // Disable snapping to prevent scroll interruption
                     end: "+=3000",
                     anticipatePin: 1,
+                    fastScrollEnd: 1000,
+                    preventOverlaps: true,
                 },
             });
         }, sectionRef);

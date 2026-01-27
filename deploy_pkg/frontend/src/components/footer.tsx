@@ -10,22 +10,17 @@ export default function Footer() {
         company: [
             { label: 'Sobre Nós', href: '#sobre' }
         ],
-        resources: [
-            { label: 'Documentação', href: '#' },
-            { label: 'Central de Ajuda', href: '#' },
-            { label: 'Contato', href: '#' }
-        ],
         legal: [
-            { label: 'Política de Privacidade', href: '#' },
-            { label: 'Termos de Serviço', href: '#' },
-            { label: 'LGPD', href: '#' }
+            { label: 'Política de Privacidade', href: '/politica-de-privacidade' },
+            { label: 'Termos de Serviço', href: '/termos-de-servico' },
+            { label: 'LGPD', href: '/lgpd' }
         ]
     };
 
     return (
         <footer className="bg-slate-50 border-t border-border">
             <div className="container mx-auto px-4 xl:px-8 py-12 xl:py-16">
-                <div className="grid grid-cols-1 xl:grid-cols-6 gap-8 xl:gap-12 mb-12">
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 xl:gap-12 mb-12">
                     <div className="xl:col-span-2">
                         <div className="mb-6">
                             <img src="/logo-header.png" alt="Caji" className="h-8 md:h-10 w-auto object-contain" />
@@ -71,26 +66,11 @@ export default function Footer() {
                         </ul>
                     </div>
 
+
                     <div>
                         <h3 className="font-semibold text-black mb-4">Empresa</h3>
                         <ul className="space-y-3">
                             {footerLinks.company.map((link) => (
-                                <li key={link.label}>
-                                    <a
-                                        href={link.href}
-                                        className="text-slate-600 hover:text-[#00A947] transition-colors text-sm"
-                                    >
-                                        {link.label}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h3 className="font-semibold text-black mb-4">Recursos</h3>
-                        <ul className="space-y-3">
-                            {footerLinks.resources.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
@@ -123,12 +103,17 @@ export default function Footer() {
                 <div className="border-t border-border pt-8">
                     <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
                         <p className="text-sm text-slate-600">
-                            © 2025 Caji
+                            © 2026 Caji. Todos os direitos reservados.
                         </p>
                         <div className="flex flex-col xl:flex-row gap-4 xl:gap-6 text-sm text-slate-600">
                             <div className="flex items-center gap-2">
                                 <Mail className="w-4 h-4" />
-                                <span>contact@cajiassist.com</span>
+                                <a
+                                    href="mailto:contact@cajiassist.com"
+                                    className="hover:text-[#00A947] transition-colors"
+                                >
+                                    contact@cajiassist.com
+                                </a>
                             </div>
                         </div>
                     </div>

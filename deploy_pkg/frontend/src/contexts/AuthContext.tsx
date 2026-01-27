@@ -18,6 +18,7 @@ interface AuthContextType {
     logout: () => void;
     checkSession: () => Promise<void>;
     updateUserPromptStatus: (hasPrompt: boolean) => void;
+    updateUserApiKeyStatus: (hasApiKey: boolean) => void;
     checkWhatsAppInstance: () => Promise<boolean>;
 }
 
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
     logout: () => { },
     checkSession: async () => { },
     updateUserPromptStatus: () => { },
+    updateUserApiKeyStatus: () => { },
     checkWhatsAppInstance: async () => false,
 });
 
@@ -160,6 +162,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(prev => prev ? { ...prev, hasPrompt } : null);
     }, []);
 
+    // Update user API key status (called after key is set)
+    const updateUserApiKeyStatus = useCallback((hasGeminiApiKey: boolean) => {
+        setUser(prev => prev ? { ...prev, hasGeminiApiKey } : null);
+    }, []);
+
     useEffect(() => {
         checkSession();
     }, []);
@@ -179,6 +186,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             logout,
             checkSession,
             updateUserPromptStatus,
+            updateUserApiKeyStatus,
             checkWhatsAppInstance
         }}>
             {children}

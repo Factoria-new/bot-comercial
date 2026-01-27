@@ -39,6 +39,7 @@ export interface Integration {
     color: string;
     connected: boolean;
     username?: string;
+    isComingSoon?: boolean;
 }
 
 export interface AgentConfig {

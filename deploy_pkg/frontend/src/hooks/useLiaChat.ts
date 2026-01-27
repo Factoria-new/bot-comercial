@@ -158,7 +158,7 @@ export const useLiaChat = ({
             setDisplayText("Lendo arquivo...");
             setIsVisible(true);
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
             const response = await fetch(`${backendUrl}/api/agent/upload-prompt`, {
                 method: 'POST',
@@ -177,7 +177,8 @@ export const useLiaChat = ({
                 if (audioVariation.path) {
                     playIntegrationAudio(audioVariation.path);
                 }
-                setDisplayText(audioVariation.text);
+                // Use sentinel value to trigger LottieLoader in UI instead of showing text
+                setDisplayText("LOTTIE_LOADER");
                 setIsVisible(true);
 
                 // Check if we have a callback for the BusinessInfoModal flow

@@ -455,7 +455,8 @@ export function useGeminiLive() {
                 });
             }
 
-            const response = await fetch('http://localhost:3003/api/agent/live-audio', {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/agent/live-audio`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

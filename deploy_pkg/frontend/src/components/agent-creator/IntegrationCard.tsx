@@ -9,16 +9,18 @@ interface IntegrationCardProps {
 }
 
 export const IntegrationCard = ({ integration, onClick }: IntegrationCardProps) => {
+    const isComingSoon = integration.isComingSoon;
+
     return (
         <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onClick}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer hover:bg-white/10 transition-all flex flex-col items-center gap-3 group w-full md:w-[25%]"
+            whileHover={!isComingSoon ? { scale: 1.05 } : {}}
+            whileTap={!isComingSoon ? { scale: 0.98 } : {}}
+            onClick={!isComingSoon ? onClick : undefined}
+            className={`bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 transition-all flex flex-col items-center gap-3 group w-full md:w-[25%] relative overflow-hidden ${isComingSoon ? 'opacity-60 cursor-default' : 'cursor-pointer hover:bg-white/10'}`}
         >
             {/* Platform Icon */}
             <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform ${!isComingSoon ? 'group-hover:scale-110' : ''}`}
                 style={{ backgroundColor: integration.color + '20' }}
             >
                 {(() => {
@@ -32,6 +34,11 @@ export const IntegrationCard = ({ integration, onClick }: IntegrationCardProps) 
             {integration.connected && (
                 <span className="text-emerald-400 text-xs flex items-center gap-1">
                     <Check className="w-3 h-3" /> Conectado
+                </span>
+            )}
+            {isComingSoon && (
+                <span className="text-white/50 text-xs font-medium bg-white/10 px-2 py-0.5 rounded-full border border-white/5">
+                    Em breve
                 </span>
             )}
         </motion.div>

@@ -28,7 +28,7 @@ export const useIntegrations = () => {
     const checkGoogleCalendarStatus = async () => {
         if (!googleCalendarUserId) return;
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/google-calendar/status?userId=${encodeURIComponent(googleCalendarUserId)}`);
             const data = await response.json();
             if (data.success && data.isConnected) {
@@ -47,7 +47,7 @@ export const useIntegrations = () => {
 
     const handleGoogleCalendarConnect = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/google-calendar/auth-url?userId=${encodeURIComponent(googleCalendarUserId)}`);
             const data = await response.json();
 
@@ -61,6 +61,12 @@ export const useIntegrations = () => {
                 const checkPopup = setInterval(async () => {
                     if (popup?.closed) {
                         clearInterval(checkPopup);
+
+                        // If popup closed and we are NOT connected, trigger cleanup
+                        if (!isGoogleCalendarConnected) {
+                            console.log("Popup closed without connection. Cleaning up INITIATED state...");
+                            handleGoogleCalendarDisconnect();
+                        }
                         return;
                     }
 
@@ -93,7 +99,7 @@ export const useIntegrations = () => {
 
     const handleGoogleCalendarDisconnect = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
             const response = await fetch(`${backendUrl}/api/google-calendar/disconnect`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -121,6 +127,8 @@ export const useIntegrations = () => {
     const integrations: Integration[] = [
         { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
         { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: isGoogleCalendarConnected },
+        { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: false, isComingSoon: true },
+        { id: 'facebook', name: 'Facebook', color: '#1877F2', icon: 'facebook', connected: false, isComingSoon: true },
     ];
 
     const handleIntegrationClick = (id: string) => {

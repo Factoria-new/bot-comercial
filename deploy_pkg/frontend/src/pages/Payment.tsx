@@ -58,7 +58,8 @@ const Payment = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3003'}/api/stripe/create-checkout`, {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/stripe/create-checkout`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

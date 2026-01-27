@@ -30,9 +30,9 @@ const InstagramCallback = () => {
                     return;
                 }
 
-                // Use relative URL to leverage proxy if available, or absolute if needed
-                // Since this page is loaded in frontend, '/api/...' should work via Vite proxy
-                const response = await fetch('/api/instagram/callback', {
+                // Use absolute URL from env var
+                const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+                const response = await fetch(`${backendUrl}/api/instagram/callback`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ connectionId })

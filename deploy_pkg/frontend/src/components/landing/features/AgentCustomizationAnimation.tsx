@@ -1,26 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Sliders, MessageSquare, Play, Pause } from "lucide-react";
 
 export const AgentCustomizationAnimation = () => {
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Initialize audio
+    useEffect(() => {
+        const audio = new Audio("/audio/agente_ia_demo.mp3");
+
+        audio.onended = () => setIsPlaying(false);
+        audio.onerror = (e) => {
+            console.error("Audio playback error:", e);
+            setIsPlaying(false);
+        };
+
+        audioRef.current = audio;
+
+        return () => {
+            audio.pause();
+            audio.currentTime = 0;
+        };
+    }, []);
 
     const handlePlay = () => {
+        if (!audioRef.current) return;
+
         if (isPlaying) {
-            window.speechSynthesis.cancel();
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
             setIsPlaying(false);
-            return;
+        } else {
+            audioRef.current.play()
+                .then(() => setIsPlaying(true))
+                .catch(e => console.error("Play failed:", e));
         }
-
-        setIsPlaying(true);
-        const utterance = new SpeechSynthesisUtterance("Olá! Sou seu especialista em vendas. Como posso ajudar com os preços hoje?");
-        utterance.lang = "pt-BR";
-        utterance.rate = 1.1;
-        utterance.pitch = 1.0;
-
-        utterance.onend = () => setIsPlaying(false);
-        window.speechSynthesis.speak(utterance);
     };
 
     return (
@@ -88,10 +104,19 @@ export const AgentCustomizationAnimation = () => {
                             </div>
 
                             {/* Toggle Switch */}
-                            <div className="relative">
-                                <div className="w-11 h-6 rounded-full bg-[#00A947]">
-                                    <div className="absolute top-1 left-[22px] w-4 h-4 bg-white rounded-full shadow-sm" />
-                                </div>
+                            <div
+                                className="relative cursor-pointer"
+                                onClick={() => setAudioEnabled(!audioEnabled)}
+                            >
+                                <motion.div
+                                    animate={{ backgroundColor: audioEnabled ? "#00A947" : "#cbd5e1" }}
+                                    className="w-11 h-6 rounded-full"
+                                >
+                                    <motion.div
+                                        animate={{ x: audioEnabled ? 22 : 4 }}
+                                        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                                    />
+                                </motion.div>
                             </div>
                         </div>
 

@@ -22,13 +22,26 @@ const httpServer = createServer(app);
 // Socket.IO configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:5173',
-      'https://bot-bora.vercel.app',
-      process.env.FRONTEND_URL
-    ].filter(Boolean),
+    origin: (origin, callback) => {
+      // Reutilizar a lógica de verificação de origem (precisamos definir a função antes ou duplicar a lógica aqui)
+      // Como a função isOriginAllowed é definida depois, vamos duplicar a lista de seguros aqui por enquanto
+      const envFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null;
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5173',
+        'https://bot-bora.vercel.app',
+        'https://cajiassist.com',
+        'https://www.cajiassist.com',
+        envFrontendUrl
+      ];
+
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST']
   }
@@ -64,12 +77,17 @@ import { getSessionConfig, setSessionConfig } from './services/sessionConfigServ
 const isOriginAllowed = (origin) => {
   if (!origin) return true; // Permitir requisições sem origin (ex: Postman)
 
+  // Normalizar FRONTEND_URL removendo barra final se existir
+  const envFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null;
+
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'http://127.0.0.1:5173',
     'https://bot-bora.vercel.app',
-    process.env.FRONTEND_URL
+    'https://cajiassist.com',
+    'https://www.cajiassist.com',
+    envFrontendUrl
   ].filter(Boolean);
 
   // Verificar se está na lista ou é domínio Vercel

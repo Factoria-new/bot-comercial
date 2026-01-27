@@ -31,7 +31,7 @@ const GoogleCalendarCallback = () => {
                 }
 
                 // Call backend to finalize the connection
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+                const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
                 const response = await fetch(`${backendUrl}/api/google-calendar/callback`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

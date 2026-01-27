@@ -7,9 +7,9 @@ import {
     SiGooglesheets,
     SiShopify,
     SiStripe,
-    SiX,
     SiTiktok
 } from "react-icons/si";
+import { FaXTwitter } from "react-icons/fa6";
 
 const iconConfigs = [
     // Orbit 1 (Inner)
@@ -22,7 +22,7 @@ const iconConfigs = [
     // Orbit 2 (Outer)
     [
         { Icon: SiShopify, color: "#95BF47" },
-        { Icon: SiX, color: "#000000" },
+        { Icon: FaXTwitter, color: "#000000" },
         { Icon: SiStripe, color: "#635BFF" },
         { Icon: SiTiktok, color: "#000000" },
     ]

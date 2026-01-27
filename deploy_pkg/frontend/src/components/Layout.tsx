@@ -18,6 +18,9 @@ interface LayoutProps {
   showLiaButton?: boolean;
   expandIntegrations?: boolean;
   onExpandIntegrationsChange?: (expanded: boolean) => void;
+  showSidebarTrigger?: boolean;
+  sidebarOpen?: boolean;
+  onSidebarOpenChange?: (open: boolean) => void;
 }
 
 const Layout = ({
@@ -25,15 +28,28 @@ const Layout = ({
   currentPage,
   showLiaButton = true,
   expandIntegrations = false,
-  onExpandIntegrationsChange
+  onExpandIntegrationsChange,
+  showSidebarTrigger = true,
+  sidebarOpen,
+  onSidebarOpenChange
 }: LayoutProps) => {
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { logout, user, updateUserApiKeyStatus } = useAuth();
   const { toast } = useToast();
   const { socket } = useSocket();
 
   // Sidebar and Lia state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
+  const isSidebarOpen = sidebarOpen !== undefined ? sidebarOpen : internalSidebarOpen;
+
+  const setIsSidebarOpen = (open: boolean) => {
+    if (onSidebarOpenChange) {
+      onSidebarOpenChange(open);
+    } else {
+      setInternalSidebarOpen(open);
+    }
+  };
+
   const [isLiaChatOpen, setIsLiaChatOpen] = useState(false);
   const [shouldExpandIntegrations, setShouldExpandIntegrations] = useState(false);
 
@@ -104,7 +120,7 @@ const Layout = ({
 
   const handleApiKeyComplete = () => {
     setIsApiKeyModalOpen(false);
-    // Optionally, refresh user data or set a flag to indicate API key is now set
+    updateUserApiKeyStatus(true);
   };
 
   // Global API Key Check
@@ -130,7 +146,7 @@ const Layout = ({
           return;
         }
 
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
         const response = await fetch(`${backendUrl}/api/users/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -165,16 +181,18 @@ const Layout = ({
   return (
     <div className="min-h-screen">
       {/* Hamburger Menu Button */}
-      <div className="fixed top-4 left-4 z-50">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsSidebarOpen(true)}
-          className="text-white/70 hover:bg-white/10"
-        >
-          <Menu className="w-6 h-6" />
-        </Button>
-      </div>
+      {showSidebarTrigger && (
+        <div className="fixed top-4 left-4 z-50">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(true)}
+            className="text-white/70 hover:bg-white/10"
+          >
+            <Menu className="w-6 h-6" />
+          </Button>
+        </div>
+      )}
 
       {/* Main Content */}
       <main>

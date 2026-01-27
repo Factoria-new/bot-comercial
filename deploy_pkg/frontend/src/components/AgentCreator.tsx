@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Menu, Sparkles, Upload } from "lucide-react";
+import { Menu, Sparkles, Upload, LogOut } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTTS } from "@/hooks/useTTS";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 // New Imports
 import { AgentCreatorProps, ChatMode, CreatorStep, AgentMessage } from "@/lib/agent-creator.types";
-import { getIntegrations } from "@/lib/integrations";
+
 import { useAgentAudio } from "@/hooks/useAgentAudio";
 import { useLiaChat } from "@/hooks/useLiaChat";
 
@@ -27,8 +27,9 @@ import { DashboardStep } from "./agent-creator/DashboardStep";
 import { LoadingOverlay } from "./agent-creator/LoadingOverlay";
 import BusinessInfoModal, { BusinessInfoData } from "./BusinessInfoModal";
 import { DaySchedule, WeekDay, WEEKDAYS_MAP } from "@/lib/scheduleTypes";
+import LottieLoader from "@/components/LottieLoader";
 
-export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat }: AgentCreatorProps) {
+export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat, integrations }: AgentCreatorProps) {
 
     // --- STATE ---
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -67,7 +68,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     ];
 
     // --- HOOKS ---
-    const { user } = useAuth();
+    const { user, logout, updateUserPromptStatus } = useAuth();
     const userEmail = user?.email || '';
     const userId = user?.uid || '';
 
@@ -78,7 +79,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         setAgentPrompt,
         startTesting,
         sendMessageToLia,
-        addUserMessage
+        addUserMessage,
+        resetOnboarding
     } = useOnboarding(userId);
 
     const { speak, stop: stopTTS, resumeContext, voiceLevel: ttsVoiceLevel } = useTTS();
@@ -135,7 +137,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     });
 
     const isWhatsAppConnected = whatsappInstances[0]?.isConnected || false;
-    const integrations = getIntegrations(isWhatsAppConnected);
+
     const voiceLevel = Math.max(liveVoiceLevel, ttsVoiceLevel, integrationVoiceLevel);
 
 
@@ -148,8 +150,25 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     useEffect(() => {
         if (chatState.step === 'testing') {
             setTestMode(true);
+        } else {
+            setTestMode(false);
         }
     }, [chatState.step]);
+
+    // SAFETY: Reset stale 'testing' state on mount
+    // If we are in this component, it means Dashboard decided we are in 'onboarding' (no prompt in DB).
+    // If local storage says 'testing', it's a zombie state from a deleted prompt.
+    useEffect(() => {
+        // Only run this check once when the component mounts and state is ready
+        if (chatState.step === 'testing') {
+            console.log("🧹 Stale 'testing' state detected on mount. Resetting onboarding.");
+            // We use a small timeout to let initialization settle and ensure we don't conflict with any immediate transitions
+            setTimeout(() => {
+                resetOnboarding();
+                setTestMode(false); // Force visual reset immediately
+            }, 100);
+        }
+    }, []); // Empty dependency = run on mount only
 
     // Loading Animation Cycle
     useEffect(() => {
@@ -172,34 +191,54 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
     // Audio Triggers for specific steps
     useEffect(() => {
         let trigger: any | null = null;
-        if (currentStep === 'integrations') trigger = 'integrations';
+
+        // Check for Wizard Options Screen (Initial state with no prompt)
+        // User must be on the main screen (not in wizard, not testing, not uploading) AND have no prompt yet
+        // AND must have API Key (otherwise ApiKeyModal will open and play its own audio)
+        const isOptionsScreen = !isWizardOpen && !testMode && !isSwitchingToTest && !isBusinessInfoModalOpen;
+        const hasNoPrompt = !chatState.agentConfig?.prompt;
+        const hasApiKey = !!user?.hasGeminiApiKey;
+
+        if (isOptionsScreen && hasNoPrompt && hasApiKey) {
+            trigger = 'wizard_options';
+        }
+        else if (currentStep === 'integrations') trigger = 'integrations';
         else if (currentStep === 'dashboard') trigger = 'dashboard_suggestion';
 
         if (trigger) {
             const audioVariation = getRandomAudio(trigger);
             if (audioVariation.path) {
-                const delay = trigger === 'integrations' ? 1000 : 0;
+                // Add a small delay for the options screen to ensure component visual transition is ready
+                const delay = (trigger === 'integrations' || trigger === 'wizard_options') ? 1000 : 0;
                 playIntegrationAudio(audioVariation.path, delay);
             }
         }
-        return () => {
-            stopIntegrationAudio();
-        };
-    }, [currentStep, playIntegrationAudio, stopIntegrationAudio]);
+        // Removing automatic cleanup here to prevent audio cutting off when state changes (e.g. switching to test mode or dashboard)
+        // The audio will naturally finish or be replaced by the next trigger.
+    }, [
+        currentStep,
+        playIntegrationAudio,
+        // stopIntegrationAudio, // Removed from dependencies
+        isWizardOpen,
+        testMode,
+        isSwitchingToTest,
+        isBusinessInfoModalOpen,
+        chatState.agentConfig?.prompt
+    ]);
 
     // WhatsApp Success Audio
     useEffect(() => {
-        if (whatsappModalState.isOpen && whatsappModalState.connectionState === 'connected') {
+        if (whatsappModalState.connectionState === 'connected') {
             const timer = setTimeout(() => {
-                console.log("🎉 WhatsApp Connected Screen! Playing success audio...");
+                console.log("🎉 WhatsApp Connected! Playing success audio...");
                 const audioVariation = getRandomAudio('integrations_success');
                 if (audioVariation.path) {
                     playIntegrationAudio(audioVariation.path);
                 }
-            }, 3000);
+            }, 500); // Reduced from 3000ms to 500ms to avoid race conditions
             return () => clearTimeout(timer);
         }
-    }, [whatsappModalState.connectionState, whatsappModalState.isOpen, playIntegrationAudio]);
+    }, [whatsappModalState.connectionState, playIntegrationAudio]); // Removed isOpen dependency
 
 
 
@@ -210,10 +249,11 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     const handleWizardComplete = async () => {
         resumeContext();
-        setIsWizardOpen(false);
+        // Set switching to test FIRST to prevent "Options Screen" detection
         setIsSwitchingToTest(true);
+        setIsWizardOpen(false);
 
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
         const apiKey = localStorage.getItem("user_gemini_api_key"); // Retrieve User Key
 
         try {
@@ -272,6 +312,13 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                     console.error('❌ Error saving business info:', bizError);
                 }
 
+                // Update Auth Context to reflect that user now has a prompt
+                if (updateUserPromptStatus) {
+                    updateUserPromptStatus(true);
+                }
+                // Need to change the destructuring at the top first.
+
+
                 // 🎤 Play Lia's completion audio feedback
                 const audioVariation = getRandomAudio('complete');
                 if (audioVariation.path) {
@@ -312,7 +359,8 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 content: msg.content
             }));
 
-            const res = await fetch('http://localhost:3003/api/agent/chat', {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const res = await fetch(`${backendUrl}/api/agent/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -340,12 +388,15 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     // Handler for BusinessInfoModal completion (after prompt upload)
     const handleBusinessInfoComplete = async (businessInfo: BusinessInfoData) => {
-        setIsBusinessInfoModalOpen(false);
-
         if (!uploadedPrompt) {
             console.error('❌ No uploaded prompt found');
+            setIsBusinessInfoModalOpen(false);
             return;
         }
+
+        // Set switching to test FIRST to prevent "Options Screen" detection
+        setIsSwitchingToTest(true);
+        setIsBusinessInfoModalOpen(false);
 
         // Format opening hours into a readable string
         const formatSchedule = (schedule: Record<WeekDay, DaySchedule>): string => {
@@ -381,7 +432,7 @@ ${scheduleStr}
         // Persist business info to database
         try {
             const token = localStorage.getItem('token');
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
             const response = await fetch(`${backendUrl}/api/user/business-info`, {
                 method: 'PUT',
@@ -409,7 +460,7 @@ ${scheduleStr}
 
         // Set the enriched prompt and proceed to test mode
         setAgentPrompt(enrichedPrompt);
-        setIsSwitchingToTest(true);
+        // setIsSwitchingToTest(true); // Already set at start
 
         // Play completion audio
         const audioVariation = getRandomAudio('complete');
@@ -439,11 +490,27 @@ ${scheduleStr}
                 }
             `}</style>
 
-            {/* Absolute Menu Button */}
+            {/* Absolute Menu Button -> Exit Button */}
             <div className="absolute top-4 left-4 z-50">
-                <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="text-white/70 hover:bg-white/10">
-                    <Menu className="w-6 h-6" />
-                </Button>
+                {currentStep === 'dashboard' ? (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onOpenSidebar}
+                        className="text-white/70 hover:bg-white/10"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </Button>
+                ) : (
+                    <Button
+                        variant="ghost"
+                        className="text-white/70 hover:bg-red-500/10 hover:text-red-400 gap-2 px-2"
+                        onClick={() => logout()}
+                    >
+                        <LogOut className="w-5 h-5" />
+                        <span className="hidden sm:inline">Sair</span>
+                    </Button>
+                )}
             </div>
 
             {/* Background Layer */}
@@ -485,7 +552,13 @@ ${scheduleStr}
                                     "text-4xl md:text-6xl font-bold tracking-tighter mb-6 transition-all duration-500",
                                     !isVisible ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
                                 )}>
-                                    {displayText || "Olá! Vamos criar seu assistente."}
+                                    {displayText === "LOTTIE_LOADER" ? (
+                                        <div className="flex justify-center items-center py-2">
+                                            <LottieLoader fullScreen={false} size={250} />
+                                        </div>
+                                    ) : (
+                                        displayText || "Olá! Vamos criar seu assistente."
+                                    )}
                                 </h1>
 
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -597,7 +670,7 @@ ${scheduleStr}
                                 agentPrompt={chatState.agentConfig?.prompt}
                                 wizardData={wizardData}
                                 nicheId={currentSchema?.id}
-                                onSaveAndFinish={() => onStartChat?.('')}
+                                onSaveAndFinish={() => setCurrentStep('dashboard')}
                                 onBack={() => setCurrentStep('chat')}
                                 whatsappModalState={whatsappModalState}
                                 handleGenerateQR={handleGenerateQR}
@@ -614,7 +687,7 @@ ${scheduleStr}
                         {currentStep === 'dashboard' && (
                             <DashboardStep
                                 integrations={integrations}
-                                onOpenIntegrations={() => setCurrentStep('integrations')}
+                                onOpenIntegrations={onOpenIntegrations}
                             />
                         )}
                     </AnimatePresence>
