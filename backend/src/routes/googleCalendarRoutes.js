@@ -35,7 +35,9 @@ router.get('/status', async (req, res) => {
             });
         }
 
-        const status = await getConnectionStatus(userId);
+        // Skip health check for UI status to prevent auto-disconnect loops or false negatives during polling
+        // The health check is strict and might fail transiently
+        const status = await getConnectionStatus(userId, true);
         res.json({ success: true, ...status });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

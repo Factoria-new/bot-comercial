@@ -221,15 +221,10 @@ export const getConnectionStatus = async (userId, skipHealthCheck = false) => {
             if (!health.valid) {
                 console.warn(`⚠️ Calendar connection invalid for ${userId}: ${health.reason || health.error}`);
 
-                // If entity mismatch, auto-disconnect the invalid connection
+                // If entity mismatch, just warn but DO NOT auto-disconnect. 
+                // Let the user or agent handle failures.
                 if (health.reason === 'entity_mismatch') {
-                    console.log(`🔄 Auto-disconnecting invalid Google Calendar connection for ${userId}`);
-                    try {
-                        await composio.connectedAccounts.delete(activeAccount.id);
-                        console.log(`✅ Invalid connection removed. User needs to reconnect.`);
-                    } catch (deleteError) {
-                        console.warn(`Could not delete invalid connection: ${deleteError.message}`);
-                    }
+                    console.warn(`🔄 Entity mismatch detected for ${userId}. Connection might be unusable.`);
                 }
 
                 return {
