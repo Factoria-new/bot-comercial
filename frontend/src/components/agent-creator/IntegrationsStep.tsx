@@ -207,13 +207,15 @@ export const IntegrationsStep = ({
 
             {/* Integration Cards Grid */}
             <div className="flex flex-col md:flex-row justify-center gap-6 w-full">
-                {integrationsState.map((integration) => (
-                    <IntegrationCard
-                        key={integration.id}
-                        integration={integration}
-                        onClick={() => handleIntegrationClick(integration.id)}
-                    />
-                ))}
+                {integrationsState
+                    .filter(integration => integration.id !== 'google_calendar')
+                    .map((integration) => (
+                        <IntegrationCard
+                            key={integration.id}
+                            integration={integration}
+                            onClick={() => handleIntegrationClick(integration.id)}
+                        />
+                    ))}
             </div>
 
             {/* Action Button */}
