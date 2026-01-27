@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link2, Sparkles, MessageCircle, MessagesSquare, Zap, Check, Users } from "lucide-react";
+import { Link2, MessageCircle, MessagesSquare, Zap, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Integration } from "@/lib/agent-creator.types";
 import { useSocket } from "@/contexts/SocketContext";
@@ -25,6 +25,13 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
         activeChats: 0
     });
 
+    // Local state for dynamic integration updates
+    const [localIntegrations, setLocalIntegrations] = useState<Integration[]>(integrations);
+
+    // Sync with props when they change
+    useEffect(() => {
+        setLocalIntegrations(integrations);
+    }, [integrations]);
 
     useEffect(() => {
         if (!socket) return;
@@ -35,11 +42,36 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
             setMetrics(newMetrics);
         });
 
+        // Listen for integration connection events
+        socket.on('instance-connected', (data: { instanceId?: string; name?: string }) => {
+            console.log('🔗 DashboardStep: Integration connected', data);
+            setLocalIntegrations(prev => prev.map(integration => {
+                // Check if this integration matches the connected instance
+                if (integration.id === 'whatsapp' && (data.instanceId || data.name)) {
+                    return { ...integration, connected: true };
+                }
+                return integration;
+            }));
+        });
+
+        // Listen for integration disconnection events
+        socket.on('instance-disconnected', (data: { instanceId?: string; name?: string }) => {
+            console.log('🔌 DashboardStep: Integration disconnected', data);
+            setLocalIntegrations(prev => prev.map(integration => {
+                if (integration.id === 'whatsapp' && (data.instanceId || data.name)) {
+                    return { ...integration, connected: false };
+                }
+                return integration;
+            }));
+        });
+
         // Request initial metrics
         socket.emit('request-metrics');
 
         return () => {
             socket.off('metrics-update');
+            socket.off('instance-connected');
+            socket.off('instance-disconnected');
         };
     }, [socket]);
 
@@ -178,7 +210,7 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                     >
                         <h3 className="text-xl font-semibold text-white mb-6">Integrações Ativas</h3>
                         <div className="flex flex-wrap gap-4">
-                            {integrations.filter(i => i.connected).map((integration) => {
+                            {localIntegrations.filter(i => i.connected).map((integration) => {
                                 const Icon = BrandIcons[integration.icon];
                                 return (
                                     <div
@@ -196,7 +228,7 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
                                     </div>
                                 );
                             })}
-                            {integrations.filter(i => i.connected).length === 0 && (
+                            {localIntegrations.filter(i => i.connected).length === 0 && (
                                 <p className="text-white/40 text-base italic">Nenhuma integração ativa no momento.</p>
                             )}
                         </div>

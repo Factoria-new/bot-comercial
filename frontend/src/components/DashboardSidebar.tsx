@@ -111,6 +111,16 @@ export default function DashboardSidebar({
     const [apiKeyExpanded, setApiKeyExpanded] = useState(false);
     const [apiKeyInput, setApiKeyInput] = useState("");
     const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+    const [isEditingApiKey, setIsEditingApiKey] = useState(false);
+
+    // Helper to mask API key (show first 8 chars, rest as asterisks)
+    const getMaskedApiKey = () => {
+        const storedKey = localStorage.getItem("user_gemini_api_key");
+        if (!storedKey) return null;
+        const visiblePart = storedKey.substring(0, 8);
+        const maskedPart = '*'.repeat(Math.min(storedKey.length - 8, 20));
+        return `${visiblePart}${maskedPart}`;
+    };
 
     useEffect(() => {
         fetch('/lotties/success.json')
@@ -882,33 +892,87 @@ export default function DashboardSidebar({
                         >
                             <div className="pl-4 pr-2 py-3 space-y-2">
                                 <div className="px-3 space-y-3">
-                                    <div className="relative">
-                                        <Input
-                                            type="password"
-                                            placeholder="Cole sua chave aqui..."
-                                            value={apiKeyInput}
-                                            onChange={(e) => setApiKeyInput(e.target.value)}
-                                            className="bg-black/20 border-white/10 text-white text-xs h-9 pr-2"
-                                        />
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <a
-                                            href="https://aistudio.google.com/app/apikey"
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="text-[10px] text-indigo-300 hover:text-indigo-200 flex items-center gap-1 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20"
-                                        >
-                                            Gerar Chave <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                        <Button
-                                            size="sm"
-                                            onClick={handleSaveApiKey}
-                                            disabled={!apiKeyInput || isSavingApiKey}
-                                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500"
-                                        >
-                                            {isSavingApiKey ? "Salvar" : "Salvar"}
-                                        </Button>
-                                    </div>
+                                    {/* View Mode: Show masked key with Edit button */}
+                                    {!isEditingApiKey && user?.hasGeminiApiKey && getMaskedApiKey() ? (
+                                        <>
+                                            <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-md px-3 py-2">
+                                                <Key className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                                                <span className="text-white/80 text-xs font-mono truncate flex-1">
+                                                    {getMaskedApiKey()}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <a
+                                                    href="https://aistudio.google.com/app/apikey"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[10px] text-indigo-300 hover:text-indigo-200 flex items-center gap-1 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20"
+                                                >
+                                                    Gerar Nova <ExternalLink className="w-3 h-3" />
+                                                </a>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setApiKeyInput("");
+                                                        setIsEditingApiKey(true);
+                                                    }}
+                                                    className="h-7 text-xs bg-white/10 hover:bg-white/20 text-white"
+                                                >
+                                                    Editar
+                                                </Button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        /* Edit Mode: Show input with Save/Cancel buttons */
+                                        <>
+                                            <div className="relative">
+                                                <Input
+                                                    type="password"
+                                                    placeholder="Cole sua nova chave aqui..."
+                                                    value={apiKeyInput}
+                                                    onChange={(e) => setApiKeyInput(e.target.value)}
+                                                    className="bg-black/20 border-white/10 text-white text-xs h-9 pr-2"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <a
+                                                    href="https://aistudio.google.com/app/apikey"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[10px] text-indigo-300 hover:text-indigo-200 flex items-center gap-1 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20"
+                                                >
+                                                    Gerar Chave <ExternalLink className="w-3 h-3" />
+                                                </a>
+                                                <div className="flex gap-2">
+                                                    {/* Only show Cancel if user already has a key */}
+                                                    {user?.hasGeminiApiKey && (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setApiKeyInput("");
+                                                                setIsEditingApiKey(false);
+                                                            }}
+                                                            className="h-7 text-xs bg-white/10 hover:bg-white/20 text-white"
+                                                        >
+                                                            Cancelar
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={async () => {
+                                                            await handleSaveApiKey();
+                                                            setIsEditingApiKey(false);
+                                                        }}
+                                                        disabled={!apiKeyInput || isSavingApiKey}
+                                                        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500"
+                                                    >
+                                                        {isSavingApiKey ? "Salvando..." : "Salvar"}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
