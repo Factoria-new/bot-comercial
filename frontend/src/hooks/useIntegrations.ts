@@ -61,6 +61,12 @@ export const useIntegrations = () => {
                 const checkPopup = setInterval(async () => {
                     if (popup?.closed) {
                         clearInterval(checkPopup);
+
+                        // If popup closed and we are NOT connected, trigger cleanup
+                        if (!isGoogleCalendarConnected) {
+                            console.log("Popup closed without connection. Cleaning up INITIATED state...");
+                            handleGoogleCalendarDisconnect();
+                        }
                         return;
                     }
 

@@ -262,15 +262,26 @@ export const disconnect = async (userId) => {
     }
 
     try {
-        const status = await getConnectionStatus(userId, true);
+        // List ALL accounts for this user (including INITIATED, ACTIVE, etc)
+        const accounts = await composio.connectedAccounts.list({
+            appName: 'googlecalendar',
+            entityId: userId
+        });
 
-        if (status.connectionId) {
-            try {
-                await composio.connectedAccounts.delete(status.connectionId);
-                console.log(`✅ Google Calendar disconnected for ${userId}`);
-            } catch (deleteError) {
-                console.warn('Could not delete from Composio:', deleteError.message);
+        if (accounts?.items?.length) {
+            console.log(`Phase 1: Found ${accounts.items.length} accounts to disconnect for ${userId}`);
+
+            // Delete all found accounts for this user
+            for (const acc of accounts.items) {
+                try {
+                    await composio.connectedAccounts.delete(acc.id);
+                    console.log(`✅ Deleted connection: ${acc.id} (${acc.status})`);
+                } catch (delErr) {
+                    console.warn(`⚠️ Failed to delete ${acc.id}:`, delErr.message);
+                }
             }
+        } else {
+            console.log(`ℹ️ No accounts found to disconnect for ${userId}`);
         }
 
         if (socketIO) {
