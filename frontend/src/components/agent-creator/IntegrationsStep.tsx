@@ -6,6 +6,8 @@ import { Integration } from "@/lib/agent-creator.types";
 import { IntegrationCard } from "./IntegrationCard";
 import { WhatsAppConnectionModal } from "./WhatsAppConnectionModal";
 import { useAuth } from "@/contexts/AuthContext";
+import CalendarSettingsModal from "@/components/CalendarSettingsModal";
+import { useCalendarConnection } from "@/hooks/useCalendarConnection";
 
 interface IntegrationsStepProps {
     integrations: Integration[];
@@ -37,6 +39,7 @@ export const IntegrationsStep = ({
     handleDisconnect,
     closeWhatsappModal,
     qrCode,
+    userEmail,
     wizardData,
     nicheId,
     isManageMode,
@@ -44,6 +47,16 @@ export const IntegrationsStep = ({
 }: IntegrationsStepProps) => {
     const { updateUserPromptStatus } = useAuth();
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+
+    // Google Calendar Connection Hook
+    const {
+        connect: connectCalendar,
+        savedSettings: calendarSettings,
+        isConnecting: isCalendarConnecting
+    } = useCalendarConnection({
+        sessionId: 'default', // Using default session for main calendar
+        userEmail: userEmail,
+    });
 
     const handleIntegrationClick = (id: string) => {
         setSelectedIntegration(id);
@@ -210,6 +223,20 @@ export const IntegrationsStep = ({
                 }}
                 onGenerateQR={handleGenerateQR}
                 onDisconnect={handleDisconnect}
+            />
+
+            {/* Google Calendar Settings Modal */}
+            <CalendarSettingsModal
+                isOpen={selectedIntegration === 'google_calendar'}
+                onClose={() => setSelectedIntegration(null)}
+                onConfirm={async (settings) => {
+                    setSelectedIntegration(null);
+                    // Use a slightly different approach since we need to pass userEmail properly
+                    // The hook is initialized at top level, so we just call connect
+                    await connectCalendar(settings);
+                }}
+                isLoading={isCalendarConnecting}
+                initialSettings={calendarSettings}
             />
         </motion.div>
     );
