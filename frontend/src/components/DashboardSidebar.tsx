@@ -112,13 +112,44 @@ export default function DashboardSidebar({
     const [apiKeyInput, setApiKeyInput] = useState("");
     const [isSavingApiKey, setIsSavingApiKey] = useState(false);
     const [isEditingApiKey, setIsEditingApiKey] = useState(false);
+    const [storedApiKey, setStoredApiKey] = useState<string | null>(null);
+    const [isLoadingApiKey, setIsLoadingApiKey] = useState(false);
+
+    // Load API Key from backend (multi-tenancy: fetches user's own key from DB)
+    const loadApiKeyFromBackend = async () => {
+        try {
+            setIsLoadingApiKey(true);
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/users/apikey`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.apiKey) {
+                    setStoredApiKey(data.apiKey);
+                    // Also update localStorage for use in other parts of the app
+                    localStorage.setItem("user_gemini_api_key", data.apiKey);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading API key from backend:', error);
+        } finally {
+            setIsLoadingApiKey(false);
+        }
+    };
 
     // Helper to mask API key (show first 8 chars, rest as asterisks)
     const getMaskedApiKey = () => {
-        const storedKey = localStorage.getItem("user_gemini_api_key");
-        if (!storedKey) return null;
-        const visiblePart = storedKey.substring(0, 8);
-        const maskedPart = '*'.repeat(Math.min(storedKey.length - 8, 20));
+        const keyToMask = storedApiKey || localStorage.getItem("user_gemini_api_key");
+        if (!keyToMask) return null;
+        const visiblePart = keyToMask.substring(0, 8);
+        const maskedPart = '*'.repeat(Math.min(keyToMask.length - 8, 20));
         return `${visiblePart}${maskedPart}`;
     };
 
@@ -168,9 +199,10 @@ export default function DashboardSidebar({
     const isPro = user?.role === 'pro' || user?.role === 'admin';
     const selectedVoice = VOICE_OPTIONS.find(v => v.value === ttsVoice);
 
-    // Initial load of configurations (TTS, etc)
+    // Initial load of configurations (TTS, API Key, etc)
     useEffect(() => {
         loadTtsConfig();
+        loadApiKeyFromBackend(); // Load API key from database on mount
     }, [sessionId]); // Reload if sessionId changes
 
     const loadTtsConfig = async () => {
@@ -286,7 +318,9 @@ export default function DashboardSidebar({
                 });
                 setApiKeyInput("");
                 setApiKeyExpanded(false);
+                // Update both localStorage and state
                 localStorage.setItem("user_gemini_api_key", apiKeyInput);
+                setStoredApiKey(apiKeyInput);
             } else {
                 throw new Error(data.error || 'Falha ao salvar');
             }
