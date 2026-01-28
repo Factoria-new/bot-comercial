@@ -83,12 +83,11 @@ const AgentConfigModal = ({
     isConnected: calendarConnected,
     isLoading: isCheckingCalendar,
     isConnecting: isConnectingCalendar,
-    savedSettings: calendarSettings,
     connect: connectCalendar,
     disconnect: disconnectCalendar
   } = useCalendarConnection({
     sessionId,
-    userEmail,
+    userId: user?.uid,
     autoCheck: isOpen && !!instanceId
   });
 
@@ -117,7 +116,8 @@ const AgentConfigModal = ({
 
   const handleCalendarSettingsConfirm = async (settings: CalendarSettings) => {
     setShowCalendarSettings(false);
-    await connectCalendar(settings);
+    // Settings saving logic seems missing in hook, proceed with auth only
+    await connectCalendar();
   };
 
   const handleDisconnectCalendar = async () => {
@@ -563,7 +563,7 @@ const AgentConfigModal = ({
         onClose={() => setShowCalendarSettings(false)}
         onConfirm={handleCalendarSettingsConfirm}
         isLoading={isConnectingCalendar}
-        initialSettings={calendarSettings}
+        initialSettings={undefined}
       />
     </Dialog >
   );

@@ -14,8 +14,8 @@ import API_CONFIG from '@/config/api';
 interface UseCalendarConnectionOptions {
     /** Session ID (not used strictly for auth-url but good for context if needed later) */
     sessionId: string;
-    /** User email is REQUIRED for the backend endpoint */
-    userEmail?: string;
+    /** User ID (system UUID) is REQUIRED for the backend endpoint */
+    userId?: string;
     /** Whether to check status on mount */
     autoCheck?: boolean;
     /** Callback when connection is successful */
@@ -35,7 +35,7 @@ interface UseCalendarConnectionReturn {
 
 export const useCalendarConnection = ({
     sessionId,
-    userEmail,
+    userId,
     autoCheck = true,
     onConnected,
     onDisconnected
@@ -51,14 +51,14 @@ export const useCalendarConnection = ({
      * Check the current connection status with the backend
      */
     const checkStatus = useCallback(async () => {
-        if (!userEmail) return;
+        if (!userId) return;
 
         // Don't set global loading if we are just polling (isConnecting is true)
         if (!isConnecting) setIsLoading(true);
 
         try {
             // Updated endpoint matches router code: router.get('/status', ...)
-            const url = `${API_CONFIG.BASE_URL}/api/google-calendar/status?userId=${userEmail}`;
+            const url = `${API_CONFIG.BASE_URL}/api/google-calendar/status?userId=${userId}`;
 
             const response = await authenticatedFetch(url);
             const data = await response.json();
@@ -78,13 +78,13 @@ export const useCalendarConnection = ({
         } finally {
             if (!isConnecting) setIsLoading(false);
         }
-    }, [userEmail, authenticatedFetch, isConnecting]);
+    }, [userId, authenticatedFetch, isConnecting]);
 
     /**
      * Initiate the OAuth connection flow
      */
     const connect = useCallback(async () => {
-        if (!userEmail) {
+        if (!userId) {
             toast({
                 title: "Erro",
                 description: "Email do usuário não identificado.",
@@ -97,7 +97,7 @@ export const useCalendarConnection = ({
 
         try {
             // Updated endpoint matches router code: router.get('/auth-url', ...)
-            const url = `${API_CONFIG.BASE_URL}/api/google-calendar/auth-url?userId=${userEmail}`;
+            const url = `${API_CONFIG.BASE_URL}/api/google-calendar/auth-url?userId=${userId}`;
 
             const response = await authenticatedFetch(url);
             const data = await response.json();
@@ -196,19 +196,19 @@ export const useCalendarConnection = ({
                 variant: "destructive"
             });
         }
-    }, [userEmail, authenticatedFetch, toast, checkStatus, onConnected]);
+    }, [userId, authenticatedFetch, toast, checkStatus, onConnected]);
 
     /**
      * Disconnect the calendar
      */
     const disconnect = useCallback(async () => {
-        if (!userEmail) return;
+        if (!userId) return;
 
         try {
             const url = `${API_CONFIG.BASE_URL}/api/google-calendar/disconnect`;
             const response = await authenticatedFetch(url, {
                 method: 'POST',
-                body: JSON.stringify({ userId: userEmail }),
+                body: JSON.stringify({ userId: userId }),
             });
 
             if (!response.ok) {
@@ -231,14 +231,14 @@ export const useCalendarConnection = ({
                 variant: "destructive"
             });
         }
-    }, [userEmail, authenticatedFetch, toast, onDisconnected]);
+    }, [userId, authenticatedFetch, toast, onDisconnected]);
 
     // Check status on mount if autoCheck is enabled
     useEffect(() => {
-        if (autoCheck && userEmail) {
+        if (autoCheck && userId) {
             checkStatus();
         }
-    }, [autoCheck, userEmail, checkStatus]);
+    }, [autoCheck, userId, checkStatus]);
 
     return {
         isConnected,

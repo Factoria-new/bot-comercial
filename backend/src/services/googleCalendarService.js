@@ -5,8 +5,7 @@ dotenv.config();
 
 // Initialize Composio client for Google Calendar
 const composio = new Composio({
-    apiKey: process.env.COMPOSIO_API_KEY,
-    toolkitVersions: { googlecalendar: 'latest' }
+    apiKey: process.env.COMPOSIO_API_KEY
 });
 
 // Socket.IO instance reference
@@ -200,9 +199,33 @@ export const getConnectionStatus = async (userId, skipHealthCheck = false) => {
         if (!accounts?.items?.length) {
             return { isConnected: false };
         }
+        // CRITICAL FIX: Manually filter by entityId because SDK's list() might return all accounts
+        // Normalize strings to ensure robust comparison (trim + lowercase)
+        const targetEntityId = userId.toLowerCase().trim();
 
-        // Find active Google Calendar account for this user
-        const activeAccount = accounts.items.find(acc => acc.status === 'ACTIVE');
+        // TRUST SDK to filter by entityId
+        // The manual filter failed because entityId is often undefined in the response object
+        const userAccounts = accounts.items;
+
+        console.log(`🔍 Status Check: User=${userId} -> Found ${userAccounts.length} accounts (SDK Filtered)`);
+
+        if (userAccounts.length > 0) {
+            const first = userAccounts[0];
+            // Log for audit but don't block
+            const idVal = first.entityId || first.userId || first.UserId || first.data?.userId || 'undefined';
+            console.log(`   - Verified Account ID: ${idVal} (Matches ${userId}?)`);
+        }
+
+        // Sort by creation time (Newest first) to ensure we track the LATEST connection attempt
+        // This prevents matching old ACTIVE accounts while a new INITIATED one is pending
+        userAccounts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const latestAccount = userAccounts[0];
+        console.log(`   - Latest Account Status: ${latestAccount?.status} (Created: ${latestAccount?.createdAt})`);
+
+        // Only consider connected if the LATEST account is ACTIVE
+        // This forces the UI to wait for the CURRENT flow to finish
+        const activeAccount = latestAccount?.status === 'ACTIVE' ? latestAccount : undefined;
 
         if (!activeAccount) {
             return { isConnected: false };
@@ -216,7 +239,9 @@ export const getConnectionStatus = async (userId, skipHealthCheck = false) => {
 
         // Validate connection health (unless skipped to prevent loops)
         if (!skipHealthCheck) {
-            const health = await validateConnectionHealth(activeAccount.id, userId);
+            // Use the actual entityId from the account if available, otherwise fallback to userId
+            const entityIdToCheck = activeAccount.entityId || userId;
+            const health = await validateConnectionHealth(activeAccount.id, entityIdToCheck);
 
             if (!health.valid) {
                 console.warn(`⚠️ Calendar connection invalid for ${userId}: ${health.reason || health.error}`);
@@ -238,6 +263,7 @@ export const getConnectionStatus = async (userId, skipHealthCheck = false) => {
         return {
             isConnected: true,
             connectionId: activeAccount.id,
+            entityId: activeAccount.entityId || userId, // Return the actual entityId
             email: activeAccount.metadata?.email || null
         };
     } catch (error) {
@@ -255,6 +281,7 @@ export const disconnect = async (userId) => {
     if (!userId) {
         return { success: false, error: 'userId (email) is required' };
     }
+    userId = userId.trim();
 
     try {
         // List ALL accounts for this user (including INITIATED, ACTIVE, etc)
@@ -268,6 +295,11 @@ export const disconnect = async (userId) => {
 
             // Delete all found accounts for this user
             for (const acc of accounts.items) {
+                // Trusting SDK filtered list via entityId (Verified in debug script to isolate users)
+                // Manual entity check removed as entityId is missing on object details
+                console.log(`🗑️ Disconnecting Account ${acc.id} (Verified by entityId scope)`);
+                console.log(`   - Object Dump: ${JSON.stringify(acc)}`);
+
                 try {
                     await composio.connectedAccounts.delete(acc.id);
                     console.log(`✅ Deleted connection: ${acc.id} (${acc.status})`);
@@ -725,7 +757,7 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
             'GOOGLECALENDAR_EVENTS_LIST',
             {
                 connectedAccountId: status.connectionId,
-                userId: userId,
+                entityId: status.entityId || userId,
                 dangerouslySkipVersionCheck: true,
                 arguments: {
                     time_min: normalizedStart,

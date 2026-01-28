@@ -1,0 +1,187 @@
+[TAILING] Tailing last 100 lines for [caji-backend] process (change the value with --lines option)
+/home/ubuntu/.pm2/logs/caji-backend-error.log last 100 lines:
+0|caji-bac | onExecute_ConnectedAccountEntityIdRequired\",\"status\":400,\"request_id\":\"9321a33c-560c-4ee9-a44e-99d0f8ac9004\",\"suggested_fix\":\"\"}}",
+0|caji-bac |     "name": "Error"
+0|caji-bac |   }
+0|caji-bac | }
+0|caji-bac | Calendar availability check error: Error executing the tool GOOGLECALENDAR_EVENTS_LIST
+0|caji-bac | Full error: {
+0|caji-bac |   "stack": "ComposioError: Error executing the tool GOOGLECALENDAR_EVENTS_LIST\n    at handleToolExecutionError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:1130:9)\n    at Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2455:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24\n\nCaused by:\n    at APIError.generate (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/core/error.mjs:36:20)\n    at Composio.makeStatusError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:139:32)\n    at Composio.makeRequest (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:280:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2443:19)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24",
+0|caji-bac |   "message": "Error executing the tool GOOGLECALENDAR_EVENTS_LIST",
+0|caji-bac |   "name": "ComposioToolExecutionError",
+0|caji-bac |   "code": "TS-SDK::TOOL_EXECUTION_ERROR",
+0|caji-bac |   "possibleFixes": [
+0|caji-bac |     "Ensure the tool slug is correct and the input arguments for the tool is valid"
+0|caji-bac |   ],
+0|caji-bac |   "errorId": "baaa3f9f-fa21-4693-84ef-00a325ac98cb",
+0|caji-bac |   "statusCode": 400,
+0|caji-bac |   "cause": {
+0|caji-bac |     "stack": "Error: 400 {\"error\":{\"message\":\"Entity ID is required with connected account. Please provide an entity ID to identify the connected account.\",\"code\":1811,\"slug\":\"ActionExecute_ConnectedAccountEntityIdRequired\",\"status\":400,\"request_id\":\"58efb201-52d0-4544-b980-e6d3c9f55fc2\",\"suggested_fix\":\"\"}}\n    at APIError.generate (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/core/error.mjs:36:20)\n    at Composio.makeStatusError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:139:32)\n    at Composio.makeRequest (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:280:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2443:19)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24",
+0|caji-bac |     "message": "400 {\"error\":{\"message\":\"Entity ID is required with connected account. Please provide an entity ID to identify the connected account.\",\"code\":1811,\"slug\":\"ActionExecute_ConnectedAccountEntityIdRequired\",\"status\":400,\"request_id\":\"58efb201-52d0-4544-b980-e6d3c9f55fc2\",\"suggested_fix\":\"\"}}",
+0|caji-bac |     "name": "Error"
+0|caji-bac |   }
+0|caji-bac | }
+0|caji-bac | Calendar availability check error: Error executing the tool GOOGLECALENDAR_EVENTS_LIST
+0|caji-bac | Full error: {
+0|caji-bac |   "stack": "ComposioError: Error executing the tool GOOGLECALENDAR_EVENTS_LIST\n    at handleToolExecutionError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:1130:9)\n    at Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2455:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24\n\nCaused by:\n    at APIError.generate (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/core/error.mjs:36:20)\n    at Composio.makeStatusError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:139:32)\n    at Composio.makeRequest (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:280:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2443:19)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24",
+0|caji-bac |   "message": "Error executing the tool GOOGLECALENDAR_EVENTS_LIST",
+0|caji-bac |   "name": "ComposioToolExecutionError",
+0|caji-bac |   "code": "TS-SDK::TOOL_EXECUTION_ERROR",
+0|caji-bac |   "possibleFixes": [
+0|caji-bac |     "Ensure the tool slug is correct and the input arguments for the tool is valid"
+0|caji-bac |   ],
+0|caji-bac |   "errorId": "9d769aac-51b7-48db-8a5e-477105782228",
+0|caji-bac |   "statusCode": 400,
+0|caji-bac |   "cause": {
+0|caji-bac |     "stack": "Error: 400 {\"error\":{\"message\":\"Entity ID is required with connected account. Please provide an entity ID to identify the connected account.\",\"code\":1811,\"slug\":\"ActionExecute_ConnectedAccountEntityIdRequired\",\"status\":400,\"request_id\":\"8dc7840c-0358-4667-b8c4-369d3834812c\",\"suggested_fix\":\"\"}}\n    at APIError.generate (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/core/error.mjs:36:20)\n    at Composio.makeStatusError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:139:32)\n    at Composio.makeRequest (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:280:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2443:19)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24",
+0|caji-bac |     "message": "400 {\"error\":{\"message\":\"Entity ID is required with connected account. Please provide an entity ID to identify the connected account.\",\"code\":1811,\"slug\":\"ActionExecute_ConnectedAccountEntityIdRequired\",\"status\":400,\"request_id\":\"8dc7840c-0358-4667-b8c4-369d3834812c\",\"suggested_fix\":\"\"}}",
+0|caji-bac |     "name": "Error"
+0|caji-bac |   }
+0|caji-bac | }
+0|caji-bac | Calendar availability check error: Error executing the tool GOOGLECALENDAR_EVENTS_LIST
+0|caji-bac | Full error: {
+0|caji-bac |   "stack": "ComposioError: Error executing the tool GOOGLECALENDAR_EVENTS_LIST\n    at handleToolExecutionError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:1130:9)\n    at Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2455:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24\n\nCaused by:\n    at APIError.generate (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/core/error.mjs:36:20)\n    at Composio.makeStatusError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:139:32)\n    at Composio.makeRequest (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:280:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2443:19)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24",
+0|caji-bac |   "message": "Error executing the tool GOOGLECALENDAR_EVENTS_LIST",
+0|caji-bac |   "name": "ComposioToolExecutionError",
+0|caji-bac |   "code": "TS-SDK::TOOL_EXECUTION_ERROR",
+0|caji-bac |   "possibleFixes": [
+0|caji-bac |     "Ensure the tool slug is correct and the input arguments for the tool is valid"
+0|caji-bac |   ],
+0|caji-bac |   "errorId": "dbbb0e1b-0e0e-4760-b0c2-327fe9b6323c",
+0|caji-bac |   "statusCode": 400,
+0|caji-bac |   "cause": {
+0|caji-bac |     "stack": "Error: 400 {\"error\":{\"message\":\"Entity ID is required with connected account. Please provide an entity ID to identify the connected account.\",\"code\":1811,\"slug\":\"ActionExecute_ConnectedAccountEntityIdRequired\",\"status\":400,\"request_id\":\"469b4e71-cad3-4083-904a-37b4fefcc1e0\",\"suggested_fix\":\"\"}}\n    at APIError.generate (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/core/error.mjs:36:20)\n    at Composio.makeStatusError (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:139:32)\n    at Composio.makeRequest (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/client/client.mjs:280:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async Tools.executeComposioTool (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2443:19)\n    at async instance.<computed> [as executeComposioTool] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async Tools.execute (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/index.mjs:2543:97)\n    at async instance.<computed> [as execute] (file:///home/ubuntu/cajiassist/backend/node_modules/@composio/core/dist/fileUtils-BxTR8M_c.mjs:526:21)\n    at async checkTimeSlotAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:727:24)\n    at async findAlternativeSlots (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:859:42)\n    at async checkAvailability (file:///home/ubuntu/cajiassist/backend/src/services/googleCalendarService.js:1710:30)\n    at async file:///home/ubuntu/cajiassist/backend/src/routes/googleCalendarRoutes.js:495:24",
+0|caji-bac |     "message": "400 {\"error\":{\"message\":\"Entity ID is required with connected account. Please provide an entity ID to identify the connected account.\",\"code\":1811,\"slug\":\"ActionExecute_ConnectedAccountEntityIdRequired\",\"status\":400,\"request_id\":\"469b4e71-cad3-4083-904a-37b4fefcc1e0\",\"suggested_fix\":\"\"}}",
+0|caji-bac |     "name": "Error"
+0|caji-bac |   }
+0|caji-bac | }
+0|caji-bac | ⚠️ AVISO: Nenhuma API key do Gemini encontrada! Verifique API_GEMINI ou GEMINI_API_KEY no .env
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_SB0BbA4lOuwA belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_SB0BbA4lOuwA belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | ⚠️ AVISO: Nenhuma API key do Gemini encontrada! Verifique API_GEMINI ou GEMINI_API_KEY no .env
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_SB0BbA4lOuwA belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_PVQf3vLSaXtr belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_SB0BbA4lOuwA belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | Google Calendar Auth Error: Multiple connected accounts found for user portob162@gmail.com in auth config ac_vPIa7zdSsrya. Please use the allowMultiple option to allow multiple connected accounts.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_i5y5fQ4qfPH2 belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_SB0BbA4lOuwA belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | ⚠️ AVISO: Nenhuma API key do Gemini encontrada! Verifique API_GEMINI ou GEMINI_API_KEY no .env
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_sqzvQyWmMs89 belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_SB0BbA4lOuwA belonging to undefined, but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | Google Calendar Auth Error: Multiple connected accounts found for user portob162@gmail.com in auth config ac_vPIa7zdSsrya. Please use the allowMultiple option to allow multiple connected accounts.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_TMZ56OdpRQoo belonging to undefined, but requested factorianew@gmail.com. SKIPPING.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_SB0BbA4lOuwA belonging to undefined, but requested factorianew@gmail.com. SKIPPING.
+0|caji-bac | Google Calendar Auth Error: Multiple connected accounts found for user factorianew@gmail.com in auth config ac_vPIa7zdSsrya. Please use the allowMultiple option to allow multiple connected accounts.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_vbt08Qu7ma98 belonging to undefined, but requested factorianew@gmail.com. SKIPPING.
+0|caji-bac | ⚠️ AVISO: Nenhuma API key do Gemini encontrada! Verifique API_GEMINI ou GEMINI_API_KEY no .env
+0|caji-bac | Google Calendar Auth Error: Multiple connected accounts found for user factorianew@gmail.com in auth config ac_vPIa7zdSsrya. Please use the allowMultiple option to allow multiple connected accounts.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_H6v5tbpd7VVP belonging to , but requested factorianew@gmail.com. SKIPPING.
+0|caji-bac | ⚠️ AVISO: Nenhuma API key do Gemini encontrada! Verifique API_GEMINI ou GEMINI_API_KEY no .env
+0|caji-bac | Google Calendar Auth Error: Multiple connected accounts found for user portob162@gmail.com in auth config ac_vPIa7zdSsrya. Please use the allowMultiple option to allow multiple connected accounts.
+0|caji-bac | ⚠️ AVISO: Nenhuma API key do Gemini encontrada! Verifique API_GEMINI ou GEMINI_API_KEY no .env
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_JMgu8xMVxeSJ belonging to , but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | 🛑 CRITICAL: Attempted to disconnect account ca_XMPDotwiCy0R belonging to , but requested portob162@gmail.com. SKIPPING.
+0|caji-bac | ⚠️ AVISO: Nenhuma API key do Gemini encontrada! Verifique API_GEMINI ou GEMINI_API_KEY no .env
+
+/home/ubuntu/.pm2/logs/caji-backend-out.log last 100 lines:
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | ✅ Health check OK para user_cmkxbi1ui00007cp62vtngcsf - conexão saudável
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🏥 Health check executando para user_cmkxbi1ui00007cp62vtngcsf...
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | ✅ Health check OK para user_cmkxbi1ui00007cp62vtngcsf - conexão saudável
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 
+0|caji-bac | 🛑 Shutting down server...
+0|caji-bac | 🧹 Cleaning up WhatsApp service...
+0|caji-bac | 📡 Connection update for user_cmkxbi1ui00007cp62vtngcsf: { connection: 'close', hasQR: false }
+0|caji-bac | ❌ Connection closed for user_cmkxbi1ui00007cp62vtngcsf. statusCode=undefined payloadMessage=undefined isDeviceRemoved=false shouldReconnect=true
+0|caji-bac | 🧹 Keep-alive interval limpo para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🧹 Health check interval limpo para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔄 Reconexão 1 para user_cmkxbi1ui00007cp62vtngcsf agendada em 2000ms (userId: cmkxbi1ui00007cp62vtngcsf)
+0|caji-bac | ✅ WhatsApp service cleaned up (sessions preserved)
+0|caji-bac | ✅ Services cleaned up
+0|caji-bac | ✅ Loaded 1 agent prompts from disk
+0|caji-bac | 📱 WhatsApp Service initialized (Baileys v7)
+0|caji-bac | 🔄 Found 1 saved sessions to restore: [ 'user_cmkxbi1ui00007cp62vtngcsf' ]
+0|caji-bac | 📅 Google Calendar Service initialized
+0|caji-bac | ============================================================
+0|caji-bac | 
+0|caji-bac |    Caji Backend Server
+0|caji-bac | 
+0|caji-bac |    Servidor rodando em: http://localhost:3003
+0|caji-bac |    Frontend URL: https://cajiassist.com/
+0|caji-bac | 
+0|caji-bac |    Status: Online
+0|caji-bac | 
+0|caji-bac | ============================================================
+0|caji-bac | 2026-01-28T01:54:37.912Z - 🚀 Upgrade available! Your composio-core version (0.5.3) is behind. Latest version: 0.5.5.
+0|caji-bac | 2026-01-28T01:54:37.914Z - 🚀 Upgrade available! Your composio-core version (0.5.3) is behind. Latest version: 0.5.5.
+0|caji-bac | 🔄 Restoring session: user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 📋 Extracted userId from sessionId: cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 📱 Found instance in DB: phone=5516981892441 for user cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔧 Creating WhatsApp socket for user_cmkxbi1ui00007cp62vtngcsf with Baileys v7 (version 2.3000.1032141294)
+0|caji-bac | ✅ Session user_cmkxbi1ui00007cp62vtngcsf restoration initiated
+0|caji-bac | 📡 Connection update for user_cmkxbi1ui00007cp62vtngcsf: { connection: 'connecting', hasQR: false }
+0|caji-bac | 🔄 Connecting user_cmkxbi1ui00007cp62vtngcsf...
+0|caji-bac | {"level":30,"time":1769565279943,"pid":52962,"hostname":"ip-172-31-4-107","msg":"✅ Cliente conectado: lXg6yAUM3EL-vXW2AAAC"}
+0|caji-bac | 🔌 WhatsApp handler attached to socket: lXg6yAUM3EL-vXW2AAAC
+0|caji-bac | {"level":30,"time":1769565279946,"pid":52962,"hostname":"ip-172-31-4-107","msg":"✅ Cliente conectado: laodC7tkWxCAOiGaAAAD"}
+0|caji-bac | 🔌 WhatsApp handler attached to socket: laodC7tkWxCAOiGaAAAD
+0|caji-bac | 📡 Connection update for user_cmkxbi1ui00007cp62vtngcsf: { connection: undefined, hasQR: false }
+0|caji-bac | 📡 Connection update for user_cmkxbi1ui00007cp62vtngcsf: { connection: 'open', hasQR: false }
+0|caji-bac | ✅ Connected: user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 📝 Session data updated for user_cmkxbi1ui00007cp62vtngcsf with user: 5516981892441:80@s.whatsapp.net
+0|caji-bac | 📝 Session userId: cmkxbi1ui00007cp62vtngcsf, sock.user.id: 5516981892441:80@s.whatsapp.net
+0|caji-bac | {"level":30,"time":1769565280903,"pid":52962,"hostname":"ip-172-31-4-107","msg":"✅ [DEBUG] getSessionConfig: User found for user_cmkxbi1ui00007cp62vtngcsf (ID: cmkxbi1ui00007cp62vtngcsf)"}
+0|caji-bac | 🔑 Gemini API Key cached for session user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 📱 Updating phoneNumber to 5516981892441 for userId cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | {"level":30,"time":1769565280903,"pid":52962,"hostname":"ip-172-31-4-107","msg":"🔑 [DEBUG] User has geminiApiKey (length: 129)"}
+0|caji-bac | {"level":30,"time":1769565280903,"pid":52962,"hostname":"ip-172-31-4-107","msg":"✅ [DEBUG] API Key decrypted successfully (starts with: AIza...)"}
+0|caji-bac | ✅ Instance phoneNumber updated to 5516981892441 for user cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | ✅ Keep-alive aprimorado ativado para user_cmkxbi1ui00007cp62vtngcsf (intervalo: 15s)
+0|caji-bac | 🏥 Health check ativado para user_cmkxbi1ui00007cp62vtngcsf (intervalo: 2min)
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | 🔍 Socket check: wsReadyState=undefined, wsIsOpen=true, sockIsOpen=undefined, sockWsExists=true => isOpen=true
+0|caji-bac | 💓 Keep-alive check para user_cmkxbi1ui00007cp62vtngcsf: sessionExists=true, isOpen=true
+0|caji-bac | 💓 Keep-alive enviado com sucesso para user_cmkxbi1ui00007cp62vtngcsf
+0|caji-bac | {"level":30,"time":1769565342542,"pid":52962,"hostname":"ip-172-31-4-107","msg":"GET /api/google-calendar/status"}
+0|caji-bac | 🔎 Scanning Acc ca_XMPDotwiCy0R:
+0|caji-bac |    - FULL OBJ: {"id":"ca_XMPDotwiCy0R","authConfig":{"id":"ac_vPIa7zdSsrya","isComposioManaged":true,"isDisabled":false},"data":{"status":"ACTIVE","access_token":"ya29...","token_type":"Bearer","refresh_token":"1//0...","expires_in":3599,"scope":"https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar","code_verifier":"1dce...","callback_url":"https://backend.composio.dev/api/v1/auth-apps/add","base_url":"https://www.googleapis.com/calendar/v3","headers":{"x-request-id":"18a7...","Authorization":"Bear..."},"queryParams":{},"extra_data":{}},"params":{"status":"ACTIVE","access_token":"ya29...","token_type":"Bearer","refresh_token":"1//0...","expires_in":3599,"scope":"https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar","code_verifier":"1dce...","callback_url":"https://backend.composio.dev/api/v1/auth-apps/add","base_url":"https://www.googleapis.com/calendar/v3","headers":{"x-request-id":"18a7...","Authorization":"Bear..."},"queryParams":{},"extra_data":{}},"status":"ACTIVE","statusReason":null,"toolkit":{"slug":"googlecalendar"},"state":{"authScheme":"OAUTH2","val":{"status":"ACTIVE","access_token":"ya29...","token_type":"Bearer","refresh_token":"1//0...","expires_in":3599,"scope":"https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar","code_verifier":"1dce...","callback_url":"https://backend.composio.dev/api/v1/auth-apps/add"}},"testRequestEndpoint":"https://www.googleapis.com/calendar/v3/users/me/calendarList","isDisabled":false,"createdAt":"2026-01-28T01:51:45.139Z","updatedAt":"2026-01-28T01:51:53.897Z"}
+0|caji-bac |    - Extracted ID: '' vs Target: 'portob162@gmail.com'
+0|caji-bac | ⚠️ No match found for portob162@gmail.com in 1 accounts.
+0|caji-bac | 🔍 Status Check: User=portob162@gmail.com -> Found 0 matching accounts (out of 1 total)
+

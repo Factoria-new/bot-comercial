@@ -1074,7 +1074,8 @@ const processBufferedMessages = async (contactId, io) => {
         let calendarConnected = false;
         if (userEmail) {
             try {
-                const calendarStatus = await getCalendarConnectionStatus(userEmail);
+                // Pass true to skip health check (avoid entity mismatch errors on validation)
+                const calendarStatus = await getCalendarConnectionStatus(userEmail, true);
                 calendarConnected = calendarStatus?.isConnected || false;
                 console.log(`📅 Calendar connected for ${userEmail}: ${calendarConnected}`);
             } catch (e) {

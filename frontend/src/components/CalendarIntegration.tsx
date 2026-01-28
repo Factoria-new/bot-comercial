@@ -6,12 +6,15 @@ import CalendarSettingsModal from './CalendarSettingsModal';
 import { useCalendarConnection } from '@/hooks/useCalendarConnection';
 import { CalendarSettings } from '@/lib/scheduleTypes';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 interface CalendarIntegrationProps {
     sessionId: string;
-    userEmail: string;
+    userEmail: string; // Kept for compatibility, unused internally
 }
 
-const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, userEmail }) => {
+const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) => {
+    const { user } = useAuth();
     const [showSettingsModal, setShowSettingsModal] = useState(false);
 
     // Use centralized calendar connection hook
@@ -19,12 +22,11 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
         isConnected,
         isLoading,
         isConnecting,
-        savedSettings,
         connect,
         disconnect
     } = useCalendarConnection({
         sessionId,
-        userEmail,
+        userId: user?.uid,
         autoCheck: true
     });
 
@@ -34,7 +36,8 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
 
     const handleModalConfirm = async (settings: CalendarSettings) => {
         setShowSettingsModal(false);
-        await connect(settings);
+        // settings ignored by hook currently
+        await connect();
     };
 
     const handleDisconnect = async () => {
@@ -146,7 +149,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId, us
                 onClose={() => setShowSettingsModal(false)}
                 onConfirm={handleModalConfirm}
                 isLoading={isConnecting}
-                initialSettings={savedSettings}
+                initialSettings={undefined}
             />
         </Card>
     );
