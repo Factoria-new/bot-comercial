@@ -23,7 +23,7 @@ const router = express.Router();
 /**
  * GET /api/google-calendar/status
  * Get Google Calendar connection status for a user
- * Query params: userId (required - user's email)
+ * Query params: userId (required - user's UUID)
  */
 router.get('/status', async (req, res) => {
     try {
@@ -31,7 +31,7 @@ router.get('/status', async (req, res) => {
         if (!userId) {
             return res.status(400).json({
                 success: false,
-                error: 'userId (email) is required'
+                error: 'userId (UUID) is required'
             });
         }
 
@@ -47,7 +47,7 @@ router.get('/status', async (req, res) => {
 /**
  * GET /api/google-calendar/auth-url
  * Generate OAuth URL for Google Calendar connection
- * Query params: userId (required - user's email)
+ * Query params: userId (required - user's UUID)
  */
 router.get('/auth-url', async (req, res) => {
     try {
@@ -55,7 +55,7 @@ router.get('/auth-url', async (req, res) => {
         if (!userId) {
             return res.status(400).json({
                 success: false,
-                error: 'userId (email) is required'
+                error: 'userId (UUID) is required'
             });
         }
 
