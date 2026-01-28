@@ -101,3 +101,20 @@ model Message {
   @@index([createdAt]) // Para limpeza de mensagens antigas
   @@map("messages")
 }
+
+// Conexões do Google Calendar via Composio
+// Armazena mapeamento userId (email) ↔ connectionId (ca_xxx)
+// Necessário porque o Composio não retorna entityId nas respostas
+model CalendarConnection {
+  id           String   @id @default(uuid())
+  userId       String   @unique // Email do usuário (entityId no Composio)
+  connectionId String   @unique // ID da conexão no Composio (ca_xxx)
+  status       String   @default("initiated") // initiated, active, failed
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([connectionId])
+  @@map("calendar_connections")
+}
+

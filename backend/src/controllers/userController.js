@@ -1,8 +1,43 @@
 
 import prisma from '../config/prisma.js';
-import { encrypt } from '../utils/encryption.js';
+import { encrypt, decrypt } from '../utils/encryption.js';
 
 import { generateSessionToken } from '../services/authService.js';
+
+/**
+ * Get the user's decrypted API Key
+ * Multi-tenancy: Each user gets their own key from the database
+ */
+export const getApiKey = async (req, res) => {
+    try {
+        const userId = req.user?.uid || req.user?.id || req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({ success: false, error: 'Invalid token payload' });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { geminiApiKey: true }
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        if (!user.geminiApiKey) {
+            return res.json({ success: true, apiKey: null });
+        }
+
+        // Decrypt the stored key
+        const decryptedKey = decrypt(user.geminiApiKey);
+
+        res.json({ success: true, apiKey: decryptedKey });
+    } catch (error) {
+        console.error('Get API Key error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch API Key' });
+    }
+};
 
 export const updateApiKey = async (req, res) => {
     try {

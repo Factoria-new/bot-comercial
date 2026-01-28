@@ -21,6 +21,7 @@ echo ">>> [3/6] Installing Backend..."
 cd ~/cajiassist/backend
 npm install
 npx prisma generate
+npx prisma migrate deploy
 cd ..
 
 # 4. Frontend Setup

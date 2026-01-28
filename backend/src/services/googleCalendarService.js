@@ -1,5 +1,6 @@
 import { Composio } from '@composio/core';
 import dotenv from 'dotenv';
+import prisma from '../config/prisma.js';
 
 dotenv.config();
 
@@ -10,6 +11,77 @@ const composio = new Composio({
 
 // Socket.IO instance reference
 let socketIO = null;
+
+// ============================================
+// LOCAL MAPPING FUNCTIONS (Multi-tenancy fix)
+// ============================================
+
+/**
+ * Save calendar connection mapping locally
+ * @param {string} userId - User's email (entityId)
+ * @param {string} connectionId - Composio connection ID (ca_xxx)
+ * @param {string} status - Connection status: 'initiated' | 'active' | 'failed'
+ */
+const saveConnectionMapping = async (userId, connectionId, status = 'initiated') => {
+    try {
+        await prisma.calendarConnection.upsert({
+            where: { userId: userId.toLowerCase().trim() },
+            update: { connectionId, status, updatedAt: new Date() },
+            create: { userId: userId.toLowerCase().trim(), connectionId, status }
+        });
+        console.log(`📅 Saved connection mapping: userId=${userId}, connectionId=${connectionId}, status=${status}`);
+    } catch (error) {
+        console.error('Failed to save connection mapping:', error.message);
+    }
+};
+
+/**
+ * Get calendar connection mapping from local DB
+ * @param {string} userId - User's email (entityId)
+ * @returns {Promise<{userId: string, connectionId: string, status: string} | null>}
+ */
+const getConnectionMapping = async (userId) => {
+    try {
+        return await prisma.calendarConnection.findUnique({
+            where: { userId: userId.toLowerCase().trim() }
+        });
+    } catch (error) {
+        console.error('Failed to get connection mapping:', error.message);
+        return null;
+    }
+};
+
+/**
+ * Delete calendar connection mapping from local DB
+ * @param {string} userId - User's email (entityId)
+ */
+const deleteConnectionMapping = async (userId) => {
+    try {
+        await prisma.calendarConnection.deleteMany({
+            where: { userId: userId.toLowerCase().trim() }
+        });
+        console.log(`🗑️ Deleted connection mapping for userId=${userId}`);
+    } catch (error) {
+        console.error('Failed to delete connection mapping:', error.message);
+    }
+};
+
+/**
+ * Update connection mapping status
+ * @param {string} userId - User's email (entityId)
+ * @param {string} status - New status
+ */
+const updateConnectionMappingStatus = async (userId, status) => {
+    try {
+        await prisma.calendarConnection.updateMany({
+            where: { userId: userId.toLowerCase().trim() },
+            data: { status, updatedAt: new Date() }
+        });
+        console.log(`📅 Updated connection status for userId=${userId} to ${status}`);
+    } catch (error) {
+        console.error('Failed to update connection mapping status:', error.message);
+    }
+};
 
 // Default timezone for Brazil (São Paulo)
 const DEFAULT_TIMEZONE = 'America/Sao_Paulo';
@@ -126,25 +198,30 @@ export const getAuthUrl = async (userId) => {
             }
         );
 
+        const connectionId = connectionRequest.connectedAccountId || connectionRequest.id;
+
+        // MULTI-TENANCY FIX: Save mapping immediately after initiating connection
+        await saveConnectionMapping(userId, connectionId, 'initiated');
+
         console.log(`✅ Google Calendar auth URL generated for ${userId}`);
 
         return {
             success: true,
             authUrl: connectionRequest.redirectUrl,
-            connectionId: connectionRequest.connectedAccountId || connectionRequest.id
+            connectionId: connectionId
         };
     } catch (error) {
         console.error('Google Calendar Auth Error:', error.message);
         return { success: false, error: error.message };
     }
 };
-
 /**
  * Handle OAuth callback after user authenticates
  * @param {string} connectionId - The connection ID returned from auth flow
+ * @param {string} userId - The user's email (optional, for updating mapping)
  * @returns {Promise<{success: boolean, connectionId?: string, email?: string, error?: string}>}
  */
-export const handleCallback = async (connectionId) => {
+export const handleCallback = async (connectionId, userId = null) => {
     if (!connectionId) {
         return { success: false, error: 'connectionId is required' };
     }
@@ -154,6 +231,24 @@ export const handleCallback = async (connectionId) => {
 
         if (connectedAccount.status !== 'ACTIVE') {
             return { success: false, error: 'Connection not active' };
+        }
+
+        // MULTI-TENANCY FIX: Update mapping status to 'active'
+        // Try to find the userId from the connectionId in our local mapping
+        if (userId) {
+            await saveConnectionMapping(userId, connectionId, 'active');
+        } else {
+            // Fallback: try to find by connectionId
+            try {
+                const existingMapping = await prisma.calendarConnection.findUnique({
+                    where: { connectionId }
+                });
+                if (existingMapping) {
+                    await updateConnectionMappingStatus(existingMapping.userId, 'active');
+                }
+            } catch (e) {
+                console.warn('Could not find existing mapping for connectionId:', connectionId);
+            }
         }
 
         const result = {
@@ -181,6 +276,7 @@ export const handleCallback = async (connectionId) => {
 
 /**
  * Get connection status for a specific user
+ * MULTI-TENANCY FIX: Uses local mapping instead of trusting Composio's entityId filter
  * @param {string} userId - User's email (unique identifier) - REQUIRED
  * @param {boolean} skipHealthCheck - Skip health validation (use for internal calls to avoid loops)
  * @returns {Promise<{isConnected: boolean, email?: string, connectionId?: string, needsReconnection?: boolean}>}
@@ -191,90 +287,86 @@ export const getConnectionStatus = async (userId, skipHealthCheck = false) => {
     }
 
     try {
-        const accounts = await composio.connectedAccounts.list({
-            appName: 'googlecalendar',
-            entityId: userId
-        });
+        // MULTI-TENANCY FIX: First check local mapping
+        const localMapping = await getConnectionMapping(userId);
 
-        if (!accounts?.items?.length) {
-            return { isConnected: false };
-        }
-        // CRITICAL FIX: Manually filter by entityId because SDK's list() might return all accounts
-        // Normalize strings to ensure robust comparison (trim + lowercase)
-        const targetEntityId = userId.toLowerCase().trim();
-
-        // TRUST SDK to filter by entityId
-        // The manual filter failed because entityId is often undefined in the response object
-        const userAccounts = accounts.items;
-
-        console.log(`🔍 Status Check: User=${userId} -> Found ${userAccounts.length} accounts (SDK Filtered)`);
-
-        if (userAccounts.length > 0) {
-            const first = userAccounts[0];
-            // Log for audit but don't block
-            const idVal = first.entityId || first.userId || first.UserId || first.data?.userId || 'undefined';
-            console.log(`   - Verified Account ID: ${idVal} (Matches ${userId}?)`);
-        }
-
-        // Sort by creation time (Newest first) to ensure we track the LATEST connection attempt
-        // This prevents matching old ACTIVE accounts while a new INITIATED one is pending
-        userAccounts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        const latestAccount = userAccounts[0];
-        console.log(`   - Latest Account Status: ${latestAccount?.status} (Created: ${latestAccount?.createdAt})`);
-
-        // Only consider connected if the LATEST account is ACTIVE
-        // This forces the UI to wait for the CURRENT flow to finish
-        const activeAccount = latestAccount?.status === 'ACTIVE' ? latestAccount : undefined;
-
-        if (!activeAccount) {
+        if (!localMapping) {
+            console.log(`📅 No local mapping found for ${userId}`);
             return { isConnected: false };
         }
 
-        // Log entity ID comparison for debugging
-        console.log(`📅 Found active account for ${userId}:`);
-        console.log(`   - connectionId: ${activeAccount.id}`);
-        console.log(`   - entityId from Composio: ${activeAccount.entityId || 'NOT SET'}`);
-        console.log(`   - userId we're using: ${userId}`);
+        console.log(`📅 Found local mapping for ${userId}: connectionId=${localMapping.connectionId}, status=${localMapping.status}`);
 
-        // Validate connection health (unless skipped to prevent loops)
-        if (!skipHealthCheck) {
-            // Use the actual entityId from the account if available, otherwise fallback to userId
-            const entityIdToCheck = activeAccount.entityId || userId;
-            const health = await validateConnectionHealth(activeAccount.id, entityIdToCheck);
-
-            if (!health.valid) {
-                console.warn(`⚠️ Calendar connection invalid for ${userId}: ${health.reason || health.error}`);
-
-                // If entity mismatch, just warn but DO NOT auto-disconnect. 
-                // Let the user or agent handle failures.
-                if (health.reason === 'entity_mismatch') {
-                    console.warn(`🔄 Entity mismatch detected for ${userId}. Connection might be unusable.`);
+        // If mapping exists but status is not 'active', check if it's still initiating
+        if (localMapping.status === 'initiated') {
+            // Try to verify if the connection became active
+            try {
+                const account = await composio.connectedAccounts.get(localMapping.connectionId);
+                if (account.status === 'ACTIVE') {
+                    // Update local mapping to active
+                    await updateConnectionMappingStatus(userId, 'active');
+                    localMapping.status = 'active';
+                } else {
+                    console.log(`📅 Connection still initiating for ${userId}`);
+                    return { isConnected: false, status: 'initiating' };
                 }
-
-                return {
-                    isConnected: false,
-                    needsReconnection: true,
-                    reason: health.reason || 'connection_invalid'
-                };
+            } catch (e) {
+                console.warn(`⚠️ Could not verify connection status:`, e.message);
+                return { isConnected: false };
             }
         }
 
-        return {
-            isConnected: true,
-            connectionId: activeAccount.id,
-            entityId: activeAccount.entityId || userId, // Return the actual entityId
-            email: activeAccount.metadata?.email || null
-        };
+        // Verify the connection still exists and is valid in Composio
+        try {
+            const account = await composio.connectedAccounts.get(localMapping.connectionId);
+
+            if (account.status !== 'ACTIVE') {
+                console.warn(`⚠️ Connection ${localMapping.connectionId} is not active (status: ${account.status})`);
+                await deleteConnectionMapping(userId);
+                return { isConnected: false, needsReconnection: true };
+            }
+
+            // Validate connection health (unless skipped to prevent loops)
+            if (!skipHealthCheck) {
+                const health = await validateConnectionHealth(localMapping.connectionId, userId);
+
+                if (!health.valid) {
+                    console.warn(`⚠️ Calendar connection invalid for ${userId}: ${health.reason || health.error}`);
+
+                    if (health.reason === 'entity_mismatch') {
+                        console.warn(`🔄 Entity mismatch detected for ${userId}. Cleaning up...`);
+                        await deleteConnectionMapping(userId);
+                    }
+
+                    return {
+                        isConnected: false,
+                        needsReconnection: true,
+                        reason: health.reason || 'connection_invalid'
+                    };
+                }
+            }
+
+            return {
+                isConnected: true,
+                connectionId: localMapping.connectionId,
+                entityId: userId,
+                email: account.metadata?.email || null
+            };
+        } catch (error) {
+            // Connection doesn't exist in Composio anymore
+            console.warn(`⚠️ Connection not found in Composio, cleaning up local mapping:`, error.message);
+            await deleteConnectionMapping(userId);
+            return { isConnected: false, needsReconnection: true };
+        }
     } catch (error) {
         console.error('Google Calendar Status Check Error:', error.message);
         return { isConnected: false, error: error.message };
     }
 };
 
-
 /**
  * Disconnect Google Calendar account for a user
+ * MULTI-TENANCY FIX: Uses local mapping for reliable disconnection
  * @param {string} userId - User's email - REQUIRED
  */
 export const disconnect = async (userId) => {
@@ -284,31 +376,41 @@ export const disconnect = async (userId) => {
     userId = userId.trim();
 
     try {
-        // List ALL accounts for this user (including INITIATED, ACTIVE, etc)
-        const accounts = await composio.connectedAccounts.list({
-            appName: 'googlecalendar',
-            entityId: userId
-        });
+        // MULTI-TENANCY FIX: First get the connection from local mapping
+        const localMapping = await getConnectionMapping(userId);
 
-        if (accounts?.items?.length) {
-            console.log(`Phase 1: Found ${accounts.items.length} accounts to disconnect for ${userId}`);
+        if (localMapping) {
+            console.log(`📅 Disconnecting via local mapping: userId=${userId}, connectionId=${localMapping.connectionId}`);
 
-            // Delete all found accounts for this user
-            for (const acc of accounts.items) {
-                // Trusting SDK filtered list via entityId (Verified in debug script to isolate users)
-                // Manual entity check removed as entityId is missing on object details
-                console.log(`🗑️ Disconnecting Account ${acc.id} (Verified by entityId scope)`);
-                console.log(`   - Object Dump: ${JSON.stringify(acc)}`);
+            // Delete from Composio
+            try {
+                await composio.connectedAccounts.delete(localMapping.connectionId);
+                console.log(`✅ Deleted connection from Composio: ${localMapping.connectionId}`);
+            } catch (delErr) {
+                console.warn(`⚠️ Failed to delete from Composio (may already be deleted):`, delErr.message);
+            }
 
-                try {
-                    await composio.connectedAccounts.delete(acc.id);
-                    console.log(`✅ Deleted connection: ${acc.id} (${acc.status})`);
-                } catch (delErr) {
-                    console.warn(`⚠️ Failed to delete ${acc.id}:`, delErr.message);
+            // Always delete local mapping
+            await deleteConnectionMapping(userId);
+        } else {
+            console.log(`ℹ️ No local mapping found for ${userId}, trying Composio directly...`);
+
+            // Fallback: try to find and delete from Composio directly
+            const accounts = await composio.connectedAccounts.list({
+                appName: 'googlecalendar',
+                entityId: userId
+            });
+
+            if (accounts?.items?.length) {
+                for (const acc of accounts.items) {
+                    try {
+                        await composio.connectedAccounts.delete(acc.id);
+                        console.log(`✅ Deleted connection: ${acc.id}`);
+                    } catch (delErr) {
+                        console.warn(`⚠️ Failed to delete ${acc.id}:`, delErr.message);
+                    }
                 }
             }
-        } else {
-            console.log(`ℹ️ No accounts found to disconnect for ${userId}`);
         }
 
         if (socketIO) {
