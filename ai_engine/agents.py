@@ -15,20 +15,21 @@ def get_agents(user_id, custom_prompt=None, user_email=None, appointment_duratio
     """
     
     # Configure Gemini LLM using CrewAI's native format
-    # Requires GEMINI_API_KEY environment variable IF api_key is not passed?
-    # Actually, LLM constructor accepts api_key.
+    # IMPORTANT: safety_settings must be passed directly, NOT inside 'config'
+    # Otherwise LiteLLM uses default aggressive filters which silently block responses
+    
+    # Safety settings for LiteLLM/Gemini - passed directly as parameter
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
     
     llm_kwargs = {
         "model": "gemini/gemini-2.5-flash",
         "temperature": 0.7,
-        "config": {
-            "safety_settings": [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-            ]
-        }
+        "safety_settings": safety_settings,  # FIXED: Direct parameter, not inside config
     }
     
     if api_key:
@@ -71,11 +72,33 @@ REGRAS DE AGENDAMENTO:
 
 1. VERIFICAR: Antes de confirmar horário, use 'Verificar Disponibilidade'.
 
-2. CONFIRMAR DADOS: Se disponível, envie por WhatsApp um resumo com: Tipo (Presencial/Online), Data, Horário, Serviço, Nome, E-mail, Local. Pergunte se pode confirmar.
+2. CONFIRMAR DADOS - ⚠️ PASSO OBRIGATÓRIO ⚠️:
+   ANTES de usar a ferramenta 'Agendar Compromisso', você DEVE:
+   a) Enviar um resumo FORMATADO para o cliente (use o template abaixo)
+   b) AGUARDAR o cliente responder "sim" ou confirmar explicitamente
+   c) NÃO AGENDE se o cliente não respondeu ainda!
+
+   📋 TEMPLATE DE CONFIRMAÇÃO (use exatamente este formato):
+   ---
+   📋 *CONFIRMAÇÃO DE AGENDAMENTO*
+   
+   📅 Data: [dia] de [mês] de [ano]
+   ⏰ Horário: [HH:MM]
+   🏢 Serviço: [tipo de serviço]
+   👤 Nome: [nome do cliente]
+   📧 E-mail: [email do cliente]
+   📍 Tipo: [Presencial/Online com Google Meet]
+   
+   ✅ Posso confirmar este agendamento?
+   ---
+
    - ⚠️ DADOS REAIS: Se faltar qualquer dado (Nome, Email, etc), PERGUNTE ao cliente.
    - 🚫 ALUCINAÇÃO ZERO: NUNCA invente dados, nunca use placeholders e NUNCA use o e-mail como nome.
 
-3. AGENDAR: Só use 'Agendar Compromisso' APÓS o cliente confirmar "sim".
+3. AGENDAR - ⚠️ SOMENTE APÓS CONFIRMAÇÃO ⚠️:
+   - Só use 'Agendar Compromisso' APÓS o cliente responder "sim", "pode confirmar", "confirma" ou similar.
+   - Se o cliente AINDA NÃO RESPONDEU à confirmação, NÃO AGENDE.
+   - Pergunte novamente se necessário: "Posso confirmar?"
 
 REGRAS DE REAGENDAMENTO:
 1. Use 'Reagendar Compromisso' passando APENAS email e nova data.

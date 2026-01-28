@@ -609,12 +609,18 @@ const formatBusinessHoursForDescription = (businessHours) => {
 };
 
 /**
- * Get time string (HH:MM) from Date object
+ * Get time string (HH:MM) from Date object in Brazil timezone
+ * TIMEZONE FIX: Uses explicit timezone to avoid server UTC issues
  */
 const getTimeString = (date) => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+    // Use toLocaleString with explicit timezone to get Brazil time
+    const brazilTimeStr = date.toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    return brazilTimeStr;
 };
 
 /**
@@ -631,7 +637,21 @@ const validateEventAgainstBusinessHours = (startDateTime, endDateTime, businessH
 
     const start = new Date(startDateTime);
     const end = new Date(endDateTime);
-    const dayKey = DAY_MAP[start.getDay()];
+
+    // TIMEZONE FIX: Get day of week in Brazil timezone, not server UTC
+    // getDay() returns UTC day which can be wrong near midnight
+    const brazilDayStr = start.toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        weekday: 'short'
+    }).toLowerCase();
+
+    // Map Portuguese weekday abbreviations to our keys
+    const weekdayToDayKey = {
+        'dom': 'dom', 'seg': 'seg', 'ter': 'ter', 'qua': 'qua',
+        'qui': 'qui', 'sex': 'sex', 'sáb': 'sab', 'sab': 'sab'
+    };
+    const dayKey = weekdayToDayKey[brazilDayStr.replace('.', '')] || DAY_MAP[start.getDay()];
+
     const daySchedule = businessHours[dayKey];
     const dayName = DAY_NAMES[dayKey];
 
@@ -859,7 +879,7 @@ export const checkTimeSlotAvailability = async (userId, startDateTime, endDateTi
             'GOOGLECALENDAR_EVENTS_LIST',
             {
                 connectedAccountId: status.connectionId,
-                entityId: status.entityId || userId,
+                userId: status.entityId || userId,
                 dangerouslySkipVersionCheck: true,
                 arguments: {
                     time_min: normalizedStart,
@@ -996,6 +1016,7 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
                             month: '2-digit'
                         });
                         const formattedTime = currentStart.toLocaleTimeString('pt-BR', {
+                            timeZone: 'America/Sao_Paulo',
                             hour: '2-digit',
                             minute: '2-digit'
                         });
@@ -1084,6 +1105,12 @@ export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 6
 
         console.log(`📅 Found ${existingEvents.length} events on ${date}`);
 
+        // Debug: log event details to understand conflict detection
+        existingEvents.forEach((event, idx) => {
+            console.log(`   📅 Event ${idx + 1}: ${event.start.toISOString()} - ${event.end.toISOString()}`);
+        });
+
+
         // Calculate available slots
         const availableSlots = [];
         const now = new Date();
@@ -1102,25 +1129,35 @@ export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 6
             const [openHour, openMin] = slot.start.split(':').map(Number);
             const [closeHour, closeMin] = slot.end.split(':').map(Number);
 
-            // Start from opening time and increment by duration
-            let currentStart = new Date(targetDate);
-            currentStart.setHours(openHour, openMin, 0, 0);
+            // TIMEZONE FIX: Create dates with explicit Brazil timezone offset (-03:00)
+            // This ensures slots are generated in Brazil time, not server UTC time
+            const dateStr = date; // YYYY-MM-DD format
+
+            // Start from opening time with Brazil timezone
+            let currentStart = new Date(`${dateStr}T${String(openHour).padStart(2, '0')}:${String(openMin).padStart(2, '0')}:00-03:00`);
 
             // slotEnd represents the CLOSING TIME - appointments can END at this time
-            // So a slot starting at 17:00 with 60min duration ending at 18:00 is valid if close is 18:00
-            const slotEnd = new Date(targetDate);
-            slotEnd.setHours(closeHour, closeMin, 0, 0);
+            const slotEnd = new Date(`${dateStr}T${String(closeHour).padStart(2, '0')}:${String(closeMin).padStart(2, '0')}:00-03:00`);
 
-            console.log(`   📅 Checking slot ${slot.start}-${slot.end}: slotEnd=${slotEnd.toISOString()}`);
+            console.log(`   📅 Checking slot ${slot.start}-${slot.end}: currentStart=${currentStart.toISOString()}, slotEnd=${slotEnd.toISOString()}`);
 
             // Use <= to include appointments that END exactly at closing time
             // Example: if closing is 18:00 and duration is 60min, 17:00 start is valid (ends at 18:00)
             while (currentStart.getTime() + durationMinutes * 60000 <= slotEnd.getTime()) {
                 const currentEnd = new Date(currentStart.getTime() + durationMinutes * 60000);
-                const hour = currentStart.getHours();
 
-                // Check period filter
-                if (hour < periodFilter.start || hour >= periodFilter.end) {
+                // TIMEZONE FIX: Get hour in Brazil timezone, not server UTC
+                // We use the original openHour + iteration count to get Brazil hour
+                const brazilTimeStr = currentStart.toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                const brazilHour = parseInt(brazilTimeStr.split(':')[0], 10);
+
+                // Check period filter (using Brazil hour)
+                if (brazilHour < periodFilter.start || brazilHour >= periodFilter.end) {
                     currentStart = new Date(currentStart.getTime() + durationMinutes * 60000);
                     continue;
                 }
@@ -1132,12 +1169,18 @@ export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 6
                 }
 
                 // Check for conflicts with existing events
-                const hasConflict = existingEvents.some(event =>
-                    currentStart < event.end && currentEnd > event.start
-                );
+                const hasConflict = existingEvents.some(event => {
+                    const conflicts = currentStart < event.end && currentEnd > event.start;
+                    if (conflicts) {
+                        console.log(`   ❌ Conflict detected: slot ${currentStart.toISOString()} conflicts with event ${event.start.toISOString()}-${event.end.toISOString()}`);
+                    }
+                    return conflicts;
+                });
 
                 if (!hasConflict) {
+                    // Use Brazil timezone for display
                     const timeStr = currentStart.toLocaleTimeString('pt-BR', {
+                        timeZone: 'America/Sao_Paulo',
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: false
@@ -1715,7 +1758,7 @@ export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, b
             return {
                 success: false,
                 reason: 'outside_business_hours',
-                message: `O horário solicitado (${new Date(normalizedStart).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}) está fora do horário de funcionamento.`,
+                message: `O horário solicitado (${new Date(normalizedStart).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}) está fora do horário de funcionamento.`,
                 formattedHours
             };
         }

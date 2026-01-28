@@ -12,6 +12,8 @@ import os
 import uuid
 from tools import TOOLS_USAGE_STATE
 
+# NOTE: load_dotenv() removed - API keys are provided by users via request parameter
+
 app = FastAPI()
 
 class HistoryItem(BaseModel):
@@ -93,7 +95,13 @@ async def run_crew_with_retry(crew, retries=3, delay=2):
     
     for attempt in range(retries):
         try:
-            return await run_crew_with_timeout(crew)
+            result = await run_crew_with_timeout(crew)
+            
+            # Check for None or empty response from LLM
+            if result is None or (isinstance(result, str) and not result.strip()):
+                raise ValueError("Invalid response from LLM call - None or empty")
+            
+            return result
         except TimeoutError as e:
             last_exception = e
             if attempt < retries - 1:
@@ -107,13 +115,23 @@ async def run_crew_with_retry(crew, retries=3, delay=2):
             last_exception = e
             error_str = str(e)
             
+            # Verificar se é erro de resposta vazia (transiente)
+            if "None or empty" in error_str or "Invalid response from LLM" in error_str:
+                wait_time = delay * (attempt + 1) + random.uniform(0.5, 2)
+                print(f"⚠️ Resposta vazia do LLM (Tentativa {attempt+1}/{retries}). Tentando novamente em {wait_time:.1f}s...")
+                await asyncio.sleep(wait_time)
             # Verificar se é erro 500 ou mensagem de erro interno
-            if "500" in error_str or "Internal error" in error_str or "INTERNAL" in error_str:
+            elif "500" in error_str or "Internal error" in error_str or "INTERNAL" in error_str:
                 wait_time = delay * (attempt + 1) + random.uniform(0, 1)
                 print(f"⚠️ Erro 500 detectado (Tentativa {attempt+1}/{retries}). Tentando novamente em {wait_time:.1f}s...")
                 await asyncio.sleep(wait_time)
+            # Rate limit errors
+            elif "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+                wait_time = delay * (attempt + 1) * 2 + random.uniform(1, 3)
+                print(f"⚠️ Rate limit detectado (Tentativa {attempt+1}/{retries}). Tentando novamente em {wait_time:.1f}s...")
+                await asyncio.sleep(wait_time)
             else:
-                # Se não for erro de servidor, falha imediatamente (ex: erro de validação)
+                # Se não for erro de servidor/transiente, falha imediatamente (ex: erro de validação)
                 raise e
                 
     # Se esgotou tentativas
@@ -207,15 +225,27 @@ Para ONLINE: informe que o link Google Meet foi enviado por e-mail.
         # --- RETRY LOGIC FOR WHATSAPP ---
         final_answer = str(result)
         
-        # Check tracking state instead of string parsing
-        # Check tracking state using global state
-        if not TOOLS_USAGE_STATE.get(request_id, {}).get("sent"):
-             # Agent finished but tool was NOT used. Force retry.
-             print(f"⚠️ Agent finished but 'sent' tracker is False. Retry triggered.")
-             print(f"Agent generated text: {final_answer}")
-             
-             retry_task = Task(
-                 description=f"""
+        # ANTI-DUPLICATION: Check if message was already sent before attempting retry
+        # This prevents duplicate messages when LLM returns empty but tool already executed
+        message_was_sent = TOOLS_USAGE_STATE.get(request_id, {}).get("sent", False)
+        
+        if message_was_sent:
+            # Message was already successfully sent - no retry needed
+            print(f"✅ Message already sent for request {request_id}. Skipping retry.")
+        elif not final_answer or final_answer.strip() == "" or "None" in final_answer:
+            # LLM returned empty/None but message wasn't sent
+            print(f"⚠️ LLM returned empty response and message not sent. Cannot retry without content.")
+        else:
+            # LLM returned content but tool was NOT used - force retry
+            print(f"⚠️ Agent finished but 'sent' tracker is False. Retry triggered.")
+            print(f"Agent generated text: {final_answer}")
+            
+            # Before retry, double-check that message wasn't sent between checks
+            if TOOLS_USAGE_STATE.get(request_id, {}).get("sent", False):
+                print(f"✅ Message was sent during processing. Cancelling retry.")
+            else:
+                retry_task = Task(
+                    description=f"""
 🚨 ATENÇÃO: Você gerou uma resposta mas NÃO usou a ferramenta de envio!
 Sua tarefa NÃO ESTÁ COMPLETA.
 
@@ -226,22 +256,22 @@ A mensagem que você gerou foi:
 
 👉 SUA TAREFA AGORA: Use a ferramenta 'Enviar Mensagem WhatsApp' para enviar EXATAMENTE o texto acima para o cliente.
 NÃO mude o texto. Apenas envie.
-                 """.strip(),
-                 expected_output="Confirmação de 'Mensagem enviada com sucesso' vinda da ferramenta.",
-                 agent=comercial
-             )
-             
-             crew_retry = Crew(
-                agents=[comercial],
-                tasks=[retry_task],
-                process=Process.sequential,
-                memory=False
-             )
-             
-             print("🔄 Starting RETRY to force message sending...")
-             result = await run_crew_with_retry(crew_retry)
-             final_answer = str(result)
-             print(f"✅ Retry result: {final_answer}")
+                    """.strip(),
+                    expected_output="Confirmação de 'Mensagem enviada com sucesso' vinda da ferramenta.",
+                    agent=comercial
+                )
+                
+                crew_retry = Crew(
+                   agents=[comercial],
+                   tasks=[retry_task],
+                   process=Process.sequential,
+                   memory=False
+                )
+                
+                print("🔄 Starting RETRY to force message sending...")
+                result = await run_crew_with_retry(crew_retry)
+                final_answer = str(result)
+                print(f"✅ Retry result: {final_answer}")
 
         return {"status": "success", "result": final_answer}
     
