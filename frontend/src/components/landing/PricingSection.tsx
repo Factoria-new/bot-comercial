@@ -5,6 +5,8 @@ import { MessageSquare, Calendar, Mic, ShieldCheck } from "lucide-react";
 
 export const PricingSection = () => {
     const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
+    const [displayPeriod, setDisplayPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
+    const [cardRotation, setCardRotation] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
@@ -16,7 +18,15 @@ export const PricingSection = () => {
 
     const handleToggle = (period: 'monthly' | 'semiannual' | 'annual') => {
         if (pricingPeriod === period) return;
+
+        // Start rotation animation
+        setCardRotation(prev => prev + 180);
         setPricingPeriod(period);
+
+        // After the card is halfway through the rotation, update the display content
+        setTimeout(() => {
+            setDisplayPeriod(period);
+        }, 300); // Half of the 0.6s animation duration
     };
 
     return (
@@ -115,16 +125,54 @@ export const PricingSection = () => {
                                 return base;
                             };
 
-                            const price = getPrice(BASE_PRICE, pricingPeriod);
+                            const getPeriodLabel = (period: string) => {
+                                if (period === 'monthly') return '/mês';
+                                if (period === 'semiannual') return '/semestre';
+                                return '/ano';
+                            };
+
+                            // Use displayPeriod for what's currently visible on the card
+                            const price = getPrice(BASE_PRICE, displayPeriod);
                             const formattedPrice = formatCurrency(price);
-                            const periodLabel = pricingPeriod === 'monthly' ? '/mês' : pricingPeriod === 'semiannual' ? '/semestre' : '/ano';
+                            const periodLabel = getPeriodLabel(displayPeriod);
 
                             // Savings text for Annual plan
-                            const savingsText = pricingPeriod === 'annual' ? (
+                            const savingsText = displayPeriod === 'annual' ? (
                                 <div className="absolute -top-4 right-0 bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded-full animate-bounce">
                                     2 MESES GRÁTIS
                                 </div>
                             ) : null;
+
+                            // Generate content for card faces
+                            const cardContent = (
+                                <>
+                                    <Heading>Premium</Heading>
+                                    <Price>
+                                        {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                    </Price>
+                                    <div className="w-full text-left pl-0 md:pl-4 relative">
+                                        {savingsText}
+                                        <ul className="text-base md:text-lg space-y-3 mt-4 md:mt-6">
+                                            <li className="flex items-center gap-3">
+                                                <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                                                <span>Bot de WhatsApp</span>
+                                            </li>
+                                            <li className="flex items-center gap-3">
+                                                <Calendar className="w-5 h-5 flex-shrink-0" />
+                                                <span>Google Calendar</span>
+                                            </li>
+                                            <li className="flex items-center gap-3">
+                                                <Mic className="w-5 h-5 flex-shrink-0" />
+                                                <span>TTS (Áudio Natural)</span>
+                                            </li>
+                                            <li className="flex items-center gap-3">
+                                                <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+                                                <span>Suporte Prioritário</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </>
+                            );
 
                             return (
                                 <div className="flex flex-row items-center justify-center gap-4 xl:gap-8 flex-nowrap w-full">
@@ -140,53 +188,11 @@ export const PricingSection = () => {
                                             type="waves"
                                             className="bg-[#00A947]"
                                             featured={true}
-                                            rotation={0}
+                                            rotation={cardRotation}
                                             ignoreAuth={true}
-                                            backChildren={
-                                                <>
-                                                    <Heading>Premium</Heading>
-                                                    <Price>
-                                                        {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
-                                                    </Price>
-                                                    <div className="w-full text-left pl-4 relative">
-                                                        {savingsText}
-                                                        <ul className="text-lg space-y-2 mt-4">
-                                                            <li>✨ Bot de WhatsApp</li>
-                                                            <li>📅 Google Calendar</li>
-                                                            <li>🗣️ TTS (Áudio Natural)</li>
-                                                            <li>🛡️ Suporte Prioritário</li>
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            }
+                                            backChildren={cardContent}
                                         >
-                                            {<>
-                                                <Heading>Premium</Heading>
-                                                <Price>
-                                                    {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
-                                                </Price>
-                                                <div className="w-full text-left pl-0 md:pl-4 relative">
-                                                    {savingsText}
-                                                    <ul className="text-base md:text-lg space-y-3 mt-4 md:mt-6">
-                                                        <li className="flex items-center gap-3">
-                                                            <MessageSquare className="w-5 h-5 flex-shrink-0" />
-                                                            <span>Bot de WhatsApp</span>
-                                                        </li>
-                                                        <li className="flex items-center gap-3">
-                                                            <Calendar className="w-5 h-5 flex-shrink-0" />
-                                                            <span>Google Calendar</span>
-                                                        </li>
-                                                        <li className="flex items-center gap-3">
-                                                            <Mic className="w-5 h-5 flex-shrink-0" />
-                                                            <span>TTS (Áudio Natural)</span>
-                                                        </li>
-                                                        <li className="flex items-center gap-3">
-                                                            <ShieldCheck className="w-5 h-5 flex-shrink-0" />
-                                                            <span>Suporte Prioritário</span>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </>}
+                                            {cardContent}
                                         </PricingWrapper>
                                     </motion.div>
                                 </div>

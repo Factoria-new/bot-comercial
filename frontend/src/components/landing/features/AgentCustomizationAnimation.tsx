@@ -6,9 +6,16 @@ export const AgentCustomizationAnimation = () => {
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const arrowVideoRef = useRef<HTMLVideoElement | null>(null);
+    const playVideoRef = useRef<HTMLVideoElement | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
 
     // Initialize audio
     useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
         const audio = new Audio("/audio/agente_ia_demo.mp3");
 
         audio.onended = () => setIsPlaying(false);
@@ -20,10 +27,44 @@ export const AgentCustomizationAnimation = () => {
         audioRef.current = audio;
 
         return () => {
+            window.removeEventListener('resize', checkMobile);
             audio.pause();
             audio.currentTime = 0;
         };
     }, []);
+
+    // Handle arrow video loop with delay
+    useEffect(() => {
+        const video = arrowVideoRef.current;
+        if (!video) return;
+
+        const handleEnded = () => {
+            setTimeout(() => {
+                video.currentTime = 0;
+                video.play().catch(() => { });
+            }, 1000);
+        };
+
+        video.addEventListener('ended', handleEnded);
+        return () => video.removeEventListener('ended', handleEnded);
+    }, [audioEnabled]);
+
+    // Handle play button video loop with delay
+    useEffect(() => {
+        // Only run this effect if the video ref is populated (i.e. when !isPlaying)
+        const video = playVideoRef.current;
+        if (!video) return;
+
+        const handleEnded = () => {
+            setTimeout(() => {
+                video.currentTime = 0;
+                video.play().catch(() => { });
+            }, 500);
+        };
+
+        video.addEventListener('ended', handleEnded);
+        return () => video.removeEventListener('ended', handleEnded);
+    }, [isPlaying, audioEnabled]); // Re-run when isPlaying changes as ref might become available
 
     const handlePlay = () => {
         if (!audioRef.current) return;
@@ -39,9 +80,35 @@ export const AgentCustomizationAnimation = () => {
         }
     };
 
+    // CSS filter to approximate a darker green (#027831) from a dark/black source
+    // If the video is already colored, we reset it with brightness(0) (black) first
+    // Note: This assumes the video has a transparent background.
+    const greenFilter = "brightness(0) saturate(100%) invert(29%) sepia(85%) saturate(1638%) hue-rotate(113deg) brightness(93%) contrast(103%)";
+
     return (
-        <div className="w-full h-full flex items-center justify-center p-2 md:p-4">
-            <div className="w-full max-w-[320px] md:max-w-[380px] bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transform scale-[0.85] md:scale-100 origin-center">
+        <div className="w-full h-full flex items-center justify-center p-2 md:p-4 relative">
+            <AnimatePresence>
+                {audioEnabled && (
+                    <motion.video
+                        ref={arrowVideoRef}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        src="/videos/arrowgreen2.webm"
+                        className="absolute w-16 h-16 md:w-20 md:h-20 pointer-events-none z-50"
+                        style={{
+                            top: isMobile ? '250px' : '360px',
+                            left: isMobile ? '-5px' : '30px',
+                            transform: "scaleY(-1)",
+                            filter: greenFilter
+                        }}
+                        autoPlay
+                        muted
+                        playsInline
+                    />
+                )}
+            </AnimatePresence>
+            <div className="w-full max-w-[320px] md:max-w-[380px] bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transform scale-[0.85] md:scale-100 origin-center relative z-10">
                 {/* Header */}
                 <div className="bg-slate-900 p-4 flex items-center justify-between">
                     <span className="text-white font-semibold flex items-center gap-2">
@@ -129,12 +196,26 @@ export const AgentCustomizationAnimation = () => {
                                     exit={{ height: 0, opacity: 0, marginTop: 0 }}
                                     className="border-t border-slate-200/60 pt-3"
                                 >
-                                    <div className="bg-white rounded-xl p-2.5 flex items-center gap-3 shadow-sm border border-slate-100">
+                                    <div className="bg-white rounded-xl p-2.5 flex items-center gap-3 shadow-sm border border-slate-100 relative">
                                         <button
                                             onClick={handlePlay}
-                                            className="w-8 h-8 rounded-full bg-[#00A947] flex items-center justify-center text-white shrink-0 hover:bg-[#008f3c] transition-colors"
+                                            className={`
+                                                w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 transition-colors relative z-20 overflow-hidden
+                                                ${isPlaying ? 'bg-[#00A947] hover:bg-[#008f3c]' : 'bg-transparent'}
+                                            `}
                                         >
-                                            {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+                                            {isPlaying ? (
+                                                <Pause size={14} fill="currentColor" />
+                                            ) : (
+                                                <video
+                                                    ref={playVideoRef}
+                                                    src="/videos/PlayOutlier.webm"
+                                                    className="w-full h-full object-cover scale-150"
+                                                    autoPlay
+                                                    muted
+                                                    playsInline
+                                                />
+                                            )}
                                         </button>
 
                                         {/* Waveform Visualization */}
@@ -164,9 +245,9 @@ export const AgentCustomizationAnimation = () => {
                                                 <motion.span
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
-                                                    className="text-[10px] text-slate-400 font-medium whitespace-nowrap mr-1"
+                                                    className="text-[10px] text-slate-400 font-medium mr-1 truncate max-w-[80px] md:max-w-none"
                                                 >
-                                                    Clique para ouvir o assistente
+                                                    Ouvir exemplo
                                                 </motion.span>
                                             )}
                                         </div>

@@ -681,27 +681,27 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                 ref={heroTextRef}
                 className="relative md:absolute top-0 left-0 w-full md:w-[60vw] lg:w-[50vw] h-auto md:h-screen flex flex-col justify-start md:justify-center pt-20 md:pt-28 pb-2 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto order-1 md:order-none"
             >
-                <h1 className="text-3xl md:text-[clamp(2.5rem,5vw,6rem)] font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
+                <h1 className="mt-8 md:mt-0 text-3xl md:text-[clamp(2.5rem,5vw,6rem)] font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
                     Seu Atendente IA em todos os seus canais,{' '}
                     <span className="text-[#00A947] block mt-2">Vendas 24 horas</span>
                 </h1>
 
-                <p className="text-gray-600 text-left mt-3 md:mt-8 text-base md:text-[clamp(1.25rem,2vw,1.5rem)] w-full max-w-2xl mr-auto leading-relaxed">
+                <p className="hidden md:block text-gray-600 text-left mt-3 md:mt-8 text-base md:text-[clamp(1.25rem,2vw,1.5rem)] w-full max-w-2xl mr-auto leading-relaxed">
                     Nunca mais perca um cliente por demora. IA que atende, agenda e vende enquanto você dorme.
                 </p>
 
                 {/* Botões CTA */}
-                <div className="flex flex-wrap gap-3 md:gap-4 mt-5 md:mt-8 pointer-events-auto">
+                <div className="flex flex-nowrap gap-3 md:gap-4 mt-5 md:mt-8 pointer-events-auto">
                     <Button
                         onClick={executeSkipToPricing}
-                        className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-6 py-4 md:px-8 md:py-6 text-base md:text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                        className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-4 py-4 md:px-8 md:py-6 text-base md:text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 whitespace-nowrap"
                     >
                         Começar Agora
                     </Button>
                     <Button
                         variant="outline"
                         onClick={() => transitionToSection('produto')}
-                        className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-6 py-4 md:px-8 md:py-6 text-base md:text-lg rounded-full transition-all"
+                        className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-4 py-4 md:px-8 md:py-6 text-base md:text-lg rounded-full transition-all whitespace-nowrap"
                     >
                         Ver Como Funciona
                     </Button>
@@ -791,10 +791,12 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                                 <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
                                     <div className="group flex justify-center w-full">
                                         <h1
-                                            className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-widest leading-[1.1] group-hover:scale-105 transition-transform duration-500"
+                                            className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-widest leading-[1.1] group-hover:scale-105 transition-transform duration-500 flex flex-col items-center gap-2"
                                             style={{ wordSpacing: '0.5em' }}
                                         >
-                                            MÉTRICAS EM TEMPO REAL
+                                            <span>MÉTRICAS</span>
+                                            <span>EM</span>
+                                            <span>TEMPO REAL</span>
                                         </h1>
                                     </div>
 
