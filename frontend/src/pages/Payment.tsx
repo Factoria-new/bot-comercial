@@ -38,10 +38,10 @@ const Payment = () => {
             'basic_semiannual': import.meta.env.VITE_STRIPE_PRICE_BASIC_SEMIANNUAL || 'price_basic_semiannual',
             'basic_annual': import.meta.env.VITE_STRIPE_PRICE_BASIC_ANNUAL || 'price_basic_annual',
 
-            // Map premium to basic prices as requested
-            'premium_monthly': import.meta.env.VITE_STRIPE_PRICE_BASIC_MONTHLY || 'price_basic_monthly',
-            'premium_semiannual': import.meta.env.VITE_STRIPE_PRICE_BASIC_SEMIANNUAL || 'price_basic_semiannual',
-            'premium_annual': import.meta.env.VITE_STRIPE_PRICE_BASIC_ANNUAL || 'price_basic_annual',
+            // Premium Plan (uses Premium Keys)
+            'premium_monthly': import.meta.env.VITE_STRIPE_PRICE_PREMIUM_MONTHLY || 'price_premium_monthly',
+            'premium_semiannual': import.meta.env.VITE_STRIPE_PRICE_PREMIUM_SEMIANNUAL || 'price_premium_semiannual',
+            'premium_annual': import.meta.env.VITE_STRIPE_PRICE_PREMIUM_ANNUAL || 'price_premium_annual',
 
             'pro_monthly': import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY || 'price_pro_monthly',
             'pro_semiannual': import.meta.env.VITE_STRIPE_PRICE_PRO_SEMIANNUAL || 'price_pro_semiannual',
@@ -67,7 +67,7 @@ const Payment = () => {
                 body: JSON.stringify({
                     email,
                     priceId: getPriceId(),
-                    planType: plan === 'premium' ? 'basic' : plan, // Map premium back to basic for backend compatibility if needed
+                    planType: plan, // Send 'premium', 'pro' or 'basic' as is
                     period,
                 }),
             });
