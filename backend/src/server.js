@@ -111,16 +111,23 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature', 'X-Gemini-Key']
 }));
 
-// Configuração para Webhook do Stripe (precisa do raw body)
-// Limite aumentado para 50mb para suportar áudios maiores
-app.use(express.json({
-  limit: '50mb',
-  verify: (req, res, buf) => {
-    if (req.originalUrl.startsWith('/api/stripe/webhook')) {
-      req.rawBody = buf.toString();
-    }
+// ===== WEBHOOK DO STRIPE - DEVE VIR ANTES DO express.json() =====
+// O Stripe exige o body raw (não parseado) para validar a assinatura
+app.post('/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    // Importar o handler dinamicamente para evitar dependência circular
+    const { handleWebhook } = await import('./controllers/stripeController.js');
+    // O express.raw() coloca o Buffer em req.body
+    // Passamos o Buffer diretamente para preservar o conteúdo exato
+    req.rawBody = req.body; // Buffer, não string!
+    return handleWebhook(req, res);
   }
-}));
+);
+
+// Configuração para outras rotas (JSON parsing normal)
+// Limite aumentado para 50mb para suportar áudios maiores
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Logging de requisições (skip high-frequency polling endpoints)

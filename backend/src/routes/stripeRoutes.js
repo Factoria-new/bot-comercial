@@ -4,7 +4,6 @@ import {
     createCheckoutSession,
     createPortalSession,
     listPrices,
-    handleWebhook,
 } from '../controllers/stripeController.js';
 
 const router = express.Router();
@@ -18,7 +17,7 @@ router.post('/create-portal', createPortalSession);
 // GET /api/stripe/prices - Listar preços disponíveis
 router.get('/prices', listPrices);
 
-// POST /api/stripe/webhook - Webhook handler (raw body já configurado no server.js)
-router.post('/webhook', handleWebhook);
+// NOTA: A rota POST /api/stripe/webhook é configurada diretamente no server.js
+// para garantir que o raw body seja capturado antes do express.json() processar
 
 export default router;

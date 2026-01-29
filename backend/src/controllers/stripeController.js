@@ -126,13 +126,38 @@ export const handleWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    // === DIAGNÓSTICO - INÍCIO ===
+    logger.info(`🔍 Webhook recebido - Headers: ${JSON.stringify({
+        'content-type': req.headers['content-type'],
+        'stripe-signature': sig ? sig.substring(0, 50) + '...' : 'MISSING',
+        'content-length': req.headers['content-length'],
+    })}`);
+    logger.info(`🔍 rawBody existe: ${!!req.rawBody}, tamanho: ${req.rawBody?.length || 0}`);
+    logger.info(`🔍 webhookSecret configurado: ${!!webhookSecret}`);
+    // === DIAGNÓSTICO - FIM ===
+
     let event;
 
     try {
         // Verificar assinatura do webhook
+        if (!req.rawBody) {
+            logger.error(`❌ rawBody não foi capturado! Verifique a ordem dos middlewares.`);
+            return res.status(400).send('Webhook Error: rawBody not captured');
+        }
+        if (!webhookSecret) {
+            logger.error(`❌ STRIPE_WEBHOOK_SECRET não está configurado!`);
+            return res.status(400).send('Webhook Error: webhookSecret not configured');
+        }
         event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
     } catch (err) {
-        logger.error(`⚠️ Webhook signature verification failed:`, err.message);
+        const bodyPreview = Buffer.isBuffer(req.rawBody)
+            ? req.rawBody.toString('utf8').substring(0, 100)
+            : req.rawBody?.substring?.(0, 100) || 'N/A';
+        logger.error(`⚠️ Webhook signature verification failed: ${err.message}`);
+        logger.error(`⚠️ Primeiros 100 chars do rawBody: ${bodyPreview}`);
+        logger.error(`⚠️ Webhook Secret (primeiros 15 chars): ${webhookSecret?.substring(0, 15)}...`);
+        logger.error(`⚠️ Content-Length: ${req.headers['content-length']}, rawBody.length: ${req.rawBody?.length}`);
+        logger.error(`⚠️ rawBody é Buffer: ${Buffer.isBuffer(req.rawBody)}`);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
