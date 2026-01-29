@@ -71,7 +71,7 @@ export const PricingSection = () => {
                 {/* Content Grid - 1 Col on Mobile, 2 on Desktop */}
                 <div className="relative z-10 w-full h-full grid grid-cols-1 md:grid-cols-2">
                     {/* Left Column: Text */}
-                    <div className="flex flex-col justify-center items-center text-center p-6 md:p-12 pt-8 md:pt-[12vh]">
+                    <div className="flex flex-col justify-center md:justify-start items-center text-center p-6 md:p-12 pt-8 md:pt-[6vh]">
                         <h2 className="text-[clamp(1.5rem,4vw,3.5rem)] font-clash font-bold text-[#1E293B] tracking-[-0.04em] leading-[1.1] mb-4 max-w-lg">
                             ESCOLHA SEU PLANO
                         </h2>
