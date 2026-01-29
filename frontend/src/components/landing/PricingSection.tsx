@@ -4,8 +4,8 @@ import { PricingWrapper, Heading, Price } from "@/components/ui/animated-pricing
 import { MessageSquare, Calendar, Mic, ShieldCheck } from "lucide-react";
 
 export const PricingSection = () => {
-    const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('annual');
-    const [displayPeriod, setDisplayPeriod] = useState<'monthly' | 'annual'>('annual');
+    const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
+    const [displayPeriod, setDisplayPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
     const [cardRotation, setCardRotation] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
 
@@ -16,7 +16,7 @@ export const PricingSection = () => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    const handleToggle = (period: 'monthly' | 'annual') => {
+    const handleToggle = (period: 'monthly' | 'semiannual' | 'annual') => {
         if (pricingPeriod === period) return;
 
         // Start rotation animation
@@ -93,13 +93,17 @@ export const PricingSection = () => {
                     {/* Right Column: Pricing Cards - Fit to container */}
                     <div className="flex flex-col justify-center items-center p-4 md:p-8 pb-12 md:pt-[8vh] relative w-full">
                         {/* Period selector */}
-                        <div className="flex justify-center mb-4 md:mb-8 w-full scale-[0.9] md:scale-100">
-                            <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer w-[340px] h-[50px]">
+                        <div className="flex justify-center mb-4 md:mb-8 w-full">
+                            <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer w-full max-w-[320px] md:max-w-sm h-[50px] translate-x-2 md:translate-x-6">
                                 <div
-                                    className={`absolute top-1 bottom-1 w-[48%] bg-[#00A947] rounded-full transition-all duration-300 ${pricingPeriod === 'annual' ? 'left-1' : 'left-[51%]'}`}
+                                    className={`absolute top-1 bottom-1 w-[32%] bg-[#00A947] rounded-full transition-all duration-300 
+                                    ${pricingPeriod === 'annual' ? 'left-1' : pricingPeriod === 'semiannual' ? 'left-[34%]' : 'left-[67%]'}`}
                                 />
                                 <div onClick={() => handleToggle('annual')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'annual' ? 'text-white font-bold' : 'text-slate-400'}`}>
                                     Anual
+                                </div>
+                                <div onClick={() => handleToggle('semiannual')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'semiannual' ? 'text-white font-bold' : 'text-slate-400'}`}>
+                                    Semestral
                                 </div>
                                 <div onClick={() => handleToggle('monthly')} className={`relative z-10 flex-1 text-center py-2 rounded-full transition-colors duration-300 ${pricingPeriod === 'monthly' ? 'text-white font-bold' : 'text-slate-400'}`}>
                                     Mensal
@@ -117,26 +121,37 @@ export const PricingSection = () => {
 
                             const getPrice = (base: number, period: string) => {
                                 if (period === 'monthly') return base;
-                                if (period === 'annual') return (base * 10) / 12;
+                                if (period === 'semiannual') return base * 6; // Full price for 6 months
+                                if (period === 'annual') return (base * 10) / 12; // 10 months for 12
                                 return base;
                             };
 
-                            const getPeriodLabel = () => {
+                            const getPeriodLabel = (period: string) => {
+                                if (period === 'semiannual') return '/semestre (6 meses)';
+                                if (period === 'annual') return <span className="text-lg">/no plano anual (12 Meses)</span>;
                                 return '/mês';
                             };
 
                             // Use displayPeriod for what's currently visible on the card
                             const price = getPrice(BASE_PRICE, displayPeriod);
                             const formattedPrice = formatCurrency(price);
-                            const periodLabel = getPeriodLabel();
+                            const periodLabel = getPeriodLabel(displayPeriod);
 
                             // Calculate savings percentage
-                            const monthlyCostAnnual = (BASE_PRICE * 10) / 12;
                             const monthlyCostMonthly = BASE_PRICE;
-                            const savingsPercent = Math.round(((monthlyCostMonthly - monthlyCostAnnual) / monthlyCostMonthly) * 100);
+                            const monthlyCostAnnual = (BASE_PRICE * 10) / 12;
+                            // For semiannual, comparing per-month basis effectively: (119.40 / 6) = 19.90. So 0% savings vs monthly.
+                            const monthlyCostSemiannual = (BASE_PRICE * 6) / 6;
+
+                            let savingsPercent = 0;
+                            if (displayPeriod === 'annual') {
+                                savingsPercent = Math.round(((monthlyCostMonthly - monthlyCostAnnual) / monthlyCostMonthly) * 100);
+                            } else if (displayPeriod === 'semiannual') {
+                                savingsPercent = Math.round(((monthlyCostMonthly - monthlyCostSemiannual) / monthlyCostMonthly) * 100);
+                            }
 
                             // Savings text for Annual plan
-                            const savingsText = displayPeriod === 'annual' ? (
+                            const savingsText = (displayPeriod === 'annual' && savingsPercent > 0) ? (
                                 <div className="absolute -top-4 right-0 bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded-full animate-bounce">
                                     ECONOMIZE {savingsPercent}%
                                 </div>

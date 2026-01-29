@@ -893,8 +893,8 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                                 <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
                                     <div className="group flex justify-center w-full">
                                         <h1
-                                            className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-widest leading-[1.1] group-hover:scale-105 transition-transform duration-500 flex flex-col items-center gap-2"
-                                            style={{ wordSpacing: '0.5em' }}
+                                            className="text-[clamp(2.5rem,7vw,5rem)] font-clash font-bold text-[#1E293B] text-center tracking-widest leading-[1.1] group-hover:scale-105 transition-transform duration-500 flex flex-col items-center gap-0"
+                                            style={{ wordSpacing: '0.1em' }}
                                         >
                                             <span>MÉTRICAS</span>
                                             <span>EM</span>
@@ -902,7 +902,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                                         </h1>
                                     </div>
 
-                                    <div className="group flex justify-center w-full">
+                                    <div className="group flex justify-center w-full mt-2">
                                         <p className="text-[clamp(0.75rem,2vw,1rem)] font-clash font-bold text-[#1E293B]/70 text-center tracking-[0.2em] uppercase group-hover:translate-y-1 transition-transform duration-300">
                                             +100% ATENDIMENTO AUTOMÁTICO
                                         </p>
@@ -910,7 +910,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                                 </motion.div>
 
                                 {/* Animated Arrow Cards */}
-                                <div className="hidden md:flex flex-col gap-6 mt-[15vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
+                                <div className="hidden md:flex flex-col gap-6 mt-[5vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
                                     {[
                                         { icon: Users, color: "bg-[#027831]", value: "+150%", label: "Leads", width: "100%" },
                                         { icon: MessageSquare, color: "bg-[#6366F1]", value: "+80%", label: "Respostas", width: "85%" },
