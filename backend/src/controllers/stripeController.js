@@ -69,7 +69,14 @@ export const createCheckoutSession = async (req, res) => {
         });
     } catch (error) {
         logger.error(error, 'Erro ao criar checkout session:');
-        res.status(500).json({ error: 'Erro ao criar sessão de pagamento' });
+        console.error('STRIPE ERROR DETAIL:', error); // Force log to stdout
+
+        // Return clear error to frontend for debugging
+        res.status(500).json({
+            error: 'Erro ao criar sessão de pagamento',
+            details: error.message,
+            code: error.code || 'unknown'
+        });
     }
 };
 
