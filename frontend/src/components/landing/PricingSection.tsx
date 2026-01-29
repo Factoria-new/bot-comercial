@@ -132,10 +132,17 @@ export const PricingSection = () => {
                                 return '/mês';
                             };
 
+                            const getPeriodLabelText = (period: string) => {
+                                if (period === 'semiannual') return '/semestre';
+                                if (period === 'annual') return '/no plano anual';
+                                return '/mês';
+                            };
+
                             // Use displayPeriod for what's currently visible on the card
                             const price = getPrice(BASE_PRICE, displayPeriod);
                             const formattedPrice = formatCurrency(price);
                             const periodLabel = getPeriodLabel(displayPeriod);
+                            const periodLabelText = getPeriodLabelText(displayPeriod);
 
                             // Calculate savings percentage
                             const monthlyCostMonthly = BASE_PRICE;
@@ -198,7 +205,7 @@ export const PricingSection = () => {
                                     >
                                         <PricingWrapper
                                             contactHref="/payment"
-                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedPrice}${periodLabel}` }}
+                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedPrice}${periodLabelText}` }}
                                             type="waves"
                                             className="bg-[#00A947]"
                                             featured={true}
