@@ -110,7 +110,7 @@ export const ChatOverlay = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
             transition={{ duration: 0.8, ease: "easeInOut" }}
-            className="absolute inset-0 flex flex-col items-center justify-start pt-[7vh] md:items-start md:justify-center md:pt-0 md:pl-20 pointer-events-none z-30"
+            className="absolute inset-0 flex flex-col items-center justify-start pt-[6vh] md:items-start md:justify-center md:pt-0 md:pl-20 pointer-events-none z-30"
         >
             <div className="w-[85%] md:w-full max-w-sm scale-75 md:scale-100 origin-top bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
                 {/* Header */}

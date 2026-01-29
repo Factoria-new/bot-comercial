@@ -103,10 +103,10 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
     };
 
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col lg:grid lg:grid-cols-4 gap-4 sm:gap-6">
                 {/* Presets & Selection (1/4) */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                     <div className="space-y-3">
                         <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider flex items-center gap-2">
                             <Zap className="h-3 w-3 text-purple-400" />
@@ -150,7 +150,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                     </div>
 
                     <div className="space-y-3 p-4 bg-black/20 rounded-xl border border-white/10">
-                        <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                        <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider hidden sm:block">
                             Ativar Dias
                         </Label>
                         <div className="grid grid-cols-7 gap-1">
@@ -176,8 +176,8 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                 </div>
 
                 {/* Detailed Slots (3/4) */}
-                <div className="lg:col-span-3 space-y-4">
-                    <ScrollArea className="h-[450px] pr-4">
+                <div className="lg:col-span-3 space-y-3 sm:space-y-4">
+                    <ScrollArea className="h-auto max-h-[40vh] sm:max-h-[450px] pr-2 sm:pr-4">
                         <div className="space-y-3">
                             {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
                                 const daySchedule = schedule[key] || { enabled: false, slots: [] };
@@ -209,22 +209,22 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                                         </div>
 
                                         {daySchedule.enabled && (
-                                            <div className="space-y-2 pl-12">
+                                            <div className="space-y-2 pl-4 sm:pl-12">
                                                 {daySchedule.slots.map((slot, index) => (
-                                                    <div key={index} className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-lg border border-white/10 flex-1">
+                                                    <div key={index} className="flex items-center gap-1 sm:gap-2">
+                                                        <div className="flex items-center gap-1 sm:gap-2 bg-black/40 p-1 sm:p-1.5 rounded-lg border border-white/10 flex-1">
                                                             <Input
                                                                 type="time"
                                                                 value={slot.start}
                                                                 onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
-                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
-                                                            <span className="text-white/30">→</span>
+                                                            <span className="text-white/30 text-xs">→</span>
                                                             <Input
                                                                 type="time"
                                                                 value={slot.end}
                                                                 onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
-                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
                                                         </div>
                                                         <button
@@ -328,15 +328,15 @@ export function BusinessInfoModal({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.5, type: 'spring', damping: 25 }}
                 className={cn(
-                    "w-full max-w-4xl mx-auto z-20 relative",
-                    "bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-3xl overflow-hidden",
-                    "min-h-[400px] flex flex-col"
+                    "w-[calc(100vw-2rem)] sm:w-full max-w-4xl mx-auto z-20 relative",
+                    "bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl sm:rounded-3xl overflow-hidden",
+                    "min-h-fit sm:min-h-[400px] flex flex-col"
                 )}
             >
                 {/* --- HEADER --- */}
-                <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                <div className="p-4 sm:p-6 lg:p-8 border-b border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white tracking-tight flex items-center gap-2 sm:gap-3">
                             <Sparkles className="w-6 h-6 text-purple-400" />
                             Configuração do Negócio
                         </h2>
@@ -359,7 +359,7 @@ export function BusinessInfoModal({
                 </div>
 
                 {/* --- BODY --- */}
-                <div className="flex-1 p-8 overflow-y-auto">
+                <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
                     <AnimatePresence mode="wait">
                         {/* STEP 1: Service Type */}
                         {step === 1 && (
@@ -512,24 +512,25 @@ export function BusinessInfoModal({
                 </div>
 
                 {/* --- FOOTER --- */}
-                <div className="p-6 border-t border-white/5 bg-black/20 flex justify-between items-center">
+                <div className="p-4 sm:p-6 border-t border-white/5 bg-black/20 flex justify-between items-center gap-2">
                     {step > 1 ? (
                         <Button
                             variant="ghost"
                             onClick={() => setStep(step - 1)}
-                            className="text-white/50 hover:text-white hover:bg-white/5 rounded-xl h-12 px-6"
+                            className="text-white/50 hover:text-white hover:bg-white/5 rounded-xl h-10 sm:h-12 px-3 sm:px-6"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Voltar
+                            <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+                            <span className="hidden sm:inline">Voltar</span>
                         </Button>
                     ) : (
                         <Button
                             variant="ghost"
                             onClick={onClose}
-                            className="text-white/30 hover:text-white hover:bg-white/5 rounded-xl h-12 px-6 text-sm"
+                            className="text-white/30 hover:text-white hover:bg-white/5 rounded-xl h-10 sm:h-12 px-3 sm:px-6 text-xs sm:text-sm"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Cancelar
+                            <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+                            <span className="hidden sm:inline">Cancelar</span>
+                            <span className="sm:hidden">X</span>
                         </Button>
                     )}
 
@@ -543,7 +544,7 @@ export function BusinessInfoModal({
                         }}
                         disabled={!isStepValid()}
                         className={cn(
-                            "bg-purple-600 hover:bg-purple-500 text-white rounded-xl h-12 px-8 shadow-lg transition-all",
+                            "bg-purple-600 hover:bg-purple-500 text-white rounded-xl h-10 sm:h-12 px-4 sm:px-6 lg:px-8 shadow-lg transition-all text-sm sm:text-base",
                             isStepValid() ? "shadow-purple-900/40 hover:scale-105" : "opacity-50 grayscale cursor-not-allowed"
                         )}
                     >
