@@ -87,9 +87,10 @@ async def run_crew_with_timeout(crew, timeout=CREW_TIMEOUT_SECONDS):
         print(f"❌ TIMEOUT: crew.kickoff() excedeu {timeout}s")
         raise TimeoutError(f"O processamento excedeu o limite de {timeout} segundos. Tente novamente.")
 
-async def run_crew_with_retry(crew, retries=3, delay=2):
+async def run_crew_with_retry(crew, retries=3, delay=2, request_id=None):
     """
     Executa o crew.kickoff() com mecanismo de retry e timeout.
+    IMPORTANT: If request_id is provided, checks if message was already sent before retrying.
     """
     last_exception = None
     
@@ -105,6 +106,11 @@ async def run_crew_with_retry(crew, retries=3, delay=2):
         except TimeoutError as e:
             last_exception = e
             if attempt < retries - 1:
+                # ANTI-DUPLICATION: Check if message was already sent before retrying
+                if request_id and TOOLS_USAGE_STATE.get(request_id, {}).get("sent", False):
+                    print(f"✅ Message already sent for request {request_id}. Stopping retry despite timeout.")
+                    return "Mensagem já enviada com sucesso."
+                    
                 wait_time = delay * (attempt + 1)
                 print(f"⚠️ Timeout (Tentativa {attempt+1}/{retries}). Tentando novamente em {wait_time}s...")
                 await asyncio.sleep(wait_time)
@@ -114,6 +120,11 @@ async def run_crew_with_retry(crew, retries=3, delay=2):
         except Exception as e:
             last_exception = e
             error_str = str(e)
+            
+            # ANTI-DUPLICATION: Check if message was already sent before retrying
+            if request_id and TOOLS_USAGE_STATE.get(request_id, {}).get("sent", False):
+                print(f"✅ Message already sent for request {request_id}. Stopping retry despite error: {error_str[:50]}...")
+                return "Mensagem já enviada com sucesso."
             
             # Verificar se é erro de resposta vazia (transiente)
             if "None or empty" in error_str or "Invalid response from LLM" in error_str:
@@ -134,7 +145,11 @@ async def run_crew_with_retry(crew, retries=3, delay=2):
                 # Se não for erro de servidor/transiente, falha imediatamente (ex: erro de validação)
                 raise e
                 
-    # Se esgotou tentativas
+    # Se esgotou tentativas - verificar se mensagem foi enviada mesmo assim
+    if request_id and TOOLS_USAGE_STATE.get(request_id, {}).get("sent", False):
+        print(f"✅ Message was sent despite exhausting retries. Returning success.")
+        return "Mensagem já enviada com sucesso."
+        
     print(f"❌ Falha após {retries} tentativas.")
     raise last_exception
 
@@ -220,7 +235,7 @@ Para ONLINE: informe que o link Google Meet foi enviado por e-mail.
             memory=False
         )
 
-        result = await run_crew_with_retry(crew)
+        result = await run_crew_with_retry(crew, request_id=request_id)
         
         # --- RETRY LOGIC FOR WHATSAPP ---
         final_answer = str(result)
@@ -269,7 +284,7 @@ NÃO mude o texto. Apenas envie.
                 )
                 
                 print("🔄 Starting RETRY to force message sending...")
-                result = await run_crew_with_retry(crew_retry)
+                result = await run_crew_with_retry(crew_retry, request_id=request_id)
                 final_answer = str(result)
                 print(f"✅ Retry result: {final_answer}")
 
@@ -328,7 +343,7 @@ Analise a mensagem e responda de forma adequada seguindo suas instruções, LEVA
             memory=False
         )
 
-        result = await run_crew_with_retry(crew)
+        result = await run_crew_with_retry(crew, request_id=request_id)
         
         # --- RETRY LOGIC FOR INSTAGRAM ---
         final_answer = str(result)
@@ -360,7 +375,7 @@ A mensagem que você gerou foi:
              )
              
              print("🔄 Starting RETRY to force Instagram message sending...")
-             result = await run_crew_with_retry(crew_retry)
+             result = await run_crew_with_retry(crew_retry, request_id=request_id)
              final_answer = str(result)
              print(f"✅ Retry result: {final_answer}")
              
