@@ -70,7 +70,9 @@ env/
 # Large files
 *.zip
 *.tar.gz
+*.exe
 deploy_pkg/
+frontend/public/videos-scroll/ffmpeg.exe
 
 # Secrets
 serviceAccountKey.json
