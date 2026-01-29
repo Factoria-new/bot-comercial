@@ -191,7 +191,78 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
 
                 {/* Detailed Slots (3/4) */}
                 <div className="lg:col-span-3 space-y-3 sm:space-y-4">
-                    <ScrollArea className="h-auto max-h-[40vh] sm:max-h-[350px] pr-2 sm:pr-4">
+                    {/* Mobile: No scroll wrapper, just a div. Desktop: ScrollArea */}
+                    <div className="sm:hidden space-y-3">
+                        {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
+                            const daySchedule = schedule[key] || { enabled: false, slots: [] };
+
+                            return (
+                                <div
+                                    key={key}
+                                    className={cn(
+                                        "flex flex-col gap-3 p-4 rounded-xl border transition-all",
+                                        daySchedule.enabled
+                                            ? "bg-white/5 border-purple-500/30"
+                                            : "bg-black/10 border-white/5 opacity-40"
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <Switch
+                                                checked={daySchedule.enabled}
+                                                onCheckedChange={() => handleDayToggle(key)}
+                                                className="data-[state=checked]:bg-purple-600"
+                                            />
+                                            <span className={cn(
+                                                "text-sm font-semibold",
+                                                daySchedule.enabled ? "text-white" : "text-white/40"
+                                            )}>
+                                                {label}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {daySchedule.enabled && (
+                                        <div className="space-y-2 pl-4 sm:pl-12">
+                                            {daySchedule.slots.map((slot, index) => (
+                                                <div key={index} className="flex items-center gap-1 sm:gap-2">
+                                                    <div className="flex items-center gap-1 sm:gap-2 bg-black/40 p-1 sm:p-1.5 rounded-lg border border-white/10 flex-1">
+                                                        <Input
+                                                            type="time"
+                                                            value={slot.start}
+                                                            onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
+                                                            className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                        />
+                                                        <span className="text-white/30 text-xs">→</span>
+                                                        <Input
+                                                            type="time"
+                                                            value={slot.end}
+                                                            onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
+                                                            className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeSlot(key, index)}
+                                                        className="p-2 text-white/30 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => addSlot(key)}
+                                                className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1.5 mt-1"
+                                            >
+                                                <Plus className="h-3 w-3" /> Adicionar Período
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {/* Desktop: ScrollArea */}
+                    <ScrollArea className="hidden sm:block h-auto max-h-[350px] pr-4">
                         <div className="space-y-3">
                             {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
                                 const daySchedule = schedule[key] || { enabled: false, slots: [] };
@@ -223,22 +294,22 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                                         </div>
 
                                         {daySchedule.enabled && (
-                                            <div className="space-y-2 pl-4 sm:pl-12">
+                                            <div className="space-y-2 pl-12">
                                                 {daySchedule.slots.map((slot, index) => (
-                                                    <div key={index} className="flex items-center gap-1 sm:gap-2">
-                                                        <div className="flex items-center gap-1 sm:gap-2 bg-black/40 p-1 sm:p-1.5 rounded-lg border border-white/10 flex-1">
+                                                    <div key={index} className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-lg border border-white/10 flex-1">
                                                             <Input
                                                                 type="time"
                                                                 value={slot.start}
                                                                 onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
-                                                                className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
-                                                            <span className="text-white/30 text-xs">→</span>
+                                                            <span className="text-white/30">→</span>
                                                             <Input
                                                                 type="time"
                                                                 value={slot.end}
                                                                 onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
-                                                                className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
                                                         </div>
                                                         <button
@@ -437,7 +508,7 @@ export function WizardModal({
             case 'checkbox-group':
                 const currentSelection = (value as string[]) || [];
                 return (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {field.options?.map(opt => (
                             <div key={opt} className="flex items-center space-x-2 bg-black/20 p-3 rounded-xl border border-white/5">
                                 <Checkbox
@@ -609,7 +680,22 @@ export function WizardModal({
     const isStepValid = () => {
         if (!schema || !schema.steps[step - 1]) return true;
 
-        return schema.steps[step - 1].fields.every(field => {
+        const currentStepObj = schema.steps[step - 1];
+
+        // SPECIAL VALIDATION: Location step requires either "100% Online" checked OR address filled
+        if (currentStepObj.id === 'location') {
+            const onlineOnly = formState.onlineOnly as string[] || [];
+            const address = formState.address as string || '';
+            const is100Online = onlineOnly.some(opt => opt.toLowerCase().includes('100% online') || opt.toLowerCase().includes('sem endereço'));
+            const hasAddress = address.trim().length > 0;
+
+            // Must have either 100% online checked OR address filled
+            if (!is100Online && !hasAddress) {
+                return false;
+            }
+        }
+
+        return currentStepObj.fields.every(field => {
             if (field.required) {
                 // Check Visibility
                 if (field.showIf) {
@@ -658,29 +744,46 @@ export function WizardModal({
                             <Sparkles className="w-6 h-6 text-purple-400" />
                             {schema?.title}
                         </h2>
-                        <div className="flex items-center gap-2 mt-1">
-                            {`Passo ${step} de ${schema ? schema.steps.length : '?'}: ${schema?.steps?.[step - 1]?.title || ''}`}
-                            {/* Audio Indicator */}
-                            {currentAudioText && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="flex items-center gap-2 bg-purple-500/20 text-purple-200 text-xs px-2 py-1 rounded-full"
-                                >
-                                    <Volume2 className="w-3 h-3 animate-pulse" />
-                                    <span>Lia: "{currentAudioText}"</span>
-                                </motion.div>
-                            )}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1 min-h-[1.5rem]">
+                            <AnimatePresence mode="wait">
+                                {/* Mobile: Hide step text when audio is playing */}
+                                {!currentAudioText && (
+                                    <motion.span
+                                        key="step-text"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="text-white/50 text-sm"
+                                    >
+                                        {`Passo ${step} de ${schema ? schema.steps.length : '?'}: ${schema?.steps?.[step - 1]?.title || ''}`}
+                                    </motion.span>
+                                )}
+                                {/* Audio Indicator - takes full width on mobile when visible */}
+                                {currentAudioText && (
+                                    <motion.div
+                                        key="audio-text"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="flex items-start gap-2 bg-purple-500/20 text-purple-200 text-xs px-2 py-1 rounded-lg sm:rounded-full"
+                                    >
+                                        <Volume2 className="w-3 h-3 animate-pulse flex-shrink-0 mt-0.5" />
+                                        <span className="leading-tight">Lia: "{currentAudioText}"</span>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
                     {/* Step Indicator */}
                     {schema && (
-                        <div className="flex gap-1.5 bg-black/20 p-1.5 rounded-full">
+                        <div className="flex gap-1 sm:gap-1.5 bg-black/20 p-1 sm:p-1.5 rounded-lg sm:rounded-full w-full sm:w-auto">
                             {schema.steps.map((_, idx) => (
                                 <div
                                     key={idx}
                                     className={cn(
-                                        "w-2.5 h-2.5 rounded-full transition-all duration-500",
+                                        "flex-1 sm:flex-none h-1.5 sm:h-2.5 sm:w-2.5 rounded-full transition-all duration-500",
                                         (idx + 1) <= step ? "bg-purple-500 shadow-[0_0_10px_purple]" : "bg-white/10"
                                     )}
                                 />

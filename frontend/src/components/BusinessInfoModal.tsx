@@ -177,7 +177,78 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
 
                 {/* Detailed Slots (3/4) */}
                 <div className="lg:col-span-3 space-y-3 sm:space-y-4">
-                    <ScrollArea className="h-auto max-h-[40vh] sm:max-h-[450px] pr-2 sm:pr-4">
+                    {/* Mobile: No scroll wrapper, just a div. Desktop: ScrollArea */}
+                    <div className="sm:hidden space-y-3">
+                        {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
+                            const daySchedule = schedule[key] || { enabled: false, slots: [] };
+
+                            return (
+                                <div
+                                    key={key}
+                                    className={cn(
+                                        "flex flex-col gap-3 p-4 rounded-xl border transition-all",
+                                        daySchedule.enabled
+                                            ? "bg-white/5 border-purple-500/30"
+                                            : "bg-black/10 border-white/5 opacity-40"
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <Switch
+                                                checked={daySchedule.enabled}
+                                                onCheckedChange={() => handleDayToggle(key)}
+                                                className="data-[state=checked]:bg-purple-600"
+                                            />
+                                            <span className={cn(
+                                                "text-sm font-semibold",
+                                                daySchedule.enabled ? "text-white" : "text-white/40"
+                                            )}>
+                                                {label}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {daySchedule.enabled && (
+                                        <div className="space-y-2 pl-4">
+                                            {daySchedule.slots.map((slot, index) => (
+                                                <div key={index} className="flex items-center gap-1">
+                                                    <div className="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/10 flex-1">
+                                                        <Input
+                                                            type="time"
+                                                            value={slot.start}
+                                                            onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
+                                                            className="h-8 flex-1 min-w-[70px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                        />
+                                                        <span className="text-white/30 text-xs">→</span>
+                                                        <Input
+                                                            type="time"
+                                                            value={slot.end}
+                                                            onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
+                                                            className="h-8 flex-1 min-w-[70px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeSlot(key, index)}
+                                                        className="p-2 text-white/30 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => addSlot(key)}
+                                                className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1.5 mt-1"
+                                            >
+                                                <Plus className="h-3 w-3" /> Adicionar Período
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {/* Desktop: ScrollArea */}
+                    <ScrollArea className="hidden sm:block h-auto max-h-[450px] pr-4">
                         <div className="space-y-3">
                             {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
                                 const daySchedule = schedule[key] || { enabled: false, slots: [] };
@@ -209,22 +280,22 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                                         </div>
 
                                         {daySchedule.enabled && (
-                                            <div className="space-y-2 pl-4 sm:pl-12">
+                                            <div className="space-y-2 pl-12">
                                                 {daySchedule.slots.map((slot, index) => (
-                                                    <div key={index} className="flex items-center gap-1 sm:gap-2">
-                                                        <div className="flex items-center gap-1 sm:gap-2 bg-black/40 p-1 sm:p-1.5 rounded-lg border border-white/10 flex-1">
+                                                    <div key={index} className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-lg border border-white/10 flex-1">
                                                             <Input
                                                                 type="time"
                                                                 value={slot.start}
                                                                 onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
-                                                                className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
-                                                            <span className="text-white/30 text-xs">→</span>
+                                                            <span className="text-white/30">→</span>
                                                             <Input
                                                                 type="time"
                                                                 value={slot.end}
                                                                 onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
-                                                                className="h-8 flex-1 min-w-[70px] sm:w-[90px] sm:flex-none border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 w-[90px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
                                                         </div>
                                                         <button
@@ -345,12 +416,12 @@ export function BusinessInfoModal({
                         </p>
                     </div>
                     {/* Step Indicator */}
-                    <div className="flex gap-1.5 bg-black/20 p-1.5 rounded-full">
+                    <div className="flex gap-1 sm:gap-1.5 bg-black/20 p-1 sm:p-1.5 rounded-lg sm:rounded-full w-full sm:w-auto">
                         {[1, 2].map((s) => (
                             <div
                                 key={s}
                                 className={cn(
-                                    "w-2.5 h-2.5 rounded-full transition-all duration-500",
+                                    "flex-1 sm:flex-none h-1.5 sm:h-2.5 sm:w-2.5 rounded-full transition-all duration-500",
                                     s <= step ? "bg-purple-500 shadow-[0_0_10px_purple]" : "bg-white/10"
                                 )}
                             />

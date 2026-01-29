@@ -630,7 +630,7 @@ ${scheduleStr}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="flex items-center justify-center"
+                                className="flex items-center justify-center w-full px-2 sm:px-0"
                             >
                                 <BusinessInfoModal
                                     open={isBusinessInfoModalOpen}
