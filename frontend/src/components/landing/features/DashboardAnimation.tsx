@@ -31,8 +31,8 @@ const Counter = ({ to, prefix = "", suffix = "" }: { to: number; prefix?: string
 
 export const DashboardAnimation = () => {
     return (
-        <div className="w-full h-full flex items-center justify-center p-4">
-            <div className="relative w-full max-w-[420px]">
+        <div className="w-full h-full flex items-center justify-center p-2 md:p-4">
+            <div className="relative w-full max-w-[320px] md:max-w-[420px] scale-[0.85] md:scale-100 origin-center">
                 {/* Background decorative elements */}
                 <div className="absolute -top-12 -right-12 w-32 h-32 bg-green-200/20 rounded-full blur-2xl" />
                 <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-blue-200/20 rounded-full blur-2xl" />

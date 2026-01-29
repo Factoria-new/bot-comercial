@@ -99,7 +99,7 @@ export const PricingWrapper: React.FC<{
 
     return (
         <div
-            className={'min-h-[500px] h-[600px] max-w-sm w-full relative sm:mx-6'}
+            className={'h-[500px] md:h-[600px] max-w-sm w-full relative sm:mx-6'}
             style={{ perspective: "1000px" }}
         >
             <motion.article
@@ -211,11 +211,11 @@ const ContentLayer: React.FC<{
         <div
             style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
             className={
-                'w-full h-full absolute top-0 left-0 z-[2] p-4 flex flex-col items-center justify-start text-center sm:gap-10 gap-7'
+                'w-full h-full absolute top-0 left-0 z-[2] p-6 flex flex-col items-center justify-start text-center gap-4 md:gap-10'
             }
         >
             {children}
-            <div style={{ transform: "translateZ(25px)" }} className={'w-full h-full flex items-end justify-end text-base'}>
+            <div style={{ transform: "translateZ(25px)" }} className={'w-full flex-1 flex items-end justify-center md:justify-end text-base mt-4'}>
                 <PricingButton contactHref={contactHref} isProCard={featured} linkState={linkState} ignoreAuth={ignoreAuth} />
             </div>
         </div>

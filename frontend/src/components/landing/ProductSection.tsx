@@ -49,7 +49,9 @@ export const ProductSection = () => {
     const triggerRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
-        const ctx = gsap.context(() => {
+        const mm = gsap.matchMedia();
+
+        mm.add("(min-width: 768px)", () => {
             gsap.to(triggerRef.current, {
                 xPercent: -100 * (features.length - 1) / features.length,
                 ease: "none",
@@ -58,25 +60,23 @@ export const ProductSection = () => {
                     pin: true,
                     start: "top top",
                     scrub: 1,
-                    // snap: 1 / (features.length - 1), // Disable snapping to prevent scroll interruption
                     end: "+=3000",
                     anticipatePin: 1,
                     fastScrollEnd: 1000,
                     preventOverlaps: true,
                 },
             });
-        }, sectionRef);
+        });
 
-        return () => ctx.revert();
+        return () => mm.revert();
     }, []);
 
     return (
-        <section ref={sectionRef} id="produto" className="relative h-screen bg-white flex flex-col justify-center overflow-hidden">
-
-            {/* Header - Fixed at Top */}
-            <div className="absolute top-32 left-0 w-full z-20 pointer-events-none text-center">
-                <div className="bg-white/90 backdrop-blur-md p-4 px-8 rounded-full inline-block shadow-sm border border-slate-100">
-                    <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight text-slate-900">
+        <section ref={sectionRef} id="produto" className="relative h-auto md:h-screen bg-white flex flex-col justify-center overflow-hidden py-20 md:py-0">
+            {/* Header - Fixed at Top for Desktop, Normal for Mobile */}
+            <div className="relative md:absolute md:top-32 left-0 w-full z-20 pointer-events-none text-center mb-20 md:mb-0">
+                <div className="bg-white/90 backdrop-blur-md p-4 px-6 md:px-8 rounded-full inline-block shadow-sm border border-slate-100 mx-2 md:mx-0">
+                    <h2 className="text-xl md:text-4xl font-extrabold tracking-tight leading-tight text-slate-900">
                         Seu Assistente de Vendas <br className="hidden md:block" />
                         <span>no </span>
                         <span className="text-[#00A947]">WhatsApp</span>
@@ -85,17 +85,17 @@ export const ProductSection = () => {
             </div>
 
             {/* The Band / Strip Area */}
-            <div className="w-full h-[480px] mt-32 bg-slate-50/50 backdrop-blur-sm overflow-hidden relative">
-                <div ref={triggerRef} className="flex h-full w-[400vw]">
+            <div className="w-full h-auto md:h-[480px] md:mt-32 bg-slate-50/50 backdrop-blur-sm overflow-hidden relative">
+                <div ref={triggerRef} className="flex flex-col md:flex-row h-full w-full md:w-[400vw]">
                     {features.map((feature, index) => (
                         <div
                             key={index}
-                            className="relative w-[100vw] h-full flex-shrink-0 flex items-center justify-center px-6 md:px-0"
+                            className="relative w-full md:w-[100vw] h-auto md:h-full flex-shrink-0 flex items-center justify-center py-24 md:py-0 px-6 md:px-0 border-b md:border-b-0 border-slate-100 last:border-b-0"
                         >
-                            <div className="container mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center px-6">
+                            <div className="container mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-12 items-center px-2 md:px-6">
 
                                 {/* Left Column: Text */}
-                                <div className="order-2 md:order-1 space-y-4">
+                                <div className="order-1 md:order-1 space-y-4 flex flex-col items-center md:items-start text-center md:text-left">
                                     <motion.div
                                         initial={{ opacity: 0, x: -50 }}
                                         whileInView={{ opacity: 1, x: 0 }}
@@ -110,7 +110,7 @@ export const ProductSection = () => {
                                             {feature.description}
                                         </p>
 
-                                        <ul className="space-y-2">
+                                        <ul className="space-y-2 w-full flex flex-col items-center md:items-start mt-6 md:mt-0">
                                             {feature.bullets.map((item, i) => (
                                                 <li key={i} className="flex items-center gap-3 text-slate-700 font-medium text-sm md:text-base">
                                                     <div className="p-1 rounded-full bg-green-100 text-[#00A947]">
@@ -124,13 +124,13 @@ export const ProductSection = () => {
                                 </div>
 
                                 {/* Right Column: Animation Component */}
-                                <div className="order-1 md:order-2 w-full flex items-center justify-center">
+                                <div className="order-2 md:order-2 w-full flex items-center justify-center">
                                     <motion.div
-                                        initial={{ opacity: 0, scale: 0.9, x: 30 }}
-                                        whileInView={{ opacity: 1, scale: 1, x: 0 }}
+                                        initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
                                         viewport={{ once: true, amount: 0.1 }}
                                         transition={{ duration: 0.6, ease: "backOut" }}
-                                        className="w-full h-[500px] max-w-2xl flex items-center justify-center"
+                                        className="w-full h-[300px] md:h-[500px] max-w-2xl flex items-center justify-center"
                                     >
                                         {feature.component}
                                     </motion.div>

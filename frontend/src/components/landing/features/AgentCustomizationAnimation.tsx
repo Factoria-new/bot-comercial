@@ -40,8 +40,8 @@ export const AgentCustomizationAnimation = () => {
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center p-4">
-            <div className="w-full max-w-[380px] bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transform scale-90 md:scale-100 origin-center">
+        <div className="w-full h-full flex items-center justify-center p-2 md:p-4">
+            <div className="w-full max-w-[320px] md:max-w-[380px] bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transform scale-[0.85] md:scale-100 origin-center">
                 {/* Header */}
                 <div className="bg-slate-900 p-4 flex items-center justify-between">
                     <span className="text-white font-semibold flex items-center gap-2">

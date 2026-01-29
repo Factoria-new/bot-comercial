@@ -1,10 +1,18 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PricingWrapper, Heading, Price } from "@/components/ui/animated-pricing-cards";
 import { MessageSquare, Calendar, Mic, ShieldCheck } from "lucide-react";
 
 export const PricingSection = () => {
     const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const handleToggle = (period: 'monthly' | 'semiannual' | 'annual') => {
         if (pricingPeriod === period) return;
@@ -12,77 +20,70 @@ export const PricingSection = () => {
     };
 
     return (
-        <section id="pricing" className="relative min-h-screen flex flex-col justify-center px-12 md:px-4 overflow-hidden">
+        <section id="pricing" className="relative min-h-screen flex flex-col justify-center px-4 md:px-12 overflow-hidden py-12 md:py-0">
             {/* Sticker Container - Rounded with margins */}
             <div
-                className="relative w-full max-w-[95%] md:max-w-[80%] mx-auto h-full min-h-[80vh] overflow-hidden md:block flex flex-col"
+                className="relative w-full max-w-full md:max-w-[80%] mx-auto h-full min-h-[40vh] md:min-h-[80vh] overflow-hidden flex flex-col"
                 style={{
-                    borderRadius: '32px',
-                    backgroundColor: '#FF621E'
+                    borderRadius: isMobile ? '0px' : '32px',
+                    backgroundColor: isMobile ? 'transparent' : '#FF621E'
                 }}
             >
                 {/* Background Video - Inside the sticker */}
-                <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: '32px', zIndex: 0 }}>
-                    <div
-                        className="absolute h-full"
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0
-                        }}
-                    >
-                        <motion.div
-                            className="w-full h-full"
+                {!isMobile && (
+                    <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: '32px', zIndex: 0 }}>
+                        <div
+                            className="absolute h-full"
                             style={{
-                                scale: 1.1,
-                                x: '-28%',
-                                y: '1%',
-                                backgroundColor: '#FF621E',
-                                maskImage: 'linear-gradient(to right, black 95%, transparent 100%)',
-                                WebkitMaskImage: 'linear-gradient(to right, black 95%, transparent 100%)'
+                                width: '100%',
+                                height: '100%',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0
                             }}
                         >
-                            <video
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="w-full h-full object-cover"
-                                style={{ display: "block" }}
+                            <motion.div
+                                className="w-full h-full"
+                                style={{
+                                    scale: 1.1,
+                                    x: '-28%',
+                                    y: '1%',
+                                    backgroundColor: '#FF621E',
+                                    maskImage: 'linear-gradient(to right, black 95%, transparent 100%)',
+                                    WebkitMaskImage: 'linear-gradient(to right, black 95%, transparent 100%)'
+                                }}
                             >
-                                <source src="/videos-scroll/NAVIGATE_4K_S10_loop@md.mp4" type="video/mp4" />
-                            </video>
-                        </motion.div>
+                                <video
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                    style={{ display: "block" }}
+                                >
+                                    <source src="/videos-scroll/NAVIGATE_4K_S10_loop@md.mp4" type="video/mp4" />
+                                </video>
+                            </motion.div>
+                        </div>
                     </div>
-                </div>
+                )}
 
-                {/* Content Grid - Always 2 Columns (Text | Cards) */}
-                <div className="relative z-10 w-full h-full grid grid-cols-2">
+                {/* Content Grid - 1 Col on Mobile, 2 on Desktop */}
+                <div className="relative z-10 w-full h-full grid grid-cols-1 md:grid-cols-2">
                     {/* Left Column: Text */}
-                    <div className="flex flex-col justify-start items-center text-center p-4 pt-[8vh] md:p-12 md:pt-[12vh]">
-                        <h2 className="text-[clamp(1.5rem,4vw,3.5rem)] font-clash font-bold text-[#1E293B] tracking-[-0.04em] leading-[1.1] mb-6 max-w-lg">
+                    <div className="flex flex-col justify-center items-center text-center p-6 md:p-12 pt-8 md:pt-[12vh]">
+                        <h2 className="text-[clamp(1.5rem,4vw,3.5rem)] font-clash font-bold text-[#1E293B] tracking-[-0.04em] leading-[1.1] mb-4 max-w-lg">
                             ESCOLHA SEU PLANO
                         </h2>
-                        <p className="text-base md:text-lg text-slate-800 max-w-sm mx-auto font-medium mb-8">
+                        <p className="text-sm md:text-lg text-slate-800 max-w-sm mx-auto font-medium mb-0">
                             Tudo o que você precisa em um único plano completo.
                         </p>
-                        <video
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-16 h-16 md:w-24 md:h-24 mx-auto"
-                        >
-                            <source src="/videos/arrow.webm" type="video/webm" />
-                        </video>
                     </div>
 
                     {/* Right Column: Pricing Cards - Fit to container */}
-                    <div className="flex flex-col justify-center items-center p-2 pt-[6vh] md:p-8 md:pt-[8vh] relative w-full">
+                    <div className="flex flex-col justify-center items-center p-4 md:p-8 pb-12 md:pt-[8vh] relative w-full">
                         {/* Period selector */}
-                        <div className="flex justify-center mb-8 w-full">
+                        <div className="flex justify-center mb-4 md:mb-8 w-full scale-[0.9] md:scale-100">
                             <div className="bg-slate-800 p-1 rounded-full flex relative items-center cursor-pointer w-[340px] h-[50px]">
                                 <div
                                     className={`absolute top-1 bottom-1 w-[32%] bg-[#00A947] rounded-full transition-all duration-300 ${pricingPeriod === 'annual' ? 'left-1' : pricingPeriod === 'semiannual' ? 'left-[34%]' : 'left-[67%]'}`}
@@ -131,7 +132,7 @@ export const PricingSection = () => {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.5 }}
-                                        className="relative z-10 w-full max-w-sm"
+                                        className="relative z-10 w-full max-w-[320px] md:max-w-sm"
                                     >
                                         <PricingWrapper
                                             contactHref="/payment"
@@ -164,9 +165,9 @@ export const PricingSection = () => {
                                                 <Price>
                                                     {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
                                                 </Price>
-                                                <div className="w-full text-left pl-4 relative">
+                                                <div className="w-full text-left pl-0 md:pl-4 relative">
                                                     {savingsText}
-                                                    <ul className="text-lg space-y-3 mt-6">
+                                                    <ul className="text-base md:text-lg space-y-3 mt-4 md:mt-6">
                                                         <li className="flex items-center gap-3">
                                                             <MessageSquare className="w-5 h-5 flex-shrink-0" />
                                                             <span>Bot de WhatsApp</span>

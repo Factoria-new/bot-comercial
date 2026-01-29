@@ -53,7 +53,8 @@ export const IntegrationsAnimation = () => {
 
                 {/* Orbits */}
                 {iconConfigs.map((orbitIcons, orbitIndex) => {
-                    const orbitSize = 200 + (orbitIndex * 120); // 200px (inner), 320px (outer)
+                    const baseOrbitSize = 200 + (orbitIndex * 120);
+                    const orbitSize = typeof window !== 'undefined' && window.innerWidth < 768 ? baseOrbitSize * 0.7 : baseOrbitSize;
                     const duration = 25 + (orbitIndex * 10); // Different speeds
                     const reverse = orbitIndex % 2 === 1; // Alternate direction
 

@@ -785,8 +785,8 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                             transition={{ duration: 0.3 }}
                         >
                             <motion.div
-                                className="flex flex-col gap-4 items-center justify-center w-full"
-                                style={{ y: metricsY, maxWidth: isMobile ? "90%" : "50%", margin: "0 auto" }}
+                                className="flex flex-col gap-4 items-center md:items-start justify-center md:justify-start w-full"
+                                style={{ y: metricsY, maxWidth: isMobile ? "90%" : "50%", margin: isMobile ? "0 auto" : "0 0 0 3vw" }}
                             >
                                 <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
                                     <div className="group flex justify-center w-full">
