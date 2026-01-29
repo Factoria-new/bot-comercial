@@ -545,8 +545,31 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                 reverseAnimationRef.current = null;
             }
 
-            gsap.set(wrapper, { width: "100vw", height: "100vh", top: "0vh", right: "0vw", borderRadius: "0px" });
-            gsap.set(heroText, { x: -100, autoAlpha: 0 });
+            const isMobile = window.innerWidth < 768;
+
+            // Apply correct positioning based on device
+            if (isMobile) {
+                gsap.set(wrapper, {
+                    position: "fixed",
+                    width: "100vw",
+                    height: "100vh",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    borderRadius: "0px",
+                    zIndex: 50
+                });
+            } else {
+                gsap.set(wrapper, {
+                    width: "100vw",
+                    height: "100vh",
+                    top: "0vh",
+                    right: "0vw",
+                    borderRadius: "0px"
+                });
+            }
+
+            gsap.set(heroText, { x: isMobile ? 0 : -100, autoAlpha: 0 });
 
             videoLoop.pause();
             gsap.set(videoLoop, { autoAlpha: 0 });
@@ -554,23 +577,40 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             gsap.set(videoMain, { autoAlpha: 0 });
 
             videoEndLoop.currentTime = 0;
-            videoEndLoop.play();
+            videoEndLoop.play().catch(() => { });
             gsap.set(videoEndLoop, { autoAlpha: 1, scale: 1 });
 
             setPhase('ended');
             zoomEndLevelRef.current = 1;
 
             setTimeout(() => {
-                if (lenis) {
+                // Mobile Fix: Release the fixed position so we can scroll past the video
+                if (window.innerWidth < 768) {
+                    gsap.set(wrapper, { position: "absolute", top: 0 });
+                }
+
+                // Force native scroll on mobile for better reliability with layout shifts
+                if (lenis && window.innerWidth >= 768) {
                     lenis.resize();
                     ScrollTrigger.refresh();
                     lenis.scrollTo('#' + sectionId, { duration: 1.2, force: true, offset: -100 });
                 } else {
-                    ScrollTrigger.refresh();
-                    const targetSection = document.getElementById(sectionId);
-                    if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const scrollRetry = () => {
+                        ScrollTrigger.refresh();
+                        const targetSection = document.getElementById(sectionId);
+                        if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    };
+
+                    // Initial attempt
+                    scrollRetry();
+
+                    // Retry attempts to handle layout shifts
+                    if (window.innerWidth < 768) {
+                        setTimeout(scrollRetry, 800);
+                        setTimeout(scrollRetry, 1600);
+                    }
                 }
-            }, 800);
+            }, 1200);
         },
 
         skipToPricing: () => {
@@ -587,30 +627,61 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                 cancelAnimationFrame(reverseAnimationRef.current);
             }
 
-            gsap.set(wrapper, { width: "100vw", height: "100vh", top: "0vh", right: "0vw", borderRadius: "0px" });
-            gsap.set(heroText, { x: -100, autoAlpha: 0 });
+            const isMobile = window.innerWidth < 768;
+
+            if (isMobile) {
+                gsap.set(wrapper, {
+                    position: "fixed",
+                    width: "100vw",
+                    height: "100vh",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    borderRadius: "0px",
+                    zIndex: 50
+                });
+            } else {
+                gsap.set(wrapper, { width: "100vw", height: "100vh", top: "0vh", right: "0vw", borderRadius: "0px" });
+            }
+
+            gsap.set(heroText, { x: isMobile ? 0 : -100, autoAlpha: 0 });
             videoLoop.pause();
             gsap.set(videoLoop, { autoAlpha: 0 });
             videoMain.pause();
             gsap.set(videoMain, { autoAlpha: 0 });
             videoEndLoop.currentTime = 0;
-            videoEndLoop.play();
+            videoEndLoop.play().catch(() => { });
             gsap.set(videoEndLoop, { autoAlpha: 1, scale: 1 });
 
             setPhase('ended');
             zoomEndLevelRef.current = 1;
 
             setTimeout(() => {
-                if (lenis) {
+                // Mobile Fix: Release the fixed position so we can scroll past the video
+                if (window.innerWidth < 768) {
+                    gsap.set(wrapper, { position: "absolute", top: 0 });
+                }
+
+                // Force native scroll on mobile
+                if (lenis && window.innerWidth >= 768) {
                     lenis.resize();
                     ScrollTrigger.refresh();
                     lenis.scrollTo('#pricing', { duration: 1.2, force: true, offset: -50 });
                 } else {
-                    ScrollTrigger.refresh();
-                    const pricingSection = document.getElementById('pricing');
-                    if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
+                    const scrollRetry = () => {
+                        ScrollTrigger.refresh();
+                        const pricingSection = document.getElementById('pricing');
+                        if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
+                    };
+
+                    scrollRetry();
+
+                    if (window.innerWidth < 768) {
+                        setTimeout(scrollRetry, 800);
+                        setTimeout(scrollRetry, 1600);
+                    }
                 }
-            }, 800);
+            }, 1200);
         }
     }));
 
@@ -643,8 +714,24 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             reverseAnimationRef.current = null;
         }
 
-        gsap.set(wrapper, { width: "100vw", height: "100vh", top: "0vh", right: "0vw", borderRadius: "0px" });
-        gsap.set(heroText, { x: -100, autoAlpha: 0 });
+        const isMobile = window.innerWidth < 768;
+
+        if (isMobile) {
+            gsap.set(wrapper, {
+                position: "fixed",
+                width: "100vw",
+                height: "100vh",
+                top: 0,
+                left: 0,
+                right: 0,
+                borderRadius: "0px",
+                zIndex: 50
+            });
+        } else {
+            gsap.set(wrapper, { width: "100vw", height: "100vh", top: "0vh", right: "0vw", borderRadius: "0px" });
+        }
+
+        gsap.set(heroText, { x: isMobile ? 0 : -100, autoAlpha: 0 });
 
         videoLoop.pause();
         gsap.set(videoLoop, { autoAlpha: 0 });
@@ -659,16 +746,31 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
         zoomEndLevelRef.current = 1;
 
         setTimeout(() => {
-            if (lenis) {
+            // Mobile Fix: Release the fixed position so we can scroll past the video
+            if (window.innerWidth < 768) {
+                gsap.set(wrapper, { position: "absolute", top: 0 });
+            }
+
+            // Force native scroll on mobile
+            if (lenis && window.innerWidth >= 768) {
                 lenis.resize();
                 ScrollTrigger.refresh();
                 lenis.scrollTo('#' + sectionId, { duration: 1.2, force: true, offset: -100 });
             } else {
-                ScrollTrigger.refresh();
-                const targetSection = document.getElementById(sectionId);
-                if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const scrollRetry = () => {
+                    ScrollTrigger.refresh();
+                    const targetSection = document.getElementById(sectionId);
+                    if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                };
+
+                scrollRetry();
+
+                if (window.innerWidth < 768) {
+                    setTimeout(scrollRetry, 800);
+                    setTimeout(scrollRetry, 1600);
+                }
             }
-        }, 1000);
+        }, 1200);
     };
 
     const executeSkipToPricing = () => transitionToSection('pricing');
