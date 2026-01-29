@@ -30,7 +30,7 @@ export const Header = ({ phase, onResetHome, onNavigate }: HeaderProps) => {
     const isOpaque = phase === 'initial' || (phase === 'ended' && isScrolled);
 
     return (
-        <header className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl py-3 px-6 flex justify-between items-center rounded-2xl transition-all duration-500 ${isOpaque
+        <header className={`fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[95%] max-w-6xl py-3 px-6 flex justify-between items-center rounded-2xl transition-all duration-500 ${isOpaque
             ? 'bg-white/80 backdrop-blur-md shadow-lg border border-gray-100'
             : 'bg-transparent shadow-none border-transparent'
             }`}>

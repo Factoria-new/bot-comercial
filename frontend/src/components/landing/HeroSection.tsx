@@ -37,23 +37,50 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
     const reverseAnimationRef = useRef<number | null>(null);
     const zoomLevelRef = useRef(1);
     const zoomEndLevelRef = useRef(1);
+    const initialMobileRectRef = useRef<DOMRect | null>(null);
+    const touchStartYRef = useRef<number>(0);
     const maxZoom = 1.05;
     const zoomStep = 0.015;
     const [isShrinking, setIsShrinking] = useState(false);
     const [isInstantReset, setIsInstantReset] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Initial setup on mount
     useEffect(() => {
         const wrapper = videoWrapperRef.current;
         if (wrapper) {
             const isMobile = window.innerWidth < 768;
-            gsap.set(wrapper, {
-                width: isMobile ? "90vw" : "40vw",
-                height: isMobile ? "50vh" : "70vh",
-                top: isMobile ? "40vh" : "15vh",
-                right: "5vw",
-                borderRadius: "30px"
-            });
+            if (isMobile) {
+                // Mobile: Relative positioning in flex flow
+                gsap.set(wrapper, {
+                    position: "relative",
+                    width: "90vw",
+                    height: "45vh",
+                    top: "auto",
+                    right: "auto",
+                    left: "auto",
+                    marginTop: "1rem",
+                    marginBottom: "2rem",
+                    borderRadius: "30px"
+                });
+            } else {
+                // Desktop: Absolute positioning
+                gsap.set(wrapper, {
+                    position: "absolute",
+                    width: "40vw",
+                    height: "70vh",
+                    top: "15vh",
+                    right: "5vw",
+                    borderRadius: "30px"
+                });
+            }
         }
 
         // Handle hash navigation on load
@@ -107,7 +134,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
         setPhase('reversing');
 
-        const reverseSpeed = 1;
+        const reverseSpeed = 0.5;
         let lastTime = performance.now();
 
         const animateReverse = (currentTime: number) => {
@@ -137,6 +164,15 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
         }
     }, [])
 
+    // Touch Start Handler
+    useEffect(() => {
+        const handleTouchStart = (e: TouchEvent) => {
+            touchStartYRef.current = e.touches[0].clientY;
+        };
+        window.addEventListener('touchstart', handleTouchStart, { passive: false });
+        return () => window.removeEventListener('touchstart', handleTouchStart);
+    }, []);
+
     // Interaction Handler
     useEffect(() => {
         const handleInteraction = (e: Event) => {
@@ -152,8 +188,16 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
             if (!wrapper || !heroText || !videoLoop || !videoMain) return;
 
-            const wheelEvent = e as WheelEvent;
-            const isScrollUp = wheelEvent.deltaY < 0;
+            let deltaY = 0;
+            if (e.type === 'wheel') {
+                deltaY = (e as WheelEvent).deltaY;
+            } else if (e.type === 'touchmove') {
+                const touchEndY = (e as TouchEvent).touches[0].clientY;
+                deltaY = touchStartYRef.current - touchEndY;
+                touchStartYRef.current = touchEndY; // Update for continuous movement
+            }
+
+            const isScrollUp = deltaY < 0;
 
             // FASE 1: Initial -> Expanded
             if (phase === 'initial') {
@@ -164,6 +208,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
                 e.preventDefault();
                 isAnimatingRef.current = true;
+                const isMobile = window.innerWidth < 768;
 
                 const tl = gsap.timeline({
                     onComplete: () => {
@@ -172,18 +217,47 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     }
                 });
 
-                tl.to(wrapper, {
-                    width: "100vw",
-                    height: "100vh",
-                    top: "0vh",
-                    right: "0vw",
-                    borderRadius: "0px",
-                    duration: 1.5,
-                    ease: "power2.inOut"
-                }, 0);
+                if (isMobile) {
+                    // Mobile FLIP: Lock to current position before expanding
+                    const rect = wrapper.getBoundingClientRect();
+                    initialMobileRectRef.current = rect; // Store for reverse animation
+
+                    gsap.set(wrapper, {
+                        position: "fixed",
+                        top: rect.top,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height,
+                        marginTop: 0,
+                        marginBottom: 0,
+                        zIndex: 50
+                    });
+
+                    tl.to(wrapper, {
+                        width: "100vw",
+                        height: "100vh",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        borderRadius: "0px",
+                        duration: 1.5,
+                        ease: "power2.inOut"
+                    }, 0);
+                } else {
+                    // Desktop: Standard expansion
+                    tl.to(wrapper, {
+                        width: "100vw",
+                        height: "100vh",
+                        top: "0vh",
+                        right: "0vw",
+                        borderRadius: "0px",
+                        duration: 1.5,
+                        ease: "power2.inOut"
+                    }, 0);
+                }
 
                 tl.to(heroText, {
-                    x: -100,
+                    x: isMobile ? 0 : -100, // No slide on mobile, just fade
                     autoAlpha: 0,
                     duration: 1.0
                 }, 0);
@@ -194,6 +268,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             // FASE 2: Expanded -> Zoom e Playing
             if (phase === 'expanded') {
                 e.preventDefault();
+                const isMobile = window.innerWidth < 768;
 
                 if (isScrollUp) {
                     if (zoomLevelRef.current > 1) {
@@ -212,18 +287,52 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                                 isAnimatingRef.current = false;
                                 setPhase('initial');
                                 setIsShrinking(false);
+
+                                if (isMobile) {
+                                    // Reset to flow layout after animation finishes
+                                    gsap.set(wrapper, {
+                                        position: "relative",
+                                        top: "auto",
+                                        left: "auto",
+                                        right: "auto",
+                                        width: "90vw",
+                                        height: "45vh",
+                                        marginTop: "1rem",
+                                        marginBottom: "2rem",
+                                        zIndex: "auto"
+                                    });
+                                }
                             }
                         });
 
-                        tl.to(wrapper, {
-                            width: "40vw",
-                            height: "70vh",
-                            top: "15vh",
-                            right: "5vw",
-                            borderRadius: "30px",
-                            duration: 1.5,
-                            ease: "power2.inOut"
-                        }, 0);
+                        if (isMobile && initialMobileRectRef.current) {
+                            // Mobile Reverse FLIP: Animate to stored coordinates while keeping Fixed
+                            const target = initialMobileRectRef.current;
+                            tl.to(wrapper, {
+                                width: target.width,
+                                height: target.height,
+                                top: target.top,
+                                left: target.left,
+                                borderRadius: "30px",
+                                duration: 1.5,
+                                ease: "power2.inOut"
+                            }, 0);
+                        } else {
+                            // Desktop or Fallback
+                            tl.to(wrapper, {
+                                position: isMobile ? "relative" : "absolute",
+                                width: isMobile ? "90vw" : "40vw",
+                                height: isMobile ? "45vh" : "70vh",
+                                top: isMobile ? "auto" : "15vh",
+                                right: isMobile ? "auto" : "5vw",
+                                marginTop: isMobile ? "1rem" : "0",
+                                marginBottom: isMobile ? "2rem" : "0",
+                                borderRadius: "30px",
+                                duration: 1.5,
+                                ease: "power2.inOut",
+                                zIndex: "auto"
+                            }, 0);
+                        }
 
                         tl.to(heroText, {
                             x: 0,
@@ -292,6 +401,9 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                             duration: 0.3,
                             ease: "power1.out"
                         });
+                    } else {
+                        // Release scroll: Switch to absolute so it scrolls away
+                        gsap.set(wrapper, { position: "absolute", top: 0 });
                     }
                 }
                 return;
@@ -331,7 +443,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
         videoMain.addEventListener('ended', handleEnded);
         return () => videoMain.removeEventListener('ended', handleEnded);
-    }, [setPhase]);
+    }, [setPhase, isMobile]);
 
     // Expose actions to parent
     useImperativeHandle(ref, () => ({
@@ -375,13 +487,29 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             gsap.set(heroText, { x: 0, autoAlpha: 1 });
 
             const isMobile = window.innerWidth < 768;
-            gsap.set(wrapper, {
-                width: isMobile ? "90vw" : "40vw",
-                height: isMobile ? "50vh" : "70vh",
-                top: isMobile ? "40vh" : "15vh",
-                right: "5vw",
-                borderRadius: "30px"
-            });
+            if (isMobile) {
+                gsap.set(wrapper, {
+                    position: "relative",
+                    width: "90vw",
+                    height: "45vh",
+                    top: "auto",
+                    right: "auto",
+                    left: "auto",
+                    marginTop: "1rem",
+                    marginBottom: "2rem",
+                    borderRadius: "30px",
+                    zIndex: "auto"
+                });
+            } else {
+                gsap.set(wrapper, {
+                    position: "absolute",
+                    width: "40vw",
+                    height: "70vh",
+                    top: "15vh",
+                    right: "5vw",
+                    borderRadius: "30px"
+                });
+            }
 
             // 4. Resetar estados
             zoomLevelRef.current = 1;
@@ -547,33 +675,33 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
 
     return (
-        <div className="relative min-h-screen">
+        <div className="relative min-h-screen flex flex-col md:block">
             {/* Texto Hero (Lado Esquerdo) */}
             <div
                 ref={heroTextRef}
-                className="absolute top-0 left-0 w-full md:w-[60vw] lg:w-[50vw] h-screen flex flex-col justify-start md:justify-center pt-32 md:pt-28 pb-24 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto"
+                className="relative md:absolute top-0 left-0 w-full md:w-[60vw] lg:w-[50vw] h-auto md:h-screen flex flex-col justify-start md:justify-center pt-20 md:pt-28 pb-2 px-6 md:pl-16 z-10 pointer-events-none md:pointer-events-auto order-1 md:order-none"
             >
-                <h1 className="text-[clamp(2.5rem,5vw,6rem)] font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
+                <h1 className="text-3xl md:text-[clamp(2.5rem,5vw,6rem)] font-extrabold text-[#1E293B] leading-tight drop-shadow-lg text-left w-full break-normal lg:break-words">
                     Seu Atendente IA em todos os seus canais,{' '}
                     <span className="text-[#00A947] block mt-2">Vendas 24 horas</span>
                 </h1>
 
-                <p className="text-gray-600 text-left mt-8 text-[clamp(1.25rem,2vw,1.5rem)] w-full max-w-2xl mr-auto leading-relaxed">
+                <p className="text-gray-600 text-left mt-3 md:mt-8 text-base md:text-[clamp(1.25rem,2vw,1.5rem)] w-full max-w-2xl mr-auto leading-relaxed">
                     Nunca mais perca um cliente por demora. IA que atende, agenda e vende enquanto você dorme.
                 </p>
 
                 {/* Botões CTA */}
-                <div className="flex flex-wrap gap-4 mt-8 pointer-events-auto">
+                <div className="flex flex-wrap gap-3 md:gap-4 mt-5 md:mt-8 pointer-events-auto">
                     <Button
                         onClick={executeSkipToPricing}
-                        className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                        className="bg-[#00A947] text-white hover:bg-[#00A947]/90 font-semibold px-6 py-4 md:px-8 md:py-6 text-base md:text-lg rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
                     >
                         Começar Agora
                     </Button>
                     <Button
                         variant="outline"
                         onClick={() => transitionToSection('produto')}
-                        className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all"
+                        className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-6 py-4 md:px-8 md:py-6 text-base md:text-lg rounded-full transition-all"
                     >
                         Ver Como Funciona
                     </Button>
@@ -583,11 +711,12 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             {/* Wrapper do Vídeo */}
             <div
                 ref={videoWrapperRef}
-                className="absolute bg-black overflow-hidden shadow-2xl z-20"
+                className="relative md:absolute bg-black overflow-hidden shadow-2xl z-20 mx-auto md:mx-0 order-2 md:order-none"
                 style={{ willChange: 'width, height, top, right, border-radius' }}
             >
                 {/* Vídeo Loop Inicial */}
                 <video
+                    key={isMobile ? 'mobile-loop' : 'desktop-loop'}
                     ref={videoLoopRef}
                     autoPlay
                     loop
@@ -596,11 +725,12 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     className="absolute top-0 left-0 w-full h-full object-cover"
                     style={{ opacity: 1 }}
                 >
-                    <source src="/videos-scroll/NAVIGATE_4K_S40_loop@md.mp4" type="video/mp4" />
+                    <source src={isMobile ? "/videos-scroll/NAVIGATE_4K_9x16_S40_loop@sm.mp4" : "/videos-scroll/NAVIGATE_4K_S40_loop@md.mp4"} type="video/mp4" />
                 </video>
 
                 {/* Vídeo Principal (toca após expansão) */}
                 <video
+                    key={isMobile ? 'mobile-main' : 'desktop-main'}
                     ref={videoMainRef}
                     muted
                     playsInline
@@ -608,11 +738,12 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     className="absolute top-0 left-0 w-full h-full object-cover"
                     style={{ opacity: 0 }}
                 >
-                    <source src="/videos-scroll/NAVIGATE_4K_S40-scrolly@md.mp4" type="video/mp4" />
+                    <source src={isMobile ? "/videos-scroll/NAVIGATE_4K_9x16_S40-scrolly@sm.mp4" : "/videos-scroll/NAVIGATE_4K_S40-scrolly@md.mp4"} type="video/mp4" />
                 </video>
 
                 {/* Vídeo Reverso (otimizado para seek) */}
                 <video
+                    key={isMobile ? 'mobile-reverse' : 'desktop-reverse'}
                     ref={videoReverseRef}
                     muted
                     playsInline
@@ -620,19 +751,21 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     className="absolute top-0 left-0 w-full h-full object-cover"
                     style={{ opacity: 0 }}
                 >
-                    <source src="/videos-scroll/NAVIGATE_4K_S40-scrolly@md_OPTIMIZED.mp4" type="video/mp4" />
+                    <source src={isMobile ? "/videos-scroll/NAVIGATE_4K_9x16_S40-scrolly@sm_OPTIMIZED.mp4" : "/videos-scroll/NAVIGATE_4K_S40-scrolly@md_OPTIMIZED.mp4"} type="video/mp4" />
                 </video>
 
                 {/* Vídeo Loop Final */}
                 <video
+                    key={isMobile ? 'mobile-end' : 'desktop-end'}
                     ref={videoEndLoopRef}
                     loop
                     muted
+                    preload="auto"
                     playsInline
                     className="absolute top-0 left-0 w-full h-full object-cover"
                     style={{ opacity: 0 }}
                 >
-                    <source src="/videos-scroll/NAVIGATE_4K_S50_loop@md.mp4" type="video/mp4" />
+                    <source src={isMobile ? "/videos-scroll/NAVIGATE_4K_9x16_S50_loop@sm.mp4" : "/videos-scroll/NAVIGATE_4K_S50_loop@md.mp4"} type="video/mp4" />
                 </video>
 
                 {/* Chat Overlay - Only visible in expanded phase (100% screen) */}
@@ -653,7 +786,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                         >
                             <motion.div
                                 className="flex flex-col gap-4 items-center justify-center w-full"
-                                style={{ y: metricsY, maxWidth: "50%" }}
+                                style={{ y: metricsY, maxWidth: isMobile ? "90%" : "50%", margin: "0 auto" }}
                             >
                                 <motion.div style={{ opacity: metricsOpacity }} className="flex flex-col gap-2">
                                     <div className="group flex justify-center w-full">
@@ -673,7 +806,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                                 </motion.div>
 
                                 {/* Animated Arrow Cards */}
-                                <div className="flex flex-col gap-6 mt-[15vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
+                                <div className="hidden md:flex flex-col gap-6 mt-[15vh] w-full max-w-[350px] md:max-w-[420px] self-start ml-4 md:ml-20">
                                     {[
                                         { icon: Users, color: "bg-[#027831]", value: "+150%", label: "Leads", width: "100%" },
                                         { icon: MessageSquare, color: "bg-[#6366F1]", value: "+80%", label: "Respostas", width: "85%" },
