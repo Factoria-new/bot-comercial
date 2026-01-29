@@ -119,6 +119,26 @@ export const PricingSection = () => {
                                 return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                             };
 
+                            // Calculate Actual Billing Price (What user pays)
+                            const getBillingPrice = (base: number, period: string) => {
+                                if (period === 'monthly') return base;
+                                if (period === 'semiannual') return base * 6; // R$ 119,40
+                                if (period === 'annual') return 199.00; // Fixed Annual Price
+                                return base;
+                            };
+
+                            const billingPrice = getBillingPrice(BASE_PRICE, displayPeriod);
+                            const formattedBillingPrice = formatCurrency(billingPrice);
+
+                            // Text label for payment summary
+                            const getPeriodLabelText = (period: string) => {
+                                if (period === 'semiannual') return '/semestre';
+                                if (period === 'annual') return '/ano';
+                                return '/mês';
+                            };
+                            const periodLabelText = getPeriodLabelText(displayPeriod);
+
+                            // Existing logic for DISPLAY on card (Monthly equivalent)
                             const getPrice = (base: number, period: string) => {
                                 if (period === 'monthly') return base;
                                 if (period === 'semiannual') return base * 6; // Full price for 6 months
@@ -132,17 +152,9 @@ export const PricingSection = () => {
                                 return '/mês';
                             };
 
-                            const getPeriodLabelText = (period: string) => {
-                                if (period === 'semiannual') return '/semestre';
-                                if (period === 'annual') return '/no plano anual';
-                                return '/mês';
-                            };
-
-                            // Use displayPeriod for what's currently visible on the card
                             const price = getPrice(BASE_PRICE, displayPeriod);
                             const formattedPrice = formatCurrency(price);
                             const periodLabel = getPeriodLabel(displayPeriod);
-                            const periodLabelText = getPeriodLabelText(displayPeriod);
 
                             // Calculate savings percentage
                             const monthlyCostMonthly = BASE_PRICE;
@@ -205,7 +217,7 @@ export const PricingSection = () => {
                                     >
                                         <PricingWrapper
                                             contactHref="/payment"
-                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedPrice}${periodLabelText}` }}
+                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedBillingPrice}${periodLabelText}` }}
                                             type="waves"
                                             className="bg-[#00A947]"
                                             featured={true}
