@@ -114,7 +114,7 @@ export const ChatOverlay = () => {
         >
             <div className="w-[85%] md:w-full max-w-sm scale-75 md:scale-100 origin-top bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 bg-white/10 border-b border-white/10 backdrop-blur-md">
+                <div className="hidden md:flex items-center justify-between px-4 py-3 bg-white/10 border-b border-white/10 backdrop-blur-md">
                     <div className="flex items-center gap-3">
                         <div className="relative">
                             <Avatar className="h-9 w-9 border border-white/20">
