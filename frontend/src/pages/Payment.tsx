@@ -47,7 +47,13 @@ const Payment = () => {
             'pro_semiannual': import.meta.env.VITE_STRIPE_PRICE_PRO_SEMIANNUAL || 'price_pro_semiannual',
             'pro_annual': import.meta.env.VITE_STRIPE_PRICE_PRO_ANNUAL || 'price_pro_annual',
         };
-        return priceMap[`${plan}_${period}`] || 'price_pro_monthly';
+        const selectedPriceId = priceMap[`${plan}_${period}`] || 'price_pro_monthly';
+        console.log('DEBUG PAYMENT:', {
+            activePlan: `${plan}_${period}`,
+            selectedPriceId,
+            env_premium_annual: import.meta.env.VITE_STRIPE_PRICE_PREMIUM_ANNUAL
+        });
+        return selectedPriceId;
     };
 
     const handlePayment = async () => {
