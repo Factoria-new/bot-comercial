@@ -1,4 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
@@ -180,65 +181,74 @@ const Layout = ({
 
   return (
     <div className="min-h-screen">
-      {/* Hamburger Menu Button */}
-      {showSidebarTrigger && (
-        <div className="fixed top-4 left-4 z-50">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsSidebarOpen(true)}
-            className="text-white/70 hover:bg-white/10"
-          >
-            <Menu className="w-6 h-6" />
-          </Button>
-        </div>
-      )}
-
       {/* Main Content */}
       <main>
         {children}
       </main>
 
-      {/* Persistent Components */}
-      <DashboardSidebar
-        isOpen={isSidebarOpen}
-        onClose={handleSidebarClose}
-        onNavigate={() => { }} // Navigation handled by router internally in Sidebar
-        currentPage={currentPage}
-        integrations={integrations}
-        onLogout={handleLogout}
-        forceExpandIntegrations={shouldExpandIntegrations}
-        onIntegrationClick={handleIntegrationClick}
-        onIntegrationDisconnect={handleIntegrationDisconnect}
-        sessionId={currentSessionId}
-        onOpenLiaChat={() => setIsLiaChatOpen(true)}
-      />
+      {/* Persistent Components - Portaled to body to ensure fixed positioning works */}
+      {typeof document !== 'undefined' && (
+        <>
+          {showSidebarTrigger && createPortal(
+            <div className="fixed top-4 left-4 z-50">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarOpen(true)}
+                className="text-white/70 hover:bg-white/10"
+              >
+                <Menu className="w-6 h-6" />
+              </Button>
+            </div>,
+            document.body
+          )}
 
-      <WhatsAppConnectionModal
-        isOpen={whatsappModalState.isOpen}
-        onClose={closeWhatsappModal}
-        modalState={whatsappModalState}
-        instance={whatsappInstance}
-        onGenerateQR={handleGenerateQR}
-        onDisconnect={handleWhatsappDisconnect}
-      />
+          {createPortal(
+            <>
+              <DashboardSidebar
+                isOpen={isSidebarOpen}
+                onClose={handleSidebarClose}
+                onNavigate={() => { }} // Navigation handled by router internally in Sidebar
+                currentPage={currentPage}
+                integrations={integrations}
+                onLogout={handleLogout}
+                forceExpandIntegrations={shouldExpandIntegrations}
+                onIntegrationClick={handleIntegrationClick}
+                onIntegrationDisconnect={handleIntegrationDisconnect}
+                sessionId={currentSessionId}
+                onOpenLiaChat={() => setIsLiaChatOpen(true)}
+              />
 
-      <LiaSidebar
-        isOpen={isLiaChatOpen}
-        onClose={() => setIsLiaChatOpen(false)}
-        metrics={metrics}
-      />
+              <WhatsAppConnectionModal
+                isOpen={whatsappModalState.isOpen}
+                onClose={closeWhatsappModal}
+                modalState={whatsappModalState}
+                instance={whatsappInstance}
+                onGenerateQR={handleGenerateQR}
+                onDisconnect={handleWhatsappDisconnect}
+              />
 
-      <ApiKeyModal
-        open={isApiKeyModalOpen}
-        onComplete={handleApiKeyComplete}
-      />
+              <LiaSidebar
+                isOpen={isLiaChatOpen}
+                onClose={() => setIsLiaChatOpen(false)}
+                metrics={metrics}
+              />
 
-      {showLiaButton && !isLiaChatOpen && (
-        <LiaFloatingButton
-          onClick={() => setIsLiaChatOpen(true)}
-          message={currentPage === 'dashboard' ? "Psiu! Caso queira saber mais métricas, me chame aqui e eu te conto tudo..." : undefined}
-        />
+              <ApiKeyModal
+                open={isApiKeyModalOpen}
+                onComplete={handleApiKeyComplete}
+              />
+
+              {showLiaButton && !isLiaChatOpen && (
+                <LiaFloatingButton
+                  onClick={() => setIsLiaChatOpen(true)}
+                  message={currentPage === 'dashboard' ? "Psiu! Caso queira saber mais métricas, me chame aqui e eu te conto tudo..." : undefined}
+                />
+              )}
+            </>,
+            document.body
+          )}
+        </>
       )}
     </div>
   );

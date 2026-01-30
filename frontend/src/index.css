@@ -74,6 +74,31 @@
     /* Cinza claro */
     --sidebar-ring: 218 54% 42%;
     /* Azul #243B6B */
+
+    /* Traffic Landing Page Specific Vars (Scoped) */
+    --lp-primary: 218 49% 28%;
+    --lp-primary-foreground: 0 0% 100%;
+    --lp-secondary: 218 49% 20%;
+    --lp-secondary-foreground: 210 40% 98%;
+    --lp-accent: 145 76% 41%;
+    --lp-accent-foreground: 0 0% 100%;
+    --lp-cta-orange: 24 100% 50%;
+    --lp-cta-orange-foreground: 0 0% 100%;
+    --lp-background: 222 47% 6%;
+    --lp-foreground: 210 40% 98%;
+    --lp-card: 222 47% 11%;
+    --lp-card-foreground: 210 40% 98%;
+    --lp-muted: 218 30% 18%;
+    --lp-muted-foreground: 215 20% 65%;
+    --lp-border: 218 30% 25%;
+    --lp-input: 218 30% 25%;
+    --lp-ring: 145 76% 41%;
+    --lp-radius: 0.75rem;
+
+    /* Traffic LP Gradients & Shadows */
+    --lp-gradient-hero: radial-gradient(ellipse at top, hsl(218 49% 15%) 0%, hsl(222 47% 6%) 70%);
+    --lp-shadow-glow: 0 0 40px hsl(145 76% 41% / 0.2);
+    --lp-shadow-card: 0 8px 32px hsl(222 47% 3% / 0.5);
   }
 
   .dark {

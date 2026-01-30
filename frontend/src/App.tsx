@@ -20,6 +20,7 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Lgpd from "./pages/Lgpd";
+import Trafego from "./pages/Trafego";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/instagram-callback" element={<InstagramCallback />} />
               <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
               <Route path="/checkout/success" element={<CheckoutSuccess />} />
+              <Route path="/trafego" element={<Trafego />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

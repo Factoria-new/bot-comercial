@@ -59,6 +59,35 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        "lp-primary": {
+          DEFAULT: "hsl(var(--lp-primary))",
+          foreground: "hsl(var(--lp-primary-foreground))",
+        },
+        "lp-secondary": {
+          DEFAULT: "hsl(var(--lp-secondary))",
+          foreground: "hsl(var(--lp-secondary-foreground))",
+        },
+        "lp-accent": {
+          DEFAULT: "hsl(var(--lp-accent))",
+          foreground: "hsl(var(--lp-accent-foreground))",
+        },
+        "lp-cta-orange": {
+          DEFAULT: "hsl(var(--lp-cta-orange))",
+          foreground: "hsl(var(--lp-cta-orange-foreground))",
+        },
+        "lp-background": "hsl(var(--lp-background))",
+        "lp-foreground": "hsl(var(--lp-foreground))",
+        "lp-card": {
+          DEFAULT: "hsl(var(--lp-card))",
+          foreground: "hsl(var(--lp-card-foreground))",
+        },
+        "lp-muted": {
+          DEFAULT: "hsl(var(--lp-muted))",
+          foreground: "hsl(var(--lp-muted-foreground))",
+        },
+        "lp-border": "hsl(var(--lp-border))",
+        "lp-ring": "hsl(var(--lp-ring))",
+
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -146,6 +175,30 @@ const config: Config = {
           "0%": { opacity: "0", transform: "scale(0.95)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(30px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-in-right": {
+          "0%": { opacity: "0", transform: "translateX(30px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "scale-in": {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 20px hsl(145 76% 41% / 0.3)" },
+          "50%": { boxShadow: "0 0 40px hsl(145 76% 41% / 0.5)" },
+        },
+        "typing-cursor": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0" },
+        },
+        "message-appear": {
+          "0%": { opacity: "0", transform: "translateY(10px) scale(0.95)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
         "fade-out-scale": {
           "0%": { opacity: "1", transform: "scale(1) translateY(0)" },
           "100%": { opacity: "0", transform: "scale(0.8) translateY(-10px)" },
@@ -181,6 +234,12 @@ const config: Config = {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "bounce-slow": "bounce 3s infinite",
         "aurora": "aurora 20s infinite linear",
+        "fade-in-up": "fade-in-up 0.8s ease-out forwards",
+        "slide-in-right": "slide-in-right 0.6s ease-out forwards",
+        "scale-in": "scale-in 0.4s ease-out forwards",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "typing-cursor": "typing-cursor 1s ease-in-out infinite",
+        "message-appear": "message-appear 0.4s ease-out forwards",
       },
     },
   },
