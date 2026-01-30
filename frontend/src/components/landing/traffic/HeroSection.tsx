@@ -121,8 +121,8 @@ export const HeroSection = () => {
                             <div className="absolute inset-0 bg-lp-accent/20 rounded-[2.5rem] blur-[60px]" />
                             <div className="relative bg-lp-card/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 h-[500px] flex flex-col">
                                 <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-4">
-                                    <div className="w-12 h-12 rounded-full bg-lp-accent flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-lp-accent/20">
-                                        C
+                                    <div className="w-12 h-12 rounded-full bg-lp-accent flex items-center justify-center shadow-lg shadow-lp-accent/20">
+                                        <img src="/favicon.png" alt="Caji" className="w-8 h-8 object-contain brightness-0 invert" />
                                     </div>
                                     <div>
                                         <h3 className="text-white font-bold font-display">Caji Assist</h3>

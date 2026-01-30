@@ -4,7 +4,6 @@ import SolutionSection from "@/components/landing/traffic/SolutionSection";
 import BenefitsSection from "@/components/landing/traffic/BenefitsSection";
 import SocialProofSection from "@/components/landing/traffic/SocialProofSection";
 import PricingSection from "@/components/landing/traffic/PricingSection";
-import FAQSection from "@/components/landing/traffic/FAQSection";
 import LPFooter from "@/components/landing/traffic/LPFooter";
 
 const Trafego = () => {
@@ -16,7 +15,6 @@ const Trafego = () => {
             <SolutionSection />
             <BenefitsSection />
             <PricingSection />
-            <FAQSection />
             <LPFooter />
         </main>
     );

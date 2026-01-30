@@ -217,7 +217,7 @@ export const PricingSection = () => {
                                     >
                                         <PricingWrapper
                                             contactHref="/payment"
-                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedBillingPrice}${periodLabelText}` }}
+                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedBillingPrice}${periodLabelText}`, source: '/' }}
                                             type="waves"
                                             className="bg-[#00A947]"
                                             featured={true}

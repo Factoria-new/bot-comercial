@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 const Payment = () => {
     const location = useLocation();
-    const { plan, period, price } = location.state || {};
+    const { plan, period, price, source } = location.state || {};
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -122,7 +122,7 @@ const Payment = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-[#00A947] selection:text-white flex flex-col justify-center relative">
-            <Link to="/" className="absolute top-8 left-8 inline-flex items-center text-slate-600 hover:text-[#00A947] transition-colors">
+            <Link to={source || "/"} className="absolute top-8 left-8 inline-flex items-center text-slate-600 hover:text-[#00A947] transition-colors">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
             </Link>
 
