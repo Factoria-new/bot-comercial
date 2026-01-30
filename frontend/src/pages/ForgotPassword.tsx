@@ -86,10 +86,6 @@ const ForgotPassword = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#f1f4f9] to-[#ffffff] flex items-center justify-center p-4">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-                <img src="/texto-logo.png" alt="Logo" className="w-64" />
-            </div>
-
             <Card className="w-full max-w-md bg-white/80 backdrop-blur-md shadow-xl border-t-4 border-[#00A947]">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-2xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-[#19B159] to-[#00A947]">
