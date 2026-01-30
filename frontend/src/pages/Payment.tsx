@@ -5,6 +5,8 @@ import { ArrowLeft, Loader2, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TermsModal } from "@/components/TermsModal";
 import { toast } from "sonner";
 
 const Payment = () => {
@@ -12,6 +14,8 @@ const Payment = () => {
     const { plan, period, price } = location.state || {};
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
 
     if (!plan) {
         return (
@@ -56,9 +60,29 @@ const Payment = () => {
         return selectedPriceId;
     };
 
+    const validateEmail = (email: string) => {
+        // Validation requested: must contain @ and .com
+        // We also check for basic email structure to be safe
+        const hasAt = email.includes('@');
+        const hasDotCom = email.includes('.com');
+        const basicStructure = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+        return hasAt && hasDotCom && basicStructure;
+    };
+
     const handlePayment = async () => {
         if (!email) {
             toast.error("Por favor, preencha seu e-mail.");
+            return;
+        }
+
+        if (!validateEmail(email)) {
+            toast.error("Por favor, insira um e-mail válido.");
+            return;
+        }
+
+        if (!acceptedTerms) {
+            toast.error("Por favor, aceite os Termos e Condições.");
             return;
         }
         setIsLoading(true);
@@ -184,6 +208,27 @@ const Payment = () => {
                             </div>
                         </div>
 
+                        <div className="flex items-center space-x-2 mb-6">
+                            <Checkbox
+                                id="terms"
+                                checked={acceptedTerms}
+                                onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                                className="border-slate-300 data-[state=checked]:bg-[#00A947] data-[state=checked]:border-[#00A947]"
+                            />
+                            <label
+                                htmlFor="terms"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"
+                            >
+                                Li e concordo com os{' '}
+                                <button
+                                    onClick={() => setShowTerms(true)}
+                                    className="text-[#00A947] hover:underline focus:outline-none"
+                                >
+                                    Termos e Condições
+                                </button>
+                            </label>
+                        </div>
+
                         <div className="bg-gradient-to-r from-[#00A947]/10 to-[#00A947]/5 rounded-xl p-4 mb-6">
                             <div className="flex items-start gap-3">
                                 <CreditCard className="h-5 w-5 text-[#00A947] mt-0.5" />
@@ -198,9 +243,9 @@ const Payment = () => {
 
                         <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col items-center">
                             <Button
-                                className="w-full bg-[#00A947] hover:bg-[#00A947]/90 text-white font-semibold py-6 text-lg rounded-xl shadow-md hover:shadow-lg transition-all"
+                                className="w-full bg-[#00A947] hover:bg-[#00A947]/90 text-white font-semibold py-6 text-lg rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={handlePayment}
-                                disabled={isLoading}
+                                disabled={isLoading || !email || !acceptedTerms}
                             >
                                 {isLoading ? (
                                     <div className="flex items-center">
@@ -220,6 +265,11 @@ const Payment = () => {
                     </motion.div>
                 </div>
             </div>
+
+            <TermsModal
+                isOpen={showTerms}
+                onClose={() => setShowTerms(false)}
+            />
         </div>
     );
 };
