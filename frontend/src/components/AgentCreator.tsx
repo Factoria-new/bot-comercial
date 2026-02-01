@@ -259,6 +259,39 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
 
     // --- HANDLERS ---
 
+    // Helper function to save prompt to database
+    const savePromptToDatabase = async (prompt: string) => {
+        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+        const token = localStorage.getItem('token');
+
+        if (!token || !prompt) {
+            console.warn('⚠️ Cannot save prompt: missing token or prompt');
+            return false;
+        }
+
+        try {
+            const response = await fetch(`${backendUrl}/api/user/prompt`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ prompt })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                console.log('✅ Prompt saved to database');
+                return true;
+            } else {
+                console.error('❌ Failed to save prompt:', result.error);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Error saving prompt to database:', error);
+            return false;
+        }
+    };
 
 
     const handleWizardComplete = async () => {
@@ -293,6 +326,9 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 setAgentPrompt(result.prompt);
                 console.log(`🔍 DEBUG: After setAgentPrompt, chatState.agentConfig?.prompt:`, chatState.agentConfig?.prompt?.substring(0, 50) || 'UNDEFINED');
                 setChatMode('agent');
+
+                // 💾 SAVE PROMPT TO DATABASE IMMEDIATELY (NEW!)
+                await savePromptToDatabase(result.prompt);
 
                 // 📅 Persist business info to database (openingHours, appointmentDuration, serviceType, businessAddress)
                 try {
@@ -362,7 +398,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         const updatedMessages = [...testMessages, userMsg];
         setTestMessages(updatedMessages);
         setIsTestTyping(true);
-        const apiKey = localStorage.getItem("user_gemini_api_key");
+        const token = localStorage.getItem('token');
 
         try {
             console.log(`🔍 DEBUG handleTestSend: chatState.agentConfig?.prompt length:`, chatState.agentConfig?.prompt?.length || 0);
@@ -377,7 +413,7 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Gemini-Key': apiKey || ''
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     message: message,
@@ -388,6 +424,10 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
             const data = await res.json();
             if (data.success) {
                 const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: data.message };
+                setTestMessages(prev => [...prev, botMsg]);
+            } else {
+                console.error('Test chat error:', data.error);
+                const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: data.error || "Erro ao conectar com o assistente de teste." };
                 setTestMessages(prev => [...prev, botMsg]);
             }
         } catch (error) {
@@ -474,6 +514,9 @@ ${scheduleStr}
         // Set the enriched prompt and proceed to test mode
         setAgentPrompt(enrichedPrompt);
         // setIsSwitchingToTest(true); // Already set at start
+
+        // 💾 SAVE PROMPT TO DATABASE IMMEDIATELY (NEW!)
+        await savePromptToDatabase(enrichedPrompt);
 
         // Play completion audio
         const audioVariation = getRandomAudio('complete');

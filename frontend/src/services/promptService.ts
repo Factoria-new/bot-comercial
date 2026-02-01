@@ -81,8 +81,8 @@ export const promptService = {
                 body: JSON.stringify({
                     message,
                     history,
-                    currentSystemPrompt,
-                    userId: 'user' // Backend expects this?
+                    currentSystemPrompt
+                    // userId is now extracted from JWT token on the backend
                 })
             });
             return await response.json();

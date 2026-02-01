@@ -213,14 +213,17 @@ export function useOnboarding(userId?: string) {
             }
 
             const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const token = localStorage.getItem('token');
             const response = await fetch(`${backendUrl}/api/agent/architect`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     message: userInput,
                     history: history,
-                    currentSystemPrompt: stateRef.current.agentConfig?.prompt || '',
-                    userId: 'user'
+                    currentSystemPrompt: stateRef.current.agentConfig?.prompt || ''
                 })
             });
 
@@ -243,6 +246,30 @@ export function useOnboarding(userId?: string) {
                             companyInfo: prev.companyInfo,
                         },
                     }));
+
+                    // 💾 SAVE PROMPT TO DATABASE IMMEDIATELY (NEW!)
+                    try {
+                        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+                        const token = localStorage.getItem('token');
+                        if (token) {
+                            const saveResponse = await fetch(`${backendUrl}/api/user/prompt`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ prompt: data.newSystemPrompt })
+                            });
+                            const saveResult = await saveResponse.json();
+                            if (saveResult.success) {
+                                console.log('✅ Prompt created by Lia saved to database');
+                            } else {
+                                console.error('❌ Failed to save Lia prompt:', saveResult.error);
+                            }
+                        }
+                    } catch (saveError) {
+                        console.error('❌ Error saving Lia prompt to database:', saveError);
+                    }
                 }
 
                 if (onChunk) {

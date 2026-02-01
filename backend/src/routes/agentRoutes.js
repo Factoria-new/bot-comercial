@@ -6,8 +6,30 @@ import multer from 'multer';
 import pdf from 'pdf-parse/lib/pdf-parse.js';
 import mammoth from 'mammoth';
 import { PROMPTS } from '../prompts/agentPrompts.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
+import prisma from '../config/prisma.js';
+import { decrypt } from '../utils/encryption.js';
 
 const router = express.Router();
+
+/**
+ * Helper to get decrypted API key for a user
+ */
+async function getUserApiKeyFromDB(userId) {
+    if (!userId) return null;
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { geminiApiKey: true }
+        });
+        if (user && user.geminiApiKey) {
+            return decrypt(user.geminiApiKey);
+        }
+    } catch (error) {
+        console.error('Error fetching user API Key:', error);
+    }
+    return null;
+}
 
 // Check API key at startup
 const API_KEY = process.env.API_GEMINI || process.env.GEMINI_API_KEY || '';
@@ -35,15 +57,29 @@ import { generateAudio } from '../services/ttsService.js';
 // Architect Agent Endpoint
 // O cérebro que constrói outros bots - usa o prompt da Lia
 // ============================================
-router.post('/architect', async (req, res) => {
+router.post('/architect', authenticateToken, async (req, res) => {
     try {
-        const { message, history, currentSystemPrompt, userId } = req.body;
-        const apiKey = req.headers['x-gemini-key'] || '';
+        const { message, history, currentSystemPrompt } = req.body;
+        let apiKey = req.headers['x-gemini-key'] || '';
+
+        // Get userId from authenticated JWT token
+        const userId = req.user?.uid || req.user?.id || null;
+
+        // If no API key in header, fetch from database using authenticated user
+        if (!apiKey && userId) {
+            console.log(`🔍 [Architect] Buscando API key do banco para usuário: ${userId}`);
+            apiKey = await getUserApiKeyFromDB(userId);
+            if (apiKey) {
+                console.log(`✅ [Architect] API key encontrada no banco (termina com ...${apiKey.slice(-4)})`);
+            } else {
+                console.warn(`⚠️ [Architect] Nenhuma API key encontrada para usuário ${userId}`);
+            }
+        }
 
         const userMessage = message || '[INÍCIO] O usuário acabou de abrir a página. Inicie a conversa se apresentando e perguntando sobre o negócio dele.';
 
-        console.log(`🏗️ [Architect] Processando mensagem...`);
-        if (apiKey) console.log(`🔑 [BYOK] Usando chave de API personalizada (termina com ...${apiKey.slice(-4)})`);
+        console.log(`🏗️ [Architect] Processando mensagem para usuário: ${userId}`);
+        if (apiKey) console.log(`🔑 [BYOK] Usando chave de API (termina com ...${apiKey.slice(-4)})`);
 
         // Get non-streaming response
         const { success, message: responseMessage, systemPrompt } = await runArchitectAgent(
@@ -147,13 +183,22 @@ router.post('/generate-prompt', async (req, res) => {
 });
 
 // Test endpoint - Chat with the created agent
-router.post('/chat', async (req, res) => {
+router.post('/chat', authenticateToken, async (req, res) => {
     try {
         const { message, systemPrompt, history = [] } = req.body;
-        const apiKey = req.headers['x-gemini-key'] || '';
+        let apiKey = req.headers['x-gemini-key'] || '';
 
-        // Pass apiKey to chatWithAgent
-        // If apiKey is empty, service will fallback/error checking
+        // Get userId from authenticated JWT token
+        const userId = req.user?.uid || req.user?.id || null;
+
+        // If no API key in header, fetch from database
+        if (!apiKey && userId) {
+            apiKey = await getUserApiKeyFromDB(userId);
+        }
+
+        if (!apiKey) {
+            return res.status(400).json({ success: false, error: 'API key não configurada' });
+        }
 
         const result = await chatWithAgent(message, systemPrompt, history, apiKey);
 
@@ -171,12 +216,20 @@ router.post('/chat', async (req, res) => {
         res.status(500).json({ success: false, error: 'Erro no chat' });
     }
 });// Text-to-Speech Endpoint using Gemini 2.0 Native TTS with fallback
-router.post('/speak', async (req, res) => {
+router.post('/speak', authenticateToken, async (req, res) => {
     try {
         const { text, voice = 'Kore' } = req.body;
-        const apiKey = req.headers['x-gemini-key'] || '';
+        let apiKey = req.headers['x-gemini-key'] || '';
 
-        // Use custom key if provided
+        // Get userId from authenticated JWT token
+        const userId = req.user?.uid || req.user?.id || null;
+
+        // If no API key in header, fetch from database
+        if (!apiKey && userId) {
+            apiKey = await getUserApiKeyFromDB(userId);
+        }
+
+        // Use custom key or fallback to env
         const keyToUse = apiKey || API_KEY;
 
         if (!keyToUse) {
@@ -205,10 +258,18 @@ router.post('/speak', async (req, res) => {
 // Gemini Live Audio Streaming Endpoint
 // Aceita texto ou áudio -> Retorna áudio streaming
 // ============================================
-router.post('/live-audio', async (req, res) => {
+router.post('/live-audio', authenticateToken, async (req, res) => {
     try {
-        const { message, audio, history = [], userId = 'anonymous' } = req.body;
-        const apiKey = req.headers['x-gemini-key'] || '';
+        const { message, audio, history = [] } = req.body;
+        let apiKey = req.headers['x-gemini-key'] || '';
+
+        // Get userId from authenticated JWT token
+        const userId = req.user?.uid || req.user?.id || 'anonymous';
+
+        // If no API key in header, fetch from database
+        if (!apiKey && userId && userId !== 'anonymous') {
+            apiKey = await getUserApiKeyFromDB(userId);
+        }
 
         console.log(`🎙️ [Live Audio] Request received - Message: ${message ? message.substring(0, 30) + '...' : 'AUDIO'}`);
 
