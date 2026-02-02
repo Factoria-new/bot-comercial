@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import Lottie from "lottie-react";
 import { Button } from "@/components/ui/button";
-import { Send, Sparkles, Loader2, Bot, User } from "lucide-react";
+import { Send, Sparkles, Loader2, User } from "lucide-react";
 import { promptService } from "@/services/promptService";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,14 @@ export const PromptEditChat = ({ currentPrompt, onPromptUpdate }: PromptEditChat
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
+    const [metaAiData, setMetaAiData] = useState<any>(null);
+
+    useEffect(() => {
+        fetch('/lotties/meta-ai-logo.json')
+            .then(res => res.json())
+            .then(data => setMetaAiData(data))
+            .catch(err => console.error("Failed to load Meta AI Lottie:", err));
+    }, []);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,7 +103,16 @@ export const PromptEditChat = ({ currentPrompt, onPromptUpdate }: PromptEditChat
             <div className="h-[200px] overflow-y-auto p-4 space-y-3 custom-scrollbar bg-black/20">
                 {messages.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center text-white/30 text-xs text-center">
-                        <Bot className="w-8 h-8 mb-2 opacity-50" />
+                        <div className="relative mb-3">
+                            <div className="w-12 h-12 rounded-full overflow-hidden relative z-10">
+                                {metaAiData ? (
+                                    <Lottie animationData={metaAiData} loop autoplay style={{ width: '100%', height: '100%' }} />
+                                ) : (
+                                    <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">L</div>
+                                )}
+                            </div>
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full z-20" />
+                        </div>
                         <p>Diga para a Lia como você quer alterar o prompt.<br />Ex: "Deixe o tom mais formal" ou "Adicione perguntas sobre orçamento"</p>
                     </div>
                 )}
