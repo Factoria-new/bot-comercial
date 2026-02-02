@@ -19,6 +19,8 @@ export const generateSessionToken = (user) => {
             uid: user.id,
             email: user.email,
             role: user.role,
+            plan: user.plan,
+            period: user.period,
             hasGeminiApiKey: !!user.geminiApiKey
         },
         JWT_SECRET,
@@ -175,6 +177,7 @@ export const login = async (email, password) => {
             displayName: user.displayName,
             status: user.status,
             plan: user.plan,
+            period: user.period,
             subscriptionStatus: user.subscriptionStatus,
             hasPrompt: !!user.customPrompt,
             hasGeminiApiKey: !!user.geminiApiKey

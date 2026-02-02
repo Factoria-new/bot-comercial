@@ -425,12 +425,22 @@ export default function DashboardSidebar({
                                 <span
                                     className={cn(
                                         "text-[10px] font-bold px-2 py-0.5 rounded-full ml-2",
-                                        user?.role === "pro" || user?.role === "admin"
-                                            ? "text-emerald-300 bg-emerald-500/20 border border-emerald-500/30"
-                                            : "text-white/60 bg-white/10"
+                                        user?.role === "admin"
+                                            ? "text-purple-300 bg-purple-500/20 border border-purple-500/30"
+                                            : user?.period
+                                                ? "text-emerald-300 bg-emerald-500/20 border border-emerald-500/30"
+                                                : "text-white/60 bg-white/10"
                                     )}
                                 >
-                                    {user?.role === "pro" || user?.role === "admin" ? "PRO" : "BÁSICO"}
+                                    {user?.role === "admin"
+                                        ? "ADMIN"
+                                        : user?.period === "monthly"
+                                            ? "MENSAL"
+                                            : user?.period === "semiannual"
+                                                ? "SEMESTRAL"
+                                                : user?.period === "annual"
+                                                    ? "ANUAL"
+                                                    : "BÁSICO"}
                                 </span>
                             </div>
                             <p className="text-white/60 text-xs truncate">

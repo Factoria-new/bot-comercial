@@ -136,7 +136,8 @@ Seu objetivo final é sempre conduzir o cliente para a ação de falar com um hu
 
 # CONTEXTO DE DADOS (BASE DE CONHECIMENTO)
 Utilize exclusivamente as informações abaixo para responder às dúvidas do usuário.
-Se a resposta não estiver aqui, informe que irá transferir para um atendente humano.
+Se a resposta não estiver aqui, diga educadamente que você **não tem acesso a essa informação** ou que ela não foi fornecida a você. 
+NÃO invente e NÃO diga que vai passar para um humano se não houver um link específico para isso. Pergunte se pode ajudar com outra coisa do contexto da empresa.
 """
 ${generateCatalogString(data, niche)}
 """

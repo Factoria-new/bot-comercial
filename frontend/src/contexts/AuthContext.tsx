@@ -4,8 +4,10 @@ import API_CONFIG from "@/config/api";
 export interface UserProfile {
     uid: string;
     email: string | null;
-    role: "basic" | "pro" | "admin";
     displayName?: string;
+    role: "basic" | "pro" | "admin";
+    plan?: string;
+    period?: "monthly" | "semiannual" | "annual";
     hasPrompt?: boolean;
     isWhatsAppConnected?: boolean;
     hasGeminiApiKey?: boolean;
@@ -101,6 +103,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         uid: decoded.uid,
                         email: decoded.email,
                         role: decoded.role || 'basic',
+                        plan: decoded.plan,
+                        period: decoded.period,
                         displayName: decoded.displayName,
                         hasPrompt,
                         hasGeminiApiKey: decoded.hasGeminiApiKey || false // Ensure backend sends this in token, or we fetch it
@@ -143,6 +147,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 uid: data.user.uid,
                 email: data.user.email,
                 role: data.user.role || 'basic',
+                plan: data.user.plan,
+                period: data.user.period,
                 displayName: data.user.displayName,
                 hasPrompt: data.user.hasPrompt || false,
                 hasGeminiApiKey: data.user.hasGeminiApiKey || false

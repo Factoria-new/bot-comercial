@@ -64,6 +64,8 @@ export const updateApiKey = async (req, res) => {
             email: updatedUser.email,
             role: updatedUser.role,
             displayName: updatedUser.displayName,
+            plan: updatedUser.plan,
+            period: updatedUser.period,
             hasGeminiApiKey: true
         };
 
@@ -99,6 +101,8 @@ export const getProfile = async (req, res) => {
                 email: true,
                 displayName: true,
                 role: true,
+                plan: true,
+                period: true,
                 geminiApiKey: true,
             }
         });
