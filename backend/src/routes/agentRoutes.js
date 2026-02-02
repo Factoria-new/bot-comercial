@@ -402,40 +402,50 @@ router.post('/demo-generate-prompt', async (req, res) => {
 });
 
 // Demo Chat (Scripted - No API Key)
+// Demo Chat (Scripted - No API Key)
 router.post('/demo-chat', async (req, res) => {
     try {
         const { message, data = {} } = req.body;
 
+        if (!message) {
+            return res.json({ success: true, message: "Olá! Como posso ajudar?" });
+        }
+
         // Normalização robusta (remove acentos e converte para minúsculas)
-        const normalizedMsg = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const normalizedMsg = message.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-        // Resposta padrão (Fallback) com gancho para o humano
-        let response = "Entendo. Como cada caso é único, prefere que eu chame um especialista humano ou quer tentar reformular a pergunta?";
+        console.log(`💬 Demo Chat: "${message}" -> Normalizado: "${normalizedMsg}"`);
 
-        // Helper para checar palavras-chave
-        const contains = (keywords) => keywords.some(k => normalizedMsg.includes(k));
+        // Resposta padrão (Fallback)
+        let response = "Entendo. Como sou uma versão de demonstração, sugiro finalizar a criação para testar todas as minhas funcionalidades personalizadas!";
 
-        // Dados dinâmicos básicos (com fallbacks)
+        // Helper para checar palavras-chave (tokens exatos ou parciais)
+        const contains = (keywords) => keywords.some(k => {
+            const keyNorm = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return normalizedMsg.includes(keyNorm);
+        });
+
+        // Dados dinâmicos básicos
         const businessName = data.businessName || "nossa empresa";
         const phone = data.phone || "(XX) 99999-9999";
+        const assistName = data.assistantName || "Assistente Virtual";
 
         // --- SISTEMA DE RESPOSTAS SCRIPTADAS ---
 
         // =================================================================
         // 0. BOAS-VINDAS & IDENTIDADE
         // =================================================================
-        if (contains(['ola', 'oi', 'eai', 'bom dia', 'boa tarde', 'boa noite', 'opa', 'hey'])) {
-            response = `Olá! 👋 Bem-vindo(a) à ${businessName}. Sou sua assistente virtual. Como posso facilitar sua vida hoje?`;
+        if (contains(['ola', 'oi', 'eai', 'bom dia', 'boa tarde', 'boa noite', 'opa', 'hey', 'tudobem'])) {
+            response = `Olá! 👋 Bem-vindo(a) à ${businessName}. Sou ${assistName}, sua assistente virtual. Como posso facilitar sua vida hoje?`;
         }
         else if (contains(['quem e', 'quem é', 'seu nome', 'voce e', 'você é', 'robo', 'bot'])) {
-            const assistName = data.assistantName || "Assistente Virtual";
             response = `Sou ${assistName}, a inteligência artificial da ${businessName}. Estou aqui para agilizar seu atendimento enquanto nossa equipe foca no seu pedido/serviço! Em que posso ajudar?`;
         }
 
         // =================================================================
         // 1. VITRINE (PRODUTOS/SERVIÇOS)
         // =================================================================
-        else if (contains(['que voces tem', 'o que vendem', 'catalogo', 'cardapio', 'menu', 'produtos', 'servicos', 'lista', 'trabalham com'])) {
+        else if (contains(['que voces tem', 'o que vendem', 'catalogo', 'cardapio', 'menu', 'produtos', 'servicos', 'lista', 'trabalham com', 'quais', 'sabores', 'tipos', 'opcoes', 'opções', 'variedade', 'pedir', 'peço', 'comprar', 'compra'])) {
             if (data.menuItems?.length > 0) {
                 const items = data.menuItems.slice(0, 3).map(i => i.name).join(', ');
                 response = `Temos opções incríveis como ${items} e muito mais! Gostaria de ver o cardápio completo ou busca algo específico?`;
@@ -450,7 +460,7 @@ router.post('/demo-chat', async (req, res) => {
             }
         }
         // PRODUCT SPECIFIC
-        else if (data.type !== 'service' && contains(['estoque', 'tem', 'têm', 'disponivel', 'disponível', 'tem esse'])) {
+        else if (data.type !== 'service' && contains(['estoque', 'tem', 'têm', 'disponivel', 'disponível', 'tem esse', 'ainda tem'])) {
             response = "É um dos nossos itens mais procurados! Para qual data ou finalidade você precisa dele? Assim confirmo a disponibilidade exata.";
         }
         else if (data.type !== 'service' && contains(['original', 'novo', 'lacrado', 'usado', 'estado'])) {
@@ -477,7 +487,7 @@ router.post('/demo-chat', async (req, res) => {
         // 3. LOGÍSTICA (FRETE/LOCALIZAÇÃO)
         // =================================================================
         // PRODUCT SPECIFIC - FREIGHT
-        else if (data.type !== 'service' && contains(['frete', 'entrega', 'cep', 'envio', 'chega quando'])) {
+        else if (data.type !== 'service' && contains(['frete', 'entrega', 'cep', 'envio', 'chega quando', 'urgencia', 'urgência', 'rapido', 'rápido', 'pressa'])) {
             response = "Isso depende da sua região. Você tem urgência para receber (Sedex/Expresso) ou prefere a opção mais econômica?";
         }
         else if (contains(['rastreio', 'rastrear', 'pedido', 'onde ta', 'onde tá', 'status'])) {
@@ -510,6 +520,19 @@ router.post('/demo-chat', async (req, res) => {
         }
         else if (data.type !== 'product' && contains(['doi', 'dói', 'dor', 'machuca', 'anestesia'])) {
             response = "Nossa técnica foca no máximo conforto. Você costuma ter sensibilidade alta a esse tipo de procedimento?";
+        }
+
+        // =================================================================
+        // 4.5. RESPOSTAS DE FOLLOW-UP (DATAS/SIM/NÃO)
+        // =================================================================
+        else if (contains(['amanha', 'hoje', 'tarde', 'noite', 'manha', 'semana', 'segunda', 'terça', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo', 'agora'])) {
+            response = "Perfeito! Verifiquei aqui e temos disponibilidade para este período. Posso confirmar sua reserva/pedido?";
+        }
+        else if (contains(['sim', 'pode', 'quero', 'claro', 'com certeza', 'isso'])) {
+            response = "Maravilha! 🎉 Para finalizarmos, você poderia me informar seu nome completo para o cadastro?";
+        }
+        else if (contains(['nao', 'não', 'pensar', 'depois', 'obrigado', 'obrigada'])) {
+            response = "Sem problemas! Fico à disposição. Se mudar de ideia ou tiver qualquer dúvida, é só me chamar. Tenha um ótimo dia! 😊";
         }
 
         // =================================================================

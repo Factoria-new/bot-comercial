@@ -308,7 +308,7 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                                 Gostou do Resultado?
                             </h2>
                             <p className="text-lg text-gray-300 mb-10 leading-relaxed">
-                                Este foi apenas um gostinho. Com a versão completa, seu agente pode conectar-se ao WhatsApp, Instagram, agendar reuniões no Calendar e processar pagamentos.
+                                Este foi apenas um gostinho. Com a versão completa, seu agente pode conectar-se ao WhatsApp, Instagram e agendar reuniões no Calendar.
                             </p>
 
                             <div className="flex flex-col gap-4 max-w-md mx-auto">
@@ -318,13 +318,6 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                                 >
                                     Ver Planos e Preços
                                     <ArrowRight className="w-5 h-5 ml-2" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => setCurrentStep('chat')}
-                                    className="text-white/50 hover:text-white"
-                                >
-                                    Voltar e Testar Mais
                                 </Button>
                             </div>
                         </motion.div>
