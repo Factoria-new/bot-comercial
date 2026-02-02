@@ -802,7 +802,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     </Button>
                     <Button
                         variant="outline"
-                        onClick={() => transitionToSection('produto')}
+                        onClick={() => window.location.href = '/sua-experiencia'}
                         className="border-2 border-[#1E293B] text-[#1E293B] hover:bg-[#1E293B] hover:text-white font-semibold px-4 py-4 md:px-8 md:py-6 text-base md:text-lg rounded-full transition-all whitespace-nowrap"
                     >
                         Ver Como Funciona

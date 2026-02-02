@@ -355,4 +355,143 @@ router.post('/upload-prompt', upload.single('file'), async (req, res) => {
     }
 });
 
+// ============================================
+// DEMO ROUTES (Public - No Auth Required)
+// ============================================
+
+// Generate Prompt for Demo (Public)
+router.post('/demo-generate-prompt', async (req, res) => {
+    try {
+        const { data, niche } = req.body;
+
+        if (!data) {
+            return res.status(400).json({
+                success: false,
+                error: 'Dados do wizard são obrigatórios (data)'
+            });
+        }
+
+        const nicheKey = niche || 'general';
+        const generator = PROMPTS[nicheKey] || PROMPTS['services'] || PROMPTS['general'];
+
+        if (!generator) {
+            return res.status(400).json({
+                success: false,
+                error: `Niche "${nicheKey}" não encontrado e nenhum fallback disponível`
+            });
+        }
+
+        // Generate prompt from template
+        const generatedPrompt = generator(data);
+
+        console.log(`✅ [Demo Generate] Prompt gerado para niche "${nicheKey}"`);
+
+        res.json({
+            success: true,
+            prompt: generatedPrompt,
+            niche: nicheKey
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao gerar prompt (demo):', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao gerar prompt demo'
+        });
+    }
+});
+
+// Demo Chat (Scripted - No API Key)
+router.post('/demo-chat', async (req, res) => {
+    try {
+        const { message, data = {} } = req.body; // Expecting 'data' from wizard
+
+        const normalizedMsg = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        let response = "Entendo. Como sou uma versão de demonstração, sugiro finalizar a criação para testar todas as minhas funcionalidades personalizadas!";
+
+        // Helper to check keywords
+        const contains = (keywords) => keywords.some(k => normalizedMsg.includes(k));
+
+        // --- SCRIPTED RESPONSES ---
+
+        // 1. PRODUCTS
+        if (contains(['estoque', 'tem', 'têm', 'disponivel', 'disponível'])) {
+            response = "Para qual finalidade você precisa dele? Posso verificar a variação ideal (cor/tamanho) para você.";
+        }
+        else if (contains(['frete', 'entrega', 'cep', 'envio'])) {
+            response = "Você tem pressa na entrega ou prefere a opção mais econômica?";
+        }
+        else if (contains(['pagamento', 'pagar', 'cartao', 'cartão', 'pix', 'parcela'])) {
+            response = "Você prefere parcelamento no cartão ou o desconto no Pix?";
+        }
+        else if (contains(['garantia', 'defeito', 'quebrar'])) {
+            response = "Você já teve alguma experiência ruim com produtos similares que te preocupa?";
+        }
+        else if (contains(['rastreio', 'rastrear', 'pedido', 'onde ta', 'onde tá'])) {
+            response = "Você gostaria de receber as atualizações automáticas via WhatsApp ou e-mail?";
+        }
+        else if (contains(['original', 'novo', 'lacrado', 'usado'])) {
+            response = "Sim, trabalhamos apenas com itens lacrados. Quer que eu envie fotos reais do produto no estoque?";
+        }
+        else if (contains(['atacado', 'quantidade', 'desconto', 'lote'])) {
+            response = "Qual seria a quantidade aproximada que você pretende comprar para eu calcular o desconto?";
+        }
+
+        // 2. SERVICES
+        else if (contains(['horario', 'horário', 'agenda', 'disponivel', 'marcar'])) {
+            response = "Você prefere o período da manhã ou da tarde para eu filtrar as opções?";
+        }
+        else if (contains(['quanto custa', 'preco', 'preço', 'valor'])) {
+            response = "Para te passar o valor exato, seu caso é algo simples ou precisa de uma solução completa?";
+        }
+        else if (contains(['onde', 'local', 'endereco', 'endereço', 'fica', 'localização'])) {
+            response = "Você virá de carro? Posso te enviar as instruções de estacionamento e o mapa.";
+        }
+        else if (contains(['domicilio', 'domicílio', 'casa', 'vem ate mim', 'vem até mim'])) {
+            response = "Em qual bairro você reside para eu verificar a disponibilidade da equipe?";
+        }
+        else if (contains(['documento', 'levar', 'preciso', 'preparacao', 'preparação'])) {
+            response = "Você prefere que eu envie um checklist em PDF ou te explico por aqui agora?";
+        }
+        else if (contains(['nota fiscal', 'nf', 'nota'])) {
+            response = "Com certeza. Você precisará da nota no seu CPF ou no CNPJ da empresa?";
+        }
+        else if (contains(['demora', 'tempo', 'duracao', 'duração'])) {
+            response = "Você tem algum compromisso logo após ou está com o tempo mais livre?";
+        }
+
+        // 3. GENERAL / SUPPORT
+        else if (contains(['problema', 'erro', 'errado', 'não funciona', 'nao funciona'])) {
+            response = "Sinto muito por isso. Para agilizar, você pode me enviar uma foto ou descrever o que aconteceu?";
+        }
+        else if (contains(['cancelar', 'trocar', 'devolver', 'desistir'])) {
+            response = "O motivo seria o produto ou alguma expectativa não atendida? Talvez eu possa sugerir uma alternativa.";
+        }
+        else if (contains(['falei com', 'ninguem', 'ninguém', 'resposta', 'atendente'])) {
+            response = "Peço desculpas pela demora. Pode me confirmar seu nome para eu localizar seu histórico agora mesmo?";
+        }
+        else if (contains(['funcionamento', 'aberto', 'abre', 'fecha'])) {
+            const closingTime = data?.hours?.["seg"]?.slots?.[0]?.end || "18:00";
+            response = `Hoje estamos atendendo até às ${closingTime}. Você planeja vir aqui hoje ou prefere agendar?`;
+        }
+
+        // Variable Injection (if any straightforward ones match)
+        // Note: The scripted responses above mostly don't have variables except closingTime.
+
+        // Emulate delay for "typing" effect
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        res.json({
+            success: true,
+            message: response
+        });
+
+    } catch (error) {
+        console.error('❌ Erro no demo chat:', error);
+        res.status(500).json({ success: false, error: 'Erro no chat de demonstração' });
+    }
+});
+
+
 export default router;

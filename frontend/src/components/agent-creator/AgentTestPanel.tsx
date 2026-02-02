@@ -9,6 +9,8 @@ interface AgentTestPanelProps {
     onTestSend: (message: string) => void;
     onSwitchToLia: () => void;
     onFinish: () => void;
+    finishLabel?: string;
+    isInputDisabled?: boolean;
 }
 
 export const AgentTestPanel = ({
@@ -16,7 +18,9 @@ export const AgentTestPanel = ({
     isTestTyping,
     onTestSend,
     onSwitchToLia,
-    onFinish
+    onFinish,
+    finishLabel = "Finalizar Teste",
+    isInputDisabled = false
 }: AgentTestPanelProps) => {
     return (
         <div className="w-full h-[85vh] flex flex-col">
@@ -75,10 +79,17 @@ export const AgentTestPanel = ({
 
                 {/* Input Area */}
                 <div className="space-y-2">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 relative">
+                        {isInputDisabled && (
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] rounded-xl flex items-center justify-center z-10 text-center p-2">
+                                <span className="text-sm font-medium text-white/90">Limite de teste atingido</span>
+                            </div>
+                        )}
+
                         <textarea
-                            placeholder="Teste seu assistente..."
-                            className="flex-1 bg-black/20 border border-white/10 resize-none min-h-[50px] rounded-xl p-3 text-white focus:outline-none focus:border-white/30 transition-all"
+                            placeholder={isInputDisabled ? "Limite de mensagens atingido" : "Teste seu assistente..."}
+                            disabled={isInputDisabled}
+                            className="flex-1 bg-black/20 border border-white/10 resize-none min-h-[50px] rounded-xl p-3 text-white focus:outline-none focus:border-white/30 transition-all disabled:opacity-50"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
@@ -92,7 +103,8 @@ export const AgentTestPanel = ({
                         />
                         <Button
                             size="icon"
-                            className="h-[50px] w-[50px] rounded-xl bg-purple-600 hover:bg-purple-500"
+                            disabled={isInputDisabled}
+                            className="h-[50px] w-[50px] rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={(e) => {
                                 const textarea = e.currentTarget.previousElementSibling as HTMLTextAreaElement;
                                 if (textarea && textarea.value.trim()) {
@@ -107,10 +119,13 @@ export const AgentTestPanel = ({
 
                     <Button
                         onClick={onFinish}
-                        className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-2 mt-2"
+                        className={cn(
+                            "w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-2 mt-2 transition-all duration-500",
+                            isInputDisabled && "animate-pulse ring-4 ring-emerald-500/30 scale-105 font-bold shadow-lg shadow-emerald-500/20"
+                        )}
                     >
                         <Check className="w-4 h-4 mr-2" />
-                        Finalizar Teste
+                        {finishLabel}
                     </Button>
                 </div>
             </div>

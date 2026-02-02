@@ -23,6 +23,7 @@ import Lgpd from "./pages/Lgpd";
 import Trafego from "./pages/Trafego";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
+import YourExperiencePage from "./pages/YourExperiencePage";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/instagram-callback" element={<InstagramCallback />} />
               <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
               <Route path="/checkout/success" element={<CheckoutSuccess />} />
+              <Route path="/sua-experiencia" element={<YourExperiencePage />} />
               <Route path="/trafego" element={<Trafego />} />
 
               <Route path="*" element={<NotFound />} />
