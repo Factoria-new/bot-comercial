@@ -404,80 +404,146 @@ router.post('/demo-generate-prompt', async (req, res) => {
 // Demo Chat (Scripted - No API Key)
 router.post('/demo-chat', async (req, res) => {
     try {
-        const { message, data = {} } = req.body; // Expecting 'data' from wizard
+        const { message, data = {} } = req.body;
 
+        // Normalização robusta (remove acentos e converte para minúsculas)
         const normalizedMsg = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-        let response = "Entendo. Como sou uma versão de demonstração, sugiro finalizar a criação para testar todas as minhas funcionalidades personalizadas!";
+        // Resposta padrão (Fallback) com gancho para o humano
+        let response = "Entendo. Como cada caso é único, prefere que eu chame um especialista humano ou quer tentar reformular a pergunta?";
 
-        // Helper to check keywords
+        // Helper para checar palavras-chave
         const contains = (keywords) => keywords.some(k => normalizedMsg.includes(k));
 
-        // --- SCRIPTED RESPONSES ---
+        // Dados dinâmicos básicos (com fallbacks)
+        const businessName = data.businessName || "nossa empresa";
+        const phone = data.phone || "(XX) 99999-9999";
 
-        // 1. PRODUCTS
-        if (contains(['estoque', 'tem', 'têm', 'disponivel', 'disponível'])) {
-            response = "Para qual finalidade você precisa dele? Posso verificar a variação ideal (cor/tamanho) para você.";
+        // --- SISTEMA DE RESPOSTAS SCRIPTADAS ---
+
+        // =================================================================
+        // 0. BOAS-VINDAS & IDENTIDADE
+        // =================================================================
+        if (contains(['ola', 'oi', 'eai', 'bom dia', 'boa tarde', 'boa noite', 'opa', 'hey'])) {
+            response = `Olá! 👋 Bem-vindo(a) à ${businessName}. Sou sua assistente virtual. Como posso facilitar sua vida hoje?`;
         }
-        else if (contains(['frete', 'entrega', 'cep', 'envio'])) {
-            response = "Você tem pressa na entrega ou prefere a opção mais econômica?";
-        }
-        else if (contains(['pagamento', 'pagar', 'cartao', 'cartão', 'pix', 'parcela'])) {
-            response = "Você prefere parcelamento no cartão ou o desconto no Pix?";
-        }
-        else if (contains(['garantia', 'defeito', 'quebrar'])) {
-            response = "Você já teve alguma experiência ruim com produtos similares que te preocupa?";
-        }
-        else if (contains(['rastreio', 'rastrear', 'pedido', 'onde ta', 'onde tá'])) {
-            response = "Você gostaria de receber as atualizações automáticas via WhatsApp ou e-mail?";
-        }
-        else if (contains(['original', 'novo', 'lacrado', 'usado'])) {
-            response = "Sim, trabalhamos apenas com itens lacrados. Quer que eu envie fotos reais do produto no estoque?";
-        }
-        else if (contains(['atacado', 'quantidade', 'desconto', 'lote'])) {
-            response = "Qual seria a quantidade aproximada que você pretende comprar para eu calcular o desconto?";
+        else if (contains(['quem e', 'quem é', 'seu nome', 'voce e', 'você é', 'robo', 'bot'])) {
+            const assistName = data.assistantName || "Assistente Virtual";
+            response = `Sou ${assistName}, a inteligência artificial da ${businessName}. Estou aqui para agilizar seu atendimento enquanto nossa equipe foca no seu pedido/serviço! Em que posso ajudar?`;
         }
 
-        // 2. SERVICES
-        else if (contains(['horario', 'horário', 'agenda', 'disponivel', 'marcar'])) {
-            response = "Você prefere o período da manhã ou da tarde para eu filtrar as opções?";
+        // =================================================================
+        // 1. VITRINE (PRODUTOS/SERVIÇOS)
+        // =================================================================
+        else if (contains(['que voces tem', 'o que vendem', 'catalogo', 'cardapio', 'menu', 'produtos', 'servicos', 'lista', 'trabalham com'])) {
+            if (data.menuItems?.length > 0) {
+                const items = data.menuItems.slice(0, 3).map(i => i.name).join(', ');
+                response = `Temos opções incríveis como ${items} e muito mais! Gostaria de ver o cardápio completo ou busca algo específico?`;
+            } else if (data.servicesList?.length > 0) {
+                const servs = data.servicesList.slice(0, 3).map(s => s.name).join(', ');
+                response = `Somos especialistas em ${servs}. Posso te explicar como funciona algum deles?`;
+            } else if (data.products?.length > 0) {
+                const prods = data.products.slice(0, 3).map(p => p.name).join(', ');
+                response = `Trabalhamos com ${prods}. Tem interesse em algum modelo específico?`;
+            } else {
+                response = "Temos uma variedade de soluções para você. Você busca um produto físico ou prestação de serviço?";
+            }
         }
-        else if (contains(['quanto custa', 'preco', 'preço', 'valor'])) {
-            response = "Para te passar o valor exato, seu caso é algo simples ou precisa de uma solução completa?";
+        // PRODUCT SPECIFIC
+        else if (data.type !== 'service' && contains(['estoque', 'tem', 'têm', 'disponivel', 'disponível', 'tem esse'])) {
+            response = "É um dos nossos itens mais procurados! Para qual data ou finalidade você precisa dele? Assim confirmo a disponibilidade exata.";
         }
-        else if (contains(['onde', 'local', 'endereco', 'endereço', 'fica', 'localização'])) {
-            response = "Você virá de carro? Posso te enviar as instruções de estacionamento e o mapa.";
-        }
-        else if (contains(['domicilio', 'domicílio', 'casa', 'vem ate mim', 'vem até mim'])) {
-            response = "Em qual bairro você reside para eu verificar a disponibilidade da equipe?";
-        }
-        else if (contains(['documento', 'levar', 'preciso', 'preparacao', 'preparação'])) {
-            response = "Você prefere que eu envie um checklist em PDF ou te explico por aqui agora?";
-        }
-        else if (contains(['nota fiscal', 'nf', 'nota'])) {
-            response = "Com certeza. Você precisará da nota no seu CPF ou no CNPJ da empresa?";
-        }
-        else if (contains(['demora', 'tempo', 'duracao', 'duração'])) {
-            response = "Você tem algum compromisso logo após ou está com o tempo mais livre?";
+        else if (data.type !== 'service' && contains(['original', 'novo', 'lacrado', 'usado', 'estado'])) {
+            response = "Trabalhamos com garantia de procedência. Você prefere ver fotos reais do item agora ou prefere saber sobre a garantia primeiro?";
         }
 
-        // 3. GENERAL / SUPPORT
-        else if (contains(['problema', 'erro', 'errado', 'não funciona', 'nao funciona'])) {
-            response = "Sinto muito por isso. Para agilizar, você pode me enviar uma foto ou descrever o que aconteceu?";
+        // =================================================================
+        // 2. PREÇOS, PAGAMENTOS E PROMOÇÕES
+        // =================================================================
+        else if (contains(['quanto custa', 'preco', 'preço', 'valor', 'orcamento', 'orçamento'])) {
+            response = "Para te passar o melhor valor possível, preciso entender: você busca algo básico ou a solução completa?";
         }
-        else if (contains(['cancelar', 'trocar', 'devolver', 'desistir'])) {
-            response = "O motivo seria o produto ou alguma expectativa não atendida? Talvez eu possa sugerir uma alternativa.";
+        else if (contains(['pagamento', 'pagar', 'cartao', 'cartão', 'pix', 'parcela', 'dinheiro'])) {
+            response = "Aceitamos as principais bandeiras e Pix. Você prefere parcelar no cartão ou aproveitar nosso desconto à vista?";
         }
-        else if (contains(['falei com', 'ninguem', 'ninguém', 'resposta', 'atendente'])) {
-            response = "Peço desculpas pela demora. Pode me confirmar seu nome para eu localizar seu histórico agora mesmo?";
+        else if (contains(['desconto', 'promoção', 'promocao', 'cupom', 'oferta', 'menos'])) {
+            response = "Eventualmente temos condições especiais! Qual seria a forma de pagamento? (Pix costuma ter as melhores vantagens).";
         }
-        else if (contains(['funcionamento', 'aberto', 'abre', 'fecha'])) {
+        else if (contains(['atacado', 'quantidade', 'lote', 'revenda', 'corporativo'])) {
+            response = "Temos uma tabela especial para volume. Qual seria a quantidade aproximada que você pretende comprar?";
+        }
+
+        // =================================================================
+        // 3. LOGÍSTICA (FRETE/LOCALIZAÇÃO)
+        // =================================================================
+        // PRODUCT SPECIFIC - FREIGHT
+        else if (data.type !== 'service' && contains(['frete', 'entrega', 'cep', 'envio', 'chega quando'])) {
+            response = "Isso depende da sua região. Você tem urgência para receber (Sedex/Expresso) ou prefere a opção mais econômica?";
+        }
+        else if (contains(['rastreio', 'rastrear', 'pedido', 'onde ta', 'onde tá', 'status'])) {
+            response = "Consigo verificar isso. Você prefere receber as atualizações automáticas aqui no WhatsApp ou por e-mail?";
+        }
+        else if (contains(['onde', 'local', 'endereco', 'endereço', 'fica', 'localização', 'mapa'])) {
+            const address = data.address || "nosso endereço";
+            response = `Estamos localizados em ${address}. Você virá de carro? Posso enviar instruções de estacionamento.`;
+        }
+        else if (contains(['estacionamento', 'parar', 'vaga', 'carro'])) {
+            response = "Temos local para parar próximo. Você precisa de vaga reservada ou acessibilidade especial?";
+        }
+        else if (contains(['domicilio', 'domicílio', 'casa', 'vem ate mim', 'vem até mim', 'delivery'])) {
+            // Service might go home too, but context differs. Keeping general.
+            response = "Atendemos sim! Em qual bairro você está para eu calcular a taxa de deslocamento/entrega?";
+        }
+
+        // =================================================================
+        // 4. AGENDAMENTO E SERVIÇOS TÉCNICOS
+        // =================================================================
+        // SERVICE SPECIFIC
+        else if (data.type !== 'product' && contains(['horario', 'horário', 'agenda', 'marcar', 'reservar'])) {
+            response = "Ótimo! Você funciona melhor no período da manhã ou da tarde? Assim filtro as vagas para você.";
+        }
+        else if (data.type !== 'product' && contains(['demora', 'tempo', 'duracao', 'duração', 'quantos dias'])) {
+            response = "Depende da complexidade, mas somos ágeis. Você tem algum prazo fatal ou compromisso logo após?";
+        }
+        else if (data.type !== 'product' && contains(['documento', 'levar', 'preciso', 'preparacao', 'preparação', 'requisito'])) {
+            response = "Para facilitar, você prefere que eu envie um checklist em PDF ou te explico os itens por aqui agora?";
+        }
+        else if (data.type !== 'product' && contains(['doi', 'dói', 'dor', 'machuca', 'anestesia'])) {
+            response = "Nossa técnica foca no máximo conforto. Você costuma ter sensibilidade alta a esse tipo de procedimento?";
+        }
+
+        // =================================================================
+        // 5. BUROCRACIA E PÓS-VENDA
+        // =================================================================
+        else if (contains(['nota fiscal', 'nf', 'nota', 'fatura'])) {
+            response = "Emitimos sim. Para adiantar, a nota seria no seu CPF pessoal ou CNPJ de empresa?";
+        }
+        else if (contains(['garantia', 'defeito', 'quebrar', 'estragou', 'conserto'])) {
+            response = "Entendo sua preocupação. O problema ocorreu recentemente ou já faz algum tempo?";
+        }
+        else if (contains(['problema', 'erro', 'errado', 'não funciona', 'nao funciona', 'deu ruim'])) {
+            response = "Sinto muito por isso. Para agilizar a resolução, você consegue me descrever o que houve ou mandar uma foto?";
+        }
+        else if (contains(['cancelar', 'trocar', 'devolver', 'desistir', 'reembolso'])) {
+            response = "Poxa, que pena. O motivo seria o produto/serviço em si ou alguma expectativa não atendida? Talvez eu tenha uma alternativa.";
+        }
+
+        // =================================================================
+        // 6. CONTATO HUMANO E INFOS GERAIS
+        // =================================================================
+        else if (contains(['falei com', 'ninguem', 'ninguém', 'resposta', 'atendente', 'humano', 'pessoa', 'gerente'])) {
+            response = "Compreendo que queira falar com alguém. Enquanto conecto nossa equipe, pode me adiantar o assunto para eu direcionar ao setor certo?";
+        }
+        else if (contains(['telefone', 'celular', 'zap', 'whatsapp', 'ligar', 'contato'])) {
+            response = `Nosso contato principal é este, mas também atendemos no ${phone}. Você prefere que a gente te ligue?`;
+        }
+        else if (contains(['funcionamento', 'aberto', 'abre', 'fecha', 'hora'])) {
             const closingTime = data?.hours?.["seg"]?.slots?.[0]?.end || "18:00";
-            response = `Hoje estamos atendendo até às ${closingTime}. Você planeja vir aqui hoje ou prefere agendar?`;
+            response = `Hoje funcionamos até às ${closingTime}. Você pretende vir agora ou prefere agendar para outro dia?`;
         }
-
-        // Variable Injection (if any straightforward ones match)
-        // Note: The scripted responses above mostly don't have variables except closingTime.
+        else if (contains(['confiavel', 'seguro', 'verdade', 'golpe', 'referencia'])) {
+            response = "Totalmente! Estamos no mercado há anos. Gostaria de ver alguns depoimentos de clientes que atendemos essa semana?";
+        }
 
         // Emulate delay for "typing" effect
         await new Promise(resolve => setTimeout(resolve, 800));

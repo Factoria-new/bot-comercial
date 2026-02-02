@@ -8,9 +8,9 @@ interface AgentTestPanelProps {
     isTestTyping: boolean;
     onTestSend: (message: string) => void;
     onSwitchToLia: () => void;
-    onFinish: () => void;
     finishLabel?: string;
     isInputDisabled?: boolean;
+    isDemo?: boolean;
 }
 
 export const AgentTestPanel = ({
@@ -20,7 +20,8 @@ export const AgentTestPanel = ({
     onSwitchToLia,
     onFinish,
     finishLabel = "Finalizar Teste",
-    isInputDisabled = false
+    isInputDisabled = false,
+    isDemo = false
 }: AgentTestPanelProps) => {
     return (
         <div className="w-full h-[85vh] flex flex-col">
@@ -28,19 +29,21 @@ export const AgentTestPanel = ({
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-50" />
 
                 {/* Toggles Header */}
-                <div className="flex justify-center mb-4 bg-black/20 p-1 rounded-xl w-fit mx-auto">
-                    <button
-                        onClick={onSwitchToLia}
-                        className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-all"
-                    >
-                        Falar com Lia
-                    </button>
-                    <button
-                        className="px-4 py-1.5 rounded-lg text-sm font-medium bg-purple-600 text-white shadow-lg"
-                    >
-                        Testar Assistente
-                    </button>
-                </div>
+                {!isDemo && (
+                    <div className="flex justify-center mb-4 bg-black/20 p-1 rounded-xl w-fit mx-auto">
+                        <button
+                            onClick={onSwitchToLia}
+                            className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-all"
+                        >
+                            Falar com Lia
+                        </button>
+                        <button
+                            className="px-4 py-1.5 rounded-lg text-sm font-medium bg-purple-600 text-white shadow-lg"
+                        >
+                            Testar Assistente
+                        </button>
+                    </div>
+                )}
 
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">

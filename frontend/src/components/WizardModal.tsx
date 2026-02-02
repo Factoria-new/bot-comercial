@@ -57,6 +57,7 @@ interface WizardModalProps {
     voiceActive?: boolean;
     onPlayAudio?: (path: string, delay?: number, onEnded?: () => void) => void;
     onClose?: () => void;
+    isDemo?: boolean;
 }
 
 // --- SCHEDULE PICKER SUB-COMPONENT ---
@@ -350,7 +351,8 @@ export function WizardModal({
     onComplete,
     voiceActive,
     onPlayAudio,
-    onClose
+    onClose,
+    isDemo = false
 }: WizardModalProps) {
 
     const [formState, setFormState] = useState<Record<string, any>>({});
@@ -898,7 +900,7 @@ export function WizardModal({
                             className="text-white/30 hover:text-white hover:bg-white/5 rounded-xl h-10 sm:h-12 px-3 sm:px-6 text-xs sm:text-sm"
                         >
                             <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
-                            <span className="hidden sm:inline">Voltar e adicionar o prompt</span>
+                            <span className="hidden sm:inline">{isDemo ? "Voltar" : "Voltar e adicionar o prompt"}</span>
                             <span className="sm:hidden">Voltar</span>
                         </Button>
                     )}

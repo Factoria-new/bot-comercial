@@ -154,6 +154,18 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
 
             const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
+            // Determine Business Type for better scripted responses
+            let businessType = 'general';
+            const schemaId = currentSchema?.id || 'general';
+
+            if (schemaId === 'restaurant') businessType = 'product';
+            else if (['beauty', 'services', 'real_estate'].includes(schemaId)) businessType = 'service';
+            else if (schemaId === 'general') {
+                // Infer from data
+                if (wizardData.products?.length > 0) businessType = 'product';
+                else businessType = 'service';
+            }
+
             // Use DEMO chat endpoint
             const res = await fetch(`${backendUrl}/api/agent/demo-chat`, {
                 method: 'POST',
@@ -162,8 +174,7 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                 },
                 body: JSON.stringify({
                     message: message,
-                    systemPrompt: agentPrompt,
-                    history: history
+                    data: { ...wizardData, type: businessType } // Inject calculated type
                 })
             });
 
@@ -257,6 +268,7 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                     voiceActive={false} // Disable voice for demo simplicity
                     onPlayAudio={playIntegrationAudio}
                     onClose={() => setIsWizardOpen(false)}
+                    isDemo={true}
                 />
 
                 {/* 3. CHAT INTERFACE */}
@@ -274,6 +286,7 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                                 onSwitchToLia={() => { }} // No Lia
                                 onFinish={handleFinishDemo}
                                 finishLabel="Ver Planos e Preços"
+                                isDemo={true}
                             />
                         </motion.div>
                     )}
