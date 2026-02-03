@@ -3,6 +3,7 @@ import express from 'express';
 import prisma from '../config/prisma.js';
 import * as authService from '../services/authService.js';
 import logger from '../config/logger.js';
+import { invalidatePromptCache } from '../services/whatsappService.js';
 
 const router = express.Router();
 
@@ -71,6 +72,10 @@ router.put('/prompt', extractUserId, async (req, res) => {
         });
 
         logger.info(`✅ Prompt salvo para usuário ${req.userId} (${prompt.length} chars)`);
+
+        // Invalidar cache de prompt em memoria para que o bot use o novo prompt imediatamente
+        invalidatePromptCache(req.userId);
+        invalidatePromptCache(`user_${req.userId}`);
 
         res.json({
             success: true,

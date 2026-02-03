@@ -1021,7 +1021,26 @@ const processBufferedMessages = async (contactId, io) => {
         return;
     }
 
-    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt, remoteJid, userEmail, appointmentDuration, serviceType, businessAddress, apiKey } = buffer;
+    const { messages, lastIncomingType, sessionId, sock, socket, agentPrompt: bufferAgentPrompt, remoteJid, userEmail, appointmentDuration, serviceType, businessAddress, apiKey } = buffer;
+
+    // Se o buffer foi marcado para refresh, buscar novo prompt do DB
+    let agentPrompt = bufferAgentPrompt;
+    if (buffer.needsPromptRefresh) {
+        try {
+            const cleanSessionId = sessionId.startsWith('user_') ? sessionId.replace('user_', '') : sessionId;
+            const user = await prisma.user.findUnique({
+                where: { id: cleanSessionId },
+                select: { customPrompt: true }
+            });
+            if (user?.customPrompt) {
+                agentPrompt = user.customPrompt;
+                console.log(`🔄 Prompt refreshed from DB for ${sessionId}`);
+            }
+        } catch (e) {
+            console.warn(`⚠️ Could not refresh prompt: ${e.message}`);
+        }
+    }
+
 
     // Concatenar todas as mensagens em uma só, separadas por quebra de linha
     const combinedMessage = messages.join('\n');
@@ -1247,7 +1266,29 @@ export const getAgentPrompt = (sessionId) => {
     return agentPrompts.get(sessionId) || null;
 };
 
+/**
+ * Invalida o cache de prompt para um usuario
+ * Chamado quando o usuario atualiza o prompt via Meu Prompt ou BusinessSettings
+ * @param {string} sessionId - ID da sessao (userId ou user_userId)
+ * @returns {boolean} - True se o cache existia e foi removido
+ */
+export const invalidatePromptCache = (sessionId) => {
+    const deleted = agentPrompts.delete(sessionId);
+    console.log(`${deleted ? '✅' : '⚠️'} Prompt cache invalidated for ${sessionId}`);
+
+    // Tambem marcar buffers pendentes para refetch do prompt
+    for (const [contactId, buffer] of messageBuffer.entries()) {
+        if (buffer.sessionId === sessionId) {
+            buffer.needsPromptRefresh = true;
+            console.log(`🔄 Buffer marked for prompt refresh: ${contactId}`);
+        }
+    }
+
+    return deleted;
+};
+
 // Send message to user (for external tools)
+
 // incomingMessageType: 'text' | 'audio' | 'image' etc. - used for TTS rule evaluation
 // Modified to accept options object
 export const sendMessageToUser = async (sessionId, phoneNumber, message, incomingMessageType = 'text', options = {}) => {
