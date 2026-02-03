@@ -14,7 +14,6 @@ import { AgentMessage } from "@/lib/agent-creator.types";
 import { useAgentAudio } from "@/hooks/useAgentAudio";
 import { useToast } from "@/hooks/use-toast";
 import { useLiaVolume } from "@/contexts/LiaVolumeContext";
-import { LiaVolumeControl } from "@/components/ui/LiaVolumeControl";
 
 interface DemoAgentCreatorProps {
     onOpenSidebar?: () => void;
@@ -222,13 +221,6 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                         <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                         <span className="text-sm font-medium">Voltar para a Home</span>
                     </Button>
-                </div>
-            )}
-
-            {/* Volume Control (hidden on CTA step) */}
-            {currentStep !== 'cta' && (
-                <div className="absolute top-6 right-6 z-50">
-                    <LiaVolumeControl compact />
                 </div>
             )}
 

@@ -56,6 +56,7 @@ export const ProductSection = () => {
                 xPercent: -100 * (features.length - 1) / features.length,
                 ease: "none",
                 scrollTrigger: {
+                    id: "product-section-trigger",
                     trigger: sectionRef.current,
                     pin: true,
                     start: "top top",

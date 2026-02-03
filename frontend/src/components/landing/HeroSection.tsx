@@ -45,6 +45,48 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
     const [isInstantReset, setIsInstantReset] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
+    // Helper function to scroll to a section while bypassing pinned ScrollTriggers
+    const scrollToSectionBypassingPins = useCallback((sectionId: string, offset: number = -100) => {
+        // Get the ProductSection's ScrollTrigger and temporarily disable the pin
+        const productTrigger = ScrollTrigger.getById("product-section-trigger");
+
+        if (productTrigger) {
+            // Disable the pin temporarily
+            productTrigger.disable();
+        }
+
+        // Perform the scroll
+        if (lenis && window.innerWidth >= 768) {
+            lenis.resize();
+            ScrollTrigger.refresh();
+            lenis.scrollTo('#' + sectionId, {
+                duration: 1.2,
+                force: true,
+                offset: offset,
+                onComplete: () => {
+                    // Re-enable the pin after scroll completes
+                    if (productTrigger) {
+                        productTrigger.enable();
+                        ScrollTrigger.refresh();
+                    }
+                }
+            });
+        } else {
+            ScrollTrigger.refresh();
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            // Re-enable after a delay for native scroll
+            setTimeout(() => {
+                if (productTrigger) {
+                    productTrigger.enable();
+                    ScrollTrigger.refresh();
+                }
+            }, 1500);
+        }
+    }, [lenis]);
+
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
         checkMobile();
@@ -109,10 +151,11 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     setPhase('ended');
                     zoomEndLevelRef.current = 1;
 
+                    // Use helper that bypasses ProductSection pin during scroll
+                    // Longer delay to ensure ProductSection's ScrollTrigger is initialized
                     setTimeout(() => {
-                        const targetSection = document.getElementById(sectionId);
-                        if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 100);
+                        scrollToSectionBypassingPins(sectionId, -100);
+                    }, 500);
                 }
             }, 100);
         }
@@ -567,27 +610,8 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     gsap.set(wrapper, { position: "absolute", top: 0 });
                 }
 
-                // Force native scroll on mobile for better reliability with layout shifts
-                if (lenis && window.innerWidth >= 768) {
-                    lenis.resize();
-                    ScrollTrigger.refresh();
-                    lenis.scrollTo('#' + sectionId, { duration: 1.2, force: true, offset: -100 });
-                } else {
-                    const scrollRetry = () => {
-                        ScrollTrigger.refresh();
-                        const targetSection = document.getElementById(sectionId);
-                        if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    };
-
-                    // Initial attempt
-                    scrollRetry();
-
-                    // Retry attempts to handle layout shifts
-                    if (window.innerWidth < 768) {
-                        setTimeout(scrollRetry, 800);
-                        setTimeout(scrollRetry, 1600);
-                    }
-                }
+                // Use helper that bypasses ProductSection pin during scroll
+                scrollToSectionBypassingPins(sectionId, -100);
             }, 1200);
         },
 
@@ -640,25 +664,8 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     gsap.set(wrapper, { position: "absolute", top: 0 });
                 }
 
-                // Force native scroll on mobile
-                if (lenis && window.innerWidth >= 768) {
-                    lenis.resize();
-                    ScrollTrigger.refresh();
-                    lenis.scrollTo('#pricing', { duration: 1.2, force: true, offset: -50 });
-                } else {
-                    const scrollRetry = () => {
-                        ScrollTrigger.refresh();
-                        const pricingSection = document.getElementById('pricing');
-                        if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
-                    };
-
-                    scrollRetry();
-
-                    if (window.innerWidth < 768) {
-                        setTimeout(scrollRetry, 800);
-                        setTimeout(scrollRetry, 1600);
-                    }
-                }
+                // Use helper that bypasses ProductSection pin during scroll
+                scrollToSectionBypassingPins('pricing', -50);
             }, 1200);
         }
     }));
@@ -729,25 +736,8 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                 gsap.set(wrapper, { position: "absolute", top: 0 });
             }
 
-            // Force native scroll on mobile
-            if (lenis && window.innerWidth >= 768) {
-                lenis.resize();
-                ScrollTrigger.refresh();
-                lenis.scrollTo('#' + sectionId, { duration: 1.2, force: true, offset: -100 });
-            } else {
-                const scrollRetry = () => {
-                    ScrollTrigger.refresh();
-                    const targetSection = document.getElementById(sectionId);
-                    if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                };
-
-                scrollRetry();
-
-                if (window.innerWidth < 768) {
-                    setTimeout(scrollRetry, 800);
-                    setTimeout(scrollRetry, 1600);
-                }
-            }
+            // Use helper that bypasses ProductSection pin during scroll
+            scrollToSectionBypassingPins(sectionId, -100);
         }, 1200);
     };
 

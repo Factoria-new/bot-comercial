@@ -314,7 +314,10 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
                     'X-Gemini-Key': apiKey || ''
                 },
                 body: JSON.stringify({
-                    data: wizardData,
+                    data: {
+                        ...wizardData,
+                        businessDescription: wizardData.description
+                    },
                     niche: currentSchema?.id || 'general'
                 })
             });
