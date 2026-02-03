@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight, CheckCircle } from "lucide-react";
+import { Sparkles, ArrowRight, CheckCircle, ArrowLeft } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
 import { WizardModal } from "./WizardModal";
 import { NicheSchema, NICHE_SCHEMAS } from "@/lib/nicheSchemas";
@@ -51,7 +51,6 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
 
     const {
         playIntegrationAudio,
-        stopIntegrationAudio,
         integrationVoiceLevel
     } = useAgentAudio({ stopTTS });
 
@@ -148,10 +147,7 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
         setIsTestTyping(true);
 
         try {
-            const history = updatedMessages.map(msg => ({
-                role: msg.type === 'user' ? 'user' : 'model',
-                content: msg.content
-            }));
+
 
             const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
@@ -212,6 +208,20 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                 }
             `}</style>
 
+            {/* Persistent Back Button (hidden on CTA step) */}
+            {currentStep !== 'cta' && (
+                <div className="absolute top-6 left-6 z-50">
+                    <Button
+                        onClick={() => window.location.href = '/'}
+                        variant="ghost"
+                        className="text-white/50 hover:text-white hover:bg-white/5 flex items-center gap-2 group transition-all"
+                    >
+                        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                        <span className="text-sm font-medium">Voltar para a Home</span>
+                    </Button>
+                </div>
+            )}
+
             {/* Background Layer */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[50%] left-[50%] w-[100vw] h-[100vh] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-black translate-x-[-50%] translate-y-[-50%]" />
@@ -260,15 +270,7 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                                 Criar Agente Agora
                             </Button>
 
-                            <div className="mt-8">
-                                <Button
-                                    onClick={() => window.location.href = '/'}
-                                    variant="ghost"
-                                    className="text-white/30 hover:text-white hover:bg-white/5 text-sm"
-                                >
-                                    Voltar para Home
-                                </Button>
-                            </div>
+
                         </motion.div>
                     )}
                 </AnimatePresence>

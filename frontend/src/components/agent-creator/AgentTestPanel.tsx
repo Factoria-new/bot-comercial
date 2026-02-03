@@ -11,6 +11,7 @@ interface AgentTestPanelProps {
     finishLabel?: string;
     isInputDisabled?: boolean;
     isDemo?: boolean;
+    onFinish: () => void;
 }
 
 export const AgentTestPanel = ({
