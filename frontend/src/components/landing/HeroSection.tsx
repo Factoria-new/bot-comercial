@@ -47,45 +47,29 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
     // Helper function to scroll to a section while bypassing pinned ScrollTriggers
     const scrollToSectionBypassingPins = useCallback((sectionId: string, offset: number = -100) => {
-        // Get the ProductSection's ScrollTrigger and temporarily disable the pin
+        // Get the ProductSection's ScrollTrigger and kill it temporarily
         const productTrigger = ScrollTrigger.getById("product-section-trigger");
 
         if (productTrigger) {
-            // Disable the pin temporarily
-            productTrigger.disable();
+            // Kill the trigger completely (removes pin and all states)
+            productTrigger.kill();
         }
 
-        // Perform the scroll
-        if (lenis && window.innerWidth >= 768) {
-            lenis.resize();
-            ScrollTrigger.refresh();
-            lenis.scrollTo('#' + sectionId, {
-                duration: 1.2,
-                force: true,
-                offset: offset,
-                onComplete: () => {
-                    // Re-enable the pin after scroll completes
-                    if (productTrigger) {
-                        productTrigger.enable();
-                        ScrollTrigger.refresh();
-                    }
-                }
-            });
-        } else {
-            ScrollTrigger.refresh();
-            const targetSection = document.getElementById(sectionId);
-            if (targetSection) {
-                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-            // Re-enable after a delay for native scroll
-            setTimeout(() => {
-                if (productTrigger) {
-                    productTrigger.enable();
-                    ScrollTrigger.refresh();
-                }
-            }, 1500);
-        }
-    }, [lenis]);
+        // Get the target element
+        const targetSection = document.getElementById(sectionId);
+        if (!targetSection) return;
+
+        // Calculate the target scroll position
+        const targetRect = targetSection.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const targetY = targetRect.top + scrollTop + offset;
+
+        // Use native smooth scroll - this avoids all Lenis/GSAP scroll issues
+        window.scrollTo({
+            top: targetY,
+            behavior: 'smooth'
+        });
+    }, []);
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);

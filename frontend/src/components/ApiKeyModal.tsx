@@ -7,6 +7,8 @@ import { useTTS } from "@/hooks/useTTS";
 import { useAgentAudio } from "@/hooks/useAgentAudio";
 import { getRandomAudio } from "@/lib/audioMappings";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiaVolume } from "@/contexts/LiaVolumeContext";
+import { LiaVolumeControl } from "@/components/ui/LiaVolumeControl";
 
 interface ApiKeyModalProps {
     open: boolean;
@@ -25,7 +27,8 @@ export function ApiKeyModal({ open, onComplete, onClose }: ApiKeyModalProps) {
 
     // Audio Hooks
     const { stop: stopTTS } = useTTS();
-    const { playIntegrationAudio, stopIntegrationAudio, integrationVoiceLevel } = useAgentAudio({ stopTTS });
+    const { volume: liaVolume } = useLiaVolume();
+    const { playIntegrationAudio, stopIntegrationAudio, integrationVoiceLevel } = useAgentAudio({ stopTTS, liaVolume });
 
     // Play Audio on Mount (Once)
     useEffect(() => {
@@ -143,6 +146,7 @@ export function ApiKeyModal({ open, onComplete, onClose }: ApiKeyModalProps) {
                             )}
                         </div>
                         <div className="flex items-center gap-2">
+                            <LiaVolumeControl compact />
                             <Button
                                 variant="ghost"
                                 onClick={() => {
