@@ -29,7 +29,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
     const videoWrapperRef = useRef<HTMLDivElement>(null);
     const videoLoopRef = useRef<HTMLVideoElement>(null);
     const videoMainRef = useRef<HTMLVideoElement>(null);
-    const videoReverseRef = useRef<HTMLVideoElement>(null);
+    const videoPreReverseRef = useRef<HTMLVideoElement>(null);
     const videoEndLoopRef = useRef<HTMLVideoElement>(null);
     const heroTextRef = useRef<HTMLDivElement>(null);
 
@@ -120,42 +120,20 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
     }, []);
 
     const playReverse = useCallback(() => {
-        const videoReverse = videoReverseRef.current;
+        const videoPreReverse = videoPreReverseRef.current;
         const videoEndLoop = videoEndLoopRef.current;
-        const videoLoop = videoLoopRef.current;
 
-        if (!videoReverse || !videoEndLoop || !videoLoop) return;
+        if (!videoPreReverse || !videoEndLoop) return;
 
         videoEndLoop.pause();
         gsap.set(videoEndLoop, { autoAlpha: 0 });
 
-        videoReverse.currentTime = videoReverse.duration;
-        gsap.set(videoReverse, { autoAlpha: 1 });
+        // Pre-rendered reverse: just play from start
+        videoPreReverse.currentTime = 0;
+        videoPreReverse.play().catch(console.error);
+        gsap.set(videoPreReverse, { autoAlpha: 1 });
 
         setPhase('reversing');
-
-        const reverseSpeed = 0.5;
-        let lastTime = performance.now();
-
-        const animateReverse = (currentTime: number) => {
-            const deltaTime = (currentTime - lastTime) / 1000;
-            lastTime = currentTime;
-
-            if (videoReverse.currentTime > 0) {
-                videoReverse.currentTime = Math.max(0, videoReverse.currentTime - (deltaTime * reverseSpeed));
-                reverseAnimationRef.current = requestAnimationFrame(animateReverse);
-            } else {
-                gsap.set(videoReverse, { autoAlpha: 0 });
-                // Garantir que o vídeo de loop volte a tocar
-                videoLoop.currentTime = 0;
-                videoLoop.play();
-                gsap.set(videoLoop, { autoAlpha: 1 });
-                setPhase('expanded');
-                reverseAnimationRef.current = null;
-            }
-        };
-
-        reverseAnimationRef.current = requestAnimationFrame(animateReverse);
     }, [setPhase]);
 
     useEffect(() => {
@@ -453,18 +431,18 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             const videoLoop = videoLoopRef.current;
             const videoMain = videoMainRef.current;
             const videoEndLoop = videoEndLoopRef.current;
-            const videoReverse = videoReverseRef.current;
+            const videoPreReverse = videoPreReverseRef.current;
 
             if (!wrapper || !heroText || !videoLoop || !videoMain || !videoEndLoop) return;
 
-            // 1. Parar animações
+            // 1. Parar animacoes
             isAnimatingRef.current = false;
             if (reverseAnimationRef.current) {
                 cancelAnimationFrame(reverseAnimationRef.current);
                 reverseAnimationRef.current = null;
             }
 
-            // 2. Resetar vídeos
+            // 2. Resetar videos
             videoMain.pause();
             videoMain.currentTime = 0;
             gsap.set(videoMain, { autoAlpha: 0 });
@@ -473,10 +451,10 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
             videoEndLoop.currentTime = 0;
             gsap.set(videoEndLoop, { autoAlpha: 0 });
 
-            if (videoReverse) {
-                videoReverse.pause();
-                videoReverse.currentTime = 0;
-                gsap.set(videoReverse, { autoAlpha: 0 });
+            if (videoPreReverse) {
+                videoPreReverse.pause();
+                videoPreReverse.currentTime = 0;
+                gsap.set(videoPreReverse, { autoAlpha: 0 });
             }
 
             videoLoop.currentTime = 0;
@@ -843,17 +821,28 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                     <source src={isMobile ? "/videos-scroll/NAVIGATE_4K_9x16_S40-scrolly@sm.mp4" : "/videos-scroll/NAVIGATE_4K_S40-scrolly@md.mp4"} type="video/mp4" />
                 </video>
 
-                {/* Vídeo Reverso (otimizado para seek) */}
+                {/* Video Pre-Rendered Reverse */}
                 <video
                     key={isMobile ? 'mobile-reverse' : 'desktop-reverse'}
-                    ref={videoReverseRef}
+                    ref={videoPreReverseRef}
                     muted
                     playsInline
                     preload="auto"
                     className="absolute top-0 left-0 w-full h-full object-cover"
                     style={{ opacity: 0 }}
+                    onEnded={() => {
+                        const videoLoop = videoLoopRef.current;
+                        const videoPreReverse = videoPreReverseRef.current;
+                        if (!videoLoop || !videoPreReverse) return;
+
+                        gsap.set(videoPreReverse, { autoAlpha: 0 });
+                        videoLoop.currentTime = 0;
+                        videoLoop.play();
+                        gsap.set(videoLoop, { autoAlpha: 1 });
+                        setPhase('expanded');
+                    }}
                 >
-                    <source src={isMobile ? "/videos-scroll/NAVIGATE_4K_9x16_S40-scrolly@sm_OPTIMIZED.mp4" : "/videos-scroll/NAVIGATE_4K_S40-scrolly@md_OPTIMIZED.mp4"} type="video/mp4" />
+                    <source src={isMobile ? "/videos-scroll/NAVIGATE_4K_9x16_S40-scrolly@sm_REVERSE.mp4" : "/videos-scroll/NAVIGATE_4K_S40-scrolly@md_REVERSE.mp4"} type="video/mp4" />
                 </video>
 
                 {/* Vídeo Loop Final */}
