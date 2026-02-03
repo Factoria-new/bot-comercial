@@ -29,6 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NicheSchema, FormField } from "@/lib/nicheSchemas";
 import { getRandomAudio, AudioTriggerType } from "@/lib/audioMappings";
+import { LiaVolumeControl } from "@/components/ui/LiaVolumeControl";
 import {
     TimeSlot,
     DaySchedule,
@@ -786,20 +787,26 @@ export function WizardModal({
                             </AnimatePresence>
                         </div>
                     </div>
-                    {/* Step Indicator */}
-                    {schema && (
-                        <div className="flex gap-1 sm:gap-1.5 bg-black/20 p-1 sm:p-1.5 rounded-lg sm:rounded-full w-full sm:w-auto">
-                            {schema.steps.map((_, idx) => (
-                                <div
-                                    key={idx}
-                                    className={cn(
-                                        "flex-1 sm:flex-none h-1.5 sm:h-2.5 sm:w-2.5 rounded-full transition-all duration-500",
-                                        (idx + 1) <= step ? "bg-purple-500 shadow-[0_0_10px_purple]" : "bg-white/10"
-                                    )}
-                                />
-                            ))}
-                        </div>
-                    )}
+                    {/* Step Indicator + Volume Control */}
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        {/* Volume Control */}
+                        <LiaVolumeControl compact className="flex-shrink-0" />
+
+                        {/* Step Indicator */}
+                        {schema && (
+                            <div className="flex gap-1 sm:gap-1.5 bg-black/20 p-1 sm:p-1.5 rounded-lg sm:rounded-full w-full sm:w-auto">
+                                {schema.steps.map((_, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={cn(
+                                            "flex-1 sm:flex-none h-1.5 sm:h-2.5 sm:w-2.5 rounded-full transition-all duration-500",
+                                            (idx + 1) <= step ? "bg-purple-500 shadow-[0_0_10px_purple]" : "bg-white/10"
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* --- BODY --- */}

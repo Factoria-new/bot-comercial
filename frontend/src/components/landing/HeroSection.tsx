@@ -316,7 +316,7 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
                             x: 0,
                             autoAlpha: 1,
                             duration: 1.0
-                        }, 0);
+                        }, 0.8);
                     }
                 } else {
                     if (zoomLevelRef.current < maxZoom) {

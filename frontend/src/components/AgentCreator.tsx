@@ -29,6 +29,7 @@ import BusinessInfoModal, { BusinessInfoData } from "./BusinessInfoModal";
 import { DaySchedule, WeekDay, WEEKDAYS_MAP } from "@/lib/scheduleTypes";
 import LottieLoader from "@/components/LottieLoader";
 import { promptService } from "@/services/promptService";
+import { useLiaVolume } from "@/contexts/LiaVolumeContext";
 
 export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExiting, onStartChat, integrations }: AgentCreatorProps) {
 
@@ -100,13 +101,13 @@ export default function AgentCreator({ onOpenSidebar, onOpenIntegrations, isExit
         handleDisconnect
     } = useWhatsAppInstances();
 
-
+    const { volume: liaVolume } = useLiaVolume();
 
     const {
         integrationVoiceLevel,
         playIntegrationAudio,
         stopIntegrationAudio
-    } = useAgentAudio({ stopTTS });
+    } = useAgentAudio({ stopTTS, liaVolume });
 
     const {
         displayText,

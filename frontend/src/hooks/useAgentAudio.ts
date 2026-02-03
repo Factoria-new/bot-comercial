@@ -2,13 +2,24 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 interface AgentAudioProps {
     stopTTS: () => void;
+    liaVolume?: number; // 0-1, defaults to 1 if not provided
 }
 
-export const useAgentAudio = ({ stopTTS }: AgentAudioProps) => {
+export const useAgentAudio = ({ stopTTS, liaVolume = 1 }: AgentAudioProps) => {
     const [integrationVoiceLevel, setIntegrationVoiceLevel] = useState(0);
     const integrationAudioRef = useRef<HTMLAudioElement | null>(null);
     const integrationAudioContextRef = useRef<AudioContext | null>(null);
     const integrationAnimationFrameRef = useRef<number>();
+    const volumeRef = useRef(liaVolume);
+
+    // Keep volume ref updated
+    useEffect(() => {
+        volumeRef.current = liaVolume;
+        // Apply to existing audio if playing
+        if (integrationAudioRef.current) {
+            integrationAudioRef.current.volume = liaVolume;
+        }
+    }, [liaVolume]);
 
     // Helper: Stop locally playing integration audio (and clean up context/visualizer)
     const stopIntegrationAudio = useCallback(() => {
@@ -47,6 +58,7 @@ export const useAgentAudio = ({ stopTTS }: AgentAudioProps) => {
                 stopIntegrationAudio();
 
                 const audio = new Audio(path);
+                audio.volume = volumeRef.current; // Apply Lia volume
                 integrationAudioRef.current = audio;
 
                 // Setup Audio Context for Animation

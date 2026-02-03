@@ -12,6 +12,7 @@ import { LiaFloatingButton } from './LiaFloatingButton';
 import { Button } from './ui/button';
 import { Menu } from 'lucide-react';
 import { ApiKeyModal } from './ApiKeyModal';
+import { LiaVolumeControl } from './ui/LiaVolumeControl';
 
 interface LayoutProps {
   children: ReactNode;
@@ -190,7 +191,7 @@ const Layout = ({
       {typeof document !== 'undefined' && (
         <>
           {showSidebarTrigger && createPortal(
-            <div className="fixed top-4 left-4 z-50">
+            <div className="fixed top-4 left-4 z-50 flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
@@ -199,6 +200,7 @@ const Layout = ({
               >
                 <Menu className="w-6 h-6" />
               </Button>
+              <LiaVolumeControl compact />
             </div>,
             document.body
           )}
