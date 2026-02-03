@@ -51,7 +51,8 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
 
     const {
         playIntegrationAudio,
-        stopIntegrationAudio
+        stopIntegrationAudio,
+        integrationVoiceLevel
     } = useAgentAudio({ stopTTS });
 
     // Loading Animation Cycle
@@ -214,8 +215,14 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
             {/* Background Layer */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[50%] left-[50%] w-[100vw] h-[100vh] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-black translate-x-[-50%] translate-y-[-50%]" />
-                <div className="absolute top-[30%] left-[50%] w-[60vw] h-[60vh] mix-blend-screen opacity-40 blur-[80px] rounded-full bg-purple-600 animate-[floatOrganic1_20s_ease-in-out_infinite]" />
-                <div className="absolute top-[60%] left-[60%] w-[50vw] h-[50vh] mix-blend-screen opacity-30 blur-[90px] rounded-full bg-blue-600 animate-[floatOrganic1_25s_ease-in-out_infinite_reverse]" />
+                <div
+                    className="absolute top-[30%] left-[50%] w-[60vw] h-[60vh] mix-blend-screen opacity-40 blur-[80px] rounded-full bg-purple-600 transition-all duration-100 ease-out"
+                    style={{ transform: `translate(-50%, -50%) scale(${1 + integrationVoiceLevel * 1})` }}
+                />
+                <div
+                    className="absolute top-[60%] left-[60%] w-[50vw] h-[50vh] mix-blend-screen opacity-30 blur-[90px] rounded-full bg-blue-600 transition-all duration-200 ease-out"
+                    style={{ transform: `translate(-50%, -50%) scale(${1 + integrationVoiceLevel * 0.8})` }}
+                />
             </div>
 
             {/* Content Layer */}
@@ -252,6 +259,16 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                                 <Sparkles className="w-6 h-6 mr-3 text-yellow-300" />
                                 Criar Agente Agora
                             </Button>
+
+                            <div className="mt-8">
+                                <Button
+                                    onClick={() => window.location.href = '/'}
+                                    variant="ghost"
+                                    className="text-white/30 hover:text-white hover:bg-white/5 text-sm"
+                                >
+                                    Voltar para Home
+                                </Button>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
