@@ -62,14 +62,7 @@ const MeuPrompt = () => {
     }, [prompt, originalPrompt]);
 
     const handleSave = async () => {
-        if (!prompt.trim()) {
-            toast({
-                title: "Prompt vazio",
-                description: "O prompt não pode estar vazio.",
-                variant: "destructive"
-            });
-            return;
-        }
+        // Validation removed to allow saving empty prompt
 
         setIsSaving(true);
         try {
@@ -260,7 +253,7 @@ const MeuPrompt = () => {
                     </div>
 
                     {/* Prompt Textarea */}
-                    {prompt ? (
+                    {prompt || isEditing ? (
                         <textarea
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
