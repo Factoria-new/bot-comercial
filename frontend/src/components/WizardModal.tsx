@@ -698,6 +698,9 @@ export function WizardModal({
         }
 
         return currentStepObj.fields.every(field => {
+            // Allow skipping description in Demo mode (Not Required)
+            if (isDemo && field.name === 'description') return true;
+
             if (field.required) {
                 // Check Visibility
                 if (field.showIf) {
@@ -720,6 +723,11 @@ export function WizardModal({
                 if (typeof value === 'string' && value.trim() === '') return false;
                 if (Array.isArray(value) && value.length === 0) return false;
                 if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+
+                // SPECIAL VALIDATION: Description minimum length (except for Demo)
+                if (field.name === 'description' && !isDemo) {
+                    if (typeof value === 'string' && value.trim().length < 50) return false;
+                }
             }
             return true;
         });

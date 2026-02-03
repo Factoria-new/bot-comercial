@@ -50,9 +50,9 @@ const AUDIO_DATA = [
     { id: 'step_catalog_v3', text: "Perfeito. Agora preciso saber o que você oferece aos clientes." },
 
     // FOCUS DESCRIPTION
-    { id: 'help_description_v1', text: "Aqui você pode falar resumidamente o que sua empresa faz. Isso ajuda a IA a entender o contexto." },
-    { id: 'help_description_v2', text: "Nesse campo, descreva seu negócio em poucas palavras. Exemplo: 'Pizzaria tradicional com forno a lenha'." },
-    { id: 'help_description_v3', text: "Uma dica: Seja breve mas específico. Fale o que você tem de melhor!" },
+    { id: 'help_description_v1', text: "Aqui você pode me contar em detalhes tudo sobre o que sua empresa faz. Quanto mais informações, melhor a IA entenderá o contexto." },
+    { id: 'help_description_v2', text: "Nesse campo, descreva seu negócio detalhadamente. Fale sobre seus produtos, serviços e o que torna sua empresa única." },
+    { id: 'help_description_v3', text: "Uma dica: Seja bem específico e detalhista. Não economize nas palavras, quero saber tudo o que você tem de melhor!" },
 
     // FOCUS ASSISTANT NAME
     { id: 'help_assistant_name_v1', text: "Dê um nome para seu assistente. Pode ser algo humanizado como 'Bia' ou 'João'." },
