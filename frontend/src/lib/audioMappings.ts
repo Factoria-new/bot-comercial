@@ -23,7 +23,10 @@ export type AudioTriggerType =
     | 'dashboard_suggestion' // NEW
     | 'step_details' // NEW
     | 'intro_apikey' // NEW
-    | 'wizard_options'; // NEW
+    | 'step_details' // NEW
+    | 'intro_apikey' // NEW
+    | 'wizard_options' // NEW
+    | 'cta_plans'; // NEW
 
 interface AudioVariation {
     id: string;
@@ -106,10 +109,10 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento.",
         "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar."
     ]),
-    'step_operations_modal': defineVariations('step_operations_modal', 3, [
-        "Agora, defina os horários de atendimento do seu negócio.",
-        "Estamos quase lá! Configure os dias e horários em que você trabalha.",
-        "Preciso saber seus horários de funcionamento para informar corretamente os clientes."
+    'step_operations_modal': defineVariations('step_operations', 3, [
+        "Agora, defina seu horário de atendimento e o link para onde o cliente será enviado, como seu contato ou agendamento.",
+        "Estamos quase lá! Configure os horários que você trabalha e o link principal para finalizar o atendimento.",
+        "Para finalizar a parte operacional, preciso saber seus horários e para onde devo levar o cliente quando ele quiser comprar ou agendar."
     ]),
     'dashboard_suggestion': defineVariations('dashboard_suggestion', 3, [
         "Seu painel está ativo! Dica rápida: que tal conectar também outros canais para centralizar todo o seu atendimento aqui?",
@@ -130,6 +133,11 @@ export const AUDIO_MAPPINGS: Record<AudioTriggerType, AudioVariation[]> = {
         "Agora você tem duas opções. Clique em 'Iniciar Criação' para eu te guiar passo a passo, ou use o botão de Upload se você já tiver um script com as instruções prontas.",
         "Como prefere criar seu agente? Podemos montar juntos clicando em 'Iniciar Criação', ou você pode enviar seu arquivo de instruções direto pelo botão de Upload.",
         "Para prosseguir, escolha o seu caminho: 'Iniciar Criação' para um modo guiado, ou o botão de Upload para enviar um script que você já tenha preparado."
+    ]),
+    'cta_plans': defineVariations('cta_plans', 3, [
+        "Gostou do que viu? Então não perca tempo. Confira nossos planos e escolha o ideal para transformar seu atendimento agora mesmo.",
+        "Imagine esses resultados no seu negócio. Dê o próximo passo! Veja nossos planos e comece hoje a revolução no seu atendimento.",
+        "Essa tecnologia está ao seu alcance. Clique no botão, veja nossos planos e descubra como é fácil ter um atendimento de ponta 24 horas por dia."
     ])
 };
 

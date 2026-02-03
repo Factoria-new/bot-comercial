@@ -20,6 +20,11 @@ const PHRASES = {
         "Aqui você pode adicionar quantos links quiser. Não esqueça de colocar uma breve descrição para o Assistente saber quando usar cada um.",
         "Adicione seus links importantes aqui, como site, redes sociais ou agendamento. A descrição ajuda o Assistente a escolher o link certo.",
         "Use esse espaço para listar links úteis. Diga para o que serve cada um, assim o Assistente envia a informação correta para o cliente."
+    ],
+    'cta_plans': [
+        "Gostou do que viu? Então não perca tempo. Confira nossos planos e escolha o ideal para transformar seu atendimento agora mesmo.",
+        "Imagine esses resultados no seu negócio. Dê o próximo passo! Veja nossos planos e comece hoje a revolução no seu atendimento.",
+        "Essa tecnologia está ao seu alcance. Clique no botão, veja nossos planos e descubra como é fácil ter um atendimento de ponta 24 horas por dia."
     ]
 };
 

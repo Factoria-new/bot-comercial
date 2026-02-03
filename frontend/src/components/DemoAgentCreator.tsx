@@ -198,6 +198,13 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
 
     const handleFinishDemo = () => {
         setCurrentStep('cta');
+        // Play CTA audio when moving to CTA step
+        setTimeout(() => {
+            const audioVariation = getRandomAudio('cta_plans');
+            if (audioVariation.path) {
+                playIntegrationAudio(audioVariation.path);
+            }
+        }, 500);
     };
 
     return (
