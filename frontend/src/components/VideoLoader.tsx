@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import Lottie from "lottie-react";
+import { useEffect, useState } from "react";
 
 interface VideoLoaderProps {
     fullScreen?: boolean;
@@ -7,17 +9,29 @@ interface VideoLoaderProps {
 }
 
 const VideoLoader = ({ fullScreen = true, size = 300, className }: VideoLoaderProps) => {
+    const [animationData, setAnimationData] = useState<any>(null);
+
+    useEffect(() => {
+        fetch("/lotties/Ripple-loading-animation.json")
+            .then((response) => response.json())
+            .then((data) => setAnimationData(data))
+            .catch((error) => console.error("Error loading animation:", error));
+    }, []);
+
+    if (!animationData) return null;
+
     const content = (
-        <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className={cn("opacity-80 object-cover rounded-full", className)}
+        <div
+            className={cn("flex items-center justify-center opacity-80", className)}
             style={{ width: size, height: size }}
         >
-            <source src="/videos/Ripple-loading-animation.webm" type="video/webm" />
-        </video>
+            <Lottie
+                animationData={animationData}
+                loop={true}
+                autoplay={true}
+                style={{ width: "100%", height: "100%" }}
+            />
+        </div>
     );
 
     if (fullScreen) {

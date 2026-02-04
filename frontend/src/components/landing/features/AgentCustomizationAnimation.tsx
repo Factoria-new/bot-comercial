@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Sliders, MessageSquare, Play, Pause } from "lucide-react";
+import Lottie, { LottieRefCurrentProps } from "lottie-react";
 
 export const AgentCustomizationAnimation = () => {
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const arrowVideoRef = useRef<HTMLVideoElement | null>(null);
-    const playVideoRef = useRef<HTMLVideoElement | null>(null);
+    const arrowLottieRef = useRef<LottieRefCurrentProps | null>(null);
+    const playLottieRef = useRef<LottieRefCurrentProps | null>(null);
+    const [arrowAnimation, setArrowAnimation] = useState<any>(null);
+    const [playAnimation, setPlayAnimation] = useState<any>(null);
     const [isMobile, setIsMobile] = useState(false);
 
     // Initialize audio
@@ -33,38 +36,18 @@ export const AgentCustomizationAnimation = () => {
         };
     }, []);
 
-    // Handle arrow video loop with delay
+    // Load Lottie animations
     useEffect(() => {
-        const video = arrowVideoRef.current;
-        if (!video) return;
+        fetch("/lotties/arrowgreen2.json")
+            .then(res => res.json())
+            .then(data => setArrowAnimation(data))
+            .catch(e => console.error("Error loading arrow animation:", e));
 
-        const handleEnded = () => {
-            setTimeout(() => {
-                video.currentTime = 0;
-                video.play().catch(() => { });
-            }, 1000);
-        };
-
-        video.addEventListener('ended', handleEnded);
-        return () => video.removeEventListener('ended', handleEnded);
-    }, [audioEnabled]);
-
-    // Handle play button video loop with delay
-    useEffect(() => {
-        // Only run this effect if the video ref is populated (i.e. when !isPlaying)
-        const video = playVideoRef.current;
-        if (!video) return;
-
-        const handleEnded = () => {
-            setTimeout(() => {
-                video.currentTime = 0;
-                video.play().catch(() => { });
-            }, 500);
-        };
-
-        video.addEventListener('ended', handleEnded);
-        return () => video.removeEventListener('ended', handleEnded);
-    }, [isPlaying, audioEnabled]); // Re-run when isPlaying changes as ref might become available
+        fetch("/lotties/PlayOutlier.json")
+            .then(res => res.json())
+            .then(data => setPlayAnimation(data))
+            .catch(e => console.error("Error loading play animation:", e));
+    }, []);
 
     const handlePlay = () => {
         if (!audioRef.current) return;
@@ -88,13 +71,11 @@ export const AgentCustomizationAnimation = () => {
     return (
         <div className="w-full h-full flex items-center justify-center p-2 md:p-4 relative">
             <AnimatePresence>
-                {audioEnabled && (
-                    <motion.video
-                        ref={arrowVideoRef}
+                {audioEnabled && arrowAnimation && (
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        src="/videos/arrowgreen2.webm"
                         className="absolute w-16 h-16 md:w-20 md:h-20 pointer-events-none z-50"
                         style={{
                             top: isMobile ? '250px' : '360px',
@@ -102,10 +83,15 @@ export const AgentCustomizationAnimation = () => {
                             transform: "scaleY(-1)",
                             filter: greenFilter
                         }}
-                        autoPlay
-                        muted
-                        playsInline
-                    />
+                    >
+                        <Lottie
+                            lottieRef={arrowLottieRef}
+                            animationData={arrowAnimation}
+                            loop={true}
+                            autoplay={true}
+                            style={{ width: '100%', height: '100%' }}
+                        />
+                    </motion.div>
                 )}
             </AnimatePresence>
             <div className="w-full max-w-[320px] md:max-w-[380px] bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transform scale-[0.85] md:scale-100 origin-center relative z-10">
@@ -206,15 +192,18 @@ export const AgentCustomizationAnimation = () => {
                                         >
                                             {isPlaying ? (
                                                 <Pause size={14} fill="currentColor" />
+                                            ) : playAnimation ? (
+                                                <div className="w-full h-full scale-150">
+                                                    <Lottie
+                                                        lottieRef={playLottieRef}
+                                                        animationData={playAnimation}
+                                                        loop={true}
+                                                        autoplay={true}
+                                                        style={{ width: '100%', height: '100%' }}
+                                                    />
+                                                </div>
                                             ) : (
-                                                <video
-                                                    ref={playVideoRef}
-                                                    src="/videos/PlayOutlier.webm"
-                                                    className="w-full h-full object-cover scale-150"
-                                                    autoPlay
-                                                    muted
-                                                    playsInline
-                                                />
+                                                <Play size={14} fill="currentColor" />
                                             )}
                                         </button>
 
