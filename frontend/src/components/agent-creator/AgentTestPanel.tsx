@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { ArrowRight, Check, FlaskConical, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,13 @@ export const AgentTestPanel = ({
     isDemo = false,
     remainingMessages
 }: AgentTestPanelProps) => {
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll quando novas mensagens chegam
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [testMessages, isTestTyping]);
+
     return (
         <div className="w-full h-[85vh] flex flex-col">
             <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl overflow-hidden relative">
@@ -88,6 +96,7 @@ export const AgentTestPanel = ({
                         </div>
                     ))}
                     {isTestTyping && <Loader2 className="w-4 h-4 animate-spin text-white/50" />}
+                    <div ref={messagesEndRef} />
                 </div>
 
                 {/* Input Area */}
