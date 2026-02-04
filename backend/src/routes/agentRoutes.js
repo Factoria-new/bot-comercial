@@ -9,6 +9,7 @@ import { PROMPTS } from '../prompts/agentPrompts.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import prisma from '../config/prisma.js';
 import { decrypt } from '../utils/encryption.js';
+import { getCurrentDemoKey, rotateToNextKey, getTotalKeys } from '../services/demoApiKeyManager.js';
 
 const router = express.Router();
 
@@ -580,6 +581,81 @@ router.post('/demo-chat', async (req, res) => {
         console.error('❌ Erro no demo chat:', error);
         res.status(500).json({ success: false, error: 'Erro no chat de demonstração' });
     }
+});
+
+
+// ============================================
+// Demo AI Chat (Real AI - usando chaves CAJI)
+// Endpoint publico para teste de demonstracao
+// ============================================
+router.post('/demo-ai-chat', async (req, res) => {
+    const { message, systemPrompt, history = [], sessionId } = req.body;
+
+    if (!message || !systemPrompt) {
+        return res.status(400).json({
+            success: false,
+            error: 'message e systemPrompt sao obrigatorios'
+        });
+    }
+
+    console.log(`[Demo AI Chat] Session: ${sessionId || 'anonymous'} - Message: "${message.substring(0, 50)}..."`);
+
+    const maxRetries = getTotalKeys();
+
+    if (maxRetries === 0) {
+        console.error('[Demo AI Chat] Nenhuma chave DEMO_API_KEY configurada');
+        return res.status(503).json({
+            success: false,
+            error: 'Servico temporariamente indisponivel. Considere assinar um de nossos planos para acesso ilimitado!'
+        });
+    }
+
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const apiKey = getCurrentDemoKey();
+
+        if (!apiKey) {
+            break;
+        }
+
+        try {
+            console.log(`[Demo AI Chat] Tentativa ${attempt + 1}/${maxRetries}`);
+
+            const result = await chatWithAgent(message, systemPrompt, history, apiKey);
+
+            if (result.success) {
+                return res.json({
+                    success: true,
+                    message: result.message
+                });
+            }
+
+            throw new Error(result.message || 'Erro desconhecido');
+
+        } catch (error) {
+            lastError = error;
+            const errorMessage = error.message || '';
+            const errorStatus = error.status || error.statusCode;
+
+            // Rotacionar para proxima chave em caso de quota/rate limit
+            if (errorStatus === 429 || errorMessage.includes('quota') || errorMessage.includes('rate')) {
+                console.warn(`[Demo AI Chat] Chave ${attempt + 1} esgotada, rotacionando...`);
+                rotateToNextKey();
+            } else {
+                // Erro nao relacionado a quota - nao rotacionar, apenas logar
+                console.error(`[Demo AI Chat] Erro nao relacionado a quota:`, errorMessage);
+                break;
+            }
+        }
+    }
+
+    // Todas as chaves falharam ou erro critico
+    console.error('[Demo AI Chat] Todas as tentativas falharam:', lastError?.message);
+    res.status(503).json({
+        success: false,
+        error: 'Nosso servico de demonstracao esta muito ocupado no momento. Que tal assinar um de nossos planos para ter acesso ilimitado e sem filas?'
+    });
 });
 
 

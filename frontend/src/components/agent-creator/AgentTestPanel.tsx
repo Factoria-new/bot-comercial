@@ -12,6 +12,7 @@ interface AgentTestPanelProps {
     isInputDisabled?: boolean;
     isDemo?: boolean;
     onFinish: () => void;
+    remainingMessages?: number;
 }
 
 export const AgentTestPanel = ({
@@ -22,7 +23,8 @@ export const AgentTestPanel = ({
     onFinish,
     finishLabel = "Finalizar Teste",
     isInputDisabled = false,
-    isDemo = false
+    isDemo = false,
+    remainingMessages
 }: AgentTestPanelProps) => {
     return (
         <div className="w-full h-[85vh] flex flex-col">
@@ -55,8 +57,15 @@ export const AgentTestPanel = ({
                         <h3 className="font-semibold text-white">Seu Assistente</h3>
                         <p className="text-xs text-white/40">Ambiente de Teste</p>
                     </div>
-                    <div className="ml-auto px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">
-                        Teste
+                    <div className="ml-auto flex items-center gap-2">
+                        {isDemo && remainingMessages !== undefined && (
+                            <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded border border-purple-500/30">
+                                {remainingMessages > 0 ? `${remainingMessages} msgs restantes` : 'Limite atingido'}
+                            </span>
+                        )}
+                        <div className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">
+                            Teste
+                        </div>
                     </div>
                 </div>
 

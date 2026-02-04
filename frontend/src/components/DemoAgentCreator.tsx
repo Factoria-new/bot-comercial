@@ -34,6 +34,11 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
     const [isTestTyping, setIsTestTyping] = useState(false);
     const [agentPrompt, setAgentPrompt] = useState<string>("");
 
+    // Demo Session (IA Real)
+    const [demoSessionId] = useState(() => Math.random().toString(36).substring(2, 15));
+    const [messageCount, setMessageCount] = useState(0);
+    const MAX_DEMO_MESSAGES = 5;
+
     // Transitions
     const [isSwitchingToTest, setIsSwitchingToTest] = useState(false);
     const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -139,41 +144,37 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
         }
     };
 
-    // Demo Chat Handler
+    // Demo Chat Handler (IA Real)
     const handleTestSend = async (message: string) => {
-        if (!message.trim() || isTestTyping) return;
+        const isLimitReached = messageCount >= MAX_DEMO_MESSAGES;
+        if (!message.trim() || isTestTyping || isLimitReached) return;
 
         const userMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'user', content: message };
         const updatedMessages = [...testMessages, userMsg];
         setTestMessages(updatedMessages);
         setIsTestTyping(true);
+        setMessageCount(prev => prev + 1);
 
         try {
-
-
             const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
 
-            // Determine Business Type for better scripted responses
-            let businessType = 'general';
-            const schemaId = currentSchema?.id || 'general';
+            // Converter mensagens para formato do historico
+            const historyForApi = updatedMessages.map(m => ({
+                role: m.type === 'user' ? 'user' : 'model',
+                content: m.content
+            }));
 
-            if (schemaId === 'restaurant') businessType = 'product';
-            else if (['beauty', 'services', 'real_estate'].includes(schemaId)) businessType = 'service';
-            else if (schemaId === 'general') {
-                // Infer from data
-                if (wizardData.products?.length > 0) businessType = 'product';
-                else businessType = 'service';
-            }
-
-            // Use DEMO chat endpoint
-            const res = await fetch(`${backendUrl}/api/agent/demo-chat`, {
+            // Usar endpoint de IA real
+            const res = await fetch(`${backendUrl}/api/agent/demo-ai-chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     message: message,
-                    data: { ...wizardData, type: businessType } // Inject calculated type
+                    systemPrompt: agentPrompt,
+                    history: historyForApi,
+                    sessionId: demoSessionId
                 })
             });
 
@@ -184,12 +185,12 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                 setTestMessages(prev => [...prev, botMsg]);
             } else {
                 console.error('Test chat error:', data.error);
-                const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: data.error || "Erro no chat de demonstração." };
+                const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: data.error || "Erro no chat de demonstracao." };
                 setTestMessages(prev => [...prev, botMsg]);
             }
         } catch (error) {
             console.error('Test chat error:', error);
-            const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: "Erro de conexão." };
+            const botMsg: AgentMessage = { id: Math.random().toString(36).substring(2, 9), type: 'bot', content: "Erro de conexao. Tente novamente." };
             setTestMessages(prev => [...prev, botMsg]);
         } finally {
             setIsTestTyping(false);
@@ -313,8 +314,10 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                                 onTestSend={handleTestSend}
                                 onSwitchToLia={() => { }} // No Lia
                                 onFinish={handleFinishDemo}
-                                finishLabel="Ver Planos e Preços"
+                                finishLabel="Ver Planos e Precos"
                                 isDemo={true}
+                                isInputDisabled={messageCount >= MAX_DEMO_MESSAGES}
+                                remainingMessages={MAX_DEMO_MESSAGES - messageCount}
                             />
                         </motion.div>
                     )}
