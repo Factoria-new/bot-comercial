@@ -954,6 +954,9 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
         return { success: false, error: 'Google Calendar not connected', suggestions: [] };
     }
 
+    // Ensure duration is an integer
+    durationMinutes = parseInt(durationMinutes, 10) || 60;
+
     try {
         const requestedDate = new Date(requestedDateTime);
         const suggestions = [];
@@ -963,11 +966,25 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
             const searchDate = new Date(requestedDate);
             searchDate.setDate(searchDate.getDate() + dayOffset);
 
-            const dayKey = DAY_MAP[searchDate.getDay()];
+            // TIMEZONE FIX: Get day of week in Brazil timezone
+            const brazilDayStr = searchDate.toLocaleDateString('pt-BR', {
+                timeZone: 'America/Sao_Paulo',
+                weekday: 'short'
+            }).toLowerCase().replace('.', '');
+
+            // Map Portuguese weekday abbreviations to our keys
+            const weekdayToDayKey = {
+                'dom': 'dom', 'seg': 'seg', 'ter': 'ter', 'qua': 'qua',
+                'qui': 'qui', 'sex': 'sex', 'sáb': 'sab', 'sab': 'sab'
+            };
+            const dayKey = weekdayToDayKey[brazilDayStr] || DAY_MAP[searchDate.getDay()];
             const daySchedule = businessHours?.[dayKey];
 
             // Skip if day is not enabled in business hours
             if (!daySchedule?.enabled || !daySchedule.slots?.length) continue;
+
+            // Get the date string in YYYY-MM-DD format for Brazil timezone
+            const dateStr = searchDate.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 
             // For each slot in the day's schedule
             for (const slot of daySchedule.slots) {
@@ -977,41 +994,46 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
                 const [startHour, startMin] = slot.start.split(':').map(Number);
                 const [endHour, endMin] = slot.end.split(':').map(Number);
 
-                // Create potential start times every 30 minutes within this slot
-                let currentStart = new Date(searchDate);
-                currentStart.setHours(startHour, startMin, 0, 0);
+                // TIMEZONE FIX: Create dates with explicit Brazil timezone offset (-03:00)
+                let currentStart = new Date(`${dateStr}T${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}:00-03:00`);
+                const slotEnd = new Date(`${dateStr}T${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}:00-03:00`);
 
-                const slotEnd = new Date(searchDate);
-                slotEnd.setHours(endHour, endMin, 0, 0);
-
+                // Use durationMinutes for slot iteration (not fixed 30 min)
                 while (currentStart.getTime() + (durationMinutes * 60 * 1000) <= slotEnd.getTime()) {
                     if (suggestions.length >= 3) break;
 
-                    const potentialStart = currentStart.toISOString();
-                    const potentialEnd = new Date(currentStart.getTime() + (durationMinutes * 60 * 1000)).toISOString();
+                    const potentialEnd = new Date(currentStart.getTime() + (durationMinutes * 60 * 1000));
 
                     // Skip if this is the same time as the original request (on day 0)
                     if (dayOffset === 0) {
                         const reqTime = new Date(requestedDateTime);
-                        if (currentStart.getHours() === reqTime.getHours() &&
-                            currentStart.getMinutes() === reqTime.getMinutes()) {
-                            currentStart.setMinutes(currentStart.getMinutes() + 30);
+                        // Compare in Brazil timezone
+                        const currentBrazilHour = parseInt(currentStart.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }), 10);
+                        const currentBrazilMin = parseInt(currentStart.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', minute: '2-digit' }), 10);
+                        const reqBrazilHour = parseInt(reqTime.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }), 10);
+                        const reqBrazilMin = parseInt(reqTime.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', minute: '2-digit' }), 10);
+
+                        if (currentBrazilHour === reqBrazilHour && currentBrazilMin === reqBrazilMin) {
+                            currentStart = new Date(currentStart.getTime() + (30 * 60 * 1000));
                             continue;
                         }
                     }
 
-                    // Skip past times
-                    if (currentStart < new Date()) {
-                        currentStart.setMinutes(currentStart.getMinutes() + 30);
+                    // Skip past times (with 2 hour minimum advance)
+                    const now = new Date();
+                    const minAdvanceMs = 2 * 60 * 60 * 1000;
+                    if (currentStart.getTime() < now.getTime() + minAdvanceMs) {
+                        currentStart = new Date(currentStart.getTime() + (30 * 60 * 1000));
                         continue;
                     }
 
                     // Check if this slot is available
-                    const availability = await checkTimeSlotAvailability(userId, potentialStart, potentialEnd);
+                    const availability = await checkTimeSlotAvailability(userId, currentStart.toISOString(), potentialEnd.toISOString());
 
                     if (availability.available) {
                         const dayName = DAY_NAMES[dayKey];
                         const formattedDate = currentStart.toLocaleDateString('pt-BR', {
+                            timeZone: 'America/Sao_Paulo',
                             day: '2-digit',
                             month: '2-digit'
                         });
@@ -1022,13 +1044,14 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
                         });
 
                         suggestions.push({
-                            start: potentialStart,
-                            end: potentialEnd,
+                            start: currentStart.toISOString(),
+                            end: potentialEnd.toISOString(),
                             formatted: `${dayName}, ${formattedDate} às ${formattedTime}`
                         });
                     }
 
-                    currentStart.setMinutes(currentStart.getMinutes() + 30);
+                    // Advance by 30 minutes for next potential slot
+                    currentStart = new Date(currentStart.getTime() + (30 * 60 * 1000));
                 }
             }
         }
@@ -1039,6 +1062,7 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
         return { success: false, error: error.message, suggestions: [] };
     }
 };
+
 
 /**
  * List ALL available time slots for a specific day
@@ -1051,6 +1075,8 @@ export const findAlternativeSlots = async (userId, requestedDateTime, businessHo
  * @returns {Promise<{success: boolean, slots?: Array, error?: string}>}
  */
 export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 60, businessHours = null, period = 'all') => {
+    // Ensure duration is an integer
+    durationMinutes = parseInt(durationMinutes, 10) || 60;
     const status = await getConnectionStatus(userId, true);
     if (!status.isConnected) {
         return { success: false, error: 'Google Calendar not connected', slots: [] };
@@ -1170,9 +1196,10 @@ export const listAvailableSlotsForDay = async (userId, date, durationMinutes = 6
 
                 // Check for conflicts with existing events
                 const hasConflict = existingEvents.some(event => {
+                    // Strict overlap check: (StartA < EndB) and (EndA > StartB)
                     const conflicts = currentStart < event.end && currentEnd > event.start;
                     if (conflicts) {
-                        console.log(`   ❌ Conflict detected: slot ${currentStart.toISOString()} conflicts with event ${event.start.toISOString()}-${event.end.toISOString()}`);
+                        console.log(`   ❌ Conflict detected: slot ${currentStart.toISOString()} (${currentStart.toLocaleTimeString('pt-BR')}) - ${currentEnd.toISOString()} (${currentEnd.toLocaleTimeString('pt-BR')}) overlaps with event ${event.start.toISOString()} - ${event.end.toISOString()}`);
                     }
                     return conflicts;
                 });
@@ -1641,6 +1668,11 @@ export const updateEvent = async (userId, eventId, updateData, durationMinutes =
         if (updateData.description) params.description = updateData.description;
         if (updateData.start) params.start_datetime = ensureTimezone(updateData.start);
         if (updateData.location !== undefined) params.location = updateData.location;
+        // Preserve attendees if provided (critical for findEventsByCustomerEmail)
+        if (updateData.attendees && updateData.attendees.length > 0) {
+            params.attendees = updateData.attendees;
+            console.log(`   Preserving attendees: ${updateData.attendees.join(', ')}`);
+        }
 
         console.log(`📅 Updating event ${eventId} for ${userId}`);
         console.log(`   Duration: ${durationHours}h ${durationMins}min, Meet: ${createMeetLink}`);
@@ -1791,12 +1823,18 @@ export const rescheduleAppointment = async (userId, eventId, newStart, newEnd, b
     // Note: originalEvent already fetched at the beginning of the function
 
     // 4. Update the event preserving ALL original data
+    // Extract attendee emails from original event
+    const originalAttendees = originalEvent.attendees?.map(a => a.email).filter(Boolean) || [];
+    console.log(`📧 Preserving original attendees: ${originalAttendees.join(', ') || 'none'}`);
+
     const updateResult = await updateEvent(userId, eventId, {
         start: normalizedStart,
         // Preserve ALL original data
         summary: originalEvent.summary || originalEvent.title,
         description: originalEvent.description,
-        location: isOnline ? '' : (businessAddress || originalEvent.location || '')
+        location: isOnline ? '' : (businessAddress || originalEvent.location || ''),
+        // Preserve attendees
+        attendees: originalAttendees
     }, appointmentDuration, isOnline);
 
     if (!updateResult.success) {

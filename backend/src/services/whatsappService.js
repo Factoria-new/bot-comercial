@@ -373,6 +373,22 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
         return;
     }
 
+    // Cleanup existing BUT disconnected session (prevent zombie sockets)
+    if (sessions.has(sessionId)) {
+        console.log(`🧹 Cleaning up existing disconnected session for ${sessionId} before recreating...`);
+        const oldSession = sessions.get(sessionId);
+        if (oldSession) {
+            if (oldSession.keepAliveInterval) clearInterval(oldSession.keepAliveInterval);
+            if (oldSession.healthCheckInterval) clearInterval(oldSession.healthCheckInterval);
+            try {
+                if (oldSession.sock?.ws) oldSession.sock.ws.close();
+            } catch (e) {
+                console.warn(`⚠️ Error forcing close of old socket:`, e.message);
+            }
+            sessions.delete(sessionId);
+        }
+    }
+
     // Session storage path
     const authFolder = path.join(process.cwd(), 'auth_info', sessionId);
 
@@ -607,6 +623,15 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
             }
 
             if (connection === 'close') {
+                // Safeguard: Verify if this event belongs to the current active session
+                const currentSession = sessions.get(sessionId);
+                const isCurrentSession = currentSession && currentSession.sock === sock;
+
+                if (!isCurrentSession) {
+                    console.log(`⚠️ Connection closed for ${sessionId} but it's an old/superseded session. Ignoring cleanup.`);
+                    return;
+                }
+
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 const payloadMessage = lastDisconnect?.error?.output?.payload?.message;
 
@@ -645,9 +670,6 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                     console.log(`🧹 Health check interval limpo para ${sessionId}`);
                 }
 
-                // Clean up current session
-                sessions.delete(sessionId);
-
                 if (shouldReconnect) {
                     // Backoff exponencial: aumentar delay a cada tentativa falhada
                     const attemptData = reconnectionAttempts.get(sessionId) || { count: 0, lastAttempt: 0 };
@@ -657,6 +679,9 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                     if (now - attemptData.lastAttempt > 5 * 60 * 1000) {
                         attemptData.count = 0;
                     }
+
+                    // Clean up current session from map BUT DON'T DELETE AUTH FOLDER
+                    sessions.delete(sessionId);
 
                     attemptData.count++;
                     attemptData.lastAttempt = now;
@@ -695,17 +720,26 @@ const createSession = async (sessionId, socket, io, phoneNumber = null, userId =
                     // User logged out - clean everything
                     console.log(`🚪 User logged out for ${sessionId}`);
 
-                    // Delay auth folder deletion to avoid race condition with saveCreds
-                    setTimeout(() => {
-                        try {
-                            if (fs.existsSync(authFolder)) {
-                                fs.rmSync(authFolder, { recursive: true, force: true });
-                                console.log(`🗑️ Auth folder deleted for ${sessionId}`);
+                    // Double check we are still the current session before destroying folder
+                    if (sessions.get(sessionId) === sessionToClean) {
+                        // Clean up current session
+                        sessions.delete(sessionId);
+
+                        // Delay auth folder deletion to avoid race condition with saveCreds
+                        setTimeout(() => {
+                            try {
+                                // Check ONE MORE TIME? No, if we deleted from map, we committed to logout.
+                                if (fs.existsSync(authFolder)) {
+                                    fs.rmSync(authFolder, { recursive: true, force: true });
+                                    console.log(`🗑️ Auth folder deleted for ${sessionId}`);
+                                }
+                            } catch (e) {
+                                console.error('Error cleaning auth folder:', e);
                             }
-                        } catch (e) {
-                            console.error('Error cleaning auth folder:', e);
-                        }
-                    }, 2000); // Wait 2 seconds for any pending saveCreds calls
+                        }, 2000); // Wait 2 seconds for any pending saveCreds calls
+                    } else {
+                        console.log(`⚠️ Aborting auth folder deletion for ${sessionId} - session was replaced concurrently`);
+                    }
 
                     socket.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
                     io.emit('disconnected', { sessionId, message: 'WhatsApp desconectado', willReconnect: false });
