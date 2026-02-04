@@ -23,7 +23,7 @@ const router = express.Router();
 /**
  * GET /api/google-calendar/status
  * Get Google Calendar connection status for a user
- * Query params: userId (required - user's UUID)
+ * Query params: userId (required - user's email)
  */
 router.get('/status', async (req, res) => {
     try {
@@ -47,7 +47,7 @@ router.get('/status', async (req, res) => {
 /**
  * GET /api/google-calendar/auth-url
  * Generate OAuth URL for Google Calendar connection
- * Query params: userId (required - user's UUID)
+ * Query params: userId (required - user's email)
  */
 router.get('/auth-url', async (req, res) => {
     try {

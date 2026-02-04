@@ -87,7 +87,7 @@ const AgentConfigModal = ({
     disconnect: disconnectCalendar
   } = useCalendarConnection({
     sessionId,
-    userId: user?.uid,
+    userId: user?.email || '', // Use email as Entity ID
     autoCheck: isOpen && !!instanceId
   });
 

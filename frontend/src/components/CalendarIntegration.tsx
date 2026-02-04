@@ -26,7 +26,7 @@ const CalendarIntegration: React.FC<CalendarIntegrationProps> = ({ sessionId }) 
         disconnect
     } = useCalendarConnection({
         sessionId,
-        userId: user?.uid,
+        userId: user?.email || '', // Use email as Entity ID for better readability and consistency
         autoCheck: true
     });
 

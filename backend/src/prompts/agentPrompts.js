@@ -114,7 +114,6 @@ ${data.businessDescription ? `
 A descrição abaixo define a identidade e valores do negócio. Use-a para INSPIRAR seu tom de voz, expressões e estilo de atendimento. NÃO repita essas palavras literalmente - interprete e incorpore essa essência nas suas respostas de forma natural e criativa.
 
 Por exemplo:
-- Se o negócio tem "alma italiana", você pode usar expressões como "Ciao!", "Buongiorno!", ou mencionar tradição italiana de forma sutil
 - Se o negócio é "acolhedor", use um tom caloroso e receptivo
 - Se o negócio é "premium", use vocabulário mais sofisticado
 

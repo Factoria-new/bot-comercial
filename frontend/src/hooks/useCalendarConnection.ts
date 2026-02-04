@@ -14,7 +14,7 @@ import API_CONFIG from '@/config/api';
 interface UseCalendarConnectionOptions {
     /** Session ID (not used strictly for auth-url but good for context if needed later) */
     sessionId: string;
-    /** User ID (system UUID) is REQUIRED for the backend endpoint */
+    /** User ID (email) is REQUIRED for the backend endpoint (Entity ID) */
     userId?: string;
     /** Whether to check status on mount */
     autoCheck?: boolean;
