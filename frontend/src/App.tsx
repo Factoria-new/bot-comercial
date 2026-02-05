@@ -22,7 +22,8 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Lgpd from "./pages/Lgpd";
-// import Trafego from "./pages/Trafego";
+import Trafego from "./pages/Trafego";
+import EmailRestrictedRoute from "./components/EmailRestrictedRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import YourExperiencePage from "./pages/YourExperiencePage";
@@ -67,7 +68,11 @@ const App = () => (
                   <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
                   <Route path="/checkout/success" element={<CheckoutSuccess />} />
                   <Route path="/sua-experiencia" element={<YourExperiencePage />} />
-                  {/* <Route path="/trafego" element={<Trafego />} /> */}
+                  <Route path="/trafego" element={
+                    <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
+                      <Trafego />
+                    </EmailRestrictedRoute>
+                  } />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
