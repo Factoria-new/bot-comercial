@@ -25,6 +25,7 @@ import Lgpd from "./pages/Lgpd";
 import Trafego from "./pages/Trafego";
 import Saude from "./pages/Saude";
 import Beleza from "./pages/Beleza";
+import Varejo from "./pages/Varejo";
 import EmailRestrictedRoute from "./components/EmailRestrictedRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
@@ -83,6 +84,11 @@ const App = () => (
                   <Route path="/beleza" element={
                     <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
                       <Beleza />
+                    </EmailRestrictedRoute>
+                  } />
+                  <Route path="/varejo" element={
+                    <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
+                      <Varejo />
                     </EmailRestrictedRoute>
                   } />
 
