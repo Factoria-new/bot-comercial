@@ -3,6 +3,7 @@ import { ArrowRight, Check, FlaskConical, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "@/lib/agent-creator.types";
+import { LiaVolumeControl } from "@/components/ui/LiaVolumeControl";
 
 interface AgentTestPanelProps {
     testMessages: AgentMessage[];
@@ -74,6 +75,7 @@ export const AgentTestPanel = ({
                         <div className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">
                             Teste
                         </div>
+                        <LiaVolumeControl compact className="scale-90" />
                     </div>
                 </div>
 

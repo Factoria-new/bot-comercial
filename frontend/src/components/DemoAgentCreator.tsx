@@ -14,6 +14,7 @@ import { AgentMessage } from "@/lib/agent-creator.types";
 import { useAgentAudio } from "@/hooks/useAgentAudio";
 import { useToast } from "@/hooks/use-toast";
 import { useLiaVolume } from "@/contexts/LiaVolumeContext";
+import { LiaVolumeControl } from "@/components/ui/LiaVolumeControl";
 
 interface DemoAgentCreatorProps {
     onOpenSidebar?: () => void;
@@ -326,35 +327,43 @@ export default function DemoAgentCreator({ onOpenSidebar }: DemoAgentCreatorProp
                 {/* 4. CTA SCREEN */}
                 <AnimatePresence>
                     {currentStep === 'cta' && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-center max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-3xl"
-                        >
-                            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <CheckCircle className="w-10 h-10 text-green-400" />
-                            </div>
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="absolute top-6 right-6 z-50"
+                            >
+                                <LiaVolumeControl />
+                            </motion.div>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="text-center max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-3xl"
+                            >
+                                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <CheckCircle className="w-10 h-10 text-green-400" />
+                                </div>
 
-                            <h2 className="text-3xl md:text-5xl font-bold mb-6">
-                                Gostou do Resultado?
-                            </h2>
-                            <p className="text-lg text-gray-300 mb-10 leading-relaxed">
-                                Este foi apenas um gostinho. Com a versão completa, seu agente pode conectar-se ao WhatsApp, Instagram e agendar reuniões no Calendar.
-                            </p>
+                                <h2 className="text-3xl md:text-5xl font-bold mb-6">
+                                    Gostou do Resultado?
+                                </h2>
+                                <p className="text-lg text-gray-300 mb-10 leading-relaxed">
+                                    Este foi apenas um gostinho. Com a versão completa, seu agente pode conectar-se ao WhatsApp, Instagram e agendar reuniões no Calendar.
+                                </p>
 
-                            <div className="flex flex-col gap-4 max-w-md mx-auto">
-                                <Button
-                                    onClick={() => window.location.href = '/#pricing'} // Redirect to pricing section
-                                    className="bg-[#00A947] hover:bg-[#008f3c] text-white h-14 text-lg rounded-xl font-bold w-full"
-                                >
-                                    Ver Planos e Preços
-                                    <ArrowRight className="w-5 h-5 ml-2" />
-                                </Button>
-                            </div>
-                        </motion.div>
+                                <div className="flex flex-col gap-4 max-w-md mx-auto">
+                                    <Button
+                                        onClick={() => window.location.href = '/#pricing'} // Redirect to pricing section
+                                        className="bg-[#00A947] hover:bg-[#008f3c] text-white h-14 text-lg rounded-xl font-bold w-full"
+                                    >
+                                        Ver Planos e Preços
+                                        <ArrowRight className="w-5 h-5 ml-2" />
+                                    </Button>
+                                </div>
+                            </motion.div>
+                        </>
                     )}
                 </AnimatePresence>
-
             </div>
         </div>
     );
