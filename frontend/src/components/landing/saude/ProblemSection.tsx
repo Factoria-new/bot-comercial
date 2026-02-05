@@ -4,21 +4,22 @@ import { CalendarX, PhoneOff, AlertTriangle } from "lucide-react";
  * ProblemSection - Saude Landing Page
  * ISOLATED from main site design system.
  * Uses --saude-* CSS variables.
+ * COLOR SCHEME: White + Blue ONLY (no red)
  */
 export const ProblemSection = () => {
     const problems = [
         {
-            icon: <CalendarX className="w-6 h-6" style={{ color: 'hsl(var(--saude-danger))' }} />,
+            icon: <CalendarX className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
             title: 'O "No-Show" Invisivel',
             description: "Pacientes marcam e nao aparecem. Voce perde dinheiro e tempo precioso que poderia ser usado com outros.",
         },
         {
-            icon: <PhoneOff className="w-6 h-6" style={{ color: 'hsl(var(--saude-danger))' }} />,
+            icon: <PhoneOff className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
             title: "Interrupcoes Constantes",
             description: "Atender o telefone durante um procedimento ou sessao quebra o foco e desvaloriza a experiencia do paciente atual.",
         },
         {
-            icon: <AlertTriangle className="w-6 h-6" style={{ color: 'hsl(var(--saude-danger))' }} />,
+            icon: <AlertTriangle className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
             title: "Emergencias Perdidas",
             description: "Dor de dente ou crise de ansiedade nao tem hora. Se voce nao atende na hora, eles procuram outro profissional.",
         },
@@ -36,7 +37,7 @@ export const ProblemSection = () => {
                         style={{ color: 'hsl(var(--saude-foreground))' }}
                     >
                         Por que sua agenda{' '}
-                        <span style={{ color: 'hsl(var(--saude-danger))' }}>tem buracos?</span>
+                        <span style={{ color: 'hsl(var(--saude-secondary))' }}>tem buracos?</span>
                     </h2>
                     <p
                         className="text-lg"
@@ -57,8 +58,8 @@ export const ProblemSection = () => {
                                 boxShadow: 'var(--saude-shadow-card)'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = '0 8px 30px hsl(var(--saude-danger) / 0.15)';
-                                e.currentTarget.style.borderColor = 'hsl(var(--saude-danger) / 0.3)';
+                                e.currentTarget.style.boxShadow = '0 8px 30px hsl(var(--saude-secondary) / 0.15)';
+                                e.currentTarget.style.borderColor = 'hsl(var(--saude-secondary) / 0.3)';
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.boxShadow = 'var(--saude-shadow-card)';
@@ -68,8 +69,8 @@ export const ProblemSection = () => {
                             <div
                                 className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
                                 style={{
-                                    backgroundColor: 'hsl(var(--saude-danger) / 0.1)',
-                                    border: '1px solid hsl(var(--saude-danger) / 0.2)'
+                                    backgroundColor: 'hsl(var(--saude-secondary) / 0.1)',
+                                    border: '1px solid hsl(var(--saude-secondary) / 0.2)'
                                 }}
                             >
                                 {problem.icon}

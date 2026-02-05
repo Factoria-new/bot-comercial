@@ -1,63 +1,108 @@
-import { Mail, Linkedin, Instagram } from 'lucide-react';
+import { Mail, Linkedin, Instagram, Sparkles } from 'lucide-react';
 
+/**
+ * LPFooter - Varejo Landing Page
+ * ISOLATED dark luxury theme
+ * Uses --varejo-* CSS variables
+ */
 export const LPFooter = () => {
     const footerLinks = {
         product: [
             { label: 'Funcionalidades', href: '#features' },
             { label: 'Produtos', href: '#produto' },
-            { label: 'Preços', href: '#pricing' }
+            { label: 'Precos', href: '#pricing' }
         ],
         company: [
-            { label: 'Sobre Nós', href: '#sobre' }
+            { label: 'Sobre Nos', href: '#sobre' }
         ],
         legal: [
-            { label: 'Política de Privacidade', href: '/politica-de-privacidade' },
-            { label: 'Termos de Serviço', href: '/termos-de-servico' },
+            { label: 'Politica de Privacidade', href: '/politica-de-privacidade' },
+            { label: 'Termos de Servico', href: '/termos-de-servico' },
             { label: 'LGPD', href: '/lgpd' }
         ]
     };
 
     return (
-        <footer className="bg-lp-background border-t border-white/5 py-12 md:py-16">
+        <footer
+            className="py-12 md:py-16"
+            style={{
+                backgroundColor: 'hsl(var(--varejo-card))',
+                borderTop: '1px solid hsl(var(--varejo-border))'
+            }}
+        >
             <div className="container mx-auto px-4 md:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-12">
                     <div className="md:col-span-2 space-y-6">
-                        <div className="flex flex-col gap-4">
-                            <img src="/logo-header-light.png" alt="Caji" className="h-8 md:h-10 w-auto object-contain self-start" />
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                style={{ background: 'var(--varejo-gradient-primary)' }}
+                            >
+                                <Sparkles className="w-5 h-5 text-white" />
+                            </div>
+                            <span
+                                className="text-xl font-bold font-display uppercase tracking-wide"
+                                style={{ color: 'hsl(var(--varejo-foreground))' }}
+                            >
+                                Varejo Assist
+                            </span>
                         </div>
-                        <p className="text-lp-muted-foreground max-w-sm leading-relaxed">
-                            Transforme seu WhatsApp em uma máquina de vendas com IA. Atendimento automático, agendamentos e métricas em tempo real.
+                        <p
+                            className="max-w-sm leading-relaxed"
+                            style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
+                        >
+                            Transforme seu WhatsApp em uma maquina de vendas com IA. Atendimento automatico, catalogo e metricas em tempo real.
                         </p>
                         <div className="flex gap-4">
                             <a
                                 href="https://www.instagram.com/cajisolutionsofc/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-lp-card/50 border border-white/10 hover:bg-lp-accent group flex items-center justify-center transition-all duration-300 shadow-sm"
+                                className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm group"
+                                style={{
+                                    backgroundColor: 'hsl(var(--varejo-background))',
+                                    border: '1px solid hsl(var(--varejo-border))'
+                                }}
                                 aria-label="Instagram"
                             >
-                                <Instagram className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" />
+                                <Instagram
+                                    className="w-5 h-5 transition-colors"
+                                    style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
+                                />
                             </a>
                             <a
                                 href="https://www.linkedin.com/company/caji-solutions"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-lp-card/50 border border-white/10 hover:bg-lp-accent group flex items-center justify-center transition-all duration-300 shadow-sm"
+                                className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm group"
+                                style={{
+                                    backgroundColor: 'hsl(var(--varejo-background))',
+                                    border: '1px solid hsl(var(--varejo-border))'
+                                }}
                                 aria-label="LinkedIn"
                             >
-                                <Linkedin className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" />
+                                <Linkedin
+                                    className="w-5 h-5 transition-colors"
+                                    style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
+                                />
                             </a>
                         </div>
                     </div>
 
                     <div>
-                        <h3 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">Produto</h3>
+                        <h3
+                            className="font-bold mb-6 uppercase tracking-wider text-xs"
+                            style={{ color: 'hsl(var(--varejo-foreground))' }}
+                        >
+                            Produto
+                        </h3>
                         <ul className="space-y-4">
                             {footerLinks.product.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-lp-muted-foreground hover:text-lp-accent transition-colors text-sm font-medium"
+                                        className="text-sm font-medium transition-colors"
+                                        style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                                     >
                                         {link.label}
                                     </a>
@@ -67,13 +112,19 @@ export const LPFooter = () => {
                     </div>
 
                     <div>
-                        <h3 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">Empresa</h3>
+                        <h3
+                            className="font-bold mb-6 uppercase tracking-wider text-xs"
+                            style={{ color: 'hsl(var(--varejo-foreground))' }}
+                        >
+                            Empresa
+                        </h3>
                         <ul className="space-y-4">
                             {footerLinks.company.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-lp-muted-foreground hover:text-lp-accent transition-colors text-sm font-medium"
+                                        className="text-sm font-medium transition-colors"
+                                        style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                                     >
                                         {link.label}
                                     </a>
@@ -83,13 +134,19 @@ export const LPFooter = () => {
                     </div>
 
                     <div>
-                        <h3 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">Legal</h3>
+                        <h3
+                            className="font-bold mb-6 uppercase tracking-wider text-xs"
+                            style={{ color: 'hsl(var(--varejo-foreground))' }}
+                        >
+                            Legal
+                        </h3>
                         <ul className="space-y-4">
                             {footerLinks.legal.map((link) => (
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-lp-muted-foreground hover:text-lp-accent transition-colors text-sm font-medium"
+                                        className="text-sm font-medium transition-colors"
+                                        style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                                     >
                                         {link.label}
                                     </a>
@@ -99,16 +156,26 @@ export const LPFooter = () => {
                     </div>
                 </div>
 
-                <div className="border-t border-white/5 pt-8">
+                <div
+                    className="pt-8"
+                    style={{ borderTop: '1px solid hsl(var(--varejo-border))' }}
+                >
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <p className="text-xs text-lp-muted-foreground font-medium">
-                            © 2026 Caji Assist. Todos os direitos reservados.
+                        <p
+                            className="text-xs font-medium"
+                            style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
+                        >
+                            2026 Caji Assist. Todos os direitos reservados.
                         </p>
                         <div className="flex items-center gap-3">
-                            <Mail className="w-4 h-4 text-lp-accent" />
+                            <Mail
+                                className="w-4 h-4"
+                                style={{ color: 'hsl(var(--varejo-primary))' }}
+                            />
                             <a
                                 href="mailto:contact@cajiassist.com"
-                                className="text-xs text-lp-muted-foreground hover:text-lp-accent transition-colors font-medium"
+                                className="text-xs font-medium transition-colors"
+                                style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                             >
                                 contact@cajiassist.com
                             </a>
