@@ -23,6 +23,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Lgpd from "./pages/Lgpd";
 import Trafego from "./pages/Trafego";
+import Saude from "./pages/Saude";
 import EmailRestrictedRoute from "./components/EmailRestrictedRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
@@ -71,6 +72,11 @@ const App = () => (
                   <Route path="/trafego" element={
                     <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
                       <Trafego />
+                    </EmailRestrictedRoute>
+                  } />
+                  <Route path="/saude" element={
+                    <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
+                      <Saude />
                     </EmailRestrictedRoute>
                   } />
 
