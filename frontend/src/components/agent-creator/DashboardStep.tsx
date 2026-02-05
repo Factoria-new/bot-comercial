@@ -25,14 +25,10 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
         activeChats: 0
     });
 
-    // Local state for dynamic integration updates
-    const [localIntegrations, setLocalIntegrations] = useState<Integration[]>(integrations);
+    // Use local integrations directly from props which are now managed by global context
+    const localIntegrations = integrations;
 
-    // Sync with props when they change
-    useEffect(() => {
-        setLocalIntegrations(integrations);
-    }, [integrations]);
-
+    // Listen for metrics updates only
     useEffect(() => {
         if (!socket) return;
 
@@ -42,56 +38,13 @@ export const DashboardStep = ({ integrations, onOpenIntegrations }: DashboardSte
             setMetrics(newMetrics);
         });
 
-        // Listen for integration connection events
-        socket.on('instance-connected', (data: { instanceId?: string; name?: string }) => {
-            console.log('🔗 DashboardStep: Integration connected', data);
-            setLocalIntegrations(prev => prev.map(integration => {
-                // Check if this integration matches the connected instance
-                if (integration.id === 'whatsapp' && (data.instanceId || data.name)) {
-                    return { ...integration, connected: true };
-                }
-                return integration;
-            }));
-        });
-
-        // Listen for integration disconnection events
-        socket.on('instance-disconnected', (data: { instanceId?: string; name?: string }) => {
-            console.log('🔌 DashboardStep: Integration disconnected', data);
-            setLocalIntegrations(prev => prev.map(integration => {
-                if (integration.id === 'whatsapp' && (data.instanceId || data.name)) {
-                    return { ...integration, connected: false };
-                }
-                return integration;
-            }));
-        });
-
         // Request initial metrics
         socket.emit('request-metrics');
 
         return () => {
             socket.off('metrics-update');
-            socket.off('instance-connected');
-            socket.off('instance-disconnected');
         };
     }, [socket]);
-
-    // Listen for Google Calendar connection via postMessage (from OAuth popup)
-    useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            if (event.data?.type === 'google-calendar-connected' && event.data?.success) {
-                console.log('📅 DashboardStep: Google Calendar connected via postMessage');
-                setLocalIntegrations(prev => prev.map(integration => {
-                    if (integration.id === 'google_calendar') {
-                        return { ...integration, connected: true };
-                    }
-                    return integration;
-                }));
-            }
-        };
-
-        window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, []);
 
     return (
         <motion.div

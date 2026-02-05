@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SocketProvider } from "@/contexts/SocketContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LiaVolumeProvider } from "@/contexts/LiaVolumeContext";
+import { IntegrationsProvider } from "@/contexts/IntegrationsContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
@@ -36,40 +37,42 @@ const App = () => (
           <Toaster />
           <Sonner />
           <LiaVolumeProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
-                <Route path="/termos-de-servico" element={<TermsOfService />} />
-                <Route path="/lgpd" element={<Lgpd />} />
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                } />
-                <Route path="/meu-prompt" element={
-                  <ProtectedRoute>
-                    <MeuPrompt />
-                  </ProtectedRoute>
-                } />
-                <Route path="/login" element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                } />
-                <Route path="/payment" element={<Payment />} />
-                <Route path="/check-email" element={<CheckEmail />} />
-                <Route path="/setup-password" element={<SetupPassword />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/instagram-callback" element={<InstagramCallback />} />
-                <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
-                <Route path="/checkout/success" element={<CheckoutSuccess />} />
-                <Route path="/sua-experiencia" element={<YourExperiencePage />} />
-                {/* <Route path="/trafego" element={<Trafego />} /> */}
+            <IntegrationsProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
+                  <Route path="/termos-de-servico" element={<TermsOfService />} />
+                  <Route path="/lgpd" element={<Lgpd />} />
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <Index />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/meu-prompt" element={
+                    <ProtectedRoute>
+                      <MeuPrompt />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/login" element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  } />
+                  <Route path="/payment" element={<Payment />} />
+                  <Route path="/check-email" element={<CheckEmail />} />
+                  <Route path="/setup-password" element={<SetupPassword />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/instagram-callback" element={<InstagramCallback />} />
+                  <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
+                  <Route path="/checkout/success" element={<CheckoutSuccess />} />
+                  <Route path="/sua-experiencia" element={<YourExperiencePage />} />
+                  {/* <Route path="/trafego" element={<Trafego />} /> */}
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </IntegrationsProvider>
           </LiaVolumeProvider>
         </AuthProvider>
       </TooltipProvider>
