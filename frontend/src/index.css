@@ -99,6 +99,45 @@
     --lp-gradient-hero: radial-gradient(ellipse at top, hsl(218 49% 15%) 0%, hsl(222 47% 6%) 70%);
     --lp-shadow-glow: 0 0 40px hsl(145 76% 41% / 0.2);
     --lp-shadow-card: 0 8px 32px hsl(222 47% 3% / 0.5);
+
+    /* ================================================================
+       SAUDE LANDING PAGE - ISOLATED DESIGN SYSTEM
+       Trust-focused light theme for healthcare professionals
+       These variables are COMPLETELY ISOLATED from the main site.
+       Future: Will be hosted on separate domain.
+       ================================================================ */
+    
+    /* Saude Primary - SeaGreen (Action/CTAs) */
+    --saude-primary: 146 50% 36%;
+    --saude-primary-foreground: 0 0% 100%;
+    
+    /* Saude Secondary - Sky Blue (Identity/Details) */
+    --saude-secondary: 199 89% 48%;
+    --saude-secondary-foreground: 0 0% 100%;
+    
+    /* Saude Backgrounds - Clean Clinical White */
+    --saude-background: 0 0% 100%;
+    --saude-background-alt: 210 40% 98%;
+    
+    /* Saude Text - Dark Gray (Never pure black) */
+    --saude-foreground: 215 25% 27%;
+    --saude-muted-foreground: 215 16% 47%;
+    
+    /* Saude Cards & Borders */
+    --saude-card: 0 0% 100%;
+    --saude-card-foreground: 215 25% 27%;
+    --saude-border: 214 32% 91%;
+    
+    /* Saude Accents */
+    --saude-accent: 146 50% 36%;
+    --saude-accent-foreground: 0 0% 100%;
+    --saude-danger: 0 84% 60%;
+    
+    /* Saude Gradients & Effects */
+    --saude-gradient-hero: linear-gradient(135deg, hsl(146 50% 96%) 0%, hsl(199 89% 96%) 50%, hsl(0 0% 100%) 100%);
+    --saude-shadow-soft: 0 4px 20px hsl(215 25% 27% / 0.08);
+    --saude-shadow-card: 0 2px 12px hsl(215 25% 27% / 0.06);
+    --saude-shadow-accent: 0 4px 20px hsl(146 50% 36% / 0.25);
   }
 
   .dark {
