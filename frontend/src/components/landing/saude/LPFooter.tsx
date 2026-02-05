@@ -1,4 +1,4 @@
-import { Mail, Linkedin, Instagram } from 'lucide-react';
+import { Mail, Linkedin, Instagram, Stethoscope } from 'lucide-react';
 
 /**
  * LPFooter - Saude Landing Page
@@ -33,8 +33,19 @@ export const LPFooter = () => {
             <div className="container mx-auto px-4 md:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-12">
                     <div className="md:col-span-2 space-y-6">
-                        <div className="flex flex-col gap-4">
-                            <img src="/logo-header-dark.png" alt="Caji" className="h-8 md:h-10 w-auto object-contain self-start" />
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
+                            >
+                                <Stethoscope className="w-5 h-5 text-white" />
+                            </div>
+                            <span
+                                className="text-xl font-bold font-display"
+                                style={{ color: 'hsl(var(--saude-foreground))' }}
+                            >
+                                Saude Assist
+                            </span>
                         </div>
                         <p
                             className="max-w-sm leading-relaxed"

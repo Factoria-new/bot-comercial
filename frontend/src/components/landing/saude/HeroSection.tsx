@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Stethoscope } from "lucide-react";
 
 const scenarios = [
     // Variacao 1: Dentista - Foco em "Emergencia"
@@ -185,7 +185,7 @@ export const HeroSection = () => {
                                             boxShadow: '0 4px 12px hsl(var(--saude-primary) / 0.3)'
                                         }}
                                     >
-                                        <img src="/favicon.png" alt="Caji" className="w-8 h-8 object-contain brightness-0 invert" />
+                                        <Stethoscope className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
                                         <h3
