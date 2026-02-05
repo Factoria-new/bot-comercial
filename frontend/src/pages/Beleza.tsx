@@ -6,9 +6,26 @@ import SocialProofSection from "@/components/landing/beleza/SocialProofSection";
 import PricingSection from "@/components/landing/beleza/PricingSection";
 import LPFooter from "@/components/landing/beleza/LPFooter";
 
+/**
+ * Beleza Landing Page
+ * ISOLATED design system for beauty businesses
+ * Uses --beleza-* CSS variables (Dark Luxury theme)
+ */
 const Beleza = () => {
     return (
-        <main className="min-h-screen bg-lp-background text-lp-foreground font-sans selection:bg-lp-accent/30 selection:text-lp-accent">
+        <main
+            className="min-h-screen font-sans"
+            style={{
+                backgroundColor: 'hsl(var(--beleza-background))',
+                color: 'hsl(var(--beleza-foreground))'
+            }}
+        >
+            <style>{`
+                ::selection {
+                    background-color: hsl(292 91% 73% / 0.3);
+                    color: hsl(292 91% 73%);
+                }
+            `}</style>
             <HeroSection />
             <SocialProofSection />
             <ProblemSection />

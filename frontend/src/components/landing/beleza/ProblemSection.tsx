@@ -1,33 +1,50 @@
-import { HandMetal, DollarSign, BellOff, Scissors } from "lucide-react";
+import { CalendarX, PhoneOff, Clock } from "lucide-react";
 
+/**
+ * ProblemSection - Beleza Landing Page
+ * ISOLATED dark luxury theme
+ * Uses --beleza-* CSS variables
+ */
 export const ProblemSection = () => {
     const problems = [
         {
-            icon: <HandMetal className="w-6 h-6 text-red-500" />,
-            title: "Mãos Ocupadas",
-            description: "Você ganha dinheiro com a mão na massa. Parar um corte ou procedimento para responder WhatsApp é jogar dinheiro fora.",
+            icon: <CalendarX className="w-6 h-6" style={{ color: 'hsl(var(--beleza-primary))' }} />,
+            title: "O No-Show Invisivel",
+            description: "Clientes marcam e nao aparecem. Voce perde dinheiro e tempo precioso que poderia ser usado com outros.",
         },
         {
-            icon: <DollarSign className="w-6 h-6 text-red-500" />,
-            title: "Custo de Recepcionista",
-            description: "Contratar alguém só para agendar custa caro. O Caji faz o mesmo trabalho por uma fração do preço.",
+            icon: <PhoneOff className="w-6 h-6" style={{ color: 'hsl(var(--beleza-primary))' }} />,
+            title: "Interrupcoes Constantes",
+            description: "Atender o telefone durante um procedimento quebra o foco e desvaloriza a experiencia do cliente atual.",
         },
         {
-            icon: <BellOff className="w-6 h-6 text-red-500" />,
-            title: "Clima Quebrado",
-            description: "Nada pior para a experiência do cliente do que o profissional parando toda hora para mexer no celular.",
+            icon: <Clock className="w-6 h-6" style={{ color: 'hsl(var(--beleza-primary))' }} />,
+            title: "Atendimento Noturno",
+            description: "Cliente quer marcar as 23h? Se voce nao responde na hora, ele agenda com o concorrente.",
         },
     ];
 
     return (
-        <section className="py-20 bg-lp-background relative overflow-hidden">
+        <section
+            className="py-20 relative overflow-hidden"
+            style={{ backgroundColor: 'hsl(var(--beleza-background))' }}
+        >
             <div className="container px-4 md:px-6">
                 <div className="text-center max-w-2xl mx-auto mb-16 animate-fade-in">
-                    <h2 className="text-3xl md:text-5xl font-display font-bold text-white mb-6">
-                        Você trabalha ou <span className="text-lp-cta-orange">responde mensagem?</span>
+                    <h2
+                        className="text-3xl md:text-5xl font-display font-bold mb-6 uppercase"
+                        style={{ color: 'hsl(var(--beleza-foreground))' }}
+                    >
+                        Por que sua agenda{' '}
+                        <span
+                            className="text-transparent bg-clip-text"
+                            style={{ backgroundImage: 'var(--beleza-gradient-primary)' }}
+                        >
+                            tem buracos?
+                        </span>
                     </h2>
-                    <p className="text-lp-muted-foreground text-lg">
-                        A realidade de quem empreende na beleza é dura: ou você atende bem quem está na cadeira, ou perde quem quer agendar.
+                    <p style={{ color: 'hsl(var(--beleza-muted-foreground))' }} className="text-lg">
+                        Os desafios de manter a agenda cheia vao alem da qualidade do seu servico.
                     </p>
                 </div>
 
@@ -35,18 +52,39 @@ export const ProblemSection = () => {
                     {problems.map((problem, index) => (
                         <div
                             key={index}
-                            className="group relative p-8 rounded-2xl bg-lp-card/50 border border-lp-border/30 hover:bg-lp-card/80 transition-all duration-300 hover:-translate-y-2 backdrop-blur-sm"
+                            className="group relative p-8 rounded-2xl backdrop-blur-sm transition-all duration-300 hover:-translate-y-2"
+                            style={{
+                                backgroundColor: 'hsl(var(--beleza-card))',
+                                border: '1px solid hsl(var(--beleza-border))'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(var(--beleza-primary) / 0.5)';
+                                e.currentTarget.style.boxShadow = 'var(--beleza-shadow-accent)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(var(--beleza-border))';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
                         >
-                            <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
-                                <Scissors className="w-8 h-8 text-red-500/50" />
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20 group-hover:scale-110 transition-transform duration-300">
+                            <div
+                                className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
+                                style={{
+                                    background: 'hsl(var(--beleza-primary) / 0.15)',
+                                    border: '1px solid hsl(var(--beleza-primary) / 0.3)'
+                                }}
+                            >
                                 {problem.icon}
                             </div>
-                            <h3 className="text-xl font-display font-bold text-white mb-3">
+                            <h3
+                                className="text-xl font-display font-bold mb-3 uppercase"
+                                style={{ color: 'hsl(var(--beleza-foreground))' }}
+                            >
                                 {problem.title}
                             </h3>
-                            <p className="text-lp-muted-foreground leading-relaxed">
+                            <p
+                                className="leading-relaxed"
+                                style={{ color: 'hsl(var(--beleza-muted-foreground))' }}
+                            >
                                 {problem.description}
                             </p>
                         </div>

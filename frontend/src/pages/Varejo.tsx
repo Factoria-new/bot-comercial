@@ -8,8 +8,8 @@ import LPFooter from "@/components/landing/varejo/LPFooter";
 
 /**
  * Varejo Landing Page
- * ISOLATED design system for beauty/retail businesses
- * Uses --varejo-* CSS variables (Dark Luxury theme)
+ * ISOLATED design system for retail/e-commerce
+ * Uses --varejo-* CSS variables (White + Orange impulse theme)
  */
 const Varejo = () => {
     return (
@@ -22,8 +22,15 @@ const Varejo = () => {
         >
             <style>{`
                 ::selection {
-                    background-color: hsl(292 91% 73% / 0.3);
-                    color: hsl(292 91% 73%);
+                    background-color: hsl(24 95% 53% / 0.2);
+                    color: hsl(24 95% 53%);
+                }
+                @keyframes pulse-cta {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.02); }
+                }
+                .animate-pulse-cta {
+                    animation: pulse-cta 2s ease-in-out infinite;
                 }
             `}</style>
             <HeroSection />

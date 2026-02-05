@@ -141,40 +141,81 @@
     --saude-shadow-accent: 0 4px 20px hsl(199 89% 48% / 0.25);
 
     /* ================================================================
-       VAREJO LANDING PAGE - ISOLATED DESIGN SYSTEM
-       Dark Luxury theme for beauty/retail (barbershops, nail studios)
+       BELEZA LANDING PAGE - ISOLATED DESIGN SYSTEM
+       Dark Luxury theme for beauty (barbershops, nail studios)
        These variables are COMPLETELY ISOLATED from the main site.
        COLOR SCHEME: Dark Mode with Fuchsia-to-Violet Gradient
        ================================================================ */
 
     /* Varejo Backgrounds - Deep Dark */
-    --varejo-background: 222 47% 11%;
-    --varejo-background-alt: 217 33% 17%;
-    --varejo-card: 217 33% 17%;
-    --varejo-card-foreground: 210 40% 98%;
+    --beleza-background: 222 47% 11%;
+    --beleza-background-alt: 217 33% 17%;
+    --beleza-card: 217 33% 17%;
+    --beleza-card-foreground: 210 40% 98%;
 
     /* Varejo Primary - Fuchsia to Violet Gradient */
-    --varejo-primary: 292 91% 73%;
-    --varejo-primary-end: 262 83% 66%;
-    --varejo-primary-foreground: 0 0% 100%;
+    --beleza-primary: 292 91% 73%;
+    --beleza-primary-end: 262 83% 66%;
+    --beleza-primary-foreground: 0 0% 100%;
 
     /* Varejo Secondary - Gold accent */
-    --varejo-secondary: 48 96% 53%;
-    --varejo-secondary-foreground: 0 0% 0%;
+    --beleza-secondary: 48 96% 53%;
+    --beleza-secondary-foreground: 0 0% 0%;
 
     /* Varejo Text - Light on Dark */
-    --varejo-foreground: 210 40% 98%;
-    --varejo-muted-foreground: 218 11% 65%;
+    --beleza-foreground: 210 40% 98%;
+    --beleza-muted-foreground: 218 11% 65%;
 
     /* Varejo Borders */
-    --varejo-border: 217 33% 25%;
+    --beleza-border: 217 33% 25%;
 
     /* Varejo Gradients & Effects */
-    --varejo-gradient-primary: linear-gradient(135deg, hsl(292 91% 73%) 0%, hsl(262 83% 66%) 100%);
-    --varejo-gradient-hero: radial-gradient(ellipse at top, hsl(217 33% 17%) 0%, hsl(222 47% 11%) 70%);
-    --varejo-shadow-glow: 0 0 40px hsl(292 91% 73% / 0.3);
-    --varejo-shadow-card: 0 8px 32px hsl(222 47% 3% / 0.5);
-    --varejo-shadow-accent: 0 4px 20px hsl(292 91% 73% / 0.4);
+    --beleza-gradient-primary: linear-gradient(135deg, hsl(292 91% 73%) 0%, hsl(262 83% 66%) 100%);
+    --beleza-gradient-hero: radial-gradient(ellipse at top, hsl(217 33% 17%) 0%, hsl(222 47% 11%) 70%);
+    --beleza-shadow-glow: 0 0 40px hsl(292 91% 73% / 0.3);
+    --beleza-shadow-card: 0 8px 32px hsl(222 47% 3% / 0.5);
+    --beleza-shadow-accent: 0 4px 20px hsl(292 91% 73% / 0.4);
+
+    /* ================================================================
+       VAREJO LANDING PAGE - ISOLATED DESIGN SYSTEM
+       E-commerce Impulse theme for retail (lojas, delivery, marketplace)
+       These variables are COMPLETELY ISOLATED from the main site.
+       COLOR SCHEME: White Mode with Orange/Red Action Colors
+       ================================================================ */
+
+    /* Varejo Backgrounds - Clean White */
+    --varejo-background: 0 0% 100%;
+    --varejo-background-alt: 210 20% 98%;
+    --varejo-card: 0 0% 100%;
+    --varejo-card-foreground: 222 47% 11%;
+
+    /* Varejo Primary - Vibrant Orange (Action/CTA) */
+    --varejo-primary: 24 95% 53%;
+    --varejo-primary-hover: 21 90% 48%;
+    --varejo-primary-foreground: 0 0% 100%;
+
+    /* Varejo Secondary - Alert Red (Urgency/Promo) */
+    --varejo-secondary: 0 84% 60%;
+    --varejo-secondary-foreground: 0 0% 100%;
+
+    /* Varejo Accent - Gold Yellow (Stars/Badges) */
+    --varejo-accent: 45 93% 47%;
+    --varejo-accent-foreground: 0 0% 0%;
+
+    /* Varejo Text - High Contrast */
+    --varejo-foreground: 222 47% 11%;
+    --varejo-muted-foreground: 215 16% 47%;
+
+    /* Varejo Borders */
+    --varejo-border: 214 32% 91%;
+
+    /* Varejo Gradients & Effects */
+    --varejo-gradient-primary: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(21 90% 48%) 100%);
+    --varejo-gradient-promo: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(24 95% 53%) 100%);
+    --varejo-gradient-hero: linear-gradient(180deg, hsl(210 20% 98%) 0%, hsl(0 0% 100%) 100%);
+    --varejo-shadow-card: 0 4px 20px hsl(222 47% 11% / 0.08);
+    --varejo-shadow-button: 0 6px 24px hsl(24 95% 53% / 0.35);
+    --varejo-shadow-hover: 0 8px 30px hsl(24 95% 53% / 0.45);
   }
 
   .dark {

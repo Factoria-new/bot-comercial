@@ -1,26 +1,26 @@
-import { Hourglass, MessageCircleOff, ShoppingCart } from "lucide-react";
+import { Clock, UserX, ShoppingCart } from "lucide-react";
 
 /**
  * ProblemSection - Varejo Landing Page
- * ISOLATED dark luxury theme
+ * E-commerce impulse theme
  * Uses --varejo-* CSS variables
  */
 export const ProblemSection = () => {
     const problems = [
         {
-            icon: <Hourglass className="w-6 h-6" style={{ color: 'hsl(var(--varejo-primary))' }} />,
-            title: "Compra por Impulso",
-            description: "Sua cliente viu o story as 23h. Se voce responder so amanha as 09h, a vontade ja passou e voce perdeu a venda.",
+            icon: <Clock className="w-6 h-6" style={{ color: 'hsl(var(--varejo-secondary))' }} />,
+            title: "O Cliente Tem Pressa",
+            description: "Demora pra responder? Ele ja fechou com o concorrente. A cada minuto de espera, uma venda perdida.",
         },
         {
-            icon: <MessageCircleOff className="w-6 h-6" style={{ color: 'hsl(var(--varejo-primary))' }} />,
-            title: "Perguntas Repetidas",
-            description: "Passar o dia respondendo 'tem G?', 'qual o frete?', 'manda tabela' impede voce de focar em crescer a loja.",
+            icon: <ShoppingCart className="w-6 h-6" style={{ color: 'hsl(var(--varejo-secondary))' }} />,
+            title: "Carrinho Abandonado",
+            description: "O cliente perguntou preco e sumiu. Sem follow-up automatico, essa venda nunca volta.",
         },
         {
-            icon: <ShoppingCart className="w-6 h-6" style={{ color: 'hsl(var(--varejo-primary))' }} />,
-            title: "Abandono de Carrinho",
-            description: "O cliente pergunta o preco e some. Sem um follow-up imediato, esse dinheiro fica na mesa.",
+            icon: <UserX className="w-6 h-6" style={{ color: 'hsl(var(--varejo-secondary))' }} />,
+            title: "Vendas na Madrugada",
+            description: "O comprador da insonia mandou mensagem as 2h. Quando voce acordou, ele ja tinha desistido.",
         },
     ];
 
@@ -32,19 +32,22 @@ export const ProblemSection = () => {
             <div className="container px-4 md:px-6">
                 <div className="text-center max-w-2xl mx-auto mb-16 animate-fade-in">
                     <h2
-                        className="text-3xl md:text-5xl font-display font-bold mb-6 uppercase"
-                        style={{ color: 'hsl(var(--varejo-foreground))' }}
+                        className="text-3xl md:text-5xl font-bold mb-6"
+                        style={{
+                            color: 'hsl(var(--varejo-foreground))',
+                            fontFamily: 'Roboto, system-ui, sans-serif'
+                        }}
                     >
-                        O cliente tem pressa.{' '}
-                        <span
-                            className="text-transparent bg-clip-text"
-                            style={{ backgroundImage: 'var(--varejo-gradient-primary)' }}
-                        >
-                            Voce tem tempo?
+                        O cliente{' '}
+                        <span style={{ color: 'hsl(var(--varejo-secondary))' }}>
+                            tem pressa
                         </span>
                     </h2>
-                    <p style={{ color: 'hsl(var(--varejo-muted-foreground))' }} className="text-lg">
-                        No varejo online, quem responde primeiro leva. Nao deixe seu cliente esperando para comprar no concorrente.
+                    <p
+                        className="text-lg"
+                        style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
+                    >
+                        No varejo online, quem demora perde. Veja os problemas que drenam seu faturamento.
                     </p>
                 </div>
 
@@ -52,32 +55,33 @@ export const ProblemSection = () => {
                     {problems.map((problem, index) => (
                         <div
                             key={index}
-                            className="group relative p-8 rounded-2xl backdrop-blur-sm transition-all duration-300 hover:-translate-y-2"
+                            className="group relative p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer"
                             style={{
                                 backgroundColor: 'hsl(var(--varejo-card))',
-                                border: '1px solid hsl(var(--varejo-border))'
+                                border: '1px solid hsl(var(--varejo-border))',
+                                boxShadow: 'var(--varejo-shadow-card)'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = 'hsl(var(--varejo-primary) / 0.5)';
-                                e.currentTarget.style.boxShadow = 'var(--varejo-shadow-accent)';
+                                e.currentTarget.style.boxShadow = '0 8px 30px hsl(0 84% 60% / 0.15)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'hsl(var(--varejo-border))';
-                                e.currentTarget.style.boxShadow = 'none';
+                                e.currentTarget.style.boxShadow = 'var(--varejo-shadow-card)';
                             }}
                         >
                             <div
-                                className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
+                                className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
                                 style={{
-                                    background: 'hsl(var(--varejo-primary) / 0.15)',
-                                    border: '1px solid hsl(var(--varejo-primary) / 0.3)'
+                                    backgroundColor: 'hsl(var(--varejo-secondary) / 0.1)'
                                 }}
                             >
                                 {problem.icon}
                             </div>
                             <h3
-                                className="text-xl font-display font-bold mb-3 uppercase"
-                                style={{ color: 'hsl(var(--varejo-foreground))' }}
+                                className="text-xl font-bold mb-3"
+                                style={{
+                                    color: 'hsl(var(--varejo-foreground))',
+                                    fontFamily: 'Roboto, system-ui, sans-serif'
+                                }}
                             >
                                 {problem.title}
                             </h3>
