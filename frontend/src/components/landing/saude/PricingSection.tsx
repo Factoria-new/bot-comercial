@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, Coffee } from "lucide-react";
 import { Link } from "react-router-dom";
 
 /**
  * PricingSection - Saude Landing Page
- * ISOLATED from main site design system.
- * Uses --saude-* CSS variables.
+ * Clean single-card pricing with coffee comparison
+ * Uses --saude-* CSS variables
  */
 export const PricingSection = () => {
     return (
@@ -17,24 +17,47 @@ export const PricingSection = () => {
             <div className="container px-4 md:px-6">
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <h2
-                        className="text-3xl md:text-5xl font-display font-bold mb-6"
-                        style={{ color: 'hsl(var(--saude-foreground))' }}
+                        className="text-3xl md:text-5xl font-bold mb-6"
+                        style={{
+                            color: 'hsl(var(--saude-foreground))',
+                            fontFamily: 'Roboto, system-ui, sans-serif'
+                        }}
                     >
                         Investimento que se paga{' '}
-                        <span style={{ color: 'hsl(var(--saude-primary))' }}>sozinho</span>
+                        <span style={{ color: 'hsl(var(--saude-primary))' }}>
+                            na primeira consulta
+                        </span>
                     </h2>
+
+                    {/* Coffee Comparison */}
+                    <div
+                        className="inline-flex items-center gap-3 px-6 py-3 rounded-full mb-6"
+                        style={{
+                            backgroundColor: 'hsl(var(--saude-primary) / 0.1)',
+                            border: '1px solid hsl(var(--saude-primary) / 0.2)'
+                        }}
+                    >
+                        <Coffee className="w-5 h-5 text-[#8B4513]" />
+                        <span
+                            className="font-semibold"
+                            style={{ color: 'hsl(var(--saude-foreground))' }}
+                        >
+                            Menos que um cafezinho por dia
+                        </span>
+                    </div>
+
                     <p
                         className="text-lg"
                         style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                     >
-                        Escolha o periodo ideal para o seu negocio.
+                        Escolha o plano ideal para a sua clinica ou consultorio.
                     </p>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {/* Mensal */}
                     <div
-                        className="p-8 rounded-3xl flex flex-col transition-all duration-300 hover:-translate-y-1"
+                        className="p-8 rounded-3xl flex flex-col transition-all duration-300"
                         style={{
                             backgroundColor: 'hsl(var(--saude-card))',
                             border: '1px solid hsl(var(--saude-border))',
@@ -44,7 +67,10 @@ export const PricingSection = () => {
                         <div className="mb-6">
                             <h3
                                 className="text-xl font-bold mb-2"
-                                style={{ color: 'hsl(var(--saude-foreground))' }}
+                                style={{
+                                    color: 'hsl(var(--saude-foreground))',
+                                    fontFamily: 'Roboto, system-ui, sans-serif'
+                                }}
                             >
                                 Mensal
                             </h3>
@@ -56,8 +82,11 @@ export const PricingSection = () => {
                                     R$
                                 </span>
                                 <span
-                                    className="text-4xl font-display font-bold"
-                                    style={{ color: 'hsl(var(--saude-foreground))' }}
+                                    className="text-5xl font-extrabold"
+                                    style={{
+                                        color: 'hsl(var(--saude-foreground))',
+                                        fontFamily: 'Roboto, system-ui, sans-serif'
+                                    }}
                                 >
                                     19,90
                                 </span>
@@ -67,16 +96,16 @@ export const PricingSection = () => {
                                 className="text-sm mt-4"
                                 style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                             >
-                                Mais barato que um cafezinho.
+                                Perfeito para comeccar.
                             </p>
                         </div>
 
                         <ul className="space-y-4 mb-8 flex-1">
                             {[
-                                'Acesso Completo',
-                                'Integracao WhatsApp',
-                                'Suporte Prioritario',
-                                'Cancele quando quiser'
+                                'Agendamento Automatico',
+                                'Integracao Google Calendar',
+                                'Lembretes via WhatsApp',
+                                'Sem fidelidade'
                             ].map((item, i) => (
                                 <li
                                     key={i}
@@ -84,7 +113,7 @@ export const PricingSection = () => {
                                     style={{ color: 'hsl(var(--saude-foreground))' }}
                                 >
                                     <Check
-                                        className="w-4 h-4"
+                                        className="w-5 h-5"
                                         style={{ color: 'hsl(var(--saude-primary))' }}
                                     />
                                     {item}
@@ -103,19 +132,11 @@ export const PricingSection = () => {
                             className="w-full mt-auto"
                         >
                             <Button
-                                className="w-full h-12 rounded-xl text-lg font-bold transition-all"
+                                className="w-full h-12 rounded-xl text-base font-bold transition-all"
                                 style={{
                                     backgroundColor: 'transparent',
                                     border: '2px solid hsl(var(--saude-primary))',
                                     color: 'hsl(var(--saude-primary))'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'hsl(var(--saude-primary))';
-                                    e.currentTarget.style.color = 'white';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                    e.currentTarget.style.color = 'hsl(var(--saude-primary))';
                                 }}
                             >
                                 Assinar Mensal
@@ -129,25 +150,28 @@ export const PricingSection = () => {
                         style={{
                             backgroundColor: 'hsl(var(--saude-card))',
                             border: '2px solid hsl(var(--saude-primary))',
-                            boxShadow: 'var(--saude-shadow-accent)'
+                            boxShadow: 'var(--saude-shadow-soft)'
                         }}
                     >
                         <div
-                            className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold tracking-wide shadow-lg whitespace-nowrap"
-                            style={{
-                                backgroundColor: 'hsl(var(--saude-primary))',
-                                color: 'white'
-                            }}
+                            className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold tracking-wide shadow-lg whitespace-nowrap text-white flex items-center gap-2"
+                            style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
                         >
-                            MAIS POPULAR - ECONOMIZE 17%
+                            <span className="text-yellow-300">★</span>
+                            Mais Popular - Economize 17%
                         </div>
                         <div className="mb-6 mt-2">
-                            <h3
-                                className="text-2xl font-bold mb-2"
-                                style={{ color: 'hsl(var(--saude-primary))' }}
-                            >
-                                Anual
-                            </h3>
+                            <div className="flex items-center gap-2 mb-2">
+                                <h3
+                                    className="text-2xl font-bold"
+                                    style={{
+                                        color: 'hsl(var(--saude-primary))',
+                                        fontFamily: 'Roboto, system-ui, sans-serif'
+                                    }}
+                                >
+                                    Anual
+                                </h3>
+                            </div>
                             <div className="flex items-baseline gap-1">
                                 <span
                                     className="text-3xl font-bold"
@@ -156,10 +180,13 @@ export const PricingSection = () => {
                                     R$
                                 </span>
                                 <span
-                                    className="text-5xl font-display font-bold"
-                                    style={{ color: 'hsl(var(--saude-foreground))' }}
+                                    className="text-6xl font-extrabold"
+                                    style={{
+                                        color: 'hsl(var(--saude-foreground))',
+                                        fontFamily: 'Roboto, system-ui, sans-serif'
+                                    }}
                                 >
-                                    199,00
+                                    199
                                 </span>
                                 <span style={{ color: 'hsl(var(--saude-muted-foreground))' }}>/ano</span>
                             </div>
@@ -170,7 +197,7 @@ export const PricingSection = () => {
                                 Equivalente a{' '}
                                 <span
                                     className="font-bold"
-                                    style={{ color: 'hsl(var(--saude-foreground))' }}
+                                    style={{ color: 'hsl(var(--saude-primary))' }}
                                 >
                                     R$ 16,58/mes
                                 </span>.
@@ -179,11 +206,11 @@ export const PricingSection = () => {
 
                         <ul className="space-y-4 mb-10 flex-1">
                             {[
-                                'Tudo do plano mensal',
+                                'Todas funcionalidades',
                                 '2 Meses Gratis',
-                                'Setup Prioritario',
-                                'Treinamento Dedicado',
-                                'Acesso Antecipado a Features'
+                                'Suporte Prioritario',
+                                'Setup Assistido',
+                                'Badge de Profissional Verificado'
                             ].map((item, i) => (
                                 <li
                                     key={i}
@@ -191,7 +218,7 @@ export const PricingSection = () => {
                                     style={{ color: 'hsl(var(--saude-foreground))' }}
                                 >
                                     <div
-                                        className="p-1 rounded-full flex-shrink-0"
+                                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                                         style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.15)' }}
                                     >
                                         <Check
@@ -221,7 +248,7 @@ export const PricingSection = () => {
                                     boxShadow: 'var(--saude-shadow-accent)'
                                 }}
                             >
-                                Assinar Anual
+                                ASSINAR AGORA
                                 <ArrowRight className="ml-2 w-5 h-5" />
                             </Button>
                         </Link>
@@ -229,7 +256,7 @@ export const PricingSection = () => {
 
                     {/* Semestral */}
                     <div
-                        className="p-8 rounded-3xl flex flex-col transition-all duration-300 hover:-translate-y-1"
+                        className="p-8 rounded-3xl flex flex-col transition-all duration-300"
                         style={{
                             backgroundColor: 'hsl(var(--saude-card))',
                             border: '1px solid hsl(var(--saude-border))',
@@ -239,7 +266,10 @@ export const PricingSection = () => {
                         <div className="mb-6">
                             <h3
                                 className="text-xl font-bold mb-2"
-                                style={{ color: 'hsl(var(--saude-foreground))' }}
+                                style={{
+                                    color: 'hsl(var(--saude-foreground))',
+                                    fontFamily: 'Roboto, system-ui, sans-serif'
+                                }}
                             >
                                 Semestral
                             </h3>
@@ -251,18 +281,21 @@ export const PricingSection = () => {
                                     R$
                                 </span>
                                 <span
-                                    className="text-4xl font-display font-bold"
-                                    style={{ color: 'hsl(var(--saude-foreground))' }}
+                                    className="text-5xl font-extrabold"
+                                    style={{
+                                        color: 'hsl(var(--saude-foreground))',
+                                        fontFamily: 'Roboto, system-ui, sans-serif'
+                                    }}
                                 >
                                     119,40
                                 </span>
-                                <span style={{ color: 'hsl(var(--saude-muted-foreground))' }}>/semestre</span>
+                                <span style={{ color: 'hsl(var(--saude-muted-foreground))' }}>/sem.</span>
                             </div>
                             <p
                                 className="text-sm mt-4"
                                 style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                             >
-                                Compromisso medio.
+                                Meio termo ideal.
                             </p>
                         </div>
 
@@ -271,7 +304,7 @@ export const PricingSection = () => {
                                 'Acesso Completo',
                                 'Integracao WhatsApp',
                                 'Renovacao a cada 6 meses',
-                                'Suporte Dedicado'
+                                'Suporte Padrao'
                             ].map((item, i) => (
                                 <li
                                     key={i}
@@ -279,7 +312,7 @@ export const PricingSection = () => {
                                     style={{ color: 'hsl(var(--saude-foreground))' }}
                                 >
                                     <Check
-                                        className="w-4 h-4"
+                                        className="w-5 h-5"
                                         style={{ color: 'hsl(var(--saude-primary))' }}
                                     />
                                     {item}
@@ -298,19 +331,11 @@ export const PricingSection = () => {
                             className="w-full mt-auto"
                         >
                             <Button
-                                className="w-full h-12 rounded-xl text-lg font-bold transition-all"
+                                className="w-full h-12 rounded-xl text-base font-bold transition-all"
                                 style={{
                                     backgroundColor: 'transparent',
                                     border: '2px solid hsl(var(--saude-primary))',
                                     color: 'hsl(var(--saude-primary))'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'hsl(var(--saude-primary))';
-                                    e.currentTarget.style.color = 'white';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                    e.currentTarget.style.color = 'hsl(var(--saude-primary))';
                                 }}
                             >
                                 Assinar Semestral

@@ -105,40 +105,47 @@
        Trust-focused light theme for healthcare professionals
        These variables are COMPLETELY ISOLATED from the main site.
        Future: Will be hosted on separate domain.
-       COLOR SCHEME: White + Blue (Sky Blue #0EA5E9) ONLY
+       COLOR SCHEME: White + Sage Green + Serene Blue (HealthTech)
        ================================================================ */
 
-    /* Saude Primary - Sky Blue (Action/CTAs) - NO GREEN */
-    --saude-primary: 199 89% 48%;
+    /* Saude Primary - Sage Green (Action/CTAs) - Health & Approval */
+    --saude-primary: 153 91% 39%;
+    /* #10B981 - Tailwind Emerald-500 equivalent approx or user's #10B981 */
+    --saude-primary-hover: 161 94% 30%;
+    /* Keep hover darker */
     --saude-primary-foreground: 0 0% 100%;
 
-    /* Saude Secondary - Darker Blue (Identity/Details) */
-    --saude-secondary: 217 91% 60%;
+    /* Saude Secondary - Serene Blue (Details/Accents) */
+    --saude-secondary: 199 89% 48%;
+    /* #0EA5E9 - Sky-500 */
     --saude-secondary-foreground: 0 0% 100%;
 
     /* Saude Backgrounds - Clean Clinical White */
     --saude-background: 0 0% 100%;
-    --saude-background-alt: 210 40% 98%;
+    /* #FFFFFF */
+    --saude-background-alt: 210 20% 98%;
+    /* #F8FAFC - Slate-50 - Off-White very soft */
 
-    /* Saude Text - Dark Gray (Never pure black) */
+    /* Saude Text - Charcoal Gray (Never pure black) */
     --saude-foreground: 215 25% 27%;
+    /* #334155 - Slate-700 */
     --saude-muted-foreground: 215 16% 47%;
 
     /* Saude Cards & Borders */
     --saude-card: 0 0% 100%;
-    --saude-card-foreground: 215 25% 27%;
+    --saude-card-foreground: 215 28% 17%;
     --saude-border: 214 32% 91%;
 
-    /* Saude Accents - Blue Only */
+    /* Saude Accents */
     --saude-accent: 199 89% 48%;
     --saude-accent-foreground: 0 0% 100%;
     --saude-danger: 0 84% 60%;
 
-    /* Saude Gradients & Effects - Blue tones only */
-    --saude-gradient-hero: linear-gradient(135deg, hsl(199 89% 97%) 0%, hsl(217 91% 97%) 50%, hsl(0 0% 100%) 100%);
-    --saude-shadow-soft: 0 4px 20px hsl(215 25% 27% / 0.08);
-    --saude-shadow-card: 0 2px 12px hsl(215 25% 27% / 0.06);
-    --saude-shadow-accent: 0 4px 20px hsl(199 89% 48% / 0.25);
+    /* Saude Gradients & Effects - Ultra-soft, diffuse shadows */
+    --saude-gradient-hero: linear-gradient(180deg, hsl(210 40% 98%) 0%, hsl(0 0% 100%) 100%);
+    --saude-shadow-soft: 0 4px 24px hsl(215 25% 27% / 0.06);
+    --saude-shadow-card: 0 2px 16px hsl(215 25% 27% / 0.05);
+    --saude-shadow-accent: 0 4px 20px hsl(160 84% 39% / 0.2);
 
     /* ================================================================
        BELEZA LANDING PAGE - ISOLATED DESIGN SYSTEM

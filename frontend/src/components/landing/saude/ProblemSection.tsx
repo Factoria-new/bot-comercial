@@ -1,82 +1,95 @@
-import { CalendarX, PhoneOff, AlertTriangle } from "lucide-react";
+import { UserX, UserCog, Moon } from "lucide-react";
+import { motion } from "framer-motion";
 
 /**
  * ProblemSection - Saude Landing Page
- * ISOLATED from main site design system.
- * Uses --saude-* CSS variables.
- * COLOR SCHEME: White + Blue ONLY (no red)
+ * Problem vs Solution cards with outline icons
+ * Uses --saude-* CSS variables
  */
 export const ProblemSection = () => {
     const problems = [
         {
-            icon: <CalendarX className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
-            title: 'O "No-Show" Invisivel',
-            description: "Pacientes marcam e nao aparecem. Voce perde dinheiro e tempo precioso que poderia ser usado com outros.",
+            icon: <UserX className="w-7 h-7" strokeWidth={1.5} />,
+            title: "Reduza Faltas de Pacientes",
+            description: "Confirmacao automatica e lembretes inteligentes reduzem drasticamente os no-shows."
         },
         {
-            icon: <PhoneOff className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
-            title: "Interrupcoes Constantes",
-            description: "Atender o telefone durante um procedimento ou sessao quebra o foco e desvaloriza a experiencia do paciente atual.",
+            icon: <UserCog className="w-7 h-7" strokeWidth={1.5} />,
+            title: "Nunca Pare uma Consulta",
+            description: "Nao interrompa o atendimento para responder WhatsApp. O Caji cuida disso."
         },
         {
-            icon: <AlertTriangle className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
-            title: "Emergencias Perdidas",
-            description: "Dor de dente ou crise de ansiedade nao tem hora. Se voce nao atende na hora, eles procuram outro profissional.",
-        },
+            icon: <Moon className="w-7 h-7" strokeWidth={1.5} />,
+            title: "Triagem na Madrugada",
+            description: "Pacientes com urgencia sao identificados e priorizados automaticamente."
+        }
     ];
 
     return (
         <section
-            className="py-20 relative overflow-hidden"
+            className="py-24 relative"
             style={{ backgroundColor: 'hsl(var(--saude-background))' }}
         >
             <div className="container px-4 md:px-6">
-                <div className="text-center max-w-2xl mx-auto mb-16 animate-fade-in">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="text-center max-w-2xl mx-auto mb-16"
+                >
                     <h2
-                        className="text-3xl md:text-5xl font-display font-bold mb-6"
+                        className="text-3xl md:text-4xl font-bold mb-6 tracking-tight"
                         style={{ color: 'hsl(var(--saude-foreground))' }}
                     >
-                        Por que sua agenda{' '}
-                        <span style={{ color: 'hsl(var(--saude-secondary))' }}>tem buracos?</span>
+                        Os Problemas que{' '}
+                        <span style={{ color: 'hsl(var(--saude-primary))' }}>
+                            Resolvemos
+                        </span>
                     </h2>
                     <p
-                        className="text-lg"
+                        className="text-lg leading-relaxed"
                         style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                     >
-                        Os desafios de manter um consultorio lotado vao alem da qualidade do seu servico.
+                        Seu tempo e precioso. Deixe a IA cuidar das tarefas repetitivas.
                     </p>
-                </div>
+                </motion.div>
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                    className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+                >
                     {problems.map((problem, index) => (
-                        <div
+                        <motion.div
                             key={index}
-                            className="group relative p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2"
+                            className="group p-8 rounded-2xl transition-all duration-500"
+                            animate={{ y: [0, -20, 0] }}
+                            transition={{
+                                duration: 4,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                            }}
+                            whileHover={{ scale: 1.08, y: -20, boxShadow: "0 20px 40px -10px hsl(var(--saude-primary) / 0.2)" }}
                             style={{
                                 backgroundColor: 'hsl(var(--saude-card))',
                                 border: '1px solid hsl(var(--saude-border))',
                                 boxShadow: 'var(--saude-shadow-card)'
                             }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = '0 8px 30px hsl(var(--saude-secondary) / 0.15)';
-                                e.currentTarget.style.borderColor = 'hsl(var(--saude-secondary) / 0.3)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = 'var(--saude-shadow-card)';
-                                e.currentTarget.style.borderColor = 'hsl(var(--saude-border))';
-                            }}
                         >
                             <div
-                                className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110"
                                 style={{
-                                    backgroundColor: 'hsl(var(--saude-secondary) / 0.1)',
-                                    border: '1px solid hsl(var(--saude-secondary) / 0.2)'
+                                    backgroundColor: 'hsl(var(--saude-secondary) / 0.08)',
+                                    color: 'hsl(var(--saude-secondary))'
                                 }}
                             >
                                 {problem.icon}
                             </div>
                             <h3
-                                className="text-xl font-display font-bold mb-3"
+                                className="text-xl font-semibold mb-3"
                                 style={{ color: 'hsl(var(--saude-foreground))' }}
                             >
                                 {problem.title}
@@ -87,9 +100,9 @@ export const ProblemSection = () => {
                             >
                                 {problem.description}
                             </p>
-                        </div>
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
             </div>
         </section>
     );

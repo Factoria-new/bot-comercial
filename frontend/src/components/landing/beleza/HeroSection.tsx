@@ -12,23 +12,23 @@ const scenarios = [
     // Variacao 1: Barbearia - Foco em "Maos Ocupadas" e Google Calendar
     [
         { id: 1, text: "Eai, tem horario pra cortar o cabelo hoje?", sender: "user", delay: 1 },
-        { id: 2, text: "Fala, chefe! O Marcao ta na regua agora, mas eu cuido da agenda. Tenho vaga as 16h ou 18h. Qual prefere?", sender: "agent", delay: 3 },
+        { id: 2, text: "Fala chefe! O Marcao ta na regua. Quer as 18h?", sender: "agent", delay: 3 },
         { id: 3, text: "Opa, 18h fica show pra mim.", sender: "user", delay: 5 },
-        { id: 4, text: "Fechado! Ja ta sincronizado no Google Agenda dele pra ninguem roubar seu lugar. Te vejo as 18h!", sender: "agent", delay: 7 }
+        { id: 4, text: "Fechado! Reservado no Google Agenda. Te vejo as 18h!", sender: "agent", delay: 7 }
     ],
     // Variacao 2: Manicure/Nail Design - Foco em "Voz Humanizada" e Detalhes
     [
         { id: 1, text: "Oi! Quanto ta o alongamento de fibra?", sender: "user", delay: 1 },
-        { id: 2, text: "Oii! A aplicacao ta R$ 120. Posso te mandar um audio rapidinho explicando como funciona a manutencao?", sender: "agent", delay: 3 },
+        { id: 2, text: "Oii linda! Ta R$ 120. Posso mandar um audio explicando?", sender: "agent", delay: 3 },
         { id: 3, text: "Pode sim, por favor.", sender: "user", delay: 5 },
-        { id: 4, text: "[Audio] ...Quer deixar marcado? Tenho horario amanha cedo!", sender: "agent", delay: 7.5 }
+        { id: 4, text: "[Audio] ...Quer marcar? Tenho horario amanha cedo!", sender: "agent", delay: 7.5 }
     ],
     // Variacao 3: Clinica de Estetica - Foco em "Atendimento Noturno"
     [
         { id: 1, text: "Voces fazem limpeza de pele?", sender: "user", delay: 1 },
-        { id: 2, text: "Fazemos sim! E nossa especialidade. A clinica ta fechada agora, mas eu to aqui 24h. Quer ver os horarios pra essa semana?", sender: "agent", delay: 3 },
+        { id: 2, text: "Fazemos sim! A clinica ta fechada, mas to aqui 24h. Quer ver os horarios?", sender: "agent", delay: 3 },
         { id: 3, text: "Quero sim, trabalho o dia todo.", sender: "user", delay: 5 },
-        { id: 4, text: "Sem problemas! Temos horarios estendidos na quinta ate as 20h. Posso reservar esse slot pra voce?", sender: "agent", delay: 7 }
+        { id: 4, text: "Temos quinta ate as 20h. Posso reservar pra voce?", sender: "agent", delay: 7 }
     ]
 ];
 
@@ -105,15 +105,15 @@ export const HeroSection = () => {
                         </div>
 
                         <h1
-                            className="text-4xl md:text-6xl lg:text-7xl font-display font-bold leading-tight uppercase tracking-tight"
+                            className="text-3xl md:text-5xl lg:text-6xl font-display font-bold leading-tight uppercase tracking-tight"
                             style={{ color: 'hsl(var(--beleza-foreground))' }}
                         >
-                            Suas maos ocupadas,<br />
+                            Sua recepcionista de IA.<br />
                             <span
                                 className="text-transparent bg-clip-text"
                                 style={{ backgroundImage: 'var(--beleza-gradient-primary)' }}
                             >
-                                sua agenda lotada
+                                Por menos de um corte.
                             </span>
                         </h1>
 
@@ -218,8 +218,8 @@ export const HeroSection = () => {
                                             >
                                                 <div
                                                     className={`max-w-[85%] p-4 rounded-2xl text-sm font-medium shadow-sm backdrop-blur-sm ${msg.sender === 'user'
-                                                            ? 'rounded-tl-none'
-                                                            : 'rounded-tr-none text-white'
+                                                        ? 'rounded-tl-none'
+                                                        : 'rounded-tr-none text-white'
                                                         }`}
                                                     style={msg.sender === 'user'
                                                         ? {

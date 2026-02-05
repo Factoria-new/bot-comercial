@@ -1,41 +1,26 @@
-import { BarChart3, Clock, ShoppingCart, Zap, CreditCard, RefreshCw } from "lucide-react";
+import { Menu, Truck, QrCode } from "lucide-react";
 
 /**
  * BenefitsSection - Varejo Landing Page
- * E-commerce impulse theme
+ * 3 focused e-commerce feature cards
  * Uses --varejo-* CSS variables
  */
 export const BenefitsSection = () => {
-    const benefits = [
+    const features = [
         {
-            icon: <ShoppingCart className="w-6 h-6 text-white" />,
-            title: "Recuperacao de Carrinho",
-            description: "O cliente perguntou preco e sumiu? O Caji manda um 'oi, conseguiu ver?' automatico para retomar a venda."
+            icon: <Menu className="w-8 h-8 text-white" />,
+            title: "Catalogo na Mao",
+            description: "O cliente pede, o Caji envia foto e preco. Sem voce precisar fazer nada."
         },
         {
-            icon: <Zap className="w-6 h-6 text-white" />,
-            title: "Link de Pagamento no Gatilho",
-            description: "O sistema detecta intencao de compra e ja envia o link ou Pix. Menos cliques, mais conversao."
+            icon: <Truck className="w-8 h-8 text-white" />,
+            title: "Frete Automatico",
+            description: "Calcula taxa de entrega na hora. Motoboy, Correios ou retirada."
         },
         {
-            icon: <CreditCard className="w-6 h-6 text-white" />,
-            title: "Profissionalismo",
-            description: "Sua loja do Instagram passa a ter atendimento de grande e-commerce. Rapido, cordial e sem erros de portugues."
-        },
-        {
-            icon: <RefreshCw className="w-6 h-6 text-white" />,
-            title: "Postura de Vendedor",
-            description: "A IA nao so responde - ela VENDE. Oferece produtos, faz sugestoes e acelera o fechamento."
-        },
-        {
-            icon: <Clock className="w-6 h-6 text-white" />,
-            title: "Venda na Madrugada",
-            description: "Atenda o comprador da insonia. O Caji fecha vendas as 3 da manha enquanto voce dorme."
-        },
-        {
-            icon: <BarChart3 className="w-6 h-6 text-white" />,
-            title: "Metricas de Venda",
-            description: "Saiba quais produtos sao mais pedidos e qual horario sua loja tem mais movimento no WhatsApp."
+            icon: <QrCode className="w-8 h-8 text-white" />,
+            title: "Pix no Gatilho",
+            description: "Envia chave Pix automaticamente e baixa no estoque apos pagamento."
         }
     ];
 
@@ -53,58 +38,61 @@ export const BenefitsSection = () => {
                             fontFamily: 'Roboto, system-ui, sans-serif'
                         }}
                     >
-                        Sua loja aberta{' '}
+                        Funcionalidades para{' '}
                         <span style={{ color: 'hsl(var(--varejo-primary))' }}>
-                            24 horas por dia
+                            VENDER mais
                         </span>
                     </h2>
                     <p
                         className="text-lg"
                         style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                     >
-                        Ferramentas essenciais para quem quer escalar as vendas sem aumentar a equipe.
+                        Tudo que o comerciante precisa para automatizar vendas no WhatsApp.
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {benefits.map((benefit, index) => (
+                <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    {features.map((feature, index) => (
                         <div
                             key={index}
-                            className="p-6 rounded-2xl transition-all duration-300 group cursor-pointer"
+                            className="p-8 rounded-3xl transition-all duration-300 group cursor-pointer text-center"
                             style={{
                                 backgroundColor: 'hsl(var(--varejo-card))',
                                 border: '1px solid hsl(var(--varejo-border))',
-                                boxShadow: 'var(--varejo-shadow-card)'
+                                boxShadow: '0 4px 24px rgba(0,0,0,0.08)'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-4px)';
-                                e.currentTarget.style.boxShadow = 'var(--varejo-shadow-hover)';
+                                e.currentTarget.style.transform = 'translateY(-8px)';
+                                e.currentTarget.style.boxShadow = '0 16px 48px hsl(24 95% 53% / 0.2)';
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'var(--varejo-shadow-card)';
+                                e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
                             }}
                         >
                             <div
-                                className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
-                                style={{ background: 'var(--varejo-gradient-primary)' }}
+                                className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-110 transition-transform duration-300"
+                                style={{
+                                    background: 'var(--varejo-gradient-primary)',
+                                    boxShadow: '0 8px 24px hsl(24 95% 53% / 0.3)'
+                                }}
                             >
-                                {benefit.icon}
+                                {feature.icon}
                             </div>
                             <h3
-                                className="text-xl font-bold mb-3"
+                                className="text-2xl font-bold mb-4"
                                 style={{
                                     color: 'hsl(var(--varejo-foreground))',
                                     fontFamily: 'Roboto, system-ui, sans-serif'
                                 }}
                             >
-                                {benefit.title}
+                                {feature.title}
                             </h3>
                             <p
-                                className="leading-relaxed"
+                                className="text-base leading-relaxed"
                                 style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                             >
-                                {benefit.description}
+                                {feature.description}
                             </p>
                         </div>
                     ))}

@@ -1,8 +1,9 @@
 import HeroSection from "@/components/landing/varejo/HeroSection";
-import ProblemSection from "@/components/landing/varejo/ProblemSection";
+import SocialProofSection from "@/components/landing/varejo/SocialProofSection";
+import BeforeAfterSection from "@/components/landing/varejo/BeforeAfterSection";
 import SolutionSection from "@/components/landing/varejo/SolutionSection";
 import BenefitsSection from "@/components/landing/varejo/BenefitsSection";
-import SocialProofSection from "@/components/landing/varejo/SocialProofSection";
+import IntegrationSection from "@/components/landing/varejo/IntegrationSection";
 import PricingSection from "@/components/landing/varejo/PricingSection";
 import LPFooter from "@/components/landing/varejo/LPFooter";
 
@@ -10,6 +11,11 @@ import LPFooter from "@/components/landing/varejo/LPFooter";
  * Varejo Landing Page
  * ISOLATED design system for retail/e-commerce
  * Uses --varejo-* CSS variables (White + Orange impulse theme)
+ * 
+ * Marketplace-style CRO design with focus on:
+ * - URGENCY (24h sales, "Pix Recebido" notifications)
+ * - VELOCITY (3-second response times)
+ * - SALES (payment links, cart recovery)
  */
 const Varejo = () => {
     return (
@@ -32,12 +38,20 @@ const Varejo = () => {
                 .animate-pulse-cta {
                     animation: pulse-cta 2s ease-in-out infinite;
                 }
+                @keyframes message-appear {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-message-appear {
+                    animation: message-appear 0.3s ease-out;
+                }
             `}</style>
             <HeroSection />
             <SocialProofSection />
-            <ProblemSection />
+            <BeforeAfterSection />
             <SolutionSection />
             <BenefitsSection />
+            <IntegrationSection />
             <PricingSection />
             <LPFooter />
         </main>

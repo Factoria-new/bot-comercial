@@ -1,28 +1,34 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle2, Stethoscope } from "lucide-react";
+import { ArrowRight, Stethoscope } from "lucide-react";
+
+/**
+ * HeroSection - Saude Landing Page
+ * HealthTech theme - "Apple Health meets Modern Clinic"
+ * Uses --saude-* CSS variables
+ */
 
 const scenarios = [
-    // Variacao 1: Dentista - Foco em "Emergencia"
+    // Dentista
     [
-        { id: 1, text: "Estou com muita dor de dente, conseguem me atender?", sender: "user", delay: 1 },
-        { id: 2, text: "Sinto muito por isso! O Dr. Andre esta em cirurgia, mas prioriza emergencias. Pode vir hoje as 14:30?", sender: "agent", delay: 3 },
-        { id: 3, text: "Consigo sim, obrigado!", sender: "user", delay: 5 },
-        { id: 4, text: "Confirmado. Vou deixar tudo pronto para sua chegada. Melhoras!", sender: "agent", delay: 6.5 }
+        { id: 1, text: "Ola, gostaria de agendar uma consulta", sender: "user", delay: 1 },
+        { id: 2, text: "Ola! Seja bem-vindo ao consultorio do Dr. Andre. Posso ajudar com agendamento. Qual sua preferencia de horario?", sender: "agent", delay: 3 },
+        { id: 3, text: "Tenho disponibilidade quinta de manha", sender: "user", delay: 5 },
+        { id: 4, text: "Perfeito! Quinta-feira, 10h esta disponivel. Confirmo seu agendamento?", sender: "agent", delay: 7 }
     ],
-    // Variacao 2: Psicologia - Foco em "Acolhimento"
+    // Psicologa
     [
-        { id: 1, text: "Gostaria de saber como funciona a terapia.", sender: "user", delay: 1 },
-        { id: 2, text: "Ola! O espaco da Dra. Ana e seguro e acolhedor. Busca atendimento presencial ou online?", sender: "agent", delay: 3 },
-        { id: 3, text: "Seria online, minha rotina e corrida.", sender: "user", delay: 5 },
-        { id: 4, text: "Perfeito. Temos horarios flexiveis. Vou enviar o link da agenda com privacidade.", sender: "agent", delay: 7 }
+        { id: 1, text: "Boa noite, preciso de atendimento", sender: "user", delay: 1 },
+        { id: 2, text: "Ola! O espaco da Dra. Ana e seguro. Busca atendimento online ou presencial?", sender: "agent", delay: 3 },
+        { id: 3, text: "Prefiro online por enquanto", sender: "user", delay: 5 },
+        { id: 4, text: "Entendo. Temos horarios disponiveis na proxima semana. Posso enviar as opcoes?", sender: "agent", delay: 7 }
     ],
-    // Variacao 3: Nutricionista/Fisio - Foco em "Triagem"
+    // Fisioterapeuta
     [
-        { id: 1, text: "A consulta aceita plano de saude?", sender: "user", delay: 1 },
-        { id: 2, text: "Oi! Trabalhamos com particular e emitimos recibo para reembolso. O valor e R$ 200 c/ retorno. Faz sentido?", sender: "agent", delay: 3 },
-        { id: 3, text: "Entendi. Vou querer marcar sim.", sender: "user", delay: 5.5 },
-        { id: 4, text: "Otima escolha! Prefere manha ou tarde para a primeira avaliacao?", sender: "agent", delay: 7.5 }
+        { id: 1, text: "Oi, e urgente, travei a coluna", sender: "user", delay: 1 },
+        { id: 2, text: "Entendo a urgencia! A Dra. Carla tem um encaixe amanha as 8h. Reservo para voce?", sender: "agent", delay: 3 },
+        { id: 3, text: "Sim, por favor!", sender: "user", delay: 5 },
+        { id: 4, text: "Confirmado! Amanha 8h, endereco: Rua das Flores, 123. Melhoras!", sender: "agent", delay: 7 }
     ]
 ];
 
@@ -70,129 +76,95 @@ export const HeroSection = () => {
 
     return (
         <section
-            className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 pb-10"
+            className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 pb-10"
             style={{ background: 'var(--saude-gradient-hero)' }}
         >
-            {/* Subtle Background Decorations */}
-            <div className="absolute top-[10%] right-[5%] w-[300px] h-[300px] rounded-full blur-[100px] opacity-40"
-                style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.15)' }} />
-            <div className="absolute bottom-[10%] left-[5%] w-[250px] h-[250px] rounded-full blur-[80px] opacity-30"
-                style={{ backgroundColor: 'hsl(var(--saude-secondary) / 0.15)' }} />
-
             <div className="container relative z-10 px-4 md:px-6">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
+                <div className="grid lg:grid-cols-2 gap-16 items-center">
                     {/* Left Content */}
-                    <div className="space-y-8 animate-fade-in-up">
+                    <div className="space-y-8 animate-fade-in-slow">
                         <div
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
                             style={{
-                                backgroundColor: 'hsl(var(--saude-secondary) / 0.1)',
-                                border: '1px solid hsl(var(--saude-secondary) / 0.3)',
-                                color: 'hsl(var(--saude-secondary))'
+                                backgroundColor: 'hsl(var(--saude-primary) / 0.1)',
+                                color: 'hsl(var(--saude-primary))'
                             }}
                         >
-                            <span className="relative flex h-2 w-2">
-                                <span
-                                    className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                                    style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
-                                />
-                                <span
-                                    className="relative inline-flex rounded-full h-2 w-2"
-                                    style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
-                                />
-                            </span>
-                            Para Profissionais da Saude
+                            <Stethoscope className="w-4 h-4" />
+                            Para Profissionais de Saude
                         </div>
 
                         <h1
-                            className="text-4xl md:text-6xl lg:text-7xl font-display font-bold leading-tight"
+                            className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight"
                             style={{ color: 'hsl(var(--saude-foreground))' }}
                         >
-                            Sua agenda cheia,<br />
-                            <span
-                                className="text-transparent bg-clip-text"
-                                style={{ backgroundImage: 'linear-gradient(135deg, hsl(var(--saude-primary)), hsl(var(--saude-secondary)))' }}
-                            >
-                                sem interrupcoes
+                            Consultorio 24h:<br />
+                            <span style={{ color: 'hsl(var(--saude-primary))' }}>
+                                Sua agenda cheia,<br />sua mente tranquila.
                             </span>
                         </h1>
 
                         <p
-                            className="text-lg md:text-xl font-sans max-w-xl leading-relaxed"
+                            className="text-lg md:text-xl max-w-xl leading-relaxed"
                             style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                         >
-                            Atenda seus pacientes com atencao total enquanto nossa IA cuida dos agendamentos, tira duvidas e confirma consultas 24h por dia.
+                            O Caji tria pacientes e agenda consultas automaticamente no seu Google Calendar. Atenda sem interrupcoes.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex flex-col sm:flex-row gap-4 pt-4">
                             <Button
                                 onClick={scrollToPricing}
-                                className="h-14 px-10 text-lg font-bold text-white rounded-xl transition-all duration-300 hover:scale-105"
+                                className="h-14 px-8 text-lg font-semibold text-white rounded-2xl transition-all duration-300 hover:scale-[1.02]"
                                 style={{
                                     backgroundColor: 'hsl(var(--saude-primary))',
                                     boxShadow: 'var(--saude-shadow-accent)'
                                 }}
                             >
-                                Comecar Agora
+                                Testar no meu Consultorio
                                 <ArrowRight className="ml-2 w-5 h-5" />
                             </Button>
                         </div>
-
-                        <div className="flex flex-wrap gap-6 pt-4 text-sm font-sans">
-                            {['LGPD Compliant', 'Triagem Inteligente', 'Reducao de No-Show'].map((feat, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-2"
-                                    style={{ color: 'hsl(var(--saude-muted-foreground))' }}
-                                >
-                                    <CheckCircle2
-                                        className="w-4 h-4"
-                                        style={{ color: 'hsl(var(--saude-primary))' }}
-                                    />
-                                    {feat}
-                                </div>
-                            ))}
-                        </div>
                     </div>
 
-                    {/* Right Content - Chat Simulation */}
-                    <div className="relative animate-slide-in-right delay-200">
-                        <div className="relative w-full max-w-[400px] mx-auto">
-                            {/* Soft glow behind chat */}
+                    {/* Right Content - Glassmorphism Phone Mockup */}
+                    <div className="relative animate-fade-in-slow delay-200">
+                        <div
+                            className="relative w-full max-w-[480px] mx-auto">
+                            {/* Glassmorphism Container */}
                             <div
-                                className="absolute inset-0 rounded-[2.5rem] blur-[40px] opacity-50"
-                                style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.15)' }}
-                            />
-
-                            {/* Chat Container */}
-                            <div
-                                className="relative rounded-[2.5rem] p-6 h-[500px] flex flex-col"
+                                className="relative rounded-[2.5rem] p-6 h-[680px] flex flex-col backdrop-blur-xl"
                                 style={{
-                                    backgroundColor: 'hsl(var(--saude-card))',
+                                    backgroundColor: 'hsl(var(--saude-card) / 0.85)',
                                     border: '1px solid hsl(var(--saude-border))',
-                                    boxShadow: 'var(--saude-shadow-soft)'
+                                    boxShadow: 'var(--saude-shadow-soft), 0 0 0 1px hsl(var(--saude-border) / 0.5)'
                                 }}
                             >
+                                {/* Phone Notch */}
+                                <div
+                                    className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-6 rounded-full"
+                                    style={{ backgroundColor: 'hsl(var(--saude-border))' }}
+                                />
+
                                 {/* Chat Header */}
                                 <div
-                                    className="flex items-center gap-4 mb-8 pb-4"
+                                    className="flex items-center gap-4 mt-8 mb-6 pb-4"
                                     style={{ borderBottom: '1px solid hsl(var(--saude-border))' }}
                                 >
                                     <div
-                                        className="w-12 h-12 rounded-full flex items-center justify-center"
-                                        style={{
-                                            backgroundColor: 'hsl(var(--saude-primary))',
-                                            boxShadow: '0 4px 12px hsl(var(--saude-primary) / 0.3)'
-                                        }}
+                                        className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                                        style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.1)' }}
                                     >
-                                        <Stethoscope className="w-6 h-6 text-white" />
+                                        <Stethoscope
+                                            className="w-6 h-6"
+                                            style={{ color: 'hsl(var(--saude-primary))' }}
+                                        />
                                     </div>
                                     <div>
                                         <h3
-                                            className="font-bold font-display"
+                                            className="font-semibold text-base"
                                             style={{ color: 'hsl(var(--saude-foreground))' }}
                                         >
-                                            Secretaria Virtual
+                                            Assistente Virtual
                                         </h3>
                                         <div className="flex items-center gap-1.5">
                                             <span
@@ -200,8 +172,8 @@ export const HeroSection = () => {
                                                 style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
                                             />
                                             <span
-                                                className="text-xs font-medium uppercase tracking-wider"
-                                                style={{ color: 'hsl(var(--saude-primary))' }}
+                                                className="text-xs"
+                                                style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                                             >
                                                 Online agora
                                             </span>
@@ -209,27 +181,27 @@ export const HeroSection = () => {
                                     </div>
                                 </div>
 
-                                {/* Chat Messages */}
-                                <div className="flex-1 space-y-4 overflow-hidden mask-gradient-b">
+                                {/* Messages */}
+                                <div className="flex-1 space-y-4 overflow-hidden">
                                     {scenarios[scenarioIndex].map((msg) => (
                                         visibleMessages.includes(msg.id) && (
                                             <div
                                                 key={`${scenarioIndex}-${msg.id}`}
-                                                className={`flex ${msg.sender === 'user' ? 'justify-start' : 'justify-end'} animate-message-appear`}
+                                                className={`flex ${msg.sender === 'user' ? 'justify-start' : 'justify-end'} animate-fade-in-slow`}
                                             >
                                                 <div
-                                                    className="max-w-[85%] p-4 rounded-2xl text-sm font-medium"
+                                                    className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${msg.sender === 'user'
+                                                        ? 'rounded-tl-md'
+                                                        : 'rounded-tr-md'
+                                                        }`}
                                                     style={msg.sender === 'user'
                                                         ? {
                                                             backgroundColor: 'hsl(var(--saude-background-alt))',
-                                                            border: '1px solid hsl(var(--saude-border))',
-                                                            color: 'hsl(var(--saude-foreground))',
-                                                            borderTopLeftRadius: 0
+                                                            color: 'hsl(var(--saude-foreground))'
                                                         }
                                                         : {
                                                             backgroundColor: 'hsl(var(--saude-primary))',
-                                                            color: 'white',
-                                                            borderTopRightRadius: 0
+                                                            color: 'white'
                                                         }
                                                     }
                                                 >
@@ -239,22 +211,22 @@ export const HeroSection = () => {
                                         )
                                     ))}
                                     {isTyping && (
-                                        <div className="flex justify-end animate-fade-in">
+                                        <div className="flex justify-end animate-fade-in-slow">
                                             <div
-                                                className="p-4 rounded-2xl rounded-tr-none flex gap-1.5 items-center w-fit h-12 justify-center"
-                                                style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.2)' }}
+                                                className="p-4 rounded-2xl rounded-tr-md flex gap-1.5 items-center w-fit h-12 justify-center"
+                                                style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.15)' }}
                                             >
                                                 <div
-                                                    className="w-1.5 h-1.5 rounded-full animate-bounce"
+                                                    className="w-2 h-2 rounded-full animate-bounce"
                                                     style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
                                                 />
                                                 <div
-                                                    className="w-1.5 h-1.5 rounded-full animate-bounce delay-100"
-                                                    style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
+                                                    className="w-2 h-2 rounded-full animate-bounce"
+                                                    style={{ backgroundColor: 'hsl(var(--saude-primary))', animationDelay: '100ms' }}
                                                 />
                                                 <div
-                                                    className="w-1.5 h-1.5 rounded-full animate-bounce delay-200"
-                                                    style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
+                                                    className="w-2 h-2 rounded-full animate-bounce"
+                                                    style={{ backgroundColor: 'hsl(var(--saude-primary))', animationDelay: '200ms' }}
                                                 />
                                             </div>
                                         </div>

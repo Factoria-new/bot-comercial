@@ -1,158 +1,213 @@
-import { ShieldCheck, HeartPulse, Stethoscope, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Stethoscope, Brain, Apple } from "lucide-react";
+import { motion } from "framer-motion";
 
 /**
  * SolutionSection - Saude Landing Page
- * ISOLATED from main site design system.
- * Uses --saude-* CSS variables.
+ * Interactive tabs with profession-specific chat demos
+ * Uses --saude-* CSS variables
  */
+
+const professions = [
+    {
+        id: 'dentista',
+        label: 'Dentistas',
+        icon: <Stethoscope className="w-4 h-4" />,
+        chat: [
+            { id: 1, text: "Ola, gostaria de agendar uma limpeza", sender: "user", delay: 0.5 },
+            { id: 2, text: "Ola! O Dr. Andre esta em atendimento agora. Temos horarios disponiveis amanha as 14h ou sexta as 10h. Qual prefere?", sender: "agent", delay: 2 },
+            { id: 3, text: "Sexta as 10h", sender: "user", delay: 3.5 },
+            { id: 4, text: "Perfeito! Agendamento confirmado para sexta, 10h. Enviaremos um lembrete no dia anterior.", sender: "agent", delay: 5 }
+        ]
+    },
+    {
+        id: 'psicologo',
+        label: 'Psicologos',
+        icon: <Brain className="w-4 h-4" />,
+        chat: [
+            { id: 1, text: "Boa noite, preciso conversar", sender: "user", delay: 0.5 },
+            { id: 2, text: "Ola! O espaco da Dra. Ana e seguro e sigiloso. Busca atendimento online ou presencial?", sender: "agent", delay: 2 },
+            { id: 3, text: "Online, por favor", sender: "user", delay: 3.5 },
+            { id: 4, text: "Entendo. Temos sessoes disponiveis na proxima semana. Posso enviar os horarios?", sender: "agent", delay: 5 }
+        ]
+    },
+    {
+        id: 'nutricionista',
+        label: 'Nutricionistas',
+        icon: <Apple className="w-4 h-4" />,
+        chat: [
+            { id: 1, text: "Oi, quero marcar uma consulta de reeducacao alimentar", sender: "user", delay: 0.5 },
+            { id: 2, text: "Ola! A Dra. Julia atende reeducacao alimentar com foco em resultados sustentaveis. Primeira consulta ou retorno?", sender: "agent", delay: 2 },
+            { id: 3, text: "Primeira consulta", sender: "user", delay: 3.5 },
+            { id: 4, text: "Otimo! Temos horarios terça ou quinta. Qual dia funciona melhor para voce?", sender: "agent", delay: 5 }
+        ]
+    }
+];
+
 export const SolutionSection = () => {
-    const features = [
-        {
-            icon: <ShieldCheck className="w-6 h-6" style={{ color: 'hsl(var(--saude-primary))' }} />,
-            title: "Biosseguranca Total",
-            description: "Voce nao precisa tirar as luvas para responder. Deixe o celular de lado e mantenha o foco na higiene e no paciente.",
-            delay: "0",
-        },
-        {
-            icon: <HeartPulse className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
-            title: "Acolhimento Imediato",
-            description: "Responda pacientes fragilizados em segundos com tom de voz empatico e acolhedor, nao robotico.",
-            delay: "100",
-        },
-        {
-            icon: <Clock className="w-6 h-6" style={{ color: 'hsl(var(--saude-primary))' }} />,
-            title: "Plantao 24 Horas",
-            description: "Seu consultorio fecha, mas as dores e duvidas dos pacientes nao. Esteja disponivel quando eles mais precisam.",
-            delay: "200",
-        },
-        {
-            icon: <Stethoscope className="w-6 h-6" style={{ color: 'hsl(var(--saude-secondary))' }} />,
-            title: "Triagem Inteligente",
-            description: "Filtre automaticamente convenios, particulares e tipos de procedimento antes mesmo de falar com o paciente.",
-            delay: "300",
-        }
-    ];
+    const [activeTab, setActiveTab] = useState('dentista');
+    const [visibleMessages, setVisibleMessages] = useState<number[]>([]);
+    const [isTyping, setIsTyping] = useState(false);
+
+    const activeProfession = professions.find(p => p.id === activeTab) || professions[0];
+
+    useEffect(() => {
+        let timeouts: NodeJS.Timeout[] = [];
+
+        setVisibleMessages([]);
+        setIsTyping(false);
+
+        activeProfession.chat.forEach((msg) => {
+            const msgTimeout = setTimeout(() => {
+                setIsTyping(false);
+                setVisibleMessages((prev) => [...prev, msg.id]);
+            }, msg.delay * 1000);
+            timeouts.push(msgTimeout);
+
+            if (msg.sender === 'agent') {
+                const typingStartDelay = Math.max(0, msg.delay - 1.5);
+                const typingTimeout = setTimeout(() => {
+                    setIsTyping(true);
+                }, typingStartDelay * 1000);
+                timeouts.push(typingTimeout);
+            }
+        });
+
+        return () => timeouts.forEach(clearTimeout);
+    }, [activeTab, activeProfession]);
 
     return (
         <section
-            className="py-20 relative overflow-hidden"
+            className="py-24 relative"
             style={{ backgroundColor: 'hsl(var(--saude-background-alt))' }}
         >
-            {/* Subtle Background Glow */}
-            <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[150px] -z-10 opacity-30"
-                style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.1)' }}
-            />
-
             <div className="container px-4 md:px-6">
-                <div className="grid lg:grid-cols-2 gap-16 items-center">
-                    <div className="order-2 lg:order-1 relative">
-                        <div className="relative z-10 grid grid-cols-2 gap-4">
-                            {features.map((feature, index) => (
-                                <div
-                                    key={index}
-                                    className="p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1 animate-fade-in-up"
-                                    style={{
-                                        animationDelay: `${feature.delay}ms`,
-                                        backgroundColor: 'hsl(var(--saude-card))',
-                                        border: '1px solid hsl(var(--saude-border))',
-                                        boxShadow: 'var(--saude-shadow-card)'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.boxShadow = 'var(--saude-shadow-soft)';
-                                        e.currentTarget.style.borderColor = 'hsl(var(--saude-primary) / 0.3)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.boxShadow = 'var(--saude-shadow-card)';
-                                        e.currentTarget.style.borderColor = 'hsl(var(--saude-border))';
-                                    }}
-                                >
-                                    <div
-                                        className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
-                                        style={{
-                                            backgroundColor: 'hsl(var(--saude-primary) / 0.1)',
-                                            border: '1px solid hsl(var(--saude-primary) / 0.2)'
-                                        }}
-                                    >
-                                        {feature.icon}
-                                    </div>
-                                    <h3
-                                        className="text-lg font-bold mb-2 font-display"
-                                        style={{ color: 'hsl(var(--saude-foreground))' }}
-                                    >
-                                        {feature.title}
-                                    </h3>
-                                    <p
-                                        className="text-sm"
-                                        style={{ color: 'hsl(var(--saude-muted-foreground))' }}
-                                    >
-                                        {feature.description}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="text-center max-w-2xl mx-auto mb-16"
+                >
+                    <h2
+                        className="text-3xl md:text-4xl font-bold mb-6 tracking-tight"
+                        style={{ color: 'hsl(var(--saude-foreground))' }}
+                    >
+                        Veja o Caji em{' '}
+                        <span style={{ color: 'hsl(var(--saude-primary))' }}>
+                            Acao
+                        </span>
+                    </h2>
+                    <p
+                        className="text-lg leading-relaxed"
+                        style={{ color: 'hsl(var(--saude-muted-foreground))' }}
+                    >
+                        Selecione sua especialidade e veja como o Caji atende seus pacientes.
+                    </p>
+                </motion.div>
 
-                    <div className="order-1 lg:order-2 space-y-8 animate-slide-in-right">
-                        <div
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
-                            style={{
-                                backgroundColor: 'hsl(var(--saude-secondary) / 0.1)',
-                                border: '1px solid hsl(var(--saude-secondary) / 0.3)'
-                            }}
-                        >
-                            <span
-                                className="text-sm font-medium font-sans"
-                                style={{ color: 'hsl(var(--saude-secondary))' }}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                    className="max-w-4xl mx-auto"
+                >
+                    {/* Tabs */}
+                    <div
+                        className="flex justify-center gap-1 mb-8 p-1.5 rounded-2xl w-fit mx-auto relative flex-wrap backdrop-blur-sm"
+                        style={{
+                            backgroundColor: 'hsl(var(--saude-primary) / 0.1)',
+                            border: '1px solid hsl(var(--saude-border))',
+                        }}
+                    >
+                        {professions.map((prof) => (
+                            <button
+                                key={prof.id}
+                                onClick={() => setActiveTab(prof.id)}
+                                className={`relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300`}
+                                style={{
+                                    color: activeTab === prof.id
+                                        ? 'hsl(var(--saude-primary))'
+                                        : 'hsl(var(--saude-muted-foreground))'
+                                }}
                             >
-                                A Etica Encontra a Eficiencia
-                            </span>
-                        </div>
-
-                        <h2
-                            className="text-3xl md:text-5xl font-display font-bold leading-tight"
-                            style={{ color: 'hsl(var(--saude-foreground))' }}
-                        >
-                            Cuide dos pacientes, <br />
-                            <span
-                                className="text-transparent bg-clip-text"
-                                style={{ backgroundImage: 'linear-gradient(135deg, hsl(var(--saude-primary)), hsl(var(--saude-secondary)))' }}
-                            >
-                                nos cuidamos da agenda
-                            </span>
-                        </h2>
-
-                        <p
-                            className="text-lg font-sans leading-relaxed"
-                            style={{ color: 'hsl(var(--saude-muted-foreground))' }}
-                        >
-                            O Caji Assist respeita a delicadeza da relacao profissional-paciente. E uma ferramenta discreta, segura e eficiente para garantir que sua clinica funcione como um relogio suico.
-                        </p>
-
-                        <ul className="space-y-4 pt-4">
-                            {[
-                                'Integracao com Google Agenda',
-                                'Scripts validados para Saude',
-                                'Privacidade total dos dados'
-                            ].map((item, index) => (
-                                <li
-                                    key={index}
-                                    className="flex items-center gap-3"
-                                    style={{ color: 'hsl(var(--saude-foreground))' }}
-                                >
-                                    <span
-                                        className="w-2 h-2 rounded-full"
-                                        style={{
-                                            backgroundColor: 'hsl(var(--saude-primary))',
-                                            boxShadow: '0 0 8px hsl(var(--saude-primary) / 0.5)'
-                                        }}
+                                {activeTab === prof.id && (
+                                    <motion.div
+                                        layoutId="activeTab"
+                                        className="absolute inset-0 rounded-xl shadow-sm"
+                                        style={{ backgroundColor: 'white' }}
+                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                     />
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
+                                )}
+                                <span className="relative z-10 flex items-center gap-2">
+                                    {prof.icon}
+                                    {prof.label}
+                                </span>
+                            </button>
+                        ))}
                     </div>
-                </div>
+
+                    {/* Chat Demo */}
+                    <div
+                        key={activeTab} // Force re-render to restart animations
+                        className="rounded-3xl p-8 transition-all duration-500 min-h-[400px]"
+                        style={{
+                            backgroundColor: 'hsl(var(--saude-card))',
+                            border: '1px solid hsl(var(--saude-border))',
+                            boxShadow: 'var(--saude-shadow-soft)'
+                        }}
+                    >
+                        <div className="space-y-4">
+                            {activeProfession.chat.map((msg) => (
+                                visibleMessages.includes(msg.id) && (
+                                    <div
+                                        key={msg.id}
+                                        className={`flex ${msg.sender === 'user' ? 'justify-start' : 'justify-end'} animate-fade-in-slow`}
+                                    >
+                                        <div
+                                            className={`max-w-[70%] p-4 rounded-2xl text-sm leading-relaxed ${msg.sender === 'user' ? 'rounded-tl-md' : 'rounded-tr-md'
+                                                }`}
+                                            style={msg.sender === 'user'
+                                                ? {
+                                                    backgroundColor: 'hsl(var(--saude-background-alt))',
+                                                    color: 'hsl(var(--saude-foreground))'
+                                                }
+                                                : {
+                                                    backgroundColor: 'hsl(var(--saude-primary))',
+                                                    color: 'white'
+                                                }
+                                            }
+                                        >
+                                            {msg.text}
+                                        </div>
+                                    </div>
+                                )
+                            ))}
+                            {isTyping && (
+                                <div className="flex justify-end animate-fade-in-slow">
+                                    <div
+                                        className="p-4 rounded-2xl rounded-tr-md flex gap-1.5 items-center w-fit h-12 justify-center"
+                                        style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.15)' }}
+                                    >
+                                        <div
+                                            className="w-2 h-2 rounded-full animate-bounce"
+                                            style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
+                                        />
+                                        <div
+                                            className="w-2 h-2 rounded-full animate-bounce"
+                                            style={{ backgroundColor: 'hsl(var(--saude-primary))', animationDelay: '100ms' }}
+                                        />
+                                        <div
+                                            className="w-2 h-2 rounded-full animate-bounce"
+                                            style={{ backgroundColor: 'hsl(var(--saude-primary))', animationDelay: '200ms' }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
             </div>
         </section>
     );

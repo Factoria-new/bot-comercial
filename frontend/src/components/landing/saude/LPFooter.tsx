@@ -1,9 +1,10 @@
 import { Mail, Linkedin, Instagram, Stethoscope } from 'lucide-react';
+import { motion } from "framer-motion";
 
 /**
  * LPFooter - Saude Landing Page
- * ISOLATED from main site design system.
- * Uses --saude-* CSS variables.
+ * Clean minimalist footer
+ * Uses --saude-* CSS variables
  */
 export const LPFooter = () => {
     const footerLinks = {
@@ -23,7 +24,11 @@ export const LPFooter = () => {
     };
 
     return (
-        <footer
+        <motion.footer
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="py-12 md:py-16"
             style={{
                 backgroundColor: 'hsl(var(--saude-background-alt))',
@@ -36,12 +41,15 @@ export const LPFooter = () => {
                         <div className="flex items-center gap-3">
                             <div
                                 className="w-10 h-10 rounded-xl flex items-center justify-center"
-                                style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
+                                style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.1)' }}
                             >
-                                <Stethoscope className="w-5 h-5 text-white" />
+                                <Stethoscope
+                                    className="w-5 h-5"
+                                    style={{ color: 'hsl(var(--saude-primary))' }}
+                                />
                             </div>
                             <span
-                                className="text-xl font-bold font-display"
+                                className="text-xl font-semibold"
                                 style={{ color: 'hsl(var(--saude-foreground))' }}
                             >
                                 Saude Assist
@@ -51,30 +59,22 @@ export const LPFooter = () => {
                             className="max-w-sm leading-relaxed"
                             style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                         >
-                            Transforme seu WhatsApp em uma maquina de vendas com IA. Atendimento automatico, agendamentos e metricas em tempo real.
+                            Automatize seu consultorio com IA. Agendamento, confirmacoes e triagem 24h pelo WhatsApp.
                         </p>
-                        <div className="flex gap-4">
+                        <div className="flex gap-3">
                             <a
                                 href="https://www.instagram.com/cajisolutionsofc/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm group"
+                                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300"
                                 style={{
-                                    backgroundColor: 'hsl(var(--saude-card))',
+                                    backgroundColor: 'hsl(var(--saude-background))',
                                     border: '1px solid hsl(var(--saude-border))'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'hsl(var(--saude-primary))';
-                                    e.currentTarget.style.borderColor = 'hsl(var(--saude-primary))';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'hsl(var(--saude-card))';
-                                    e.currentTarget.style.borderColor = 'hsl(var(--saude-border))';
                                 }}
                                 aria-label="Instagram"
                             >
                                 <Instagram
-                                    className="w-5 h-5 transition-colors"
+                                    className="w-5 h-5"
                                     style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                                 />
                             </a>
@@ -82,23 +82,15 @@ export const LPFooter = () => {
                                 href="https://www.linkedin.com/company/caji-solutions"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm group"
+                                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300"
                                 style={{
-                                    backgroundColor: 'hsl(var(--saude-card))',
+                                    backgroundColor: 'hsl(var(--saude-background))',
                                     border: '1px solid hsl(var(--saude-border))'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'hsl(var(--saude-secondary))';
-                                    e.currentTarget.style.borderColor = 'hsl(var(--saude-secondary))';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'hsl(var(--saude-card))';
-                                    e.currentTarget.style.borderColor = 'hsl(var(--saude-border))';
                                 }}
                                 aria-label="LinkedIn"
                             >
                                 <Linkedin
-                                    className="w-5 h-5 transition-colors"
+                                    className="w-5 h-5"
                                     style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                                 />
                             </a>
@@ -107,8 +99,8 @@ export const LPFooter = () => {
 
                     <div>
                         <h3
-                            className="font-bold mb-6 uppercase tracking-wider text-xs"
-                            style={{ color: 'hsl(var(--saude-foreground))' }}
+                            className="font-semibold mb-6 text-xs uppercase tracking-wider"
+                            style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                         >
                             Produto
                         </h3>
@@ -117,14 +109,8 @@ export const LPFooter = () => {
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-sm font-medium transition-colors"
-                                        style={{ color: 'hsl(var(--saude-muted-foreground))' }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.color = 'hsl(var(--saude-primary))';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.color = 'hsl(var(--saude-muted-foreground))';
-                                        }}
+                                        className="text-sm transition-colors hover:opacity-70"
+                                        style={{ color: 'hsl(var(--saude-foreground))' }}
                                     >
                                         {link.label}
                                     </a>
@@ -135,8 +121,8 @@ export const LPFooter = () => {
 
                     <div>
                         <h3
-                            className="font-bold mb-6 uppercase tracking-wider text-xs"
-                            style={{ color: 'hsl(var(--saude-foreground))' }}
+                            className="font-semibold mb-6 text-xs uppercase tracking-wider"
+                            style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                         >
                             Empresa
                         </h3>
@@ -145,14 +131,8 @@ export const LPFooter = () => {
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-sm font-medium transition-colors"
-                                        style={{ color: 'hsl(var(--saude-muted-foreground))' }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.color = 'hsl(var(--saude-primary))';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.color = 'hsl(var(--saude-muted-foreground))';
-                                        }}
+                                        className="text-sm transition-colors hover:opacity-70"
+                                        style={{ color: 'hsl(var(--saude-foreground))' }}
                                     >
                                         {link.label}
                                     </a>
@@ -163,8 +143,8 @@ export const LPFooter = () => {
 
                     <div>
                         <h3
-                            className="font-bold mb-6 uppercase tracking-wider text-xs"
-                            style={{ color: 'hsl(var(--saude-foreground))' }}
+                            className="font-semibold mb-6 text-xs uppercase tracking-wider"
+                            style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                         >
                             Legal
                         </h3>
@@ -173,14 +153,8 @@ export const LPFooter = () => {
                                 <li key={link.label}>
                                     <a
                                         href={link.href}
-                                        className="text-sm font-medium transition-colors"
-                                        style={{ color: 'hsl(var(--saude-muted-foreground))' }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.color = 'hsl(var(--saude-primary))';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.color = 'hsl(var(--saude-muted-foreground))';
-                                        }}
+                                        className="text-sm transition-colors hover:opacity-70"
+                                        style={{ color: 'hsl(var(--saude-foreground))' }}
                                     >
                                         {link.label}
                                     </a>
@@ -196,7 +170,7 @@ export const LPFooter = () => {
                 >
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <p
-                            className="text-xs font-medium"
+                            className="text-xs"
                             style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                         >
                             2026 Caji Assist. Todos os direitos reservados.
@@ -204,18 +178,12 @@ export const LPFooter = () => {
                         <div className="flex items-center gap-3">
                             <Mail
                                 className="w-4 h-4"
-                                style={{ color: 'hsl(var(--saude-primary))' }}
+                                style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                             />
                             <a
                                 href="mailto:contact@cajiassist.com"
-                                className="text-xs font-medium transition-colors"
-                                style={{ color: 'hsl(var(--saude-muted-foreground))' }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.color = 'hsl(var(--saude-primary))';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.color = 'hsl(var(--saude-muted-foreground))';
-                                }}
+                                className="text-xs transition-colors hover:opacity-70"
+                                style={{ color: 'hsl(var(--saude-foreground))' }}
                             >
                                 contact@cajiassist.com
                             </a>
@@ -223,7 +191,7 @@ export const LPFooter = () => {
                     </div>
                 </div>
             </div>
-        </footer>
+        </motion.footer>
     );
 };
 

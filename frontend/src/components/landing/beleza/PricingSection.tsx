@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, Scissors } from "lucide-react";
 import { Link } from "react-router-dom";
 
 /**
@@ -28,6 +28,18 @@ export const PricingSection = () => {
                             sozinho
                         </span>
                     </h2>
+                    <div
+                        className="inline-flex items-center gap-3 px-5 py-3 rounded-full mb-4"
+                        style={{
+                            backgroundColor: 'hsl(var(--beleza-primary) / 0.15)',
+                            border: '1px solid hsl(var(--beleza-primary) / 0.3)'
+                        }}
+                    >
+                        <Scissors className="w-5 h-5" style={{ color: 'hsl(var(--beleza-primary))' }} />
+                        <span style={{ color: 'hsl(var(--beleza-foreground))' }} className="font-medium">
+                            Custa menos que um atendimento seu.
+                        </span>
+                    </div>
                     <p style={{ color: 'hsl(var(--beleza-muted-foreground))' }} className="text-lg">
                         Escolha o periodo ideal para o seu negocio.
                     </p>

@@ -1,57 +1,40 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle2, ShoppingCart, Zap } from "lucide-react";
+import { ArrowRight, ShoppingBag, Package, Zap, QrCode, Menu, Truck, ShoppingCart } from "lucide-react";
 
 /**
  * HeroSection - Varejo Landing Page
- * E-commerce impulse theme for retail
+ * Marketplace-style CRO design with urgency, velocity, and sales focus
  * Uses --varejo-* CSS variables
  */
 
-const scenarios = [
-    // Variacao 1: Loja de Roupas - Foco em "Preco e Disponibilidade"
-    [
-        { id: 1, text: "Oi, esse vestido preto tem no tamanho G?", sender: "user", delay: 1 },
-        { id: 2, text: "Ola! Tudo bem? O pretinho basico e lindo ne? Temos G sim! A forma dele e normal.", sender: "agent", delay: 3 },
-        { id: 3, text: "Ah que otimo. Qual o valor e o frete para o centro?", sender: "user", delay: 5 },
-        { id: 4, text: "Ele esta R$ 89,90. O frete pro centro e fixo: R$ 10,00 via motoboy (chega hoje!).", sender: "agent", delay: 7 }
-    ],
-    // Variacao 2: Delivery de Comida - Foco em "Rapidez"
-    [
-        { id: 1, text: "Quanto ta o combo familia?", sender: "user", delay: 1 },
-        { id: 2, text: "Fala! O combo familia ta R$ 79,90 e serve 4 pessoas. Quer que eu mande o cardapio completo?", sender: "agent", delay: 3 },
-        { id: 3, text: "Manda sim. Aceita Pix?", sender: "user", delay: 5 },
-        { id: 4, text: "Aceita Pix sim! Ja vou mandar o cardapio e a chave. Entrega em 40min na sua regiao!", sender: "agent", delay: 7 }
-    ],
-    // Variacao 3: Loja de Eletronicos - Foco em "Link de Pagamento"
-    [
-        { id: 1, text: "Tem fone bluetooth em promocao?", sender: "user", delay: 1 },
-        { id: 2, text: "Temos! O mais vendido esta de R$ 149 por R$ 99,90. So hoje! Quer o link pra garantir?", sender: "agent", delay: 3 },
-        { id: 3, text: "Quero sim, parece bom!", sender: "user", delay: 5 },
-        { id: 4, text: "Enviando o link de pagamento agora! Aproveita que o estoque ta acabando.", sender: "agent", delay: 7 }
-    ]
+const chatScenario = [
+    { id: 1, text: "Tem esse vestido M?", sender: "user", delay: 1 },
+    { id: 2, text: "Temos sim! Custa R$ 89,90. O frete e R$ 10. Segue o link de pagamento ou Pix", sender: "agent", delay: 3 },
+    { id: 3, text: "Quero! Manda o Pix", sender: "user", delay: 6 },
+    { id: 4, text: "pix.caji.com/loja123", sender: "payment", delay: 8 },
 ];
 
 export const HeroSection = () => {
-    const [scenarioIndex, setScenarioIndex] = useState(0);
     const [visibleMessages, setVisibleMessages] = useState<number[]>([]);
     const [isTyping, setIsTyping] = useState(false);
+    const [showNotification, setShowNotification] = useState(false);
 
     useEffect(() => {
         let timeouts: NodeJS.Timeout[] = [];
-        const currentScenario = scenarios[scenarioIndex];
 
         setVisibleMessages([]);
         setIsTyping(false);
+        setShowNotification(false);
 
-        currentScenario.forEach((msg) => {
+        chatScenario.forEach((msg) => {
             const msgTimeout = setTimeout(() => {
                 setIsTyping(false);
                 setVisibleMessages((prev) => [...prev, msg.id]);
             }, msg.delay * 1000);
             timeouts.push(msgTimeout);
 
-            if (msg.sender === 'agent') {
+            if (msg.sender === 'agent' || msg.sender === 'payment') {
                 const typingStartDelay = Math.max(0, msg.delay - 1.5);
                 const typingTimeout = setTimeout(() => {
                     setIsTyping(true);
@@ -60,14 +43,21 @@ export const HeroSection = () => {
             }
         });
 
-        const totalDuration = Math.max(...currentScenario.map(m => m.delay)) + 4;
-        const switchTimeout = setTimeout(() => {
-            setScenarioIndex((prev) => (prev + 1) % scenarios.length);
-        }, totalDuration * 1000);
+        // Show "Pix Recebido" notification after payment link
+        const notificationTimeout = setTimeout(() => {
+            setShowNotification(true);
+        }, 10000);
+        timeouts.push(notificationTimeout);
 
-        timeouts.push(switchTimeout);
+        // Restart cycle
+        const restartTimeout = setTimeout(() => {
+            setVisibleMessages([]);
+            setShowNotification(false);
+        }, 14000);
+        timeouts.push(restartTimeout);
+
         return () => timeouts.forEach(clearTimeout);
-    }, [scenarioIndex]);
+    }, [visibleMessages.length === 0]);
 
     const scrollToPricing = () => {
         const element = document.getElementById("pricing");
@@ -91,69 +81,140 @@ export const HeroSection = () => {
                             }}
                         >
                             <ShoppingCart className="w-4 h-4" />
-                            Para Comercio e Varejo
+                            Para Lojistas e Comercio
                         </div>
 
                         <h1
-                            className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight"
+                            className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
                             style={{
                                 color: 'hsl(var(--varejo-foreground))',
                                 fontFamily: 'Roboto, system-ui, sans-serif'
                             }}
                         >
-                            Seu cliente nao<br />
+                            Sua loja aberta{' '}
                             <span style={{ color: 'hsl(var(--varejo-primary))' }}>
-                                tem paciencia
+                                24h
                             </span>
+                            <br />
+                            enquanto voce dorme.
                         </h1>
 
                         <p
                             className="text-lg md:text-xl max-w-xl"
                             style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                         >
-                            Se voce demora 10 minutos para responder, ele compra no concorrente. O Caji envia preco, frete e link de pagamento em segundos.
+                            O Caji atende, envia preco, calcula frete e fecha a venda por Pix — tudo automatico, em segundos.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Badge de Urgencia */}
+                        <div
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
+                            style={{
+                                backgroundColor: 'hsl(0 84% 60% / 0.1)',
+                                color: 'hsl(0 84% 60%)',
+                                border: '1px solid hsl(0 84% 60% / 0.3)'
+                            }}
+                        >
+                            <Zap className="w-4 h-4" />
+                            Recupere 30% das vendas da madrugada
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 pt-4">
                             <Button
                                 onClick={scrollToPricing}
-                                className="h-14 px-10 text-lg font-bold text-white rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-cta"
+                                className="h-16 px-12 text-xl font-bold text-white rounded-2xl transition-all duration-300 hover:scale-105"
                                 style={{
                                     background: 'var(--varejo-gradient-primary)',
-                                    boxShadow: 'var(--varejo-shadow-button)'
+                                    boxShadow: '0 8px 32px hsl(24 95% 53% / 0.4)',
+                                    animation: 'pulse-cta 2s ease-in-out infinite'
                                 }}
                             >
-                                COMECAR AGORA
-                                <ArrowRight className="ml-2 w-5 h-5" />
+                                VENDER 24H AGORA
+                                <ArrowRight className="ml-2 w-6 h-6" />
                             </Button>
                         </div>
 
                         <div
-                            className="flex flex-wrap gap-6 pt-4 text-sm font-medium"
+                            className="flex flex-wrap gap-6 pt-2 text-sm font-medium"
                             style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
                         >
-                            {['Catalogo Imediato', 'Recuperacao de Carrinho', 'Postura de Vendedor'].map((feat, i) => (
+                            {[
+                                { icon: Menu, text: 'Catalogo Imediato' },
+                                { icon: Truck, text: 'Frete Automatico' },
+                                { icon: QrCode, text: 'Pix na Hora' }
+                            ].map((feat, i) => (
                                 <div key={i} className="flex items-center gap-2">
-                                    <CheckCircle2
+                                    <feat.icon
                                         className="w-5 h-5"
                                         style={{ color: 'hsl(var(--varejo-primary))' }}
                                     />
-                                    {feat}
+                                    {feat.text}
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Right Content - Chat Simulation */}
+                    {/* Right Content - Chat Simulation with Floating Elements */}
                     <div className="relative animate-slide-in-right delay-200">
+                        {/* Floating 3D Elements */}
+                        <div
+                            className="absolute -top-8 -left-8 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl"
+                            style={{
+                                background: 'var(--varejo-gradient-primary)',
+                                animation: 'float 3s ease-in-out infinite'
+                            }}
+                        >
+                            <ShoppingBag className="w-8 h-8 text-white" />
+                        </div>
+
+                        <div
+                            className="absolute -bottom-4 -left-4 w-14 h-14 rounded-xl flex items-center justify-center shadow-2xl"
+                            style={{
+                                background: 'linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%))',
+                                animation: 'float 3s ease-in-out infinite 0.5s'
+                            }}
+                        >
+                            <Package className="w-7 h-7 text-white" />
+                        </div>
+
+                        <div
+                            className="absolute -top-4 -right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl"
+                            style={{
+                                backgroundColor: 'hsl(var(--varejo-accent))',
+                                animation: 'float 3s ease-in-out infinite 1s'
+                            }}
+                        >
+                            <Zap className="w-6 h-6 text-white" />
+                        </div>
+
+                        {/* Pix Recebido Notification */}
+                        <div
+                            className={`absolute -right-8 top-1/3 px-4 py-3 rounded-xl shadow-2xl transition-all duration-500 ${showNotification ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+                                }`}
+                            style={{
+                                background: 'linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%))',
+                                color: 'white'
+                            }}
+                        >
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                    <QrCode className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium opacity-80">Pix Recebido</p>
+                                    <p className="text-lg font-bold">R$ 89,90</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="relative w-full max-w-[400px] mx-auto">
                             {/* Chat Container */}
                             <div
-                                className="relative rounded-3xl p-6 h-[500px] flex flex-col"
+                                className="relative rounded-3xl p-6 h-[480px] flex flex-col"
                                 style={{
                                     backgroundColor: 'hsl(var(--varejo-card))',
                                     border: '1px solid hsl(var(--varejo-border))',
-                                    boxShadow: 'var(--varejo-shadow-card)'
+                                    boxShadow: '0 24px 64px -12px rgba(0,0,0,0.15)'
                                 }}
                             >
                                 {/* Badge - 24h */}
@@ -162,7 +223,7 @@ export const HeroSection = () => {
                                     style={{ backgroundColor: 'hsl(var(--varejo-secondary))' }}
                                 >
                                     <Zap className="w-3 h-3" />
-                                    Resposta Imediata
+                                    24h Online
                                 </div>
 
                                 {/* Chat Header */}
@@ -187,7 +248,7 @@ export const HeroSection = () => {
                                                 fontFamily: 'Roboto, system-ui, sans-serif'
                                             }}
                                         >
-                                            Vendas 24h
+                                            Loja Fashion
                                         </h3>
                                         <div className="flex items-center gap-1.5">
                                             <span
@@ -198,35 +259,48 @@ export const HeroSection = () => {
                                                 className="text-xs font-medium"
                                                 style={{ color: 'hsl(142 76% 36%)' }}
                                             >
-                                                Online agora
+                                                Vendendo agora
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Messages */}
-                                <div className="flex-1 space-y-4 overflow-hidden mask-gradient-b">
-                                    {scenarios[scenarioIndex].map((msg) => (
+                                <div className="flex-1 space-y-4 overflow-hidden">
+                                    {chatScenario.map((msg) => (
                                         visibleMessages.includes(msg.id) && (
                                             <div
-                                                key={`${scenarioIndex}-${msg.id}`}
+                                                key={msg.id}
                                                 className={`flex ${msg.sender === 'user' ? 'justify-start' : 'justify-end'} animate-message-appear`}
                                             >
                                                 <div
                                                     className={`max-w-[85%] p-4 rounded-2xl text-sm font-medium shadow-sm ${msg.sender === 'user'
-                                                            ? 'rounded-tl-none'
-                                                            : 'rounded-tr-none text-white'
+                                                        ? 'rounded-tl-none'
+                                                        : 'rounded-tr-none text-white'
                                                         }`}
-                                                    style={msg.sender === 'user'
-                                                        ? {
-                                                            backgroundColor: 'hsl(var(--varejo-background-alt))',
-                                                            color: 'hsl(var(--varejo-foreground))'
-                                                        }
-                                                        : {
-                                                            background: 'var(--varejo-gradient-primary)'
-                                                        }
+                                                    style={
+                                                        msg.sender === 'user'
+                                                            ? {
+                                                                backgroundColor: 'hsl(var(--varejo-background-alt))',
+                                                                color: 'hsl(var(--varejo-foreground))'
+                                                            }
+                                                            : msg.sender === 'payment'
+                                                                ? {
+                                                                    background: 'linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%))',
+                                                                    fontFamily: 'monospace',
+                                                                    fontSize: '0.9rem'
+                                                                }
+                                                                : {
+                                                                    background: 'var(--varejo-gradient-primary)'
+                                                                }
                                                     }
                                                 >
+                                                    {msg.sender === 'payment' && (
+                                                        <div className="flex items-center gap-2 mb-1 text-xs opacity-80">
+                                                            <QrCode className="w-3 h-3" />
+                                                            Link de Pagamento
+                                                        </div>
+                                                    )}
                                                     {msg.text}
                                                 </div>
                                             </div>
@@ -259,6 +333,14 @@ export const HeroSection = () => {
                     </div>
                 </div>
             </div>
+
+            {/* CSS for floating animation */}
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-10px); }
+                }
+            `}</style>
         </section>
     );
 };

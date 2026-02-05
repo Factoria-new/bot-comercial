@@ -28,6 +28,24 @@ export const PricingSection = () => {
                             na primeira venda
                         </span>
                     </h2>
+
+                    {/* Hamburger Comparison */}
+                    <div
+                        className="inline-flex items-center gap-3 px-6 py-3 rounded-full mb-6"
+                        style={{
+                            backgroundColor: 'hsl(var(--varejo-accent) / 0.15)',
+                            border: '1px solid hsl(var(--varejo-accent) / 0.3)'
+                        }}
+                    >
+                        <span className="text-2xl">🍔</span>
+                        <span
+                            className="font-bold"
+                            style={{ color: 'hsl(var(--varejo-foreground))' }}
+                        >
+                            Mais barato que um lanche
+                        </span>
+                    </div>
+
                     <p
                         className="text-lg"
                         style={{ color: 'hsl(var(--varejo-muted-foreground))' }}
