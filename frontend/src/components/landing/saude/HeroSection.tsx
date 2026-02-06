@@ -1,7 +1,7 @@
-import { BackgroundBlobs } from "./BackgroundBlobs";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Stethoscope } from "lucide-react";
+import { motion } from "framer-motion";
 
 /**
  * HeroSection - Saude Landing Page
@@ -77,10 +77,24 @@ export const HeroSection = () => {
 
     return (
         <section
-            className="relative min-h-screen flex items-center justify-center pt-16 pb-10"
+            className="relative min-h-screen z-50 flex items-center justify-center pt-16 pb-10"
             style={{ background: 'var(--saude-gradient-hero)' }}
         >
-            <BackgroundBlobs />
+            {/* Large Top-Left Blob */}
+            <motion.div
+                animate={{
+                    scale: [1, 1.05, 1],
+                    x: [0, 20, 0],
+                }}
+                transition={{
+                    duration: 10,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+                className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] rounded-full opacity-60 mix-blend-multiply pointer-events-none z-0"
+                style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
+            />
+
             <div className="container relative z-10 px-4 md:px-6">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
                     {/* Left Content */}
@@ -157,7 +171,7 @@ export const HeroSection = () => {
                                         style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.1)' }}
                                     >
                                         <img
-                                            src="/logo-header-light.png"
+                                            src="/favicon.png"
                                             alt="Caji Logo"
                                             className="w-full h-full object-contain p-2"
                                         />

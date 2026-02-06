@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { BackgroundBlobs } from "./BackgroundBlobs";
 
 /**
  * IntegrationSection - Saude Landing Page
@@ -9,10 +8,24 @@ import { BackgroundBlobs } from "./BackgroundBlobs";
 export const IntegrationSection = () => {
     return (
         <section
-            className="py-24 relative"
+            className="py-24 relative z-20"
             style={{ backgroundColor: 'hsl(var(--saude-background))' }}
         >
-            <BackgroundBlobs />
+            {/* Small Left Blob */}
+            <motion.div
+                animate={{
+                    y: [10, -10, 10],
+                    x: [0, 10, 0],
+                }}
+                transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+                className="absolute top-1/2 -translate-y-1/2 -left-[5%] w-[300px] h-[300px] rounded-full opacity-60 mix-blend-multiply pointer-events-none z-0"
+                style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
+            />
+
             <div className="container px-4 md:px-6 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

@@ -44,8 +44,6 @@ const professions = [
     }
 ];
 
-import { BackgroundBlobs } from "./BackgroundBlobs";
-
 export const SolutionSection = () => {
     const [activeTab, setActiveTab] = useState('dentista');
     const [visibleMessages, setVisibleMessages] = useState<number[]>([]);
@@ -93,10 +91,9 @@ export const SolutionSection = () => {
 
     return (
         <section
-            className="py-24 relative"
+            className="py-24 relative z-30"
             style={{ backgroundColor: 'hsl(var(--saude-background-alt))' }}
         >
-            <BackgroundBlobs />
             <div className="container px-4 md:px-6 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

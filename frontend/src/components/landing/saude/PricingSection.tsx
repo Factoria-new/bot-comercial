@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, Stethoscope } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PRICING_DISPLAY, getPriceState } from "@/constants/pricing";
-import { BackgroundBlobs } from "./BackgroundBlobs";
 
 /**
  * PricingSection - Saude Landing Page
@@ -12,11 +11,10 @@ import { BackgroundBlobs } from "./BackgroundBlobs";
 export const PricingSection = () => {
     return (
         <section
-            className="py-24 relative"
+            className="py-24 relative z-10"
             id="pricing"
             style={{ backgroundColor: 'hsl(var(--saude-background-alt))' }}
         >
-            <BackgroundBlobs />
             <div className="container px-4 md:px-6 relative z-10">
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <h2
