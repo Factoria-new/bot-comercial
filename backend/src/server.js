@@ -12,8 +12,10 @@ import promptRoutes from './routes/promptRoutes.js';
 import googleCalendarRoutes from './routes/googleCalendarRoutes.js';
 import stripeRoutes from './routes/stripeRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import instagramRoutes from './routes/instagramRoutes.js';
 import { initGoogleCalendarService } from './services/googleCalendarService.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
+import { initInstagramService } from './services/instagramService.js';
 import { PROMPTS } from './prompts/agentPrompts.js';
 
 const app = express();
@@ -69,6 +71,9 @@ initWhatsAppService(io);
 
 // Initialize Google Calendar service with Socket.IO
 initGoogleCalendarService(io);
+
+// Initialize Instagram service with Socket.IO
+initInstagramService(io);
 
 // Import session config service (separated to avoid circular dependencies)
 import { getSessionConfig, setSessionConfig } from './services/sessionConfigService.js';
@@ -180,6 +185,9 @@ app.use('/api/google-calendar', googleCalendarRoutes);
 
 // Rotas de Pagamento (Stripe)
 app.use('/api/stripe', stripeRoutes);
+
+// Rotas do Instagram
+app.use('/api/instagram', instagramRoutes);
 
 // Rotas de Status do WhatsApp
 app.get('/api/whatsapp/status/:sessionId', (req, res) => {

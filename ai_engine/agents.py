@@ -163,40 +163,47 @@ REGRAS DE CANCELAMENTO:
     return comercial, social_media, trafego
 
 
-def get_instagram_agent(user_id, custom_prompt=None, target_recipient_id=None, request_id=None):
+def get_instagram_agent(user_id, custom_prompt=None, target_recipient_id=None, request_id=None, api_key=None):
     """
     Create a single agent for Instagram DM responses.
     user_id is the user's email (connected account owner)
     target_recipient_id is the customer ID to lock the tool to
     request_id is a unique ID to track if message was sent
+    api_key is the user's Gemini API Key
     """
     
-    gemini_llm = LLM(
-        model="gemini/gemini-2.5-flash",
-        temperature=0.7,
-        config={
-            "safety_settings": [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-            ]
-        }
-    )
+    # Safety settings for LiteLLM/Gemini
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
+    
+    # Build LLM kwargs
+    llm_kwargs = {
+        "model": "gemini/gemini-2.5-flash",
+        "temperature": 0.7,
+        "safety_settings": safety_settings,
+    }
+    
+    function_llm_kwargs = {
+        "model": "gemini/gemini-2.5-flash",
+        "temperature": 0.1,
+        "safety_settings": safety_settings,
+    }
+    
+    if api_key:
+        llm_kwargs["api_key"] = api_key
+        function_llm_kwargs["api_key"] = api_key
+        print(f"🔑 Instagram Agent: Using Custom API Key for {user_id}")
+    else:
+        print(f"⚠️ Instagram Agent: Using Environment API Key for {user_id}")
+    
+    gemini_llm = LLM(**llm_kwargs)
     
     # LLM separado para function calling
-    function_calling_llm = LLM(
-        model="gemini/gemini-2.5-flash",
-        temperature=0.1,
-        config={
-            "safety_settings": [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-            ]
-        }
-    )
+    function_calling_llm = LLM(**function_llm_kwargs)
 
     instagram_tool = InstagramSendTool(user_id=user_id, default_recipient=target_recipient_id, request_id=request_id)
     calendar_tool = GoogleCalendarTool(user_id=user_id)

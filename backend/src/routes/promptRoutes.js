@@ -4,6 +4,7 @@ import prisma from '../config/prisma.js';
 import * as authService from '../services/authService.js';
 import logger from '../config/logger.js';
 import { invalidatePromptCache } from '../services/whatsappService.js';
+import { configureInstagramAgent } from '../services/instagramService.js';
 
 const router = express.Router();
 
@@ -68,7 +69,7 @@ router.put('/prompt', extractUserId, async (req, res) => {
                 customPrompt: prompt,
                 updatedAt: new Date()
             },
-            select: { id: true, customPrompt: true }
+            select: { id: true, email: true, customPrompt: true }
         });
 
         logger.info(`✅ Prompt salvo para usuário ${req.userId} (${prompt.length} chars)`);
@@ -76,6 +77,16 @@ router.put('/prompt', extractUserId, async (req, res) => {
         // Invalidar cache de prompt em memoria para que o bot use o novo prompt imediatamente
         invalidatePromptCache(req.userId);
         invalidatePromptCache(`user_${req.userId}`);
+
+        // Sync with Instagram Agent if email exists
+        if (updatedUser.email) {
+            try {
+                configureInstagramAgent(updatedUser.email, prompt);
+                logger.info(`✅ Prompt sincronizado com agente Instagram para ${updatedUser.email}`);
+            } catch (instError) {
+                logger.warn(`⚠️ Falha ao sincronizar prompt com Instagram: ${instError.message}`);
+            }
+        }
 
         res.json({
             success: true,

@@ -4,7 +4,7 @@ import { Integration } from '@/types/onboarding';
 type BaseIntegration = Omit<Integration, 'connected' | 'username'>;
 
 export const INTEGRATIONS_LIST: BaseIntegration[] = [
-    { id: 'instagram', name: 'Instagram', icon: 'instagram', color: '#E1306C', isComingSoon: true },
+    { id: 'instagram', name: 'Instagram', icon: 'instagram', color: '#E1306C' },
     { id: 'whatsapp', name: 'WhatsApp', icon: 'whatsapp', color: '#25D366' },
     { id: 'facebook', name: 'Facebook', icon: 'facebook', color: '#1877F2', isComingSoon: true },
 ];

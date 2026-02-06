@@ -1,15 +1,17 @@
 import { Composio } from '@composio/core';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import prisma from '../config/prisma.js';
 import fs from 'fs';
 import path from 'path';
+import { decrypt } from '../utils/encryption.js';
 
 dotenv.config();
 
 // Initialize Composio client with Instagram toolkit version
 const composio = new Composio({
     apiKey: process.env.COMPOSIO_API_KEY,
-    toolkitVersions: { instagram: '20260108_00' }
+    toolkitVersions: { instagram: '20260203_00' }
 });
 
 // Socket.IO instance reference
@@ -121,8 +123,10 @@ export const getUserInfo = async (connectionId) => {
     try {
         const result = await composio.tools.execute(
             'INSTAGRAM_GET_USER_INFO',
-            {},
-            { connectedAccountId: connectionId }
+            {
+                connectedAccountId: connectionId,
+                arguments: {}
+            }
         );
 
         return result.successful ? result.data : null;
@@ -146,8 +150,11 @@ export const sendImageDM = async (userId, recipientId, imageUrl, caption = '') =
     try {
         const result = await composio.tools.execute(
             'INSTAGRAM_SEND_IMAGE',
-            { recipient_id: recipientId, image_url: imageUrl, caption },
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                arguments: { recipient_id: recipientId, image_url: imageUrl, caption }
+            }
         );
 
         return result.successful
@@ -171,8 +178,11 @@ export const markSeen = async (userId, recipientId) => {
     try {
         const result = await composio.tools.execute(
             'INSTAGRAM_MARK_SEEN',
-            { recipient_id: recipientId },
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                arguments: { recipient_id: recipientId }
+            }
         );
 
         return { success: result.successful };
@@ -233,15 +243,20 @@ export const listConversations = async (userId, limit = 25) => {
     try {
         const result = await composio.tools.execute(
             'INSTAGRAM_LIST_ALL_CONVERSATIONS',
-            { limit },
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                arguments: { limit }
+            }
         );
+        const conversations = result.data?.data || result.data || [];
+        console.log(`📱 Instagram: Found ${conversations.length} conversations`);
 
         return result.successful
-            ? { success: true, conversations: result.data || [] }
+            ? { success: true, conversations: result.data?.data || result.data || [] }
             : { success: false, error: result.error || 'Failed to list conversations' };
     } catch (error) {
-        console.error('Instagram List Conversations Error:', error.message);
+        console.error(`❌ Instagram List Conversations Error: ${error.message}`);
         return { success: false, error: error.message };
     }
 };
@@ -258,12 +273,15 @@ export const getMessages = async (userId, conversationId, limit = 25) => {
     try {
         const result = await composio.tools.execute(
             'INSTAGRAM_LIST_ALL_MESSAGES',
-            { conversation_id: conversationId, limit },
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                arguments: { conversation_id: conversationId, limit }
+            }
         );
 
         return result.successful
-            ? { success: true, messages: result.data || [] }
+            ? { success: true, messages: result.data?.data || result.data?.messages || result.data || [] }
             : { success: false, error: result.error || 'Failed to get messages' };
     } catch (error) {
         console.error('Instagram Get Messages Error:', error.message);
@@ -283,8 +301,11 @@ export const sendDM = async (userId, recipientId, text) => {
     try {
         const result = await composio.tools.execute(
             'INSTAGRAM_SEND_TEXT_MESSAGE',
-            { recipient_id: recipientId, text },
-            { connectedAccountId: status.connectionId }
+            {
+                connectedAccountId: status.connectionId,
+                userId: userId,
+                arguments: { recipient_id: recipientId, text }
+            }
         );
 
         return result.successful
@@ -432,9 +453,31 @@ export const startPolling = (userId, intervalMs = 15000) => {
             }
 
             // Get agent prompt
-            const agentPrompt = instagramAgentPrompts.get(userId);
+            let agentPrompt = instagramAgentPrompts.get(userId);
+
+            // Fallback: Try to fetch from database if not in memory
             if (!agentPrompt) {
-                console.log(`⚠️ No agent prompt for ${userId}, skipping poll`);
+                try {
+                    const user = await prisma.user.findFirst({
+                        where: { email: userId },
+                        select: { customPrompt: true }
+                    });
+
+                    if (user?.customPrompt) {
+                        agentPrompt = user.customPrompt;
+                        configureInstagramAgent(userId, agentPrompt); // Cache it
+                        console.log(`✅ Loaded prompt from DB for ${userId}`);
+                    }
+                } catch (dbError) {
+                    console.warn(`Could not fetch prompt from DB for ${userId}: ${dbError.message}`);
+                }
+            }
+
+            if (!agentPrompt) {
+                // Only log sparingly to avoid spamming logs
+                if (Math.random() < 0.1) {
+                    console.log(`⚠️ No agent prompt for ${userId}, skipping poll`);
+                }
                 return;
             }
 
@@ -454,6 +497,8 @@ export const startPolling = (userId, intervalMs = 15000) => {
                 const msgResult = await getMessages(userId, convId, 5);
                 if (!msgResult.success || !msgResult.messages?.length) continue;
 
+                console.log(`   📬 Conv ${convId.substring(0, 15)}... → ${msgResult.messages.length} messages`);
+
                 for (const msg of msgResult.messages) {
                     const msgId = msg.id || msg.message_id;
                     if (!msgId || processed.has(msgId)) continue;
@@ -465,7 +510,8 @@ export const startPolling = (userId, intervalMs = 15000) => {
                         continue;
                     }
 
-                    const messageText = msg.text || msg.message?.text || msg.content || '';
+                    // Extract message text - Instagram API returns it in 'message' field
+                    const messageText = msg.message || msg.text || msg.message?.text || msg.content || '';
                     if (!messageText.trim()) {
                         processed.add(msgId);
                         continue;
@@ -488,12 +534,33 @@ export const startPolling = (userId, intervalMs = 15000) => {
                     // Forward to AI Engine
                     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
                     try {
+                        // Fetch and decrypt user's Gemini API Key
+                        const user = await prisma.user.findFirst({
+                            where: { email: userId },
+                            select: { geminiApiKey: true }
+                        });
+
+                        let geminiApiKey = null;
+                        if (user?.geminiApiKey) {
+                            try {
+                                geminiApiKey = decrypt(user.geminiApiKey);
+                            } catch (decryptError) {
+                                console.error(`❌ Error decrypting Gemini API key: ${decryptError.message}`);
+                            }
+                        }
+
+                        if (!geminiApiKey) {
+                            console.error(`❌ No Gemini API key found for ${userId}`);
+                            continue;
+                        }
+
                         await axios.post(`${aiServiceUrl}/webhook/instagram`, {
                             userId,
                             senderId,
                             message: messageText,
                             history: history.map(h => ({ role: h.role, content: h.content })),
-                            agentPrompt
+                            agentPrompt,
+                            geminiApiKey
                         });
                         console.log(`✅ Forwarded to AI Engine for ${senderId}`);
                     } catch (aiError) {

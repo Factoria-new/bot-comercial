@@ -41,6 +41,7 @@ class InstagramMessageInput(BaseModel):
     message: str
     agentPrompt: Optional[str] = None
     history: Optional[List[HistoryItem]] = None
+    geminiApiKey: Optional[str] = None  # User's Gemini API Key
 
 
 
@@ -316,7 +317,8 @@ async def handle_instagram_message(data: InstagramMessageInput):
             user_id=data.userId, 
             custom_prompt=data.agentPrompt,
             target_recipient_id=data.senderId,  # SECURITY: Lock tools to this user
-            request_id=request_id               # STATEFUL: Track usage via global state
+            request_id=request_id,              # STATEFUL: Track usage via global state
+            api_key=data.geminiApiKey           # USER API KEY: From decrypted database value
         )
 
         task_atendimento = Task(

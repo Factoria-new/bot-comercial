@@ -141,10 +141,148 @@ export const IntegrationsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    // Instagram Integration
+    const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+
+    const checkInstagramStatus = useCallback(async () => {
+        if (!user?.email) return;
+        try {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(user.email)}`);
+            const data = await response.json();
+            if (data.success && data.isConnected) {
+                setIsInstagramConnected(true);
+
+                // Ensure polling is active
+                fetch(`${backendUrl}/api/instagram/start-polling`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.email })
+                }).catch(err => console.error('Failed to ensure polling:', err));
+            } else {
+                setIsInstagramConnected(false);
+            }
+        } catch (e) {
+            console.error("Failed to check Instagram status", e);
+        }
+    }, [user?.email]);
+
+    useEffect(() => {
+        checkInstagramStatus();
+
+        // Listen for message from callback window
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'instagram-connected' && event.data?.success) {
+                setIsInstagramConnected(true);
+                toast({
+                    title: "Instagram Conectado!",
+                    description: `Conectado como @${event.data.username || 'usuário'}`,
+                    className: "bg-emerald-500 text-white border-0"
+                });
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [checkInstagramStatus, toast]);
+
+    const handleInstagramConnect = async () => {
+        if (!user?.email) return;
+        try {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/instagram/auth-url?userId=${encodeURIComponent(user.email)}`);
+            const data = await response.json();
+
+            if (data.success && data.authUrl) {
+                const popup = window.open(
+                    data.authUrl,
+                    'Instagram Auth',
+                    'width=600,height=700,scrollbars=yes'
+                );
+
+                const checkPopup = setInterval(async () => {
+                    if (popup?.closed) {
+                        clearInterval(checkPopup);
+                        checkInstagramStatus(); // Check status on close just in case
+                        return;
+                    }
+
+                    // Poll for connection success while window is open
+                    // This is needed because sometimes the redirect back doesn't happen automatically
+                    try {
+                        const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+                        const response = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(user.email)}`);
+                        const data = await response.json();
+
+                        if (data.success && data.isConnected) {
+                            popup.close();
+                            clearInterval(checkPopup);
+                            setIsInstagramConnected(true);
+
+                            // Start polling immediately
+                            try {
+                                await fetch(`${backendUrl}/api/instagram/start-polling`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user.email })
+                                });
+                            } catch (e) {
+                                console.error('Failed to start polling:', e);
+                            }
+
+                            toast({
+                                title: "Instagram Conectado!",
+                                description: "Conexão estabelecida com sucesso.",
+                                className: "bg-emerald-500 text-white border-0"
+                            });
+                        }
+                    } catch (e) {
+                        // Ignore errors during polling
+                    }
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Instagram auth error:', error);
+            toast({
+                title: "Erro",
+                description: "Não foi possível conectar ao Instagram.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleInstagramDisconnect = async () => {
+        if (!user?.email) return;
+        try {
+            const backendUrl = import.meta.env.VITE_API_URL || 'https://api.cajiassist.com';
+            const response = await fetch(`${backendUrl}/api/instagram/disconnect`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.email })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                setIsInstagramConnected(false);
+                toast({
+                    title: "Desconectado",
+                    description: "Instagram desconectado com sucesso.",
+                });
+            }
+        } catch (error) {
+            console.error('Failed to disconnect Instagram:', error);
+            toast({
+                title: "Erro",
+                description: "Não foi possível desconectar o Instagram.",
+                variant: "destructive"
+            });
+        }
+    };
+
     const integrations: Integration[] = [
         { id: 'whatsapp', name: 'WhatsApp', color: '#25D366', icon: 'whatsapp', connected: isWhatsAppConnected },
         { id: 'google_calendar', name: 'Google Calendar', color: '#4285F4', icon: 'google_calendar', connected: isGoogleCalendarConnected },
-        { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: false, isComingSoon: true },
+        { id: 'instagram', name: 'Instagram', color: '#E4405F', icon: 'instagram', connected: isInstagramConnected },
         { id: 'facebook', name: 'Facebook', color: '#1877F2', icon: 'facebook', connected: false, isComingSoon: true },
     ];
 
@@ -157,6 +295,10 @@ export const IntegrationsProvider = ({ children }: { children: ReactNode }) => {
             if (!isGoogleCalendarConnected) {
                 handleGoogleCalendarConnect();
             }
+        } else if (id === 'instagram') {
+            if (!isInstagramConnected) {
+                handleInstagramConnect();
+            }
         }
     };
 
@@ -165,6 +307,8 @@ export const IntegrationsProvider = ({ children }: { children: ReactNode }) => {
             handleWhatsappDisconnect();
         } else if (id === 'google_calendar') {
             handleGoogleCalendarDisconnect();
+        } else if (id === 'instagram') {
+            handleInstagramDisconnect();
         }
     };
 
