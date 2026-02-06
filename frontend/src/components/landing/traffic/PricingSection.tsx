@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PRICING_DISPLAY, getPriceState } from "@/constants/pricing";
 
 export const PricingSection = () => {
     return (
@@ -22,7 +23,7 @@ export const PricingSection = () => {
                             <h3 className="text-xl font-bold text-white mb-2">Mensal</h3>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-2xl font-bold text-white">R$</span>
-                                <span className="text-4xl font-display font-bold text-white">19,90</span>
+                                <span className="text-4xl font-display font-bold text-white">{PRICING_DISPLAY.monthly.replace("R$", "").trim()}</span>
                                 <span className="text-lp-muted-foreground">/mês</span>
                             </div>
                             <p className="text-sm text-lp-muted-foreground mt-4">Flexibilidade total.</p>
@@ -47,7 +48,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'monthly',
-                                price: 'R$ 19,90/mês',
+                                price: getPriceState('monthly'),
                                 source: '/trafego'
                             }}
                             className="w-full mt-auto"
@@ -61,17 +62,17 @@ export const PricingSection = () => {
                     {/* Anual (Featured) */}
                     <div className="p-8 rounded-3xl bg-lp-card border-2 border-lp-accent relative shadow-[0_0_40px_rgba(25,177,89,0.15)] flex flex-col transform md:-translate-y-4 z-10">
                         <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-lp-accent text-white px-4 py-1 rounded-full text-sm font-bold tracking-wide shadow-lg whitespace-nowrap">
-                            MAIS POPULAR - ECONOMIZE 17%
+                            MAIS POPULAR - ECONOMIZE {PRICING_DISPLAY.discountPercentage}
                         </div>
                         <div className="mb-6 mt-2">
                             <h3 className="text-2xl font-bold text-lp-accent mb-2">Anual</h3>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-3xl font-bold text-white">R$</span>
-                                <span className="text-5xl font-display font-bold text-white">199,00</span>
+                                <span className="text-5xl font-display font-bold text-white">{PRICING_DISPLAY.annualTotal.replace("R$", "").trim()}</span>
                                 <span className="text-lp-muted-foreground">/ano</span>
                             </div>
                             <p className="text-sm text-lp-muted-foreground mt-4">
-                                Equivalente a <span className="text-white font-bold">R$ 16,58/mês</span>.
+                                Equivalente a <span className="text-white font-bold">{PRICING_DISPLAY.annualMonthly}/mês</span>.
                             </p>
                         </div>
 
@@ -97,7 +98,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'annual',
-                                price: 'R$ 199,00/ano',
+                                price: getPriceState('annual'),
                                 source: '/trafego'
                             }}
                             className="w-full mt-auto"
@@ -115,7 +116,7 @@ export const PricingSection = () => {
                             <h3 className="text-xl font-bold text-white mb-2">Semestral</h3>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-2xl font-bold text-white">R$</span>
-                                <span className="text-4xl font-display font-bold text-white">119,40</span>
+                                <span className="text-4xl font-display font-bold text-white">{PRICING_DISPLAY.semiAnnual.replace("R$", "").trim()}</span>
                                 <span className="text-lp-muted-foreground">/semestre</span>
                             </div>
                             <p className="text-sm text-lp-muted-foreground mt-4">Compromisso médio.</p>
@@ -140,7 +141,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'semiannual',
-                                price: 'R$ 119,40/semestre',
+                                price: getPriceState('semiannual'),
                                 source: '/trafego'
                             }}
                             className="w-full mt-auto"

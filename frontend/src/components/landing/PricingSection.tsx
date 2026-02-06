@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { PricingWrapper, Heading, Price } from "@/components/ui/animated-pricing-cards";
-import { MessageSquare, Calendar, Mic, ShieldCheck } from "lucide-react";
+import { Calendar, MessageSquare, Mic, ShieldCheck } from "lucide-react";
+import { PRICING_CONFIG, ANNUAL_PRICE_TOTAL, SEMI_ANNUAL_PRICE } from "@/constants/pricing";
 
 export const PricingSection = () => {
     const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
@@ -113,7 +114,7 @@ export const PricingSection = () => {
 
                         {/* Pricing Logic Variables */}
                         {(() => {
-                            const BASE_PRICE = 19.90;
+                            const BASE_PRICE = PRICING_CONFIG.MONTHLY_PRICE;
 
                             const formatCurrency = (value: number) => {
                                 return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -122,8 +123,8 @@ export const PricingSection = () => {
                             // Calculate Actual Billing Price (What user pays)
                             const getBillingPrice = (base: number, period: string) => {
                                 if (period === 'monthly') return base;
-                                if (period === 'semiannual') return base * 6; // R$ 119,40
-                                if (period === 'annual') return 199.00; // Fixed Annual Price
+                                if (period === 'semiannual') return SEMI_ANNUAL_PRICE;
+                                if (period === 'annual') return ANNUAL_PRICE_TOTAL;
                                 return base;
                             };
 
@@ -141,8 +142,8 @@ export const PricingSection = () => {
                             // Existing logic for DISPLAY on card (Monthly equivalent)
                             const getPrice = (base: number, period: string) => {
                                 if (period === 'monthly') return base;
-                                if (period === 'semiannual') return base * 6; // Full price for 6 months
-                                if (period === 'annual') return (base * 10) / 12; // 10 months for 12
+                                if (period === 'semiannual') return SEMI_ANNUAL_PRICE;
+                                if (period === 'annual') return ANNUAL_PRICE_TOTAL;
                                 return base;
                             };
 
@@ -158,9 +159,9 @@ export const PricingSection = () => {
 
                             // Calculate savings percentage
                             const monthlyCostMonthly = BASE_PRICE;
-                            const monthlyCostAnnual = (BASE_PRICE * 10) / 12;
-                            // For semiannual, comparing per-month basis effectively: (119.40 / 6) = 19.90. So 0% savings vs monthly.
-                            const monthlyCostSemiannual = (BASE_PRICE * 6) / 6;
+                            const monthlyCostAnnual = ANNUAL_PRICE_TOTAL / 12;
+                            // For semiannual, comparing per-month basis:
+                            const monthlyCostSemiannual = SEMI_ANNUAL_PRICE / 6;
 
                             let savingsPercent = 0;
                             if (displayPeriod === 'annual') {

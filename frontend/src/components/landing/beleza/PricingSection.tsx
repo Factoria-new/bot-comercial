@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight, Scissors } from "lucide-react";
+import { ArrowRight, Check, Scissors } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PRICING_DISPLAY, getPriceState } from "@/constants/pricing";
 
 /**
  * PricingSection - Beleza Landing Page
@@ -72,9 +73,9 @@ export const PricingSection = () => {
                                     className="text-4xl font-display font-bold"
                                     style={{ color: 'hsl(var(--beleza-foreground))' }}
                                 >
-                                    19,90
+                                    {PRICING_DISPLAY.monthly.replace("R$", "").trim()}
                                 </span>
-                                <span style={{ color: 'hsl(var(--beleza-muted-foreground))' }}>/mes</span>
+                                <span style={{ color: 'hsl(var(--beleza-muted-foreground))' }}>/mês</span>
                             </div>
                             <p
                                 className="text-sm mt-4"
@@ -110,7 +111,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'monthly',
-                                price: 'R$ 19,90/mes',
+                                price: getPriceState('monthly'),
                                 source: '/beleza'
                             }}
                             className="w-full mt-auto"
@@ -141,7 +142,7 @@ export const PricingSection = () => {
                             className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold tracking-wide shadow-lg whitespace-nowrap text-white uppercase"
                             style={{ background: 'var(--beleza-gradient-primary)' }}
                         >
-                            Mais Popular - Economize 17%
+                            Mais Popular - Economize {PRICING_DISPLAY.discountPercentage}
                         </div>
                         <div className="mb-6 mt-2">
                             <h3
@@ -161,7 +162,7 @@ export const PricingSection = () => {
                                     className="text-5xl font-display font-bold"
                                     style={{ color: 'hsl(var(--beleza-foreground))' }}
                                 >
-                                    199,00
+                                    {PRICING_DISPLAY.annualTotal.replace("R$", "").trim()}
                                 </span>
                                 <span style={{ color: 'hsl(var(--beleza-muted-foreground))' }}>/ano</span>
                             </div>
@@ -171,7 +172,7 @@ export const PricingSection = () => {
                             >
                                 Equivalente a{' '}
                                 <span style={{ color: 'hsl(var(--beleza-foreground))' }} className="font-bold">
-                                    R$ 16,58/mes
+                                    {PRICING_DISPLAY.annualMonthly}/mês
                                 </span>.
                             </p>
                         </div>
@@ -208,7 +209,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'annual',
-                                price: 'R$ 199,00/ano',
+                                price: getPriceState('annual'),
                                 source: '/beleza'
                             }}
                             className="w-full mt-auto"
@@ -252,7 +253,7 @@ export const PricingSection = () => {
                                     className="text-4xl font-display font-bold"
                                     style={{ color: 'hsl(var(--beleza-foreground))' }}
                                 >
-                                    119,40
+                                    {PRICING_DISPLAY.semiAnnual.replace("R$", "").trim()}
                                 </span>
                                 <span style={{ color: 'hsl(var(--beleza-muted-foreground))' }}>/semestre</span>
                             </div>
@@ -290,7 +291,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'semiannual',
-                                price: 'R$ 119,40/semestre',
+                                price: getPriceState('semiannual'),
                                 source: '/beleza'
                             }}
                             className="w-full mt-auto"

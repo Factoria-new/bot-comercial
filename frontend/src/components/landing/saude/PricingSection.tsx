@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight, Coffee } from "lucide-react";
+import { ArrowRight, Check, Coffee } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PRICING_DISPLAY, getPriceState } from "@/constants/pricing";
 
 /**
  * PricingSection - Saude Landing Page
@@ -88,9 +89,9 @@ export const PricingSection = () => {
                                         fontFamily: 'Roboto, system-ui, sans-serif'
                                     }}
                                 >
-                                    19,90
+                                    {PRICING_DISPLAY.monthly.replace("R$", "").trim()}
                                 </span>
-                                <span style={{ color: 'hsl(var(--saude-muted-foreground))' }}>/mes</span>
+                                <span style={{ color: 'hsl(var(--saude-muted-foreground))' }}>/mês</span>
                             </div>
                             <p
                                 className="text-sm mt-4"
@@ -126,7 +127,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'monthly',
-                                price: 'R$ 19,90/mes',
+                                price: getPriceState('monthly'),
                                 source: '/saude'
                             }}
                             className="w-full mt-auto"
@@ -158,7 +159,7 @@ export const PricingSection = () => {
                             style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
                         >
                             <span className="text-yellow-300">★</span>
-                            Mais Popular - Economize 17%
+                            Mais Popular - Economize {PRICING_DISPLAY.discountPercentage}
                         </div>
                         <div className="mb-6 mt-2">
                             <div className="flex items-center gap-2 mb-2">
@@ -186,7 +187,7 @@ export const PricingSection = () => {
                                         fontFamily: 'Roboto, system-ui, sans-serif'
                                     }}
                                 >
-                                    199
+                                    {PRICING_DISPLAY.annualTotal.replace("R$", "").replace(",00", "").trim()}
                                 </span>
                                 <span style={{ color: 'hsl(var(--saude-muted-foreground))' }}>/ano</span>
                             </div>
@@ -199,7 +200,7 @@ export const PricingSection = () => {
                                     className="font-bold"
                                     style={{ color: 'hsl(var(--saude-primary))' }}
                                 >
-                                    R$ 16,58/mes
+                                    {PRICING_DISPLAY.annualMonthly}/mês
                                 </span>.
                             </p>
                         </div>
@@ -236,7 +237,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'annual',
-                                price: 'R$ 199,00/ano',
+                                price: getPriceState('annual'),
                                 source: '/saude'
                             }}
                             className="w-full mt-auto"
@@ -287,7 +288,7 @@ export const PricingSection = () => {
                                         fontFamily: 'Roboto, system-ui, sans-serif'
                                     }}
                                 >
-                                    119,40
+                                    {PRICING_DISPLAY.semiAnnual.replace("R$", "").trim()}
                                 </span>
                                 <span style={{ color: 'hsl(var(--saude-muted-foreground))' }}>/sem.</span>
                             </div>
@@ -325,7 +326,7 @@ export const PricingSection = () => {
                             state={{
                                 plan: 'premium',
                                 period: 'semiannual',
-                                price: 'R$ 119,40/semestre',
+                                price: getPriceState('semiannual'),
                                 source: '/saude'
                             }}
                             className="w-full mt-auto"

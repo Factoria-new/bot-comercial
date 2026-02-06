@@ -16,7 +16,7 @@ export const ProblemSection = () => {
         {
             icon: <UserCog className="w-7 h-7" strokeWidth={1.5} />,
             title: "Nunca Pare uma Consulta",
-            description: "Nao interrompa o atendimento para responder WhatsApp. O Caji cuida disso."
+            description: "Nao interrompa o atendimento para responder aos seus canais. O Caji cuida disso."
         },
         {
             icon: <Moon className="w-7 h-7" strokeWidth={1.5} />,

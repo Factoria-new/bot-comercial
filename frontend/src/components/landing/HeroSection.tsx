@@ -47,28 +47,59 @@ export const HeroSection = forwardRef<HeroSectionRef, HeroSectionProps>(({ phase
 
     // Helper function to scroll to a section while bypassing pinned ScrollTriggers
     const scrollToSectionBypassingPins = useCallback((sectionId: string, offset: number = -100) => {
-        // Get the ProductSection's ScrollTrigger and kill it temporarily
+        // Get the ProductSection's ScrollTrigger
         const productTrigger = ScrollTrigger.getById("product-section-trigger");
 
         if (productTrigger) {
-            // Kill the trigger completely (removes pin and all states)
-            productTrigger.kill();
+            // Disable (revert) checks/pins so the page layout is "flat" for calculation
+            productTrigger.disable();
         }
 
         // Get the target element
         const targetSection = document.getElementById(sectionId);
-        if (!targetSection) return;
+        if (!targetSection) {
+            // Safety: restore if target not found
+            if (productTrigger) productTrigger.enable();
+            return;
+        }
 
-        // Calculate the target scroll position
+        // Calculate the target scroll position (in flat state)
         const targetRect = targetSection.getBoundingClientRect();
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         const targetY = targetRect.top + scrollTop + offset;
 
-        // Use native smooth scroll - this avoids all Lenis/GSAP scroll issues
+        // Use native smooth scroll
         window.scrollTo({
             top: targetY,
             behavior: 'smooth'
         });
+
+        // Re-enable after scroll animation finishes
+        // Using a timeout that matches typical smooth scroll duration
+        setTimeout(() => {
+            if (productTrigger) {
+                // Re-enable the trigger. This re-inserts the pin spacer, expanding the page height.
+                productTrigger.enable();
+                ScrollTrigger.refresh();
+
+                // Correct position if necessary.
+                // If the target section is BELOW the product section, re-enabling the pin
+                // pushed the content down. We need to jump to the new visual position.
+                const targetSectionRefreshed = document.getElementById(sectionId);
+                if (targetSectionRefreshed) {
+                    const rect = targetSectionRefreshed.getBoundingClientRect();
+                    // If rect.top is not (approx) offset, we drifted.
+                    // e.g. if we aimed for -100, and rect.top is now 2900, we drifted.
+                    // We simply scroll safely to the element's new absolute position.
+                    const newScrollTop = window.pageYOffset + rect.top + offset;
+
+                    window.scrollTo({
+                        top: newScrollTop,
+                        behavior: 'auto' // Instant correction
+                    });
+                }
+            }
+        }, 1000); // 1s is sufficient for most smooth scrolls to complete
     }, []);
 
     useEffect(() => {
