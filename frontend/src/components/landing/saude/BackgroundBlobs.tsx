@@ -20,7 +20,7 @@ export const BackgroundBlobs = () => {
                     repeat: Infinity,
                     ease: "easeInOut"
                 }}
-                className="absolute -top-[10%] -right-[5%] w-[300px] h-[300px] rounded-full blur-3xl opacity-20"
+                className="absolute -top-[10%] -right-[5%] w-[300px] h-[300px] rounded-full opacity-10"
                 style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
             />
 
@@ -37,7 +37,7 @@ export const BackgroundBlobs = () => {
                     ease: "easeInOut",
                     delay: 1
                 }}
-                className="absolute -bottom-[10%] -left-[5%] w-[250px] h-[250px] rounded-full blur-3xl opacity-15"
+                className="absolute -bottom-[10%] -left-[5%] w-[250px] h-[250px] rounded-full opacity-10"
                 style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
             />
 
@@ -53,7 +53,7 @@ export const BackgroundBlobs = () => {
                     ease: "easeInOut",
                     delay: 2
                 }}
-                className="absolute top-[40%] right-[10%] w-[150px] h-[150px] rounded-full blur-3xl opacity-10"
+                className="absolute top-[40%] right-[10%] w-[150px] h-[150px] rounded-full opacity-5"
                 style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
             />
         </div>

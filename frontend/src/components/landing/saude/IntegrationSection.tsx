@@ -9,7 +9,7 @@ import { BackgroundBlobs } from "./BackgroundBlobs";
 export const IntegrationSection = () => {
     return (
         <section
-            className="py-24 relative overflow-hidden"
+            className="py-24 relative"
             style={{ backgroundColor: 'hsl(var(--saude-background))' }}
         >
             <BackgroundBlobs />
@@ -138,21 +138,12 @@ export const IntegrationSection = () => {
                             style={{ backgroundColor: 'transparent' }}
                         >
                             <svg viewBox="0 0 48 48" className="w-12 h-12">
-                                <path fill="#fff" d="M12 40c-2.21 0-4-1.79-4-4V14h32v22c0 2.21-1.79 4-4 4H12z" />
-                                <path fill="#4285F4" d="M38 10h-6v4h6v26H10V14h6v-4h-6C7.79 10 6 11.79 6 14v22c0 2.21 1.79 4 4 4h28c2.21 0 4-1.79 4-4V14c0-2.21-1.79-4-4-4z" />
-                                <text x="24" y="34" fontSize="18" fontWeight="bold" fill="#4285F4" textAnchor="middle">31</text>
-                                <path fill="#EA4335" d="M38 10h-4V6h4c2.21 0 4 1.79 4 4v4h-4v-4zM10 10H6v4h-4v-4c0-2.21 1.79-4 4-4h4v4z" />
-                                <path fill="#34A853" d="M10 40h4v-4H6v4zM38 40h-4v-4h4v4z" />
-                                <path fill="#FBBC05" d="M38 10h-20V6h20v4zM10 10h20V6H10v4z" />
-                                <path fill="#4285F4" d="M6 14h4v26H6zM38 14h4v26h-4z" opacity="0" />
-                                {/* Modern "Outline" style recreation */}
                                 <rect x="8" y="11" width="32" height="31" rx="4" fill="#fff" strokeWidth="0" />
                                 <path fill="#4285F4" d="M37 9h-4v4h4v26H11V13h4V9h-4c-2.21 0-4 1.79-4 4v26c0 2.21 1.79 4 4 4h26c2.21 0 4-1.79 4-4V13c0-2.21-1.79-4-4-4z" />
                                 <text x="24" y="34" fontSize="20" fontWeight="bold" fill="#4285F4" textAnchor="middle" fontFamily="Arial">31</text>
                                 <path fill="#FBBC05" d="M37 9H11c-2.21 0-4 1.79-4 4h34c0-2.21-1.79-4-4-4z" />
                                 <path fill="#EA4335" d="M37 9h-4V5H15v4h-4c-2.21 0-4 1.79-4 4v.5h34V13c0-2.21-1.79-4-4-4z" />
                                 <path fill="#34A853" d="M7 39v-5h34v5c0 2.21-1.79 4-4 4H11c-2.21 0-4-1.79-4-4z" />
-                                <path fill="#1967D2" d="M37 9h-5V5h5c2.21 0 4 1.79 4 4v4h-4V9zM11 9H6v4h-4c0-2.21 1.79-4 4-4h5v4z" opacity="0" />
                             </svg>
                         </div>
                         <div>

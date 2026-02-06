@@ -77,7 +77,7 @@ export const HeroSection = () => {
 
     return (
         <section
-            className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 pb-10"
+            className="relative min-h-screen flex items-center justify-center pt-16 pb-10"
             style={{ background: 'var(--saude-gradient-hero)' }}
         >
             <BackgroundBlobs />
