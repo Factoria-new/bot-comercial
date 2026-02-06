@@ -2,8 +2,8 @@ import { Composio } from '@composio/core';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import prisma from '../config/prisma.js';
-import fs from 'fs';
-import path from 'path';
+// fs and path removed
+
 import { decrypt } from '../utils/encryption.js';
 
 dotenv.config();
@@ -18,12 +18,9 @@ const composio = new Composio({
 let socketIO = null;
 
 // --- Instagram Polling State ---
-// Store polling intervals per user
 const pollingIntervals = new Map();
 // Store processed message IDs to avoid duplicates (userId -> Set of messageIds)
 const processedMessages = new Map();
-// Store agent prompts per user
-const instagramAgentPrompts = new Map();
 // Store conversation history per contact (userId:senderId -> messages[])
 const instagramConversationHistory = new Map();
 
@@ -34,6 +31,78 @@ const instagramConversationHistory = new Map();
 export const initInstagramService = (io) => {
     socketIO = io;
 };
+
+// ============================================
+// LOCAL MAPPING FUNCTIONS (Multi-tenancy fix)
+// ============================================
+
+/**
+ * Save Instagram connection mapping locally
+ * @param {string} userId - User's email (entityId)
+ * @param {string} connectionId - Composio connection ID (ca_xxx)
+ * @param {string} status - Connection status: 'initiated' | 'active' | 'failed'
+ */
+const saveInstagramConnectionMapping = async (userId, connectionId, status = 'initiated') => {
+    try {
+        await prisma.instagramConnection.upsert({
+            where: { userId: userId.toLowerCase().trim() },
+            update: { connectionId, status, updatedAt: new Date() },
+            create: { userId: userId.toLowerCase().trim(), connectionId, status }
+        });
+        console.log(`📸 Saved Instagram connection mapping: userId=${userId}, connectionId=${connectionId}, status=${status}`);
+    } catch (error) {
+        console.error('Failed to save Instagram connection mapping:', error.message);
+    }
+};
+
+/**
+ * Get Instagram connection mapping from local DB
+ * @param {string} userId - User's email (entityId)
+ * @returns {Promise<{userId: string, connectionId: string, status: string} | null>}
+ */
+const getInstagramConnectionMapping = async (userId) => {
+    try {
+        return await prisma.instagramConnection.findUnique({
+            where: { userId: userId.toLowerCase().trim() }
+        });
+    } catch (error) {
+        console.error('Failed to get Instagram connection mapping:', error.message);
+        return null;
+    }
+};
+
+/**
+ * Delete Instagram connection mapping from local DB
+ * @param {string} userId - User's email (entityId)
+ */
+const deleteInstagramConnectionMapping = async (userId) => {
+    try {
+        await prisma.instagramConnection.deleteMany({
+            where: { userId: userId.toLowerCase().trim() }
+        });
+        console.log(`🗑️ Deleted Instagram connection mapping for userId=${userId}`);
+    } catch (error) {
+        console.error('Failed to delete Instagram connection mapping:', error.message);
+    }
+};
+
+/**
+ * Update Instagram connection mapping status
+ * @param {string} userId - User's email (entityId)
+ * @param {string} status - New status
+ */
+const updateInstagramConnectionMappingStatus = async (userId, status) => {
+    try {
+        await prisma.instagramConnection.updateMany({
+            where: { userId: userId.toLowerCase().trim() },
+            data: { status, updatedAt: new Date() }
+        });
+        console.log(`📸 Updated Instagram connection status for userId=${userId} to ${status}`);
+    } catch (error) {
+        console.error('Failed to update Instagram connection mapping status:', error.message);
+    }
+};
+
 
 /**
  * Generate OAuth URL for Instagram authentication
@@ -51,6 +120,8 @@ export const getAuthUrl = async (userId) => {
             return { success: false, error: 'Instagram Auth Config ID not configured' };
         }
 
+        console.log(`📸 Initiating Instagram auth for user: ${userId}`);
+
         const connectionRequest = await composio.connectedAccounts.initiate(
             userId,
             authConfigId,
@@ -59,10 +130,17 @@ export const getAuthUrl = async (userId) => {
             }
         );
 
+        const connectionId = connectionRequest.connectedAccountId || connectionRequest.id;
+
+        // MULTI-TENANCY FIX: Save mapping immediately after initiating connection
+        await saveInstagramConnectionMapping(userId, connectionId, 'initiated');
+
+        console.log(`✅ Instagram auth URL generated for ${userId}`);
+
         return {
             success: true,
             authUrl: connectionRequest.redirectUrl,
-            connectionId: connectionRequest.connectedAccountId || connectionRequest.id
+            connectionId: connectionId
         };
     } catch (error) {
         console.error('Instagram Auth Error:', error.message);
@@ -75,7 +153,7 @@ export const getAuthUrl = async (userId) => {
  * @param {string} connectionId - The connection ID returned from auth flow
  * @returns {Promise<{success: boolean, connectionId?: string, username?: string, error?: string}>}
  */
-export const handleCallback = async (connectionId) => {
+export const handleCallback = async (connectionId, userId = null) => {
     if (!connectionId) {
         return { success: false, error: 'connectionId is required' };
     }
@@ -85,6 +163,23 @@ export const handleCallback = async (connectionId) => {
 
         if (connectedAccount.status !== 'ACTIVE') {
             return { success: false, error: 'Connection not active' };
+        }
+
+        // MULTI-TENANCY FIX: Update mapping status to 'active'
+        if (userId) {
+            await saveInstagramConnectionMapping(userId, connectionId, 'active');
+        } else {
+            // Fallback: try to find by connectionId
+            try {
+                const existingMapping = await prisma.instagramConnection.findUnique({
+                    where: { connectionId }
+                });
+                if (existingMapping) {
+                    await updateInstagramConnectionMappingStatus(existingMapping.userId, 'active');
+                }
+            } catch (e) {
+                console.warn('Could not find existing mapping for connectionId:', connectionId);
+            }
         }
 
         // Try to get user info
@@ -104,6 +199,8 @@ export const handleCallback = async (connectionId) => {
                 username: result.username
             });
         }
+
+        console.log(`✅ Instagram connected for: ${result.username || connectionId}`);
 
         return result;
     } catch (error) {
@@ -194,6 +291,7 @@ export const markSeen = async (userId, recipientId) => {
 
 /**
  * Get connection status for a specific user
+ * MULTI-TENANCY FIX: Uses local mapping instead of trusting Composio's entityId filter
  * @param {string} userId - User's email (unique identifier) - REQUIRED
  * @returns {Promise<{isConnected: boolean, username?: string, igUserId?: string, connectionId?: string}>}
  */
@@ -203,28 +301,66 @@ export const getConnectionStatus = async (userId) => {
     }
 
     try {
-        const accounts = await composio.connectedAccounts.list({
-            appName: 'instagram',
-            entityId: userId
-        });
+        // MULTI-TENANCY FIX: First check local mapping
+        const localMapping = await getInstagramConnectionMapping(userId);
 
-        if (!accounts?.items?.length) {
+        if (!localMapping) {
+            console.log(`📸 No local Instagram mapping found for ${userId}`);
             return { isConnected: false };
         }
 
-        // Find active Instagram account for this user
-        const activeAccount = accounts.items.find(acc => acc.status === 'ACTIVE');
+        console.log(`📸 Found local Instagram mapping for ${userId}: connectionId=${localMapping.connectionId}, status=${localMapping.status}`);
 
-        if (!activeAccount) {
-            return { isConnected: false };
+        // If mapping exists but status is not 'active', check if it's still initiating
+        if (localMapping.status === 'initiated') {
+            // Try to verify if the connection became active
+            try {
+                const account = await composio.connectedAccounts.get(localMapping.connectionId);
+                if (account.status === 'ACTIVE') {
+                    // Update local mapping to active
+                    await updateInstagramConnectionMappingStatus(userId, 'active');
+                    localMapping.status = 'active';
+                } else {
+                    // Connection exists but not active yet
+                    return { isConnected: false, status: 'initiating' };
+                }
+            } catch (e) {
+                // Connection not found in Composio (404) - user likely closed popup without completing
+                // Clean up the orphan mapping
+                console.warn(`⚠️ Instagram connection not found (user may have closed popup). Cleaning up orphan mapping for ${userId}`);
+                await deleteInstagramConnectionMapping(userId);
+
+                // Also stop polling if active
+                if (pollingIntervals.has(userId)) {
+                    await stopPolling(userId);
+                }
+
+                return { isConnected: false, needsReconnection: true };
+            }
         }
 
-        return {
-            isConnected: true,
-            connectionId: activeAccount.id,
-            username: activeAccount.metadata?.username || null,
-            igUserId: activeAccount.metadata?.igUserId || null
-        };
+        // Verify the connection still exists and is valid in Composio
+        try {
+            const account = await composio.connectedAccounts.get(localMapping.connectionId);
+
+            if (account.status !== 'ACTIVE') {
+                console.warn(`⚠️ Instagram connection ${localMapping.connectionId} is not active (status: ${account.status})`);
+                await deleteInstagramConnectionMapping(userId);
+                return { isConnected: false, needsReconnection: true };
+            }
+
+            return {
+                isConnected: true,
+                connectionId: localMapping.connectionId,
+                username: account.metadata?.username || null,
+                igUserId: account.metadata?.igUserId || null
+            };
+        } catch (error) {
+            // Connection doesn't exist in Composio anymore
+            console.warn(`⚠️ Instagram connection not found in Composio, cleaning up local mapping:`, error.message);
+            await deleteInstagramConnectionMapping(userId);
+            return { isConnected: false, needsReconnection: true };
+        }
     } catch (error) {
         console.error('Instagram Status Check Error:', error.message);
         return { isConnected: false, error: error.message };
@@ -321,23 +457,56 @@ export const sendDM = async (userId, recipientId, text) => {
 
 /**
  * Disconnect Instagram account for a user
+ * MULTI-TENANCY FIX: Uses local mapping for reliable disconnection
  * @param {string} userId - User's email - REQUIRED
  */
 export const disconnect = async (userId) => {
     if (!userId) {
         return { success: false, error: 'userId (email) is required' };
     }
+    userId = userId.trim();
 
     try {
-        const status = await getConnectionStatus(userId);
+        // MULTI-TENANCY FIX: First get the connection from local mapping
+        const localMapping = await getInstagramConnectionMapping(userId);
 
-        if (status.connectionId) {
+        if (localMapping) {
+            console.log(`📸 Disconnecting Instagram via local mapping: userId=${userId}, connectionId=${localMapping.connectionId}`);
+
+            // Delete from Composio
             try {
-                await composio.connectedAccounts.delete(status.connectionId);
-            } catch (deleteError) {
-                // Connection might already be deleted
-                console.warn('Could not delete from Composio:', deleteError.message);
+                await composio.connectedAccounts.delete(localMapping.connectionId);
+                console.log(`✅ Deleted Instagram connection from Composio: ${localMapping.connectionId}`);
+            } catch (delErr) {
+                console.warn(`⚠️ Failed to delete Instagram from Composio (may already be deleted):`, delErr.message);
             }
+
+            // Always delete local mapping
+            await deleteInstagramConnectionMapping(userId);
+        } else {
+            console.log(`ℹ️ No local Instagram mapping found for ${userId}, trying Composio directly...`);
+
+            // Fallback: try to find and delete from Composio directly
+            const accounts = await composio.connectedAccounts.list({
+                appName: 'instagram',
+                entityId: userId
+            });
+
+            if (accounts?.items?.length) {
+                for (const acc of accounts.items) {
+                    try {
+                        await composio.connectedAccounts.delete(acc.id);
+                        console.log(`✅ Deleted Instagram connection: ${acc.id}`);
+                    } catch (delErr) {
+                        console.warn(`⚠️ Failed to delete ${acc.id}:`, delErr.message);
+                    }
+                }
+            }
+        }
+
+        // Stop polling if active
+        if (pollingIntervals.has(userId)) {
+            await stopPolling(userId);
         }
 
         if (socketIO) {
@@ -362,74 +531,89 @@ export const cleanup = async () => {
     }
     pollingIntervals.clear();
     processedMessages.clear();
-    instagramAgentPrompts.clear();
-    instagramConversationHistory.clear();
 };
 
-// ============================================
-// INSTAGRAM POLLING SYSTEM
-// ============================================
-
-const PROMPTS_FILE = path.join(process.cwd(), 'data', 'instagram_agents.json');
-
 /**
- * Load persisted agent prompts
+ * Resume polling for all active users on valid startup
  */
-const loadAgentPrompts = () => {
+export const resumeActivePolling = async () => {
     try {
-        if (fs.existsSync(PROMPTS_FILE)) {
-            const data = fs.readFileSync(PROMPTS_FILE, 'utf8');
-            const prompts = JSON.parse(data);
-            for (const [userId, prompt] of Object.entries(prompts)) {
-                instagramAgentPrompts.set(userId, prompt);
+        console.log('🔄 Resuming active Instagram polling sessions...');
+        const activeUsers = await prisma.user.findMany({
+            where: {
+                isInstagramPollingActive: true,
+                geminiApiKey: { not: null } // Ensure they have an API key
             }
-            console.log(`✅ Loaded ${instagramAgentPrompts.size} agent prompts from disk`);
+        });
+
+        console.log(`📊 Found ${activeUsers.length} users with active Instagram polling`);
+
+        for (const user of activeUsers) {
+            // Decrypt key to verify validity (optional but good practice)
+            try {
+                if (user.geminiApiKey) {
+                    startPolling(user.email, 15000, false); // false = don't update DB (already true)
+                }
+            } catch (e) {
+                console.error(`❌ Failed to resume for ${user.email}: ${e.message}`);
+            }
         }
     } catch (error) {
-        console.error('Failed to load agent prompts:', error.message);
+        console.error('❌ Error resuming Instagram polling:', error);
     }
 };
 
-/**
- * Save agent prompts to disk
- */
-const saveAgentPrompts = () => {
-    try {
-        const prompts = Object.fromEntries(instagramAgentPrompts);
-        fs.writeFileSync(PROMPTS_FILE, JSON.stringify(prompts, null, 2));
-    } catch (error) {
-        console.error('Failed to save agent prompts:', error.message);
-    }
-};
+// Resume polling on load
+// resumeActivePolling(); // Will be called from server.js instead to ensure DB connection
 
-// Initialize persistence
-loadAgentPrompts();
 
 /**
  * Configure agent prompt for Instagram
  * @param {string} userId - User's email
  * @param {string} prompt - Agent prompt
  */
-export const configureInstagramAgent = (userId, prompt) => {
+export const configureInstagramAgent = async (userId, prompt) => {
     if (!userId || !prompt) {
         console.warn('⚠️ Cannot configure Instagram agent: missing userId or prompt');
         return false;
     }
-    instagramAgentPrompts.set(userId, prompt);
-    saveAgentPrompts(); // Persist changes
-    console.log(`✅ Instagram agent configured for ${userId} (${prompt.length} chars)`);
-    return true;
-};
 
+    try {
+        await prisma.user.update({
+            where: { email: userId },
+            data: { instagramPrompt: prompt }
+        });
+        console.log(`✅ Instagram agent configured for ${userId} (${prompt.length} chars)`);
+        return true;
+    } catch (error) {
+        console.error(`❌ Failed to save Instagram prompt for ${userId}:`, error.message);
+        return false;
+    }
+};
 /**
  * Start polling for new Instagram DMs
  * @param {string} userId - User's email
  * @param {number} intervalMs - Polling interval in ms (default: 15000)
+ * @param {boolean} updateDb - Whether to update status in DB (default: true)
  */
-export const startPolling = (userId, intervalMs = 15000) => {
+
+
+export const startPolling = async (userId, intervalMs = 15000, updateDb = true) => {
     if (!userId) {
         console.error('❌ Cannot start polling: userId required');
         return false;
+    }
+
+    // Update DB status if requested
+    if (updateDb) {
+        try {
+            await prisma.user.update({
+                where: { email: userId },
+                data: { isInstagramPollingActive: true }
+            });
+        } catch (error) {
+            console.error(`⚠️ Failed to update active status in DB for ${userId}:`, error.message);
+        }
     }
 
     // Stop existing polling if any
@@ -452,30 +636,23 @@ export const startPolling = (userId, intervalMs = 15000) => {
                 return;
             }
 
-            // Get agent prompt
-            let agentPrompt = instagramAgentPrompts.get(userId);
+            // Get agent prompt from DB
+            let agentPrompt = null;
+            try {
+                const user = await prisma.user.findUnique({
+                    where: { email: userId },
+                    select: { instagramPrompt: true, customPrompt: true }
+                });
 
-            // Fallback: Try to fetch from database if not in memory
-            if (!agentPrompt) {
-                try {
-                    const user = await prisma.user.findFirst({
-                        where: { email: userId },
-                        select: { customPrompt: true }
-                    });
-
-                    if (user?.customPrompt) {
-                        agentPrompt = user.customPrompt;
-                        configureInstagramAgent(userId, agentPrompt); // Cache it
-                        console.log(`✅ Loaded prompt from DB for ${userId}`);
-                    }
-                } catch (dbError) {
-                    console.warn(`Could not fetch prompt from DB for ${userId}: ${dbError.message}`);
-                }
+                // Use specific Instagram prompt or fallback to general custom prompt
+                agentPrompt = user?.instagramPrompt || user?.customPrompt;
+            } catch (dbError) {
+                console.warn(`Could not fetch prompt from DB for ${userId}: ${dbError.message}`);
             }
 
             if (!agentPrompt) {
-                // Only log sparingly to avoid spamming logs
-                if (Math.random() < 0.1) {
+                // Only log sparingly
+                if (Math.random() < 0.05) {
                     console.log(`⚠️ No agent prompt for ${userId}, skipping poll`);
                 }
                 return;
@@ -585,12 +762,22 @@ export const startPolling = (userId, intervalMs = 15000) => {
  * Stop polling for a user
  * @param {string} userId - User's email
  */
-export const stopPolling = (userId) => {
+export const stopPolling = async (userId) => {
     const intervalId = pollingIntervals.get(userId);
     if (intervalId) {
         clearInterval(intervalId);
         pollingIntervals.delete(userId);
-        console.log(`🛑 Stopped Instagram polling for ${userId}`);
+
+        try {
+            await prisma.user.update({
+                where: { email: userId },
+                data: { isInstagramPollingActive: false }
+            });
+            console.log(`🛑 Stopped Instagram polling for ${userId}`);
+        } catch (error) {
+            console.error(`⚠️ Failed to update active status in DB for ${userId}:`, error.message);
+        }
+
         return true;
     }
     return false;
@@ -626,5 +813,6 @@ export default {
     configureInstagramAgent,
     startPolling,
     stopPolling,
-    addToHistory
+    addToHistory,
+    resumeActivePolling
 };

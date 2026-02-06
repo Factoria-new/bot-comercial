@@ -15,7 +15,7 @@ import userRoutes from './routes/userRoutes.js';
 import instagramRoutes from './routes/instagramRoutes.js';
 import { initGoogleCalendarService } from './services/googleCalendarService.js';
 import { initWhatsAppService, getSessionStatus, setAgentPrompt, cleanup as cleanupWhatsApp } from './services/whatsappService.js';
-import { initInstagramService } from './services/instagramService.js';
+import { initInstagramService, cleanup as cleanupInstagram, resumeActivePolling } from './services/instagramService.js';
 import { PROMPTS } from './prompts/agentPrompts.js';
 
 const app = express();
@@ -74,6 +74,11 @@ initGoogleCalendarService(io);
 
 // Initialize Instagram service with Socket.IO
 initInstagramService(io);
+// Resume active Instagram polling sessions from DB
+// Wrapped in timeout to allow DB connection to establish
+setTimeout(() => {
+  resumeActivePolling();
+}, 5000);
 
 // Import session config service (separated to avoid circular dependencies)
 import { getSessionConfig, setSessionConfig } from './services/sessionConfigService.js';
@@ -314,6 +319,7 @@ const gracefulShutdown = async () => {
 
   try {
     await cleanupWhatsApp();
+    await cleanupInstagram();
     console.log('✅ Services cleaned up');
     process.exit(0);
   } catch (error) {

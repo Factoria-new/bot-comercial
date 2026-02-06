@@ -203,7 +203,18 @@ export const IntegrationsProvider = ({ children }: { children: ReactNode }) => {
                 const checkPopup = setInterval(async () => {
                     if (popup?.closed) {
                         clearInterval(checkPopup);
-                        checkInstagramStatus(); // Check status on close just in case
+
+                        // Check status one more time
+                        const statusRes = await fetch(`${backendUrl}/api/instagram/status?userId=${encodeURIComponent(user.email)}`);
+                        const statusData = await statusRes.json();
+
+                        // If popup closed and we are NOT connected, trigger cleanup
+                        if (!statusData.success || !statusData.isConnected) {
+                            console.log("Instagram popup closed without connection. Cleaning up INITIATED state...");
+                            handleInstagramDisconnect();
+                        } else {
+                            setIsInstagramConnected(true);
+                        }
                         return;
                     }
 

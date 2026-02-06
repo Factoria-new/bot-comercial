@@ -350,7 +350,7 @@ Analise a mensagem e responda de forma adequada seguindo suas instruções, LEVA
         # --- RETRY LOGIC FOR INSTAGRAM ---
         final_answer = str(result)
         
-        if not message_tracker.get("sent"):
+        if not TOOLS_USAGE_STATE.get(request_id, {}).get("sent", False):
              print(f"⚠️ Agent finished but 'sent' tracker (Instagram) is False. Retry triggered.")
              
              retry_task = Task(

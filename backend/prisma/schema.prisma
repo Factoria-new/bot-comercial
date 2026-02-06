@@ -48,6 +48,10 @@ model User {
   aiTemperature      Float     @default(1.0)
   geminiApiKey       String?   @db.Text // Chave criptografada do usuário
   
+  // Configuração do Instagram Bot
+  isInstagramPollingActive Boolean @default(false)
+  instagramPrompt          String? @db.Text
+  
   // Relação 1:1 com Instance
   instance           Instance?
   
@@ -116,5 +120,20 @@ model CalendarConnection {
   @@index([userId])
   @@index([connectionId])
   @@map("calendar_connections")
+}
+
+// Conexoes do Instagram via Composio
+// Armazena mapeamento userId (email) <-> connectionId (ca_xxx)
+model InstagramConnection {
+  id           String   @id @default(uuid())
+  userId       String   @unique // Email do usuario (entityId no Composio)
+  connectionId String   @unique // ID da conexao no Composio (ca_xxx)
+  status       String   @default("initiated") // initiated, active, failed
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([connectionId])
+  @@map("instagram_connections")
 }
 
