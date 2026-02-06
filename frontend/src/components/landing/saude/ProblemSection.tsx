@@ -1,5 +1,6 @@
 import { UserX, UserCog, Moon } from "lucide-react";
 import { motion } from "framer-motion";
+import { BackgroundBlobs } from "./BackgroundBlobs";
 
 /**
  * ProblemSection - Saude Landing Page
@@ -30,7 +31,8 @@ export const ProblemSection = () => {
             className="py-24 relative"
             style={{ backgroundColor: 'hsl(var(--saude-background))' }}
         >
-            <div className="container px-4 md:px-6">
+            <BackgroundBlobs />
+            <div className="container px-4 md:px-6 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}

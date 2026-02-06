@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { BackgroundBlobs } from "./BackgroundBlobs";
 
 /**
  * IntegrationSection - Saude Landing Page
@@ -11,7 +12,8 @@ export const IntegrationSection = () => {
             className="py-24 relative overflow-hidden"
             style={{ backgroundColor: 'hsl(var(--saude-background))' }}
         >
-            <div className="container px-4 md:px-6">
+            <BackgroundBlobs />
+            <div className="container px-4 md:px-6 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -54,12 +56,12 @@ export const IntegrationSection = () => {
                         }}
                     >
                         <div
-                            className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                            style={{ backgroundColor: '#25D3661A' }}
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform hover:scale-110"
+                            style={{ backgroundColor: 'transparent' }}
                         >
-                            <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#25D366">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118 1.121 0 2.479.248-.005 2.875-1.372 2.875-2.227v0z" />
-                                <path d="M11.94 1a9.97 9.97 0 0 0-9.97 9.97c0 1.95.56 3.77 1.54 5.34L2.24 21.76l5.58-1.46a9.96 9.96 0 0 0 4.12.89 9.97 9.97 0 0 0 9.97-9.97A9.97 9.97 0 0 0 11.94 1z" fill="none" />
+                            <svg viewBox="0 0 48 48" className="w-12 h-12">
+                                <path fill="#25D366" d="M24 4C12.95 4 4 12.95 4 24c0 3.53.92 6.86 2.52 9.77L4 44l10.51-2.76A19.95 19.95 0 0 0 24 44c11.05 0 20-8.95 20-20S35.05 4 24 4z" />
+                                <path fill="#fff" d="M34.73 29.56c-.53-.27-3.13-1.54-3.61-1.72-.48-.18-.84-.27-1.19.27-.35.53-1.37 1.72-1.67 2.07-.31.35-.61.4-.97.27a14.2 14.2 0 0 1-4.73-2.92 15.63 15.63 0 0 1-3.27-4.07c-.18-.31-.02-.48.12-.74.13-.24.28-.62.42-.93.14-.31.21-.52.32-.87.11-.35.05-.66-.02-.93-.09-.27-.85-2.04-1.16-2.79-.31-.73-.61-.63-.84-.64h-.72c-.25 0-.66.09-1 .46-.35.37-1.33 1.3-1.33 3.17 0 1.88 1.37 3.69 1.56 3.95.19.27 2.69 4.11 6.52 5.76 2.56 1.11 3.08.89 4.2.83 1.22-.06 3.13-1.28 3.57-2.52.44-1.24.44-2.3.31-2.52-.13-.22-.48-.35-1.01-.62z" />
                             </svg>
                         </div>
                         <div>
@@ -132,13 +134,25 @@ export const IntegrationSection = () => {
                         }}
                     >
                         <div
-                            className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                            style={{ backgroundColor: 'hsl(var(--saude-secondary) / 0.1)' }}
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform hover:scale-110"
+                            style={{ backgroundColor: 'transparent' }}
                         >
-                            <svg viewBox="0 0 24 24" className="w-8 h-8">
-                                <path fill="#4285F4" d="M20.57 3.68h-1.63V1.64c0-.45-.36-.82-.82-.82s-.82.37-.82.82v2.04H6.7V1.64c0-.45-.36-.82-.82-.82s-.82.37-.82.82v2.04H3.43c-.9 0-1.64.74-1.64 1.64v15.54c0 .9.74 1.64 1.64 1.64h17.14c.9 0 1.64-.74 1.64-1.64V5.32c0-.9-.74-1.64-1.64-1.64zM19.1 20.88H4.9c-.45 0-.82-.37-.82-.82V8.59h15.84v11.47c0 .45-.37.82-.82.82z" />
-                                <path fill="#34A853" d="M12 12h-4c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-4c0-.55-.45-1-1-1zm-.25 4.25h-3.5v-3.5h3.5v3.5z" />
-                                <path fill="#FBBC05" d="M16.5 12h-2c-.28 0-.5.22-.5.5v2c0 .28.22.5.5.5h2c.28 0 .5-.22.5-.5v-2c0-.28-.22-.5-.5-.5z" />
+                            <svg viewBox="0 0 48 48" className="w-12 h-12">
+                                <path fill="#fff" d="M12 40c-2.21 0-4-1.79-4-4V14h32v22c0 2.21-1.79 4-4 4H12z" />
+                                <path fill="#4285F4" d="M38 10h-6v4h6v26H10V14h6v-4h-6C7.79 10 6 11.79 6 14v22c0 2.21 1.79 4 4 4h28c2.21 0 4-1.79 4-4V14c0-2.21-1.79-4-4-4z" />
+                                <text x="24" y="34" fontSize="18" fontWeight="bold" fill="#4285F4" textAnchor="middle">31</text>
+                                <path fill="#EA4335" d="M38 10h-4V6h4c2.21 0 4 1.79 4 4v4h-4v-4zM10 10H6v4h-4v-4c0-2.21 1.79-4 4-4h4v4z" />
+                                <path fill="#34A853" d="M10 40h4v-4H6v4zM38 40h-4v-4h4v4z" />
+                                <path fill="#FBBC05" d="M38 10h-20V6h20v4zM10 10h20V6H10v4z" />
+                                <path fill="#4285F4" d="M6 14h4v26H6zM38 14h4v26h-4z" opacity="0" />
+                                {/* Modern "Outline" style recreation */}
+                                <rect x="8" y="11" width="32" height="31" rx="4" fill="#fff" strokeWidth="0" />
+                                <path fill="#4285F4" d="M37 9h-4v4h4v26H11V13h4V9h-4c-2.21 0-4 1.79-4 4v26c0 2.21 1.79 4 4 4h26c2.21 0 4-1.79 4-4V13c0-2.21-1.79-4-4-4z" />
+                                <text x="24" y="34" fontSize="20" fontWeight="bold" fill="#4285F4" textAnchor="middle" fontFamily="Arial">31</text>
+                                <path fill="#FBBC05" d="M37 9H11c-2.21 0-4 1.79-4 4h34c0-2.21-1.79-4-4-4z" />
+                                <path fill="#EA4335" d="M37 9h-4V5H15v4h-4c-2.21 0-4 1.79-4 4v.5h34V13c0-2.21-1.79-4-4-4z" />
+                                <path fill="#34A853" d="M7 39v-5h34v5c0 2.21-1.79 4-4 4H11c-2.21 0-4-1.79-4-4z" />
+                                <path fill="#1967D2" d="M37 9h-5V5h5c2.21 0 4 1.79 4 4v4h-4V9zM11 9H6v4h-4c0-2.21 1.79-4 4-4h5v4z" opacity="0" />
                             </svg>
                         </div>
                         <div>
@@ -152,7 +166,7 @@ export const IntegrationSection = () => {
                                 className="text-sm"
                                 style={{ color: 'hsl(var(--saude-muted-foreground))' }}
                             >
-                                Sincroniza automatico
+                                Sincroniza automático
                             </p>
                         </div>
                     </div>

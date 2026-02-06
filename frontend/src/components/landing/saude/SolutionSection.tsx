@@ -44,6 +44,8 @@ const professions = [
     }
 ];
 
+import { BackgroundBlobs } from "./BackgroundBlobs";
+
 export const SolutionSection = () => {
     const [activeTab, setActiveTab] = useState('dentista');
     const [visibleMessages, setVisibleMessages] = useState<number[]>([]);
@@ -56,6 +58,19 @@ export const SolutionSection = () => {
 
         setVisibleMessages([]);
         setIsTyping(false);
+
+        // Determine the total duration of the conversation based on the last message's delay
+        const lastMessageDelay = Math.max(...activeProfession.chat.map(m => m.delay));
+        // Add buffer time after the conversation finishes before switching (e.g., 4 seconds)
+        const switchDelay = lastMessageDelay + 4;
+
+        // Schedule auto-switch
+        const switchTimeout = setTimeout(() => {
+            const currentIndex = professions.findIndex(p => p.id === activeTab);
+            const nextIndex = (currentIndex + 1) % professions.length;
+            setActiveTab(professions[nextIndex].id);
+        }, switchDelay * 1000);
+        timeouts.push(switchTimeout);
 
         activeProfession.chat.forEach((msg) => {
             const msgTimeout = setTimeout(() => {
@@ -81,7 +96,8 @@ export const SolutionSection = () => {
             className="py-24 relative"
             style={{ backgroundColor: 'hsl(var(--saude-background-alt))' }}
         >
-            <div className="container px-4 md:px-6">
+            <BackgroundBlobs />
+            <div className="container px-4 md:px-6 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -95,7 +111,7 @@ export const SolutionSection = () => {
                     >
                         Veja o Caji em{' '}
                         <span style={{ color: 'hsl(var(--saude-primary))' }}>
-                            Acao
+                            Ação
                         </span>
                     </h2>
                     <p

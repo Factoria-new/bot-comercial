@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, Coffee } from "lucide-react";
+import { ArrowRight, Check, Stethoscope } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PRICING_DISPLAY, getPriceState } from "@/constants/pricing";
+import { BackgroundBlobs } from "./BackgroundBlobs";
 
 /**
  * PricingSection - Saude Landing Page
@@ -15,7 +16,8 @@ export const PricingSection = () => {
             id="pricing"
             style={{ backgroundColor: 'hsl(var(--saude-background-alt))' }}
         >
-            <div className="container px-4 md:px-6">
+            <BackgroundBlobs />
+            <div className="container px-4 md:px-6 relative z-10">
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <h2
                         className="text-3xl md:text-5xl font-bold mb-6"
@@ -38,12 +40,12 @@ export const PricingSection = () => {
                             border: '1px solid hsl(var(--saude-primary) / 0.2)'
                         }}
                     >
-                        <Coffee className="w-5 h-5 text-[#8B4513]" />
+                        <Stethoscope className="w-5 h-5" style={{ color: 'hsl(var(--saude-primary))' }} />
                         <span
                             className="font-semibold"
                             style={{ color: 'hsl(var(--saude-foreground))' }}
                         >
-                            Menos que um cafezinho por dia
+                            Uma consulta paga o ano todo
                         </span>
                     </div>
 

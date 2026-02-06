@@ -1,3 +1,4 @@
+import { BackgroundBlobs } from "./BackgroundBlobs";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Stethoscope } from "lucide-react";
@@ -79,6 +80,7 @@ export const HeroSection = () => {
             className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 pb-10"
             style={{ background: 'var(--saude-gradient-hero)' }}
         >
+            <BackgroundBlobs />
             <div className="container relative z-10 px-4 md:px-6">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
                     {/* Left Content */}
@@ -151,12 +153,13 @@ export const HeroSection = () => {
                                     style={{ borderBottom: '1px solid hsl(var(--saude-border))' }}
                                 >
                                     <div
-                                        className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                                        className="w-12 h-12 rounded-2xl flex items-center justify-center relative overflow-hidden"
                                         style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.1)' }}
                                     >
-                                        <Stethoscope
-                                            className="w-6 h-6"
-                                            style={{ color: 'hsl(var(--saude-primary))' }}
+                                        <img
+                                            src="/logo-header-light.png"
+                                            alt="Caji Logo"
+                                            className="w-full h-full object-contain p-2"
                                         />
                                     </div>
                                     <div>
