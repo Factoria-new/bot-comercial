@@ -52,7 +52,7 @@ export const LPFooter = () => {
                                 className="text-xl font-semibold"
                                 style={{ color: 'hsl(var(--saude-foreground))' }}
                             >
-                                Saude Assist
+                                Caji Assist
                             </span>
                         </div>
                         <p

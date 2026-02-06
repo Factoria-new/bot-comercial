@@ -30,18 +30,9 @@ export const ProblemSection = () => {
             className="py-24 relative z-40"
             style={{ backgroundColor: 'hsl(var(--saude-background))' }}
         >
-            {/* Large Right Blob */}
-            <motion.div
-                animate={{
-                    y: [-20, 20, -20],
-                    scale: [1, 1.1, 1],
-                }}
-                transition={{
-                    duration: 12,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-                className="absolute top-1/2 -translate-y-1/2 -right-[10%] w-[600px] h-[600px] rounded-full opacity-60 mix-blend-multiply pointer-events-none z-0"
+            {/* Large Right Blob (Static) */}
+            <div
+                className="absolute top-1/2 -translate-y-1/2 -right-[20%] w-[30vw] h-[30vw] rounded-full opacity-60 mix-blend-multiply pointer-events-none z-0"
                 style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
             />
 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Stethoscope } from "lucide-react";
-import { motion } from "framer-motion";
 
 /**
  * HeroSection - Saude Landing Page
@@ -80,18 +79,9 @@ export const HeroSection = () => {
             className="relative min-h-screen z-50 flex items-center justify-center pt-16 pb-10"
             style={{ background: 'var(--saude-gradient-hero)' }}
         >
-            {/* Large Top-Left Blob */}
-            <motion.div
-                animate={{
-                    scale: [1, 1.05, 1],
-                    x: [0, 20, 0],
-                }}
-                transition={{
-                    duration: 10,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-                className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] rounded-full opacity-60 mix-blend-multiply pointer-events-none z-0"
+            {/* Large Top-Left Blob (Static) */}
+            <div
+                className="absolute -top-[110%] -left-[45%] w-[80vw] h-[80vw] rounded-full opacity-60 mix-blend-multiply pointer-events-none z-0"
                 style={{ backgroundColor: 'hsl(var(--saude-secondary))' }}
             />
 
@@ -171,7 +161,7 @@ export const HeroSection = () => {
                                         style={{ backgroundColor: 'hsl(var(--saude-primary) / 0.1)' }}
                                     >
                                         <img
-                                            src="/favicon.png"
+                                            src="/favicon-dark.png"
                                             alt="Caji Logo"
                                             className="w-full h-full object-contain p-2"
                                         />
@@ -248,6 +238,53 @@ export const HeroSection = () => {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* iPhone-style Input Bar (Decorative) */}
+                                <div
+                                    className="mt-4 flex items-center gap-2 p-2 rounded-full pointer-events-none select-none"
+                                    style={{
+                                        backgroundColor: 'hsl(var(--saude-background-alt))',
+                                        border: '1px solid hsl(var(--saude-border))'
+                                    }}
+                                >
+                                    {/* Camera Icon */}
+                                    <div
+                                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                                        style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
+                                    >
+                                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </div>
+                                    {/* Text Input Placeholder */}
+                                    <div
+                                        className="flex-1 px-4 py-2 text-sm rounded-full"
+                                        style={{
+                                            backgroundColor: 'hsl(var(--saude-card))',
+                                            color: 'hsl(var(--saude-muted-foreground))'
+                                        }}
+                                    >
+                                        Mensagem
+                                    </div>
+                                    {/* Send Icon */}
+                                    <div
+                                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                                        style={{ backgroundColor: 'hsl(var(--saude-primary))' }}
+                                    >
+                                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                {/* iPhone Home Indicator */}
+                                <div className="flex justify-center mt-4">
+                                    <div
+                                        className="w-32 h-1 rounded-full"
+                                        style={{ backgroundColor: 'hsl(var(--saude-border))' }}
+                                    />
                                 </div>
                             </div>
                         </div>
