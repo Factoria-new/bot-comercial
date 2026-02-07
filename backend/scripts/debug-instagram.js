@@ -9,7 +9,7 @@ const composio = new Composio({
     toolkitVersions: { instagram: '20260203_00' }
 });
 
-const connectionId = 'ca_4xClsgkiWvo_'; // From the logs
+const connectionId = 'ca_SN5UiqshiIKj'; // From the logs
 const userId = 'portob162@gmail.com'; // User entity ID
 
 async function debugInstagram() {

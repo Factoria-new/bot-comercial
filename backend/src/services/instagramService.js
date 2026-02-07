@@ -23,6 +23,8 @@ const pollingIntervals = new Map();
 const processedMessages = new Map();
 // Store conversation history per contact (userId:senderId -> messages[])
 const instagramConversationHistory = new Map();
+// Cache for Instagram User IDs to avoid repetitive API calls (connectionId -> igUserId)
+const instagramUserIds = new Map();
 
 /**
  * Initialize Instagram service with Socket.IO
@@ -349,11 +351,37 @@ export const getConnectionStatus = async (userId) => {
                 return { isConnected: false, needsReconnection: true };
             }
 
+            // Enhanced IG User ID retrieval with caching
+            let igUserId = instagramUserIds.get(localMapping.connectionId);
+            let username = account.metadata?.username;
+
+            // If not in cache and not in metadata, try to fetch it
+            if (!igUserId) {
+                if (account.metadata?.igUserId) {
+                    igUserId = account.metadata.igUserId;
+                    instagramUserIds.set(localMapping.connectionId, igUserId);
+                } else {
+                    // Fetch from API
+                    try {
+                        const userInfo = await getUserInfo(localMapping.connectionId);
+                        if (userInfo?.id) {
+                            igUserId = userInfo.id;
+                            username = userInfo.username || username;
+                            // Cache it
+                            instagramUserIds.set(localMapping.connectionId, igUserId);
+                            console.log(`📸 Cached Instagram User ID for ${userId}: ${igUserId}`);
+                        }
+                    } catch (err) {
+                        console.warn(`⚠️ Failed to fetch user info for ${userId}: ${err.message}`);
+                    }
+                }
+            }
+
             return {
                 isConnected: true,
                 connectionId: localMapping.connectionId,
-                username: account.metadata?.username || null,
-                igUserId: account.metadata?.igUserId || null
+                username: username || null,
+                igUserId: igUserId || null
             };
         } catch (error) {
             // Connection doesn't exist in Composio anymore
