@@ -671,13 +671,31 @@ export const startPolling = async (userId, intervalMs = 15000, updateDb = true) 
                 const convId = conv.id || conv.conversation_id;
                 if (!convId) continue;
 
-                const msgResult = await getMessages(userId, convId, 5);
+                const msgResult = await getMessages(userId, convId, 20);
                 if (!msgResult.success || !msgResult.messages?.length) continue;
 
                 console.log(`   📬 Conv ${convId.substring(0, 15)}... → ${msgResult.messages.length} messages`);
 
                 for (const msg of msgResult.messages) {
                     const msgId = msg.id || msg.message_id;
+                    const msgTimestamp = msg.created_time || msg.timestamp || msg.created_at;
+
+                    // Skip messages older than 24 hours (accounts for severe Instagram API delay)
+                    if (msgTimestamp) {
+                        const msgDate = new Date(msgTimestamp);
+                        const now = new Date();
+                        const ageMs = now.getTime() - msgDate.getTime();
+                        const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+                        if (ageMs > TWENTY_FOUR_HOURS_MS) {
+                            // Silently skip very old messages
+                            if (msgId && !processed.has(msgId)) {
+                                processed.add(msgId);
+                            }
+                            continue;
+                        }
+                    }
+
                     if (!msgId || processed.has(msgId)) continue;
 
                     // Skip messages sent by the connected account (our responses)
