@@ -18,6 +18,7 @@ interface LayoutProps {
   children: ReactNode;
   currentPage: "dashboard" | "chat" | "connections" | "integrations" | "ai-status" | "calendar" | "settings" | "my-prompt";
   showLiaButton?: boolean;
+  hideLiaOnMobile?: boolean;
   expandIntegrations?: boolean;
   onExpandIntegrationsChange?: (expanded: boolean) => void;
   showSidebarTrigger?: boolean;
@@ -29,6 +30,7 @@ const Layout = ({
   children,
   currentPage,
   showLiaButton = true,
+  hideLiaOnMobile = false,
   expandIntegrations = false,
   onExpandIntegrationsChange,
   showSidebarTrigger = true,
@@ -242,10 +244,12 @@ const Layout = ({
               />
 
               {showLiaButton && !isLiaChatOpen && (
-                <LiaFloatingButton
-                  onClick={() => setIsLiaChatOpen(true)}
-                  message={currentPage === 'dashboard' ? "Psiu! Caso queira saber mais métricas, me chame aqui e eu te conto tudo..." : undefined}
-                />
+                <div className={hideLiaOnMobile ? 'hidden sm:block' : ''}>
+                  <LiaFloatingButton
+                    onClick={() => setIsLiaChatOpen(true)}
+                    message={currentPage === 'dashboard' ? "Psiu! Caso queira saber mais metricas, me chame aqui e eu te conto tudo..." : undefined}
+                  />
+                </div>
               )}
             </>,
             document.body

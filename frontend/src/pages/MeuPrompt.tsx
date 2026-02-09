@@ -147,7 +147,7 @@ const MeuPrompt = () => {
     }
 
     return (
-        <Layout currentPage="my-prompt">
+        <Layout currentPage="my-prompt" hideLiaOnMobile={isBusinessSettingsOpen}>
             <div className="min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]">
                 {/* Header */}
                 <header className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -286,16 +286,14 @@ const MeuPrompt = () => {
                         <span>Alteracoes aplicadas automaticamente ao salvar</span>
                     </div>
 
-                    {/* Lia Prompt Editor Chat - Hidden when modal is open */}
-                    {!isBusinessSettingsOpen && (
-                        <PromptEditChat
-                            currentPrompt={prompt}
-                            onPromptUpdate={(newPrompt) => {
-                                setPrompt(newPrompt);
-                                setIsEditing(true);
-                            }}
-                        />
-                    )}
+                    {/* Lia Prompt Editor Chat */}
+                    <PromptEditChat
+                        currentPrompt={prompt}
+                        onPromptUpdate={(newPrompt) => {
+                            setPrompt(newPrompt);
+                            setIsEditing(true);
+                        }}
+                    />
                 </main>
 
                 {/* Business Settings Modal */}
