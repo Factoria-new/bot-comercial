@@ -117,38 +117,31 @@ export const PricingSection = () => {
                             // Usando valores direto do STRIPE_CONFIG importado de constants/pricing
                             // Isso garante que os valores exibidos são os mesmos que o script sync-stripe-prices.js gerou
 
-                            // Valores formatados prontos para display
-                            const formattedBillingPrice = PRICING_DISPLAY[displayPeriod === 'annual' ? 'annualTotal' : displayPeriod]
-                                // Se for 'annualTotal', ele já vem formatado como R$ XXX,XX. Para manter compatibilidade com display anterior:
-                                .replace('/ano', '').replace('/mês', '').replace('/semestre', '');
+                            // 1. Main Display Price (Always Monthly Equivalent)
+                            let mainDisplayPrice = '';
+                            if (displayPeriod === 'monthly') mainDisplayPrice = PRICING_DISPLAY.monthly;
+                            else if (displayPeriod === 'semiannual') mainDisplayPrice = PRICING_DISPLAY.semiannualMonthly;
+                            else if (displayPeriod === 'annual') mainDisplayPrice = PRICING_DISPLAY.annualMonthly;
 
-                            // Text label for payment summary
-                            const getPeriodLabelText = (period: string) => {
-                                if (period === 'semiannual') return '/semestre';
-                                if (period === 'annual') return '/ano';
-                                return '/mês';
-                            };
-                            const periodLabelText = getPeriodLabelText(displayPeriod);
+                            // 2. Subtitle / Callout logic
+                            let subtitleContent: React.ReactNode = null;
 
-                            // Labels extras
-                            const getPeriodLabel = (period: string) => {
-                                if (period === 'semiannual') return '/semestre';
-                                if (period === 'annual') return <span className="text-lg">/no plano anual</span>;
-                                return '/mês';
-                            };
-
-                            const formattedPrice = displayPeriod === 'annual'
-                                ? PRICING_DISPLAY.annualMonthly // Mostra valor mensal equivalente no card anual
-                                : formattedBillingPrice;        // Mostra valor cheio nos outros
-
-                            const periodLabel = getPeriodLabel(displayPeriod);
-
-                            // Savings text for Annual plan
-                            const savingsText = (displayPeriod === 'annual' && STRIPE_CONFIG.DISCOUNT_PERCENTAGE > 0) ? (
-                                <div className="absolute -top-4 right-0 bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded-full animate-bounce">
-                                    ECONOMIZE {STRIPE_CONFIG.DISCOUNT_PERCENTAGE}%
-                                </div>
-                            ) : null;
+                            if (displayPeriod === 'semiannual') {
+                                subtitleContent = (
+                                    <span className="block text-sm text-slate-500 font-medium mt-1">
+                                        = {PRICING_DISPLAY.semiannual} por semestre
+                                    </span>
+                                );
+                            } else if (displayPeriod === 'annual') {
+                                subtitleContent = (
+                                    <div className="flex flex-col items-center mt-2 leading-tight">
+                                        <span className="text-sm text-slate-400 line-through">De {PRICING_DISPLAY.annualTotal}</span>
+                                        <span className="text-base text-emerald-600 font-bold whitespace-nowrap">
+                                            Por apenas {PRICING_DISPLAY.annualTotalDiscounted}
+                                        </span>
+                                    </div>
+                                );
+                            }
 
                             // ID do Preço para passar pro checkout
                             // Mapeia displayPeriod para a chave correta em PRODUCTS
@@ -158,12 +151,36 @@ export const PricingSection = () => {
 
                             const priceId = STRIPE_CONFIG.PRODUCTS[productKey]?.priceId;
 
+                            // 4. Savings badge (Restore logic)
+                            const savingsText = (displayPeriod === 'annual' && STRIPE_CONFIG.DISCOUNT_PERCENTAGE > 0) ? (
+                                <div className="absolute -top-4 right-0 bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded-full animate-bounce">
+                                    ECONOMIZE {STRIPE_CONFIG.DISCOUNT_PERCENTAGE}%
+                                </div>
+                            ) : null;
+
+                            // 5. Variables for PricingWrapper (Checkout/Link state)
+                            // We need value + label for state passed to /payment
+                            let formattedBillingPrice = '';
+                            let periodLabelText = '';
+
+                            if (displayPeriod === 'monthly') {
+                                formattedBillingPrice = PRICING_DISPLAY.monthly;
+                                periodLabelText = '/mês';
+                            } else if (displayPeriod === 'semiannual') {
+                                formattedBillingPrice = PRICING_DISPLAY.semiannual;
+                                periodLabelText = '/semestre';
+                            } else if (displayPeriod === 'annual') {
+                                formattedBillingPrice = PRICING_DISPLAY.annualTotal; // Valor cheio visual, mas o checkout aplicará cupom
+                                periodLabelText = '/ano';
+                            }
+
                             // Generate content for card faces
                             const cardContent = (
                                 <>
                                     <Heading>Essential</Heading>
                                     <Price>
-                                        {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
+                                        {mainDisplayPrice}<span className="text-2xl">/mês</span>
+                                        {subtitleContent}
                                     </Price>
                                     <div className="w-full text-left pl-0 md:pl-4 relative">
                                         {savingsText}
