@@ -33,6 +33,9 @@ import YourExperiencePage from "./pages/YourExperiencePage";
 
 const queryClient = new QueryClient();
 
+import { CookieConsentProvider } from "@/contexts/CookieConsentContext";
+import { CookieConsentBanner } from "@/components/ui/CookieConsentBanner";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <SocketProvider>
@@ -40,63 +43,66 @@ const App = () => (
         <AuthProvider>
           <Toaster />
           <Sonner />
-          <LiaVolumeProvider>
-            <IntegrationsProvider>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
-                  <Route path="/termos-de-servico" element={<TermsOfService />} />
-                  <Route path="/lgpd" element={<Lgpd />} />
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute>
-                      <Index />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/meu-prompt" element={
-                    <ProtectedRoute>
-                      <MeuPrompt />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/login" element={
-                    <PublicRoute>
-                      <Login />
-                    </PublicRoute>
-                  } />
-                  <Route path="/payment" element={<Payment />} />
-                  <Route path="/check-email" element={<CheckEmail />} />
-                  <Route path="/setup-password" element={<SetupPassword />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/instagram-callback" element={<InstagramCallback />} />
-                  <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
-                  <Route path="/checkout/success" element={<CheckoutSuccess />} />
-                  <Route path="/sua-experiencia" element={<YourExperiencePage />} />
-                  <Route path="/trafego" element={
-                    <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
-                      <Trafego />
-                    </EmailRestrictedRoute>
-                  } />
-                  <Route path="/saude" element={
-                    <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
-                      <Saude />
-                    </EmailRestrictedRoute>
-                  } />
-                  <Route path="/beleza" element={
-                    <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
-                      <Beleza />
-                    </EmailRestrictedRoute>
-                  } />
-                  <Route path="/varejo" element={
-                    <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
-                      <Varejo />
-                    </EmailRestrictedRoute>
-                  } />
+          <CookieConsentProvider>
+            <LiaVolumeProvider>
+              <IntegrationsProvider>
+                <CookieConsentBanner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
+                    <Route path="/termos-de-servico" element={<TermsOfService />} />
+                    <Route path="/lgpd" element={<Lgpd />} />
+                    <Route path="/dashboard" element={
+                      <ProtectedRoute>
+                        <Index />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/meu-prompt" element={
+                      <ProtectedRoute>
+                        <MeuPrompt />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/login" element={
+                      <PublicRoute>
+                        <Login />
+                      </PublicRoute>
+                    } />
+                    <Route path="/payment" element={<Payment />} />
+                    <Route path="/check-email" element={<CheckEmail />} />
+                    <Route path="/setup-password" element={<SetupPassword />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/instagram-callback" element={<InstagramCallback />} />
+                    <Route path="/calendar-callback" element={<GoogleCalendarCallback />} />
+                    <Route path="/checkout/success" element={<CheckoutSuccess />} />
+                    <Route path="/sua-experiencia" element={<YourExperiencePage />} />
+                    <Route path="/trafego" element={
+                      <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
+                        <Trafego />
+                      </EmailRestrictedRoute>
+                    } />
+                    <Route path="/saude" element={
+                      <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
+                        <Saude />
+                      </EmailRestrictedRoute>
+                    } />
+                    <Route path="/beleza" element={
+                      <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
+                        <Beleza />
+                      </EmailRestrictedRoute>
+                    } />
+                    <Route path="/varejo" element={
+                      <EmailRestrictedRoute allowedEmail="portob162@gmail.com">
+                        <Varejo />
+                      </EmailRestrictedRoute>
+                    } />
 
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </IntegrationsProvider>
-          </LiaVolumeProvider>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </IntegrationsProvider>
+            </LiaVolumeProvider>
+          </CookieConsentProvider>
         </AuthProvider>
       </TooltipProvider>
     </SocketProvider>
