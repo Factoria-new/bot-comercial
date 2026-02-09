@@ -120,25 +120,16 @@ export const PricingSection = () => {
                             // 1. Main Display Price (Always Monthly Equivalent)
                             let mainDisplayPrice = '';
                             if (displayPeriod === 'monthly') mainDisplayPrice = PRICING_DISPLAY.monthly;
-                            else if (displayPeriod === 'semiannual') mainDisplayPrice = PRICING_DISPLAY.semiannualMonthly;
+                            else if (displayPeriod === 'semiannual') mainDisplayPrice = PRICING_DISPLAY.semiannual;
                             else if (displayPeriod === 'annual') mainDisplayPrice = PRICING_DISPLAY.annualMonthly;
 
                             // 2. Subtitle / Callout logic
                             let subtitleContent: React.ReactNode = null;
 
-                            if (displayPeriod === 'semiannual') {
-                                subtitleContent = (
-                                    <span className="block text-sm text-orange-400 font-medium mt-1">
-                                        {PRICING_DISPLAY.semiannual} por semestre
-                                    </span>
-                                );
-                            } else if (displayPeriod === 'annual') {
+                            if (displayPeriod === 'annual') {
                                 subtitleContent = (
                                     <div className="flex flex-col items-center mt-2 leading-tight">
-                                        <span className="text-sm text-orange-200 line-through">De {PRICING_DISPLAY.annualTotal}</span>
-                                        <span className="text-base text-orange-400 font-bold whitespace-nowrap">
-                                            Por apenas {PRICING_DISPLAY.annualTotalDiscounted}
-                                        </span>
+                                        <span className="text-sm text-white">No plano anual</span>
                                     </div>
                                 );
                             }
@@ -179,7 +170,10 @@ export const PricingSection = () => {
                                 <>
                                     <Heading>Essential</Heading>
                                     <Price>
-                                        {mainDisplayPrice}<span className="text-2xl">/mês</span>
+                                        {mainDisplayPrice}
+                                        <span className="text-2xl">
+                                            {displayPeriod === 'semiannual' ? '/semestre' : '/mês'}
+                                        </span>
                                         {subtitleContent}
                                     </Price>
                                     <div className="w-full text-left pl-0 md:pl-4 relative">

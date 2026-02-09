@@ -35,6 +35,24 @@ const Payment = () => {
     const planName = (plan === 'basic' || plan === 'premium') ? 'Premium' : 'Pro';
     const periodName = period === 'monthly' ? 'Mensal' : period === 'semiannual' ? 'Semestral' : 'Anual';
 
+    // Calculate display price - if annual, apply discount percentage visually
+    let displayPrice = price;
+    if (period === 'annual' && STRIPE_CONFIG.DISCOUNT_PERCENTAGE > 0) {
+        // Retrieve raw amount from STRIPE_CONFIG to calculate precise discounted value
+        const rawAmount = STRIPE_CONFIG.PRODUCTS.annual?.amount || 0;
+        const discountedAmount = rawAmount * (1 - STRIPE_CONFIG.DISCOUNT_PERCENTAGE / 100);
+
+        displayPrice = (
+            <div className="flex flex-col items-end">
+                <span className="text-sm text-slate-400 line-through font-normal">{price}</span>
+                <span>{discountedAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                <span className="text-xs text-[#00A947] font-medium bg-[#00A947]/10 px-2 py-0.5 rounded-full mt-1">
+                    {STRIPE_CONFIG.DISCOUNT_PERCENTAGE}% OFF
+                </span>
+            </div>
+        );
+    }
+
     // Map plan and period to Stripe price IDs
     const getPriceId = () => {
         // Se o product Key não vier no state (vinda do PricingSection), tentar inferir do plan/period
@@ -145,7 +163,7 @@ const Payment = () => {
                                 <p className="text-slate-500 text-sm">Ciclo {periodName}</p>
                             </div>
                             <div className="text-xl font-bold text-[#00A947]">
-                                {price}
+                                {displayPrice}
                             </div>
                         </div>
 
