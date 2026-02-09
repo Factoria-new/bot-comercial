@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TermsModal } from "@/components/TermsModal";
 import { toast } from "sonner";
+import { STRIPE_CONFIG } from "@/constants/pricing";
 
 const Payment = () => {
     const location = useLocation();
@@ -35,29 +36,31 @@ const Payment = () => {
     const periodName = period === 'monthly' ? 'Mensal' : period === 'semiannual' ? 'Semestral' : 'Anual';
 
     // Map plan and period to Stripe price IDs
-    // TODO: Replace these with actual Stripe price IDs from your dashboard
     const getPriceId = () => {
-        const priceMap: Record<string, string> = {
-            'basic_monthly': import.meta.env.VITE_STRIPE_PRICE_BASIC_MONTHLY || 'price_basic_monthly',
-            'basic_semiannual': import.meta.env.VITE_STRIPE_PRICE_BASIC_SEMIANNUAL || 'price_basic_semiannual',
-            'basic_annual': import.meta.env.VITE_STRIPE_PRICE_BASIC_ANNUAL || 'price_basic_annual',
+        // Se o product Key não vier no state (vinda do PricingSection), tentar inferir do plan/period
+        // Mas o PricingSection já manda o priceId correto no state.
 
-            // Premium Plan (uses Premium Keys)
-            'premium_monthly': import.meta.env.VITE_STRIPE_PRICE_PREMIUM_MONTHLY || 'price_premium_monthly',
-            'premium_semiannual': import.meta.env.VITE_STRIPE_PRICE_PREMIUM_SEMIANNUAL || 'price_premium_semiannual',
-            'premium_annual': import.meta.env.VITE_STRIPE_PRICE_PREMIUM_ANNUAL || 'price_premium_annual',
+        if (location.state?.priceId) {
+            console.log('DEBUG PAYMENT: Using priceId from state:', location.state.priceId);
+            return location.state.priceId;
+        }
 
-            'pro_monthly': import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY || 'price_pro_monthly',
-            'pro_semiannual': import.meta.env.VITE_STRIPE_PRICE_PRO_SEMIANNUAL || 'price_pro_semiannual',
-            'pro_annual': import.meta.env.VITE_STRIPE_PRICE_PRO_ANNUAL || 'price_pro_annual',
-        };
-        const selectedPriceId = priceMap[`${plan}_${period}`] || 'price_pro_monthly';
-        console.log('DEBUG PAYMENT:', {
-            activePlan: `${plan}_${period}`,
-            selectedPriceId,
-            env_premium_annual: import.meta.env.VITE_STRIPE_PRICE_PREMIUM_ANNUAL
-        });
-        return selectedPriceId;
+        // Fallback caso acesse direto (não deveria acontecer muito se o fluxo for forçado)
+        // Mapeia logicamente para o nosso config
+        // plan 'essential' (ou 'premium' legacy) -> STRIPE_CONFIG.PRODUCTS
+
+        // Se for outro plano (Pro/Basic), não temos no config novo ainda, manter hardcoded ou erro?
+        // O user só pediu Essential por enquanto. Vamos focar no Essential.
+
+        let productKey = 'monthly';
+        if (period === 'semiannual') productKey = 'semiannual';
+        if (period === 'annual') productKey = 'annual';
+
+        // @ts-ignore - ignorando erro de tipagem temporário pois STRIPE_CONFIG é what we have
+        const priceId = STRIPE_CONFIG.PRODUCTS[productKey]?.priceId;
+
+        console.log('DEBUG PAYMENT: Inferred priceId:', priceId);
+        return priceId || 'price_monthly_placeholder';
     };
 
     const validateEmail = (email: string) => {

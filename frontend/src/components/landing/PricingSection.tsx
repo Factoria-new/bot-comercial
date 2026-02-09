@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { PricingWrapper, Heading, Price } from "@/components/ui/animated-pricing-cards";
 import { Calendar, MessageSquare, Mic, ShieldCheck } from "lucide-react";
-import { PRICING_CONFIG, ANNUAL_PRICE_TOTAL, SEMI_ANNUAL_PRICE } from "@/constants/pricing";
+import { STRIPE_CONFIG, PRICING_DISPLAY } from "@/constants/pricing";
 
 export const PricingSection = () => {
     const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'semiannual' | 'annual'>('annual');
@@ -114,22 +114,13 @@ export const PricingSection = () => {
 
                         {/* Pricing Logic Variables */}
                         {(() => {
-                            const BASE_PRICE = PRICING_CONFIG.MONTHLY_PRICE;
+                            // Usando valores direto do STRIPE_CONFIG importado de constants/pricing
+                            // Isso garante que os valores exibidos são os mesmos que o script sync-stripe-prices.js gerou
 
-                            const formatCurrency = (value: number) => {
-                                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                            };
-
-                            // Calculate Actual Billing Price (What user pays)
-                            const getBillingPrice = (base: number, period: string) => {
-                                if (period === 'monthly') return base;
-                                if (period === 'semiannual') return SEMI_ANNUAL_PRICE;
-                                if (period === 'annual') return ANNUAL_PRICE_TOTAL;
-                                return base;
-                            };
-
-                            const billingPrice = getBillingPrice(BASE_PRICE, displayPeriod);
-                            const formattedBillingPrice = formatCurrency(billingPrice);
+                            // Valores formatados prontos para display
+                            const formattedBillingPrice = PRICING_DISPLAY[displayPeriod === 'annual' ? 'annualTotal' : displayPeriod]
+                                // Se for 'annualTotal', ele já vem formatado como R$ XXX,XX. Para manter compatibilidade com display anterior:
+                                .replace('/ano', '').replace('/mês', '').replace('/semestre', '');
 
                             // Text label for payment summary
                             const getPeriodLabelText = (period: string) => {
@@ -139,48 +130,38 @@ export const PricingSection = () => {
                             };
                             const periodLabelText = getPeriodLabelText(displayPeriod);
 
-                            // Existing logic for DISPLAY on card (Monthly equivalent)
-                            const getPrice = (base: number, period: string) => {
-                                if (period === 'monthly') return base;
-                                if (period === 'semiannual') return SEMI_ANNUAL_PRICE;
-                                if (period === 'annual') return ANNUAL_PRICE_TOTAL;
-                                return base;
-                            };
-
+                            // Labels extras
                             const getPeriodLabel = (period: string) => {
-                                if (period === 'semiannual') return '/semestre (6 meses)';
-                                if (period === 'annual') return <span className="text-lg">/no plano anual (12 Meses)</span>;
+                                if (period === 'semiannual') return '/semestre';
+                                if (period === 'annual') return <span className="text-lg">/no plano anual</span>;
                                 return '/mês';
                             };
 
-                            const price = getPrice(BASE_PRICE, displayPeriod);
-                            const formattedPrice = formatCurrency(price);
+                            const formattedPrice = displayPeriod === 'annual'
+                                ? PRICING_DISPLAY.annualMonthly // Mostra valor mensal equivalente no card anual
+                                : formattedBillingPrice;        // Mostra valor cheio nos outros
+
                             const periodLabel = getPeriodLabel(displayPeriod);
 
-                            // Calculate savings percentage
-                            const monthlyCostMonthly = BASE_PRICE;
-                            const monthlyCostAnnual = ANNUAL_PRICE_TOTAL / 12;
-                            // For semiannual, comparing per-month basis:
-                            const monthlyCostSemiannual = SEMI_ANNUAL_PRICE / 6;
-
-                            let savingsPercent = 0;
-                            if (displayPeriod === 'annual') {
-                                savingsPercent = Math.round(((monthlyCostMonthly - monthlyCostAnnual) / monthlyCostMonthly) * 100);
-                            } else if (displayPeriod === 'semiannual') {
-                                savingsPercent = Math.round(((monthlyCostMonthly - monthlyCostSemiannual) / monthlyCostMonthly) * 100);
-                            }
-
                             // Savings text for Annual plan
-                            const savingsText = (displayPeriod === 'annual' && savingsPercent > 0) ? (
+                            const savingsText = (displayPeriod === 'annual' && STRIPE_CONFIG.DISCOUNT_PERCENTAGE > 0) ? (
                                 <div className="absolute -top-4 right-0 bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded-full animate-bounce">
-                                    ECONOMIZE {savingsPercent}%
+                                    ECONOMIZE {STRIPE_CONFIG.DISCOUNT_PERCENTAGE}%
                                 </div>
                             ) : null;
+
+                            // ID do Preço para passar pro checkout
+                            // Mapeia displayPeriod para a chave correta em PRODUCTS
+                            const productKey = displayPeriod === 'annual' ? 'annual'
+                                : displayPeriod === 'semiannual' ? 'semiannual'
+                                    : 'monthly';
+
+                            const priceId = STRIPE_CONFIG.PRODUCTS[productKey]?.priceId;
 
                             // Generate content for card faces
                             const cardContent = (
                                 <>
-                                    <Heading>Premium</Heading>
+                                    <Heading>Essential</Heading>
                                     <Price>
                                         {formattedPrice}<br /><span className="text-2xl">{periodLabel}</span>
                                     </Price>
@@ -218,7 +199,13 @@ export const PricingSection = () => {
                                     >
                                         <PricingWrapper
                                             contactHref="/payment"
-                                            linkState={{ plan: 'premium', period: pricingPeriod, price: `${formattedBillingPrice}${periodLabelText}`, source: '/' }}
+                                            linkState={{
+                                                plan: 'essential',
+                                                period: pricingPeriod,
+                                                price: `${formattedBillingPrice}${periodLabelText}`,
+                                                priceId: priceId, // Passando ID do Stripe direto
+                                                source: '/'
+                                            }}
                                             type="waves"
                                             className="bg-[#00A947]"
                                             featured={true}

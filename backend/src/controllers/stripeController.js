@@ -48,6 +48,15 @@ export const createCheckoutSession = async (req, res) => {
             },
         };
 
+        // Aplica cupom de desconto para planos anuais
+        if (period === 'annual') {
+            // ID fornecido pelo usuário: CAJI50
+            // Nota: Se o ID começar com 'promo_', pode ser um Promotion Code, mas vamos tentar como Coupon primeiro conforme solicitado.
+            // Caso falhe, alterar para { promotion_code: ... }
+            const couponId = process.env.STRIPE_ANNUAL_COUPON_ID || 'CAJI50';
+            sessionConfig.discounts = [{ coupon: couponId }];
+        }
+
         // Se email foi fornecido, pré-preencher no checkout
         if (email) {
             sessionConfig.customer_email = email;
