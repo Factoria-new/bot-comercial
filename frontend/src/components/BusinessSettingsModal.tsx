@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
@@ -177,77 +176,75 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
 
                 {/* Detailed Slots (3/4) */}
                 <div className="lg:col-span-3 space-y-3">
-                    <ScrollArea className="h-[240px] sm:h-[280px] pr-2 sm:pr-3">
-                        <div className="space-y-2">
-                            {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
-                                const daySchedule = schedule[key] || { enabled: false, slots: [] };
+                    <div className="space-y-2 max-h-none sm:max-h-[280px] sm:overflow-y-auto sm:pr-3 custom-scrollbar">
+                        {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
+                            const daySchedule = schedule[key] || { enabled: false, slots: [] };
 
-                                return (
-                                    <div
-                                        key={key}
-                                        className={cn(
-                                            "flex flex-col gap-2 p-3 rounded-xl border transition-all",
-                                            daySchedule.enabled
-                                                ? "bg-white/5 border-purple-500/30"
-                                                : "bg-black/10 border-white/5 opacity-40"
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <Switch
-                                                    checked={daySchedule.enabled}
-                                                    onCheckedChange={() => handleDayToggle(key)}
-                                                    className="data-[state=checked]:bg-purple-600 scale-90"
-                                                />
-                                                <span className={cn(
-                                                    "text-sm font-semibold",
-                                                    daySchedule.enabled ? "text-white" : "text-white/40"
-                                                )}>
-                                                    {label}
-                                                </span>
-                                            </div>
+                            return (
+                                <div
+                                    key={key}
+                                    className={cn(
+                                        "flex flex-col gap-2 p-3 rounded-xl border transition-all",
+                                        daySchedule.enabled
+                                            ? "bg-white/5 border-purple-500/30"
+                                            : "bg-black/10 border-white/5 opacity-40"
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Switch
+                                                checked={daySchedule.enabled}
+                                                onCheckedChange={() => handleDayToggle(key)}
+                                                className="data-[state=checked]:bg-purple-600 scale-90"
+                                            />
+                                            <span className={cn(
+                                                "text-sm font-semibold",
+                                                daySchedule.enabled ? "text-white" : "text-white/40"
+                                            )}>
+                                                {label}
+                                            </span>
                                         </div>
-
-                                        {daySchedule.enabled && (
-                                            <div className="space-y-1.5 pl-6 sm:pl-10">
-                                                {daySchedule.slots.map((slot, index) => (
-                                                    <div key={index} className="flex items-center gap-1.5 sm:gap-2">
-                                                        <div className="flex items-center gap-1.5 sm:gap-2 bg-black/40 p-1 rounded-lg border border-white/10 flex-1">
-                                                            <Input
-                                                                type="time"
-                                                                value={slot.start}
-                                                                onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
-                                                                className="h-8 sm:h-7 w-[70px] sm:w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
-                                                            />
-                                                            <span className="text-white/30 text-xs">-</span>
-                                                            <Input
-                                                                type="time"
-                                                                value={slot.end}
-                                                                onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
-                                                                className="h-8 sm:h-7 w-[70px] sm:w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
-                                                            />
-                                                        </div>
-                                                        <button
-                                                            onClick={() => removeSlot(key, index)}
-                                                            className="p-2 sm:p-1.5 text-white/30 hover:text-red-400 transition-colors"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                                <button
-                                                    onClick={() => addSlot(key)}
-                                                    className="text-[11px] sm:text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 py-1"
-                                                >
-                                                    <Plus className="h-3 w-3" /> Adicionar
-                                                </button>
-                                            </div>
-                                        )}
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </ScrollArea>
+
+                                    {daySchedule.enabled && (
+                                        <div className="space-y-1.5 pl-6 sm:pl-10">
+                                            {daySchedule.slots.map((slot, index) => (
+                                                <div key={index} className="flex items-center gap-1.5 sm:gap-2">
+                                                    <div className="flex items-center gap-1.5 sm:gap-2 bg-black/40 p-1 rounded-lg border border-white/10 flex-1">
+                                                        <Input
+                                                            type="time"
+                                                            value={slot.start}
+                                                            onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
+                                                            className="h-8 sm:h-7 w-[70px] sm:w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                        />
+                                                        <span className="text-white/30 text-xs">-</span>
+                                                        <Input
+                                                            type="time"
+                                                            value={slot.end}
+                                                            onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
+                                                            className="h-8 sm:h-7 w-[70px] sm:w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeSlot(key, index)}
+                                                        className="p-2 sm:p-1.5 text-white/30 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => addSlot(key)}
+                                                className="text-[11px] sm:text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 py-1"
+                                            >
+                                                <Plus className="h-3 w-3" /> Adicionar
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>

@@ -286,14 +286,16 @@ const MeuPrompt = () => {
                         <span>Alteracoes aplicadas automaticamente ao salvar</span>
                     </div>
 
-                    {/* Lia Prompt Editor Chat */}
-                    <PromptEditChat
-                        currentPrompt={prompt}
-                        onPromptUpdate={(newPrompt) => {
-                            setPrompt(newPrompt);
-                            setIsEditing(true);
-                        }}
-                    />
+                    {/* Lia Prompt Editor Chat - Hidden when modal is open */}
+                    {!isBusinessSettingsOpen && (
+                        <PromptEditChat
+                            currentPrompt={prompt}
+                            onPromptUpdate={(newPrompt) => {
+                                setPrompt(newPrompt);
+                                setIsEditing(true);
+                            }}
+                        />
+                    )}
                 </main>
 
                 {/* Business Settings Modal */}
