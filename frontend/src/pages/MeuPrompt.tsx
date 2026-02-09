@@ -150,29 +150,27 @@ const MeuPrompt = () => {
         <Layout currentPage="my-prompt">
             <div className="min-h-screen bg-gradient-to-b from-[#020617] via-[#0f0a29] to-[#1a0a2e]">
                 {/* Header */}
-                <header className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                                <Sparkles className="w-5 h-5 text-purple-400" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-white">Meu Prompt</h1>
-                                <p className="text-xs text-white/50">Gerencie a personalidade do seu agente</p>
-                            </div>
+                <header className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-lg sm:text-xl font-bold text-white">Meu Prompt</h1>
+                            <p className="text-[11px] sm:text-xs text-white/50">Gerencie a personalidade do seu agente</p>
                         </div>
                     </div>
 
                     {(hasChanges || showSuccess) && (
                         showSuccess && successAnimationData ? (
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-md px-6 py-2 flex items-center justify-center min-w-[140px] h-10">
-                                <Lottie animationData={successAnimationData} loop={false} className="h-8 w-8" />
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 sm:px-6 py-2 flex items-center justify-center min-w-[120px] sm:min-w-[140px] h-9 sm:h-10 w-full sm:w-auto">
+                                <Lottie animationData={successAnimationData} loop={false} className="h-7 w-7 sm:h-8 sm:w-8" />
                             </div>
                         ) : (
                             <Button
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white w-full sm:w-auto text-sm"
                             >
                                 {isSaving ? (
                                     <>Salvando...</>
@@ -188,25 +186,25 @@ const MeuPrompt = () => {
                 </header>
 
                 {/* Main Content */}
-                <main className="max-w-5xl mx-auto px-6 py-8">
+                <main className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
                     {/* Actions Bar */}
-                    <div className="flex items-center gap-3 mb-6">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                         {!isEditing ? (
                             <Button
                                 onClick={() => setIsEditing(true)}
                                 variant="outline"
-                                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                                className="bg-white/5 border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
                             >
-                                <Edit3 className="w-4 h-4 mr-2" />
+                                <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                                 Editar
                             </Button>
                         ) : (
                             <Button
                                 onClick={handleRevert}
                                 variant="outline"
-                                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                                className="bg-white/5 border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
                             >
-                                <RotateCcw className="w-4 h-4 mr-2" />
+                                <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                                 Cancelar
                             </Button>
                         )}
@@ -214,19 +212,19 @@ const MeuPrompt = () => {
                         <Button
                             onClick={() => fileInputRef.current?.click()}
                             variant="outline"
-                            className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                            className="bg-white/5 border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
                         >
-                            <Upload className="w-4 h-4 mr-2" />
-                            Substituir Prompt
+                            <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                            <span className="hidden xs:inline">Substituir </span>Prompt
                         </Button>
 
                         <Button
                             onClick={() => setIsBusinessSettingsOpen(true)}
                             variant="outline"
-                            className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                            className="bg-white/5 border-white/20 text-white hover:bg-white/10 text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
                         >
-                            <img src="/icons/business-profile.png" alt="" className="w-4 h-4 mr-2 brightness-0 invert" />
-                            Perfil do Negócio
+                            <img src="/icons/business-profile.png" alt="" className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 brightness-0 invert" />
+                            <span className="hidden xs:inline">Perfil do </span>Negocio
                         </Button>
 
                         <input
@@ -239,15 +237,15 @@ const MeuPrompt = () => {
                     </div>
 
                     {/* Stats */}
-                    <div className="flex items-center gap-4 text-sm text-white/50 mb-4">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-white/50 mb-3 sm:mb-4">
                         <div className="flex items-center gap-1.5">
-                            <FileText className="w-4 h-4" />
+                            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             <span>{prompt.length.toLocaleString()} caracteres</span>
                         </div>
                         {hasChanges && (
                             <div className="flex items-center gap-1.5 text-amber-400">
-                                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                                <span>Alterações não salvas</span>
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-400 animate-pulse" />
+                                <span>Alteracoes nao salvas</span>
                             </div>
                         )}
                     </div>
@@ -259,22 +257,22 @@ const MeuPrompt = () => {
                             onChange={(e) => setPrompt(e.target.value)}
                             readOnly={!isEditing}
                             className={`
-                                w-full min-h-[60vh] p-6 rounded-2xl resize-none transition-all
+                                w-full min-h-[40vh] sm:min-h-[60vh] p-4 sm:p-6 rounded-xl sm:rounded-2xl resize-none transition-all
                                 bg-white/5 border border-white/10 text-white/90 text-sm leading-relaxed
                                 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50
                                 ${isEditing ? 'bg-white/10 border-purple-500/30' : 'cursor-default'}
                             `}
-                            placeholder="Seu prompt aparecerá aqui..."
+                            placeholder="Seu prompt aparecera aqui..."
                         />
                     ) : (
-                        <div className="flex flex-col items-center justify-center min-h-[60vh] bg-white/5 rounded-2xl border border-white/10">
-                            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-                                <FileText className="w-8 h-8 text-white/30" />
+                        <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[60vh] bg-white/5 rounded-xl sm:rounded-2xl border border-white/10 px-4">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/5 flex items-center justify-center mb-3 sm:mb-4">
+                                <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-white/30" />
                             </div>
-                            <p className="text-white/50 mb-4">Nenhum prompt configurado</p>
+                            <p className="text-white/50 mb-3 sm:mb-4 text-sm sm:text-base text-center">Nenhum prompt configurado</p>
                             <Button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="bg-purple-500 hover:bg-purple-600 text-white"
+                                className="bg-purple-500 hover:bg-purple-600 text-white text-sm"
                             >
                                 <Upload className="w-4 h-4 mr-2" />
                                 Fazer Upload
@@ -283,9 +281,9 @@ const MeuPrompt = () => {
                     )}
 
                     {/* Footer Info */}
-                    <div className="mt-6 flex items-center gap-2 text-xs text-white/40">
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Alterações são aplicadas automaticamente ao seu agente após salvar</span>
+                    <div className="mt-4 sm:mt-6 flex items-center gap-2 text-[11px] sm:text-xs text-white/40">
+                        <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400 flex-shrink-0" />
+                        <span>Alteracoes aplicadas automaticamente ao salvar</span>
                     </div>
 
                     {/* Lia Prompt Editor Chat */}

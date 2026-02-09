@@ -104,7 +104,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4">
                 {/* Presets & Selection (1/4) */}
                 <div className="space-y-4">
                     <div className="space-y-2">
@@ -153,7 +153,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                         <Label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
                             Ativar Dias
                         </Label>
-                        <div className="grid grid-cols-7 gap-1">
+                        <div className="flex flex-wrap gap-1.5">
                             {(Object.keys(WEEKDAYS_SHORT) as WeekDay[]).map((day) => {
                                 const isEnabled = schedule[day]?.enabled;
                                 return (
@@ -161,7 +161,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                                         key={day}
                                         onClick={() => handleDayToggle(day)}
                                         className={cn(
-                                            "aspect-square rounded-full font-bold text-[9px] transition-all",
+                                            "w-8 h-8 sm:w-7 sm:h-7 rounded-full font-bold text-[10px] sm:text-[9px] transition-all",
                                             isEnabled
                                                 ? "bg-purple-600 text-white shadow-lg shadow-purple-900/50"
                                                 : "bg-white/5 text-white/30 border border-white/5 hover:border-white/20"
@@ -177,7 +177,7 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
 
                 {/* Detailed Slots (3/4) */}
                 <div className="lg:col-span-3 space-y-3">
-                    <ScrollArea className="h-[280px] pr-3">
+                    <ScrollArea className="h-[240px] sm:h-[280px] pr-2 sm:pr-3">
                         <div className="space-y-2">
                             {(Object.entries(WEEKDAYS_MAP) as [WeekDay, string][]).map(([key, label]) => {
                                 const daySchedule = schedule[key] || { enabled: false, slots: [] };
@@ -209,35 +209,35 @@ const SchedulePicker = ({ value, onChange }: { value: any, onChange: (val: any) 
                                         </div>
 
                                         {daySchedule.enabled && (
-                                            <div className="space-y-1.5 pl-10">
+                                            <div className="space-y-1.5 pl-6 sm:pl-10">
                                                 {daySchedule.slots.map((slot, index) => (
-                                                    <div key={index} className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-2 bg-black/40 p-1 rounded-lg border border-white/10 flex-1">
+                                                    <div key={index} className="flex items-center gap-1.5 sm:gap-2">
+                                                        <div className="flex items-center gap-1.5 sm:gap-2 bg-black/40 p-1 rounded-lg border border-white/10 flex-1">
                                                             <Input
                                                                 type="time"
                                                                 value={slot.start}
                                                                 onChange={(e) => updateSlot(key, index, 'start', e.target.value)}
-                                                                className="h-7 w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 sm:h-7 w-[70px] sm:w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
-                                                            <span className="text-white/30 text-xs">→</span>
+                                                            <span className="text-white/30 text-xs">-</span>
                                                             <Input
                                                                 type="time"
                                                                 value={slot.end}
                                                                 onChange={(e) => updateSlot(key, index, 'end', e.target.value)}
-                                                                className="h-7 w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
+                                                                className="h-8 sm:h-7 w-[70px] sm:w-[80px] border-none bg-transparent focus-visible:ring-0 text-center font-mono text-xs text-white p-0"
                                                             />
                                                         </div>
                                                         <button
                                                             onClick={() => removeSlot(key, index)}
-                                                            className="p-1.5 text-white/30 hover:text-red-400 transition-colors"
+                                                            className="p-2 sm:p-1.5 text-white/30 hover:text-red-400 transition-colors"
                                                         >
-                                                            <Trash2 className="h-3 w-3" />
+                                                            <Trash2 className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
                                                         </button>
                                                     </div>
                                                 ))}
                                                 <button
                                                     onClick={() => addSlot(key)}
-                                                    className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                                    className="text-[11px] sm:text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 py-1"
                                                 >
                                                     <Plus className="h-3 w-3" /> Adicionar
                                                 </button>
@@ -458,38 +458,38 @@ ${scheduleStr}
             />
 
             {/* Modal Container */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
                 {/* Modal */}
                 <motion.div
                     initial={{ opacity: 0, y: 30, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3, type: 'spring', damping: 25 }}
-                    className="w-full max-w-3xl max-h-[90vh] flex flex-col bg-gradient-to-b from-slate-900 to-slate-950 border border-white/10 shadow-2xl shadow-black/50 rounded-2xl overflow-hidden pointer-events-auto"
+                    className="w-full sm:max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col bg-gradient-to-b from-slate-900 to-slate-950 border-t sm:border border-white/10 shadow-2xl shadow-black/50 rounded-t-2xl sm:rounded-2xl overflow-hidden pointer-events-auto"
                 >
                     {/* Header */}
-                    <div className="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-purple-500/20">
-                                <img src="/icons/business-profile.png" alt="" className="w-5 h-5 brightness-0 invert" />
+                    <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-500/20">
+                                <img src="/icons/business-profile.png" alt="" className="w-4 h-4 sm:w-5 sm:h-5 brightness-0 invert" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-white">Perfil do Negócio</h2>
-                                <p className="text-white/50 text-xs">Tipo de atendimento e horários de funcionamento</p>
+                                <h2 className="text-base sm:text-lg font-bold text-white">Perfil do Negocio</h2>
+                                <p className="text-white/50 text-[11px] sm:text-xs">Tipo de atendimento e horarios</p>
                             </div>
                         </div>
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={onClose}
-                            className="text-white/50 hover:text-white hover:bg-white/10 rounded-lg"
+                            className="text-white/50 hover:text-white hover:bg-white/10 rounded-lg h-8 w-8 sm:h-10 sm:w-10"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4 sm:w-5 sm:h-5" />
                         </Button>
                     </div>
 
                     {/* Body */}
-                    <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 sm:space-y-6">
                         {isLoading ? (
                             <div className="flex items-center justify-center py-12">
                                 <div className="p-4 rounded-full bg-white/5">
@@ -627,11 +627,11 @@ ${scheduleStr}
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 border-t border-white/5 bg-black/20 flex justify-end gap-3 shrink-0">
+                    <div className="p-3 sm:p-4 border-t border-white/5 bg-black/20 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 shrink-0">
                         <Button
                             variant="ghost"
                             onClick={onClose}
-                            className="text-white/50 hover:text-white hover:bg-white/5 rounded-xl"
+                            className="text-white/50 hover:text-white hover:bg-white/5 rounded-xl w-full sm:w-auto"
                         >
                             Cancelar
                         </Button>
@@ -639,7 +639,7 @@ ${scheduleStr}
                             onClick={handleSave}
                             disabled={isSaving || !isValid()}
                             className={cn(
-                                "bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-6",
+                                "bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-6 w-full sm:w-auto",
                                 !isValid() && "opacity-50 cursor-not-allowed"
                             )}
                         >
