@@ -128,15 +128,15 @@ export const PricingSection = () => {
 
                             if (displayPeriod === 'semiannual') {
                                 subtitleContent = (
-                                    <span className="block text-sm text-slate-500 font-medium mt-1">
-                                        = {PRICING_DISPLAY.semiannual} por semestre
+                                    <span className="block text-sm text-orange-400 font-medium mt-1">
+                                        {PRICING_DISPLAY.semiannual} por semestre
                                     </span>
                                 );
                             } else if (displayPeriod === 'annual') {
                                 subtitleContent = (
                                     <div className="flex flex-col items-center mt-2 leading-tight">
-                                        <span className="text-sm text-slate-400 line-through">De {PRICING_DISPLAY.annualTotal}</span>
-                                        <span className="text-base text-emerald-600 font-bold whitespace-nowrap">
+                                        <span className="text-sm text-orange-200 line-through">De {PRICING_DISPLAY.annualTotal}</span>
+                                        <span className="text-base text-orange-400 font-bold whitespace-nowrap">
                                             Por apenas {PRICING_DISPLAY.annualTotalDiscounted}
                                         </span>
                                     </div>
