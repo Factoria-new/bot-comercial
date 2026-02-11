@@ -1,0 +1,62 @@
+🔍 Testing Instagram API directly...
+
+1. Checking connection status...
+2026-02-11T15:40:35.731Z - 🚀 Upgrade available! Your composio-core version (0.5.3) is behind. Latest version: 0.6.3.
+   Status: ACTIVE
+   Metadata: undefined
+
+4. Testing Get User Info...
+   ❌ Error calling INSTAGRAM_GET_USER_INFO: Error executing the tool INSTAGRAM_GET_USER_INFO
+
+2. Listing conversations...
+   Success: true
+   Raw data: {
+  "data": [
+    {
+      "id": "aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0MjYwMTI0NzQzNzEwMTc2NjEw",
+      "updated_time": "2026-02-07T15:22:19+0000"
+    },
+    {
+      "id": "aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0Mjc2MjU1NDUzNjY2MzQwNzI1",
+      "updated_time": "2026-02-07T15:08:47+0000"
+    },
+    {
+      "id": "aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0MjU5OTkzNzgxMzM2NTk4OTYy",
+      "updated_time": "2026-02-06T17:31:42+0000"
+    }
+  ]
+}
+   Found 3 conversations
+
+3. Getting messages from conversation aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0MjYwMTI0NzQzNzEwMTc2NjEw...
+   Success: true
+   Raw data: {
+  "data": [
+    {
+      "created_time": "2026-02-07T15:22:19+0000",
+      "from": {
+        "id": "1990190081548748",
+        "username": "sergiomeirellespsic"
+      },
+      "id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDgwMTMxNTQ3NTc4OjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI2MDEyNDc0MzcxMDE3NjYxMDozMjY1OTU0OTc0MTI3NTQ1MjYyNjQ5MDIyNzg4ODc1MDU5MgZDZD",
+      "message": "Olá",
+      "to": {
+        "data": [
+          {
+            "id": "17841480131547578",
+            "username": "cajisolutionsofc"
+          }
+        ]
+      }
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "after": "ZAXlKamRYSnpiM0lpT2lJek1qWTFPVFUwT1RjME1USTNOVFExTWpZAeU5qUTVNREl5TnpnNE9EYzFNRFU1TWlKOQZDZD"
+    },
+    "next": "https://graph.instagram.com/v21.0/aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0MjYwMTI0NzQzNzEwMTc2NjEw/messages?fields=id%2Cfrom%2Cto%2Cmessage%2Ccreated_time%2Cattachments&access_token=IGAANIBn24qVBBZAFpEWGhtODJNekFhNVdOZAVZAPQWx2WHZAmQ09td3kxeXRGMlJGY3h5UlNfa2lIVGpjWkxlb3ZA1LUxyTFJVZAnlZAVmJGbFk0YUFJRzRGLXdVTUxSSDFHZAjctVVIxQmR5LTFlNm9XbW00eUFR&limit=20&after=ZAXlKamRYSnpiM0lpT2lJek1qWTFPVFUwT1RjME1USTNOVFExTWpZAeU5qUTVNREl5TnpnNE9EYzFNRFU1TWlKOQZDZD"
+  }
+}
+
+   Found 1 messages:
+   - [2026-02-07T15:22:19+0000] From 1990190081548748: "Olá..."

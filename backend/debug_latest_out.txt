@@ -1,0 +1,6 @@
+🔍 Testing Instagram API (Version: latest)...
+
+
+4. Testing Get User Info with version="latest"...
+2026-02-11T15:50:38.818Z - 🚀 Upgrade available! Your composio-core version (0.5.3) is behind. Latest version: 0.6.3.
+   ❌ Error calling INSTAGRAM_GET_USER_INFO: Toolkit version not specified. For manual execution of the tool please pass a specific toolkit version

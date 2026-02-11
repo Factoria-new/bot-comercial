@@ -31,7 +31,76 @@ const instagramUserIds = new Map();
  * @param {object} io - Socket.IO instance
  */
 export const initInstagramService = (io) => {
-    socketIO = io;
+    const socketIO = io;
+};
+
+// ============================================
+// CIRCUIT BREAKER STATE
+// ============================================
+const circuitBreaker = new Map(); // userId -> { failures: number, nextTry: number }
+const CB_THRESHOLD = 5; // Max consecutive failures
+const CB_TIMEOUT = 60000; // 1 minute timeout after threshold reached
+
+/**
+ * Check if circuit is open (paused) for user
+ */
+const isCircuitOpen = (userId) => {
+    const state = circuitBreaker.get(userId);
+    if (!state) return false;
+
+    if (state.failures >= CB_THRESHOLD) {
+        if (Date.now() < state.nextTry) {
+            return true; // Circuit open, waiting for timeout
+        } else {
+            // Timeout expired, try again (half-open)
+            return false;
+        }
+    }
+    return false;
+};
+
+/**
+ * Record a failure for circuit breaker
+ */
+const recordFailure = (userId) => {
+    const state = circuitBreaker.get(userId) || { failures: 0, nextTry: 0 };
+    state.failures++;
+    if (state.failures >= CB_THRESHOLD) {
+        state.nextTry = Date.now() + CB_TIMEOUT;
+        console.warn(`🔌 Circuit breaker OPEN for ${userId} (paused for ${CB_TIMEOUT / 1000}s)`);
+    }
+    circuitBreaker.set(userId, state);
+};
+
+/**
+ * Reset circuit breaker on success
+ */
+const recordSuccess = (userId) => {
+    if (circuitBreaker.has(userId)) {
+        circuitBreaker.delete(userId);
+    }
+};
+
+// ============================================
+// HELPER: Validate Connection Health
+// ============================================
+const validateConnectionHealth = async (connectionId, userId) => {
+    try {
+        // Use getUserInfo as a lightweight health check
+        const result = await composio.tools.execute(
+            'INSTAGRAM_GET_USER_INFO',
+            {
+                connectedAccountId: connectionId,
+                userId: userId,
+                arguments: {}
+            }
+        );
+
+        return { valid: result.successful !== false };
+    } catch (error) {
+        console.warn(`⚠️ Connection health check failed for ${userId}: ${error.message}`);
+        return { valid: false, error: error.message };
+    }
 };
 
 // ============================================
@@ -128,7 +197,7 @@ export const getAuthUrl = async (userId) => {
             userId,
             authConfigId,
             {
-                redirectUrl: `${process.env.FRONTEND_URL}/instagram-callback`
+                redirectUrl: `${process.env.FRONTEND_URL}/instagram-callback?userId=${encodeURIComponent(userId)}`
             }
         );
 
@@ -184,8 +253,8 @@ export const handleCallback = async (connectionId, userId = null) => {
             }
         }
 
-        // Try to get user info
-        const userInfo = await getUserInfo(connectionId);
+        // Try to get user info - NOW PASSING USERID
+        const userInfo = await getUserInfo(connectionId, userId);
 
         const result = {
             success: true,
@@ -214,18 +283,26 @@ export const handleCallback = async (connectionId, userId = null) => {
 // ---------------------
 // 4. getUserInfo
 // ---------------------
-export const getUserInfo = async (connectionId) => {
+export const getUserInfo = async (connectionId, userId = null) => {
     if (!connectionId) {
         return null;
     }
 
     try {
+        // Construct the payload correctly with userId if available
+        const payload = {
+            connectedAccountId: connectionId,
+            arguments: {}
+        };
+
+        // CRITICAL FIX: Pass userId (entityId) to Composio
+        if (userId) {
+            payload.userId = userId;
+        }
+
         const result = await composio.tools.execute(
             'INSTAGRAM_GET_USER_INFO',
-            {
-                connectedAccountId: connectionId,
-                arguments: {}
-            }
+            payload
         );
 
         return result.successful ? result.data : null;
@@ -303,7 +380,7 @@ export const getConnectionStatus = async (userId) => {
     }
 
     try {
-        // MULTI-TENANCY FIX: First check local mapping
+        // 1. Check local mapping first (Fastest)
         const localMapping = await getInstagramConnectionMapping(userId);
 
         if (!localMapping) {
@@ -311,69 +388,31 @@ export const getConnectionStatus = async (userId) => {
             return { isConnected: false };
         }
 
-        console.log(`📸 Found local Instagram mapping for ${userId}: connectionId=${localMapping.connectionId}, status=${localMapping.status}`);
+        // 2. If status is 'active', verify health with cache/retry
+        if (localMapping.status === 'active') {
+            // Check if we have a recent verified health status (e.g. within last minute) to avoid hammering API?
+            // For now, let's implement the health check to be sure.
 
-        // If mapping exists but status is not 'active', check if it's still initiating
-        if (localMapping.status === 'initiated') {
-            // Try to verify if the connection became active
-            try {
-                const account = await composio.connectedAccounts.get(localMapping.connectionId);
-                if (account.status === 'ACTIVE') {
-                    // Update local mapping to active
-                    await updateInstagramConnectionMappingStatus(userId, 'active');
-                    localMapping.status = 'active';
-                } else {
-                    // Connection exists but not active yet
-                    return { isConnected: false, status: 'initiating' };
-                }
-            } catch (e) {
-                // Connection not found in Composio (404) - user likely closed popup without completing
-                // Clean up the orphan mapping
-                console.warn(`⚠️ Instagram connection not found (user may have closed popup). Cleaning up orphan mapping for ${userId}`);
-                await deleteInstagramConnectionMapping(userId);
+            // Validate health
+            const health = await validateConnectionHealth(localMapping.connectionId, userId);
 
-                // Also stop polling if active
-                if (pollingIntervals.has(userId)) {
-                    await stopPolling(userId);
-                }
-
-                return { isConnected: false, needsReconnection: true };
-            }
-        }
-
-        // Verify the connection still exists and is valid in Composio
-        try {
-            const account = await composio.connectedAccounts.get(localMapping.connectionId);
-
-            if (account.status !== 'ACTIVE') {
-                console.warn(`⚠️ Instagram connection ${localMapping.connectionId} is not active (status: ${account.status})`);
-                await deleteInstagramConnectionMapping(userId);
-                return { isConnected: false, needsReconnection: true };
+            if (!health.valid) {
+                console.warn(`⚠️ Instagram connection invalid for ${userId}: ${health.error}`);
+                // Don't delete immediately, maybe transient? 
+                // But user requested robust checks. If header missing error, it's permanent until fixed.
+                return { isConnected: false, needsReconnection: true, error: health.error };
             }
 
-            // Enhanced IG User ID retrieval with caching
+            // Get cached user info if possible
             let igUserId = instagramUserIds.get(localMapping.connectionId);
-            let username = account.metadata?.username;
+            let username = null;
 
-            // If not in cache and not in metadata, try to fetch it
             if (!igUserId) {
-                if (account.metadata?.igUserId) {
-                    igUserId = account.metadata.igUserId;
+                const userInfo = await getUserInfo(localMapping.connectionId, userId);
+                if (userInfo?.id) {
+                    igUserId = userInfo.id;
+                    username = userInfo.username;
                     instagramUserIds.set(localMapping.connectionId, igUserId);
-                } else {
-                    // Fetch from API
-                    try {
-                        const userInfo = await getUserInfo(localMapping.connectionId);
-                        if (userInfo?.id) {
-                            igUserId = userInfo.id;
-                            username = userInfo.username || username;
-                            // Cache it
-                            instagramUserIds.set(localMapping.connectionId, igUserId);
-                            console.log(`📸 Cached Instagram User ID for ${userId}: ${igUserId}`);
-                        }
-                    } catch (err) {
-                        console.warn(`⚠️ Failed to fetch user info for ${userId}: ${err.message}`);
-                    }
                 }
             }
 
@@ -383,12 +422,24 @@ export const getConnectionStatus = async (userId) => {
                 username: username || null,
                 igUserId: igUserId || null
             };
-        } catch (error) {
-            // Connection doesn't exist in Composio anymore
-            console.warn(`⚠️ Instagram connection not found in Composio, cleaning up local mapping:`, error.message);
-            await deleteInstagramConnectionMapping(userId);
-            return { isConnected: false, needsReconnection: true };
         }
+
+        // 3. If initiated, check if it became active
+        if (localMapping.status === 'initiated') {
+            try {
+                const account = await composio.connectedAccounts.get(localMapping.connectionId);
+                if (account.status === 'ACTIVE') {
+                    await updateInstagramConnectionMappingStatus(userId, 'active');
+                    return { isConnected: true, connectionId: localMapping.connectionId };
+                }
+            } catch (e) {
+                // 404 means user aborted
+                await deleteInstagramConnectionMapping(userId);
+                return { isConnected: false, needsReconnection: true };
+            }
+        }
+
+        return { isConnected: false, status: localMapping.status };
     } catch (error) {
         console.error('Instagram Status Check Error:', error.message);
         return { isConnected: false, error: error.message };
@@ -657,10 +708,17 @@ export const startPolling = async (userId, intervalMs = 15000, updateDb = true) 
     console.log(`🔄 Starting Instagram polling for ${userId} (every ${intervalMs / 1000}s)`);
 
     const poll = async () => {
+        // CIRCUIT BREAKER CHECK
+        if (isCircuitOpen(userId)) {
+            // Silent skip when circuit is open
+            return;
+        }
+
         try {
             const status = await getConnectionStatus(userId);
             if (!status.isConnected) {
                 console.log(`⚠️ Instagram not connected for ${userId}, skipping poll`);
+                recordFailure(userId); // Mark as failure if check fails
                 return;
             }
 
@@ -686,8 +744,8 @@ export const startPolling = async (userId, intervalMs = 15000, updateDb = true) 
                 return;
             }
 
-            // List conversations
-            const convResult = await listConversations(userId, 10);
+            // List conversations (Increased limit from 10 to 50)
+            const convResult = await listConversations(userId, 50);
             if (!convResult.success || !convResult.conversations?.length) {
                 return;
             }
@@ -791,8 +849,12 @@ export const startPolling = async (userId, intervalMs = 15000, updateDb = true) 
                     }
                 }
             }
+            // If we got here, poll was successful
+            recordSuccess(userId);
+
         } catch (error) {
             console.error(`❌ Polling error for ${userId}: ${error.message}`);
+            recordFailure(userId);
         }
     };
 

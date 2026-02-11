@@ -72,7 +72,7 @@ router.get('/auth-url', async (req, res) => {
  */
 router.post('/callback', async (req, res) => {
     try {
-        const { connectionId } = req.body;
+        const { connectionId, userId } = req.body;
         if (!connectionId) {
             return res.status(400).json({
                 success: false,
@@ -80,7 +80,7 @@ router.post('/callback', async (req, res) => {
             });
         }
 
-        const result = await handleCallback(connectionId);
+        const result = await handleCallback(connectionId, userId);
         if (result.success) {
             res.json(result);
         } else {

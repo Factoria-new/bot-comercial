@@ -1,0 +1,28 @@
+🔍 Testing Instagram API directly...
+
+1. Checking connection status...
+   Status: ACTIVE
+   Metadata: undefined
+
+4. Listing available actions for this connection...
+   ❌ Error listing actions: Cannot read properties of undefined (reading 'list')
+
+2. Listing conversations...
+2026-02-11T15:45:29.612Z - 🚀 Upgrade available! Your composio-core version (0.5.3) is behind. Latest version: 0.6.3.
+   Success: true
+   Raw data: {
+  "data": [
+    {
+      "id": "aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0MjYwMTI0NzQzNzEwMTc2NjEw",
+      "updated_time": "2026-02-07T15:22:19+0000"
+    },
+    {
+      "id": "aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0Mjc2MjU1NDUzNjY2MzQwNzI1",
+      "updated_time": "2026-02-07T15:08:47+0000"
+    },
+    {
+      "id": "aWdfZAG06MzQwMjgyMzY2ODQxNzEwMzAxMjQ0MjU5OTkzNzgxMzM2NTk4OTYy",
+      "updated_time": "2026-02-06T17:31:42+0000"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+🔍 Testing INSTAGRAM_GET_USER_INFO arguments...
+
+
+Testing: Empty args
+Args: {}
+2026-02-11T15:46:35.910Z - 🚀 Upgrade available! Your composio-core version (0.5.3) is behind. Latest version: 0.6.3.
+❌ Exception: Error executing the tool INSTAGRAM_GET_USER_INFO
+
+Testing: With user_id
+Args: {"user_id":"17841480131547578"}
+❌ Exception: Error executing the tool INSTAGRAM_GET_USER_INFO
+
+Testing: With id
+Args: {"id":"17841480131547578"}
+❌ Exception: Error executing the tool INSTAGRAM_GET_USER_INFO
+
+Testing: With username
+Args: {"username":"cajisolutionsofc"}
+❌ Exception: Error executing the tool INSTAGRAM_GET_USER_INFO
+
+Testing: With user_name
+Args: {"user_name":"cajisolutionsofc"}
+❌ Exception: Error executing the tool INSTAGRAM_GET_USER_INFO
+
+Testing: With query
+Args: {"query":"cajisolutionsofc"}
+❌ Exception: Error executing the tool INSTAGRAM_GET_USER_INFO
