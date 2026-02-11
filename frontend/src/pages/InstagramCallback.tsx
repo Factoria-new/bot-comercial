@@ -13,6 +13,7 @@ const InstagramCallback = () => {
             try {
                 // Get the connection ID from URL params
                 const connectionId = searchParams.get('connectedAccountId') || searchParams.get('id');
+                const userId = searchParams.get('userId');
 
                 if (!connectionId) {
                     // If no connection ID, the auth was likely successful
@@ -35,7 +36,7 @@ const InstagramCallback = () => {
                 const response = await fetch(`${backendUrl}/api/instagram/callback`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ connectionId })
+                    body: JSON.stringify({ connectionId, userId })
                 });
 
                 const data = await response.json();
