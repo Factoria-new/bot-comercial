@@ -37,14 +37,7 @@ const Landing = () => {
         }
     };
 
-    useEffect(() => {
-        // Font loading (kept from original)
-        const link = document.createElement('link');
-        link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap';
-        link.rel = 'stylesheet';
-        document.head.appendChild(link);
-        return () => { document.head.removeChild(link) };
-    }, []);
+
 
     // Force scroll to top on mount ONLY if no hash (kept logic mostly handled in Hero, but good to ensure)
     useEffect(() => {

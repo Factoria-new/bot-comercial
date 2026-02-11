@@ -37,7 +37,7 @@ export const Header = ({ phase, onResetHome, onNavigate }: HeaderProps) => {
             : 'bg-transparent shadow-none border-transparent'
             }`}>
             <div className="flex items-center">
-                <img src="/logo-header.png" alt="Caji" className="h-8 md:h-10 w-auto object-contain" />
+                <img src="/logo-header.webp" alt="Caji" width="143" height="56" className="h-8 md:h-10 w-auto object-contain" />
             </div>
 
             {/* Navegação Central - Desktop */}
