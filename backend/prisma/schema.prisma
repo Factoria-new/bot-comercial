@@ -137,3 +137,33 @@ model InstagramConnection {
   @@map("instagram_connections")
 }
 
+// Conversas do Instagram
+model InstagramConversation {
+  id            String   @id @default(uuid())
+  userRefId     String   // ID do usuário dono (userId/email)
+  userEmail     String?
+  senderId      String   // ID do remetente (cliente no Insta)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  messages      InstagramMessage[]
+  
+  @@unique([userRefId, senderId])
+  @@map("instagram_conversations")
+}
+
+// Mensagens do Instagram
+model InstagramMessage {
+  id             String                @id @default(uuid())
+  conversationId String
+  role           String                // "user" ou "model"
+  content        String
+  createdAt      DateTime              @default(now())
+  externalId     String?               // ID da mensagem no Instagram
+  
+  conversation   InstagramConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([conversationId])
+  @@map("instagram_messages")
+}
+

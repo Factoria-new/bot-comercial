@@ -234,10 +234,106 @@ export async function disconnect() {
     logger.info('🔌 Prisma desconectado');
 }
 
+/**
+ * Obtém uma instância pelo userId
+ * @param {string} userId - ID do usuário (email)
+ * @returns {Promise<Instance|null>}
+ */
+/**
+ * Busca histórico específico do Instagram
+ */
+export async function getInstagramHistory(userId, senderId, limit = DEFAULT_HISTORY_LIMIT) {
+    try {
+        let userRefId = userId;
+        // Resolve user ID if email is provided, to match FK constraints
+        const user = await prisma.user.findUnique({ where: { email: userId } });
+        if (user) {
+            userRefId = user.id;
+        }
+
+        const conversation = await prisma.instagramConversation.findFirst({
+            where: {
+                userRefId: userRefId,
+                senderId: senderId
+            }
+        });
+
+        if (!conversation) return [];
+
+        const messages = await prisma.instagramMessage.findMany({
+            where: { conversationId: conversation.id },
+            orderBy: { createdAt: 'asc' },
+            take: limit,
+            select: { role: true, content: true }
+        });
+
+        return messages;
+    } catch (error) {
+        logger.error(`❌ Erro ao buscar histórico Instagram: ${error.message}`);
+        return [];
+    }
+}
+
+/**
+ * Salva mensagem específica do Instagram
+ */
+export async function saveInstagramMessage(userId, senderId, role, content, externalId = null) {
+    try {
+        // Resolve user ID if email is provided (Crucial for Foreign Key constraint to User table)
+        // userId here is the email passed from instagramService
+        const user = await prisma.user.findUnique({ where: { email: userId } });
+        if (!user) {
+            logger.error(`❌ Erro ao salvar mensagem Instagram: Usuário não encontrado para email ${userId}`);
+            return null;
+        }
+
+        const userRefId = user.id;
+
+        let conversation = await prisma.instagramConversation.findFirst({
+            where: {
+                userRefId: userRefId,
+                senderId: senderId
+            }
+        });
+
+        if (!conversation) {
+            conversation = await prisma.instagramConversation.create({
+                data: {
+                    userRefId: userRefId,
+                    userEmail: user.email,
+                    senderId: senderId
+                }
+            });
+        }
+
+        const message = await prisma.instagramMessage.create({
+            data: {
+                conversationId: conversation.id,
+                role,
+                content,
+                externalId
+            }
+        });
+
+        await prisma.instagramConversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() }
+        });
+
+        return message;
+    } catch (error) {
+        logger.error(`❌ Erro ao salvar mensagem Instagram: ${error.message}`);
+        return null;
+    }
+}
+
 export default {
     getConversationHistory,
     saveMessage,
     clearHistory,
     cleanupOldMessages,
-    disconnect
+    disconnect,
+    // New methods specific for Instagram
+    getInstagramHistory,
+    saveInstagramMessage
 };
