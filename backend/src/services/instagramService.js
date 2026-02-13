@@ -143,7 +143,6 @@ export const getUserInfo = async (connectionId) => {
 
         return result.successful ? result.data : null;
     } catch (error) {
-        // Log less aggressively or handle specific error codes
         console.error('Instagram Get User Info Error:', error.message);
         return null;
     }
@@ -375,8 +374,8 @@ export const sendDM = async (userId, recipientId, text) => {
                 userId: userId,
                 arguments: {
                     recipient_id: recipientId,
-                    text: text,
-                    tag: 'HUMAN_AGENT'
+                    text: text
+                    // tag: 'HUMAN_AGENT' // Removed to fix 403 error
                 }
             }
         );
@@ -521,7 +520,11 @@ const processBufferedMessages = async (userId, senderId, agentPrompt, geminiApiK
     // console.log(`📦 Processing ${messagesToProcess.length} buffered messages for ${senderId}`);
 
     // Concatenate messages
-    const fullMessage = messagesToProcess.join(' ');
+    // Handle both string (legacy) and object (new) formats for robustness
+    const fullMessage = messagesToProcess.map(m => {
+        if (typeof m === 'string') return m;
+        return m.message || m.text || m.message?.text || m.content || '';
+    }).join(' ');
 
     // --- PERSISTENCE & HISTORY ---
     // Import history service functions (UPDATED to use Instagram-specific models)
@@ -529,7 +532,12 @@ const processBufferedMessages = async (userId, senderId, agentPrompt, geminiApiK
 
     // Add processed user message to history (DB)
     // Now saves to 'instagram_messages' table
-    await saveMessageByUserId(userId, senderId, 'user', fullMessage, messagesToProcess[0].id); // Assuming first message in buffer has the ID
+    // Use ID from first message object, or generate one if missing
+    const firstMsgId = (typeof messagesToProcess[0] === 'object' && messagesToProcess[0].id)
+        ? messagesToProcess[0].id
+        : `buffered_${Date.now()}`;
+
+    await saveMessageByUserId(userId, senderId, 'user', fullMessage, firstMsgId);
 
     console.log(`[Instagram] 📩 Message from ${senderId}: "${fullMessage.substring(0, 50)}${fullMessage.length > 50 ? '...' : ''}"`);
 
@@ -592,14 +600,23 @@ export const startPolling = (userId, intervalMs = 15000) => {
 
     // Flag to ignore existing messages on restart
     let isInitialSync = true;
+    let isPollingProcessing = false;
+    const pollingStartTime = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
 
     console.log(`🔄 Starting Instagram polling for ${userId} (every ${intervalMs / 1000}s)`);
 
     const poll = async () => {
+        if (isPollingProcessing) {
+            console.log(`⚠️ Polling overlapping for ${userId}, skipping this cycle.`);
+            return;
+        }
+        isPollingProcessing = true;
+
         try {
             const status = await getConnectionStatus(userId);
             if (!status.isConnected) {
                 console.log(`⚠️ Instagram not connected for ${userId}, skipping poll`);
+                isPollingProcessing = false;
                 return;
             }
 
@@ -664,12 +681,14 @@ export const startPolling = (userId, intervalMs = 15000) => {
                 if (Math.random() < 0.1) {
                     console.log(`⚠️ No agent prompt for ${userId}, skipping poll`);
                 }
+                isPollingProcessing = false;
                 return;
             }
 
             // List conversations
             const convResult = await listConversations(userId, 10);
             if (!convResult.success || !convResult.conversations?.length) {
+                isPollingProcessing = false;
                 return;
             }
 
@@ -689,7 +708,7 @@ export const startPolling = (userId, intervalMs = 15000) => {
 
                 if (!isInitialSync) {
                     // Log the IDs of messages found to debug
-                    const msgIds = msgResult.messages.map(m => m.id || m.message_id);
+                    // const msgIds = msgResult.messages.map(m => m.id || m.message_id);
                     // console.log(`   📬 Conv ${convId.substring(0, 15)}... → ${msgResult.messages.length} messages. IDs: ${msgIds.join(', ')}`);
                 }
 
@@ -707,6 +726,25 @@ export const startPolling = (userId, intervalMs = 15000) => {
                     // Skip if initial sync
                     if (isInitialSync) {
                         // console.log(`   ⏩ Skipping initial sync msg: ${msgId}`);
+                        continue;
+                    }
+
+                    // TIMESTAMP CHECK: Skip old messages (before polling started)
+                    // Instagram API usually returns ISO string or unix timestamp
+                    let msgTime = 0;
+                    if (msg.created_time) {
+                        // Handle ISO string or Unix timestamp
+                        msgTime = typeof msg.created_time === 'string' && msg.created_time.includes('T')
+                            ? Math.floor(new Date(msg.created_time).getTime() / 1000)
+                            : parseInt(msg.created_time);
+                    } else if (msg.timestamp) {
+                        msgTime = typeof msg.timestamp === 'string' && msg.timestamp.includes('T')
+                            ? Math.floor(new Date(msg.timestamp).getTime() / 1000)
+                            : parseInt(msg.timestamp);
+                    }
+
+                    if (msgTime > 0 && msgTime < pollingStartTime) {
+                        console.log(`[Instagram] ⏩ Skipping old message ${msgId} (Time: ${msgTime} < Start: ${pollingStartTime})`);
                         continue;
                     }
 
@@ -747,7 +785,7 @@ export const startPolling = (userId, intervalMs = 15000) => {
                     const bufferData = messageBuffer.get(bufferKey);
 
                     // Add message to buffer
-                    bufferData.messages.push(messageText);
+                    bufferData.messages.push({ ...msg, id: msgId, created_time: msgTime }); // Store full msg obj
 
                     // Reset timer (debounce)
                     if (bufferData.timer) {
@@ -774,6 +812,8 @@ export const startPolling = (userId, intervalMs = 15000) => {
 
         } catch (error) {
             console.error(`❌ Polling error for ${userId}: ${error.message}`);
+        } finally {
+            isPollingProcessing = false;
         }
     };
 
