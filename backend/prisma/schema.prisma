@@ -129,6 +129,8 @@ model InstagramConnection {
   userId       String   @unique // Email do usuario (entityId no Composio)
   connectionId String   @unique // ID da conexao no Composio (ca_xxx)
   status       String   @default("initiated") // initiated, active, failed
+  instagramUserId   String? // ID do usuário no Instagram (para evitar eco)
+  instagramUsername String? // Username do usuário no Instagram
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   

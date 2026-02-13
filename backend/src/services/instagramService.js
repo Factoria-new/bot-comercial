@@ -5,6 +5,7 @@ import prisma from '../config/prisma.js';
 import fs from 'fs';
 import path from 'path';
 import { decrypt } from '../utils/encryption.js';
+import { getCurrentFormattedTime } from './chatService.js';
 
 dotenv.config();
 
@@ -279,6 +280,26 @@ export const getConnectionStatus = async (userId) => {
     }
 };
 
+/**
+ * Helper to ensure Instagram User ID is persisted in DB
+ */
+const ensureInstagramUserIdPersisted = async (userId, connectionId, igUserId, username) => {
+    if (!userId || !connectionId || !igUserId) return;
+
+    try {
+        await prisma.instagramConnection.update({
+            where: { connectionId },
+            data: {
+                instagramUserId: igUserId,
+                instagramUsername: username
+            }
+        });
+        console.log(`💾 Persisted Instagram User ID for ${userId}: ${igUserId}`);
+    } catch (e) {
+        console.warn(`⚠️ Failed to persist Instagram User ID: ${e.message}`);
+    }
+};
+
 // ---------------------
 // 1. listConversations
 // ---------------------
@@ -352,7 +373,11 @@ export const sendDM = async (userId, recipientId, text) => {
             {
                 connectedAccountId: status.connectionId,
                 userId: userId,
-                arguments: { recipient_id: recipientId, text }
+                arguments: {
+                    recipient_id: recipientId,
+                    text: text,
+                    tag: 'HUMAN_AGENT'
+                }
             }
         );
 
@@ -520,7 +545,8 @@ const processBufferedMessages = async (userId, senderId, agentPrompt, geminiApiK
         message: fullMessage,
         history, // Use DB history
         agentPrompt,
-        geminiApiKey: geminiApiKey
+        geminiApiKey: geminiApiKey,
+        currentDate: getCurrentFormattedTime() // Add current date/time to payload
     };
 
     // Clean payload for logging
@@ -581,7 +607,7 @@ export const startPolling = (userId, intervalMs = 15000) => {
             let agentPrompt = instagramAgentPrompts.get(userId);
             let geminiApiKey = userGeminiKeys.get(userId);
 
-            // Always fetch fresh data from DB to ensure prompt is up to date
+            // Fetch user settings + Instagram Connection info
             const user = await prisma.user.findFirst({
                 where: { email: userId },
                 select: {
@@ -589,6 +615,25 @@ export const startPolling = (userId, intervalMs = 15000) => {
                     geminiApiKey: true
                 }
             });
+
+            // Fetch persisted Instagram User ID
+            const igConnection = await prisma.instagramConnection.findFirst({
+                where: { userId: userId, status: 'active' },
+                select: { instagramUserId: true, instagramUsername: true, connectionId: true }
+            });
+
+            // 1. Try to get ID from connection status (live)
+            // 2. Fallback to DB persisted ID
+            let myIgUserId = status.igUserId || igConnection?.instagramUserId;
+
+            // If we have a live ID but not in DB, persist it now for robustness
+            if (status.igUserId && status.connectionId && (!igConnection?.instagramUserId || igConnection.instagramUserId !== status.igUserId)) {
+                await ensureInstagramUserIdPersisted(userId, status.connectionId, status.igUserId, status.username);
+            }
+
+            if (!myIgUserId) {
+                if (Math.random() < 0.05) console.warn(`⚠️ [Instagram] Critical: No Instagram User ID found for ${userId}. Echo prevention may fail.`);
+            }
 
             // Update Agent Prompt
             if (user?.customPrompt) {
@@ -668,20 +713,21 @@ export const startPolling = (userId, intervalMs = 15000) => {
                     // Skip messages sent by the connected account (our responses)
                     const senderId = msg.from?.id || msg.sender_id || msg.participant_id;
 
-                    // DEBUG LOGGING - TEMPORARY RESTORE TO FIX BUG
-                    // console.log(`   🔍 Checking msg ${msgId} from ${senderId} (Me: ${status.igUserId})`);
-
-                    if (!status.igUserId) {
-                        console.warn(`[Instagram] ⚠️ Cannot identify self (missing igUserId). Skipping msg ${msgId} to prevent loops.`);
+                    // ECHO DETECTION & PREVENTION (Robust)
+                    // 1. Check against `myIgUserId` (from Live API or DB)
+                    if (myIgUserId && String(senderId) === String(myIgUserId)) {
+                        console.log(`[Instagram] ⏩ Skipping own message (ID Match: ${senderId})`);
                         continue;
                     }
 
-                    // Enforce string comparison
-                    // console.log(`[Instagram] 🔍 Checking msg ${msgId} (Sender: ${senderId}) vs Me (${status.igUserId})`);
-                    if (String(senderId) === String(status.igUserId)) {
-                        console.log(`[Instagram] ⏩ Skipping own/system message from ${senderId}`);
+                    // 2. Check against `status.igUserId` explicitly if different
+                    if (status.igUserId && String(senderId) === String(status.igUserId)) {
+                        console.log(`[Instagram] ⏩ Skipping own message (Live ID Match: ${senderId})`);
                         continue;
                     }
+
+                    // 3. (Optional) Check against cached known bot IDs if you have them
+                    // ...
 
                     // Extract message text - Instagram API returns it in 'message' field
                     const messageText = msg.message || msg.text || msg.message?.text || msg.content || '';
