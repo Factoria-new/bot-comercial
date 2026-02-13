@@ -20,7 +20,7 @@ export function ApiKeyModal({ open, onComplete, onClose }: ApiKeyModalProps) {
     const [apiKey, setApiKey] = useState("");
     const [isValidating, setIsValidating] = useState(false);
     const [error, setError] = useState("");
-    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+
     const [currentAudioText, setCurrentAudioText] = useState<string | null>(null);
     const hasPlayedAudio = useRef(false);
     const { logout } = useAuth();
@@ -228,39 +228,16 @@ export function ApiKeyModal({ open, onComplete, onClose }: ApiKeyModalProps) {
                             </div>
 
                             <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl">
-                                {!isVideoPlaying ? (
-                                    <button
-                                        onClick={() => setIsVideoPlaying(true)}
-                                        className="absolute inset-0 w-full h-full group cursor-pointer"
-                                        aria-label="Reproduzir tutorial"
-                                    >
-                                        {/* Thumbnail Image */}
-                                        <img
-                                            src="/images/Chave de api no caji.png"
-                                            alt="Tutorial - Como adicionar a chave de API"
-                                            className="w-full h-full object-cover"
-                                        />
-                                        {/* Overlay */}
-                                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
-                                        {/* Play Button */}
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-16 h-16 rounded-full bg-purple-600/90 group-hover:bg-purple-500 group-hover:scale-110 transition-all flex items-center justify-center shadow-lg shadow-purple-900/50">
-                                                <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[16px] border-l-white border-b-[10px] border-b-transparent ml-1"></div>
-                                            </div>
-                                        </div>
-                                    </button>
-                                ) : (
-                                    <iframe
-                                        width="100%"
-                                        height="100%"
-                                        src="https://www.youtube.com/embed/bgbY41qN4-M?autoplay=1"
-                                        title="Getting started with Gemini API"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                        allowFullScreen
-                                        className="absolute inset-0"
-                                    ></iframe>
-                                )}
+                                <iframe
+                                    width="100%"
+                                    height="100%"
+                                    src="https://www.youtube.com/embed/RUqk-lLEuVQ"
+                                    title="Tutorial - Como adicionar a chave de API"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                    className="absolute inset-0"
+                                ></iframe>
                             </div>
                         </div>
 
